@@ -1417,7 +1417,7 @@ void read_nomemd()
 void write_nomem()
 {
    if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->block[(address&0xFFF)/4].ops != NOTCOMPILED)
+     if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
        invalid_code_set(address>>12, 1);
    address = virtual_to_physical_address(address,1);
    if (address == 0x00000000) return;
@@ -1427,7 +1427,7 @@ void write_nomem()
 void write_nomemb()
 {
    if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->block[(address&0xFFF)/4].ops != NOTCOMPILED)
+     if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
        invalid_code_set(address>>12, 1);
    address = virtual_to_physical_address(address,1);
    if (address == 0x00000000) return;
@@ -1437,7 +1437,7 @@ void write_nomemb()
 void write_nomemh()
 {
    if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->block[(address&0xFFF)/4].ops != NOTCOMPILED)
+     if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
        invalid_code_set(address>>12, 1);
    address = virtual_to_physical_address(address,1);
    if (address == 0x00000000) return;
@@ -1447,7 +1447,7 @@ void write_nomemh()
 void write_nomemd()
 {
    if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->block[(address&0xFFF)/4].ops != NOTCOMPILED)
+     if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
        invalid_code_set(address>>12, 1);
    address = virtual_to_physical_address(address,1);
    if (address == 0x00000000) return;
