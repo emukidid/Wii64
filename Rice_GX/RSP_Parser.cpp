@@ -693,14 +693,14 @@ uint32 DLParser_CheckUcode(uint32 ucStart, uint32 ucDStart, uint32 ucSize, uint3
         for ( uint32 i = 0; i < 0x1000; i++ )
         {
 
-            if ( g_pRDRAMs8[ base + ((i+0) ^ 3) ] == 'R' &&
-                g_pRDRAMs8[ base + ((i+1) ^ 3) ] == 'S' &&
-                g_pRDRAMs8[ base + ((i+2) ^ 3) ] == 'P' )
+            if ( g_pRDRAMs8[ base + ((i+0) ^ S8) ] == 'R' &&
+                g_pRDRAMs8[ base + ((i+1) ^ S8) ] == 'S' &&
+                g_pRDRAMs8[ base + ((i+2) ^ S8) ] == 'P' )
             {
                 unsigned char * p = str;
-                while ( g_pRDRAMs8[ base + (i ^ 3) ] >= ' ')
+                while ( g_pRDRAMs8[ base + (i ^ S8) ] >= ' ')
                 {
-                    *p++ = g_pRDRAMs8[ base + (i ^ 3) ];
+                    *p++ = g_pRDRAMs8[ base + (i ^ S8) ];
                     i++;
                 }
                 *p++ = 0;
@@ -816,6 +816,9 @@ void DLParser_Process(OSTask * pTask)
     g_pOSTask = pTask;
     
     DebuggerPauseCountN( NEXT_DLIST );
+//    struct timeval tv;
+//    gettimeofday(&tv, 0);
+//    status.gRDPTime = tv.tv_usec;
     status.gRDPTime = (uint32) SDL_GetTicks();
 
     status.gDlistCount++;
@@ -836,6 +839,8 @@ void DLParser_Process(OSTask * pTask)
             {DebuggerAppendMsg("Start Task without DLIST: ucode=%08X, data=%08X", (uint32)pTask->t.ucode, (uint32)pTask->t.ucode_data);});
 
 
+//    // Check if we need to purge
+//    if (status.gRDPTime - status.lastPurgeTimeTime > 5000)
     // Check if we need to purge (every 5 milliseconds)
     if (status.gRDPTime - status.lastPurgeTimeTime > 5)
     {
@@ -1308,7 +1313,7 @@ void DLParser_FillRect(Gfx *gfx)
             {
                 for( uint32 j=x0; j<x1; j++ )
                 {
-                    *(uint16*)((base+pitch*i+j)^2) = color;
+                    *(uint16*)((base+pitch*i+j)^(S16<<1)) = color;
                 }
             }
         }
@@ -1335,7 +1340,7 @@ void DLParser_FillRect(Gfx *gfx)
                 {
                     for( uint32 j=x0; j<x1; j++ )
                     {
-                        *(uint16*)((base+pitch*i+j)^2) = color;
+                        *(uint16*)((base+pitch*i+j)^(S16<<1)) = color;
                     }
                 }
             }
@@ -1348,7 +1353,7 @@ void DLParser_FillRect(Gfx *gfx)
                 {
                     for( uint32 j=x0; j<x1; j++ )
                     {
-                        *(uint8*)((base+pitch*i+j)^3) = color;
+                        *(uint8*)((base+pitch*i+j)^S8) = color;
                     }
                 }
             }
@@ -1629,6 +1634,9 @@ void DLParser_SetEnvColor(Gfx *gfx)
 
 void RDP_DLParser_Process(void)
 {
+//    struct timeval tv;
+//    gettimeofday(&tv, 0);
+//    status.gRDPTime = tv.tv_usec;
     status.gRDPTime = (uint32) SDL_GetTicks();
 
     status.gDlistCount++;
@@ -1640,6 +1648,8 @@ void RDP_DLParser_Process(void)
     gDlistStack[gDlistStackPointer].pc = start;
     gDlistStack[gDlistStackPointer].countdown = MAX_DL_COUNT;
 
+//    // Check if we need to purge
+//    if (status.gRDPTime - status.lastPurgeTimeTime > 5000)
     // Check if we need to purge (every 5 milliseconds)
     if (status.gRDPTime - status.lastPurgeTimeTime > 5)
     {
@@ -1726,7 +1736,11 @@ static void make_crc_table()
 }
 
 /* ========================================================================= */
+#ifndef _BIG_ENDIAN
 #define DO1(buf) crc = crc_table[((int)crc ^ (*buf++)) & 0xff] ^ (crc >> 8);
+#else // !_BIG_ENDIAN -> Big Endian fix - necessary for Ucode detection.
+#define DO1(buf) crc = crc_table[((int)crc ^ (*(uint8*)((int)buf++ ^ 3))) & 0xff] ^ (crc >> 8);
+#endif // _BIG_ENDIAN
 #define DO2(buf)  DO1(buf); DO1(buf);
 #define DO4(buf)  DO2(buf); DO2(buf);
 #define DO8(buf)  DO4(buf); DO4(buf);
@@ -1767,8 +1781,8 @@ void LoadMatrix(uint32 addr)
     {
         for (j = 0; j < 4; j++) 
         {
-            int     hi = *(short *)(g_pRDRAMu8 + ((addr+(i<<3)+(j<<1)     )^0x2));
-            int  lo = *(unsigned short *)(g_pRDRAMu8 + ((addr+(i<<3)+(j<<1) + 32)^0x2));
+            int  hi = *(short *)(g_pRDRAMu8 + ((addr+(i<<3)+(j<<1)     )^(S16<<1)));
+            int  lo = *(unsigned short *)(g_pRDRAMu8 + ((addr+(i<<3)+(j<<1) + 32)^(S16<<1)));
             matToLoad.m[i][j] = (float)((hi<<16) | lo) * fRecip;
         }
     }

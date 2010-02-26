@@ -83,9 +83,9 @@ void ConvertRGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
         for (y = 0; y < tinfo.HeightToLoad; y++)
         {
             if ((y%2) == 0)
-                nFiddle = 0x2;
+                nFiddle = (S16<<1);
             else
-                nFiddle = 0x2 | 0x4;
+                nFiddle = (S16<<1) | 0x4;
 
             // dwDst points to start of destination row
             uint16 * wDst = (uint16 *)((uint8 *)dInfo.lpSurface + y*dInfo.lPitch);
@@ -118,7 +118,7 @@ void ConvertRGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             for (x = 0; x < tinfo.WidthToLoad; x++)
             {
-                uint16 w = *(uint16 *)&pByteSrc[dwWordOffset ^ 0x2];
+                uint16 w = *(uint16 *)&pByteSrc[dwWordOffset ^ (S16<<1)];
 
                 wDst[x] = Convert555ToR4G4B4A4(w);
                 
@@ -160,7 +160,7 @@ void ConvertRGBA32_16(CTexture *pTexture, const TxtrInfo &tinfo)
                 {
                     uint32 w = pWordSrc[idx^nFiddle];
                     uint8* psw = (uint8*)&w;
-                    dwDst[x] = R4G4B4A4_MAKE( (psw[0]>>4), (psw[1]>>4), (psw[2]>>4), (psw[3]>>4));
+                    dwDst[x] = R4G4B4A4_MAKE( (psw[3^S8]>>4), (psw[2^S8]>>4), (psw[1^S8]>>4), (psw[0^S8]>>4));
                 }
             }
         }
@@ -181,10 +181,10 @@ void ConvertRGBA32_16(CTexture *pTexture, const TxtrInfo &tinfo)
                     for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
                     {
 
-                        *pDst++ = R4G4B4A4_MAKE((pS[3]>>4),     // Red
-                            (pS[2]>>4),
-                            (pS[1]>>4),
-                            (pS[0]>>4));        // Alpha
+                        *pDst++ = R4G4B4A4_MAKE((pS[0^S8]>>4),     // Red
+                            (pS[1^S8]>>4),
+                            (pS[2^S8]>>4),
+                            (pS[3^S8]>>4));        // Alpha
                         pS+=4;
                     }
                 }
@@ -198,10 +198,10 @@ void ConvertRGBA32_16(CTexture *pTexture, const TxtrInfo &tinfo)
                     n = 0;
                     for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
                     {
-                        *pDst++ = R4G4B4A4_MAKE((pS[(n^0x8) + 3]>>4),       // Red
-                            (pS[(n^0x8) + 2]>>4),
-                            (pS[(n^0x8) + 1]>>4),
-                            (pS[(n^0x8) + 0]>>4));  // Alpha
+                        *pDst++ = R4G4B4A4_MAKE((pS[(n+0)^(0x8|S8)]>>4),       // Red
+                            (pS[(n+1)^(0x8|S8)]>>4),
+                            (pS[(n+2)^(0x8|S8)]>>4),
+                            (pS[(n+3)^(0x8|S8)]>>4));  // Alpha
 
                         n += 4;
                     }
@@ -217,10 +217,10 @@ void ConvertRGBA32_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
                 for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
                 {
-                    *pDst++ = R4G4B4A4_MAKE((pS[3]>>4),     // Red
-                        (pS[2]>>4),
-                        (pS[1]>>4),
-                        (pS[0]>>4));        // Alpha
+                    *pDst++ = R4G4B4A4_MAKE((pS[0^S8]>>4),     // Red
+                        (pS[1^S8]>>4),
+                        (pS[2^S8]>>4),
+                        (pS[3^S8]>>4));        // Alpha
                     pS+=4;
                 }
             }
@@ -254,9 +254,9 @@ void ConvertIA4_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             // For odd lines, swap words too
             if ((y%2) == 0)
-                nFiddle = 0x3;
+                nFiddle = S8;
             else
-                nFiddle = 0x7;
+                nFiddle = 0x4|S8;
 
 
             // This may not work if X is not even?
@@ -297,7 +297,7 @@ void ConvertIA4_16(CTexture *pTexture, const TxtrInfo &tinfo)
             // Do two pixels at a time
             for (uint32 x = 0; x < tinfo.WidthToLoad; x+=2)
             {
-                uint8 b = pSrc[dwByteOffset ^ 0x3];
+                uint8 b = pSrc[dwByteOffset ^ S8];
 
                 // Even
                 *pDst++ = R4G4B4A4_MAKE(ThreeToFour[(b & 0xE0) >> 5],
@@ -339,9 +339,9 @@ void ConvertIA8_16(CTexture *pTexture, const TxtrInfo &tinfo)
         {
             // For odd lines, swap words too
             if ((y%2) == 0)
-                nFiddle = 0x3;
+                nFiddle = S8;
             else
-                nFiddle = 0x7;
+                nFiddle = 0x4|S8;
 
 
             uint16 *pDst = (uint16 *)((uint8*)dInfo.lpSurface + y * dInfo.lPitch);
@@ -372,7 +372,7 @@ void ConvertIA8_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
             {
-                uint8 b = pSrc[dwByteOffset ^ 0x3];
+                uint8 b = pSrc[dwByteOffset ^ S8];
 
                 *pDst++ = R4G4B4A4_MAKE(((b&0xf0)>>4),((b&0xf0)>>4),((b&0xf0)>>4),(b&0x0f));
 
@@ -406,7 +406,7 @@ void ConvertIA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
         for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
         {
-            uint16 w = *(uint16 *)&pByteSrc[dwWordOffset^0x2];
+            uint16 w = *(uint16 *)&pByteSrc[dwWordOffset^(S16<<1)];
 
             uint8 i = (uint8)(w >> 12);
             uint8 a = (uint8)(w & 0xFF);
@@ -445,16 +445,16 @@ void ConvertI4_16(CTexture *pTexture, const TxtrInfo &tinfo)
             if( !conkerSwapHack || (y&4) == 0 )
             {
                 if ((y%2) == 0)
-                    nFiddle = 0x3;
+                    nFiddle = S8;
                 else
-                    nFiddle = 0x7;
+                    nFiddle = 0x4|S8;
             }
             else
             {
                 if ((y%2) == 1)
-                    nFiddle = 0x3;
+                    nFiddle = S8;
                 else
-                    nFiddle = 0x7;
+                    nFiddle = 0x4|S8;
             }
 
             for (uint32 x = 0; x < tinfo.WidthToLoad; x+=2)
@@ -486,7 +486,7 @@ void ConvertI4_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             for (uint32 x = 0; x < tinfo.WidthToLoad; x+=2)
             {
-                uint8 b = pSrc[dwByteOffset ^ 0x3];
+                uint8 b = pSrc[dwByteOffset ^ S8];
 
                 // Even
                 //*pDst++ = R4G4B4A4_MAKE(b>>4, b>>4, b>>4, b>>4);
@@ -519,9 +519,9 @@ void ConvertI8_16(CTexture *pTexture, const TxtrInfo &tinfo)
         for (uint32 y = 0; y < tinfo.HeightToLoad; y++)
         {
             if ((y%2) == 0)
-                nFiddle = 0x3;
+                nFiddle = S8;
             else
-                nFiddle = 0x7;
+                nFiddle = 0x4|S8;
 
             uint16 *pDst = (uint16*)((uint8 *)dInfo.lpSurface + y * dInfo.lPitch);
 
@@ -550,7 +550,7 @@ void ConvertI8_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
             {
-                uint8 b = *(uint8*)((pSrc+dwByteOffset)^0x3);
+                uint8 b = *(uint8*)((pSrc+dwByteOffset)^S8);
 
                 *pDst++ = R4G4B4A4_MAKE(b>>4,
                                       b>>4,
@@ -585,9 +585,9 @@ void ConvertCI4_RGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
         for (uint32 y = 0; y <  tinfo.HeightToLoad; y++)
         {
             if ((y%2) == 0)
-                nFiddle = 0x3;
+                nFiddle = S8;
             else
-                nFiddle = 0x7;
+                nFiddle = 0x4|S8;
 
 
             uint16 * pDst = (uint16 *)((uint8 *)dInfo.lpSurface + y * dInfo.lPitch);
@@ -601,8 +601,8 @@ void ConvertCI4_RGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
                 uint8 bhi = (b&0xf0)>>4;
                 uint8 blo = (b&0x0f);
 
-                pDst[0] = Convert555ToR4G4B4A4(pPal[bhi^1]);    // Remember palette is in different endian order!
-                pDst[1] = Convert555ToR4G4B4A4(pPal[blo^1]);    // Remember palette is in different endian order!
+                pDst[0] = Convert555ToR4G4B4A4(pPal[bhi^S16]);    // Remember palette is in different endian order!
+                pDst[1] = Convert555ToR4G4B4A4(pPal[blo^S16]);    // Remember palette is in different endian order!
                 pDst+=2;
 
                 dwByteOffset++;
@@ -621,13 +621,13 @@ void ConvertCI4_RGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             for (uint32 x = 0; x < tinfo.WidthToLoad; x+=2)
             {
-                uint8 b = pSrc[dwByteOffset ^ 0x3];
+                uint8 b = pSrc[dwByteOffset ^ S8];
 
                 uint8 bhi = (b&0xf0)>>4;
                 uint8 blo = (b&0x0f);
 
-                pDst[0] = Convert555ToR4G4B4A4(pPal[bhi^1]);    // Remember palette is in different endian order!
-                pDst[1] = Convert555ToR4G4B4A4(pPal[blo^1]);    // Remember palette is in different endian order!
+                pDst[0] = Convert555ToR4G4B4A4(pPal[bhi^S16]);    // Remember palette is in different endian order!
+                pDst[1] = Convert555ToR4G4B4A4(pPal[blo^S16]);    // Remember palette is in different endian order!
                 pDst+=2;
 
                 dwByteOffset++;
@@ -686,9 +686,9 @@ void ConvertCI4_IA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
         for (uint32 y = 0; y <  tinfo.HeightToLoad; y++)
         {
             if ((y%2) == 0)
-                nFiddle = 0x3;
+                nFiddle = S8;
             else
-                nFiddle = 0x7;
+                nFiddle = 0x4|S8;
 
 
             uint16 * pDst = (uint16 *)((uint8 *)dInfo.lpSurface + y * dInfo.lPitch);
@@ -702,8 +702,8 @@ void ConvertCI4_IA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
                 uint8 bhi = (b&0xf0)>>4;
                 uint8 blo = (b&0x0f);
 
-                pDst[0] = ConvertIA16ToR4G4B4A4(pPal[bhi^1]);   // Remember palette is in different endian order!
-                pDst[1] = ConvertIA16ToR4G4B4A4(pPal[blo^1]);   // Remember palette is in different endian order!
+                pDst[0] = ConvertIA16ToR4G4B4A4(pPal[bhi^S16]);   // Remember palette is in different endian order!
+                pDst[1] = ConvertIA16ToR4G4B4A4(pPal[blo^S16]);   // Remember palette is in different endian order!
                 pDst += 2;
                 dwByteOffset++;
             }
@@ -721,13 +721,13 @@ void ConvertCI4_IA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             for (uint32 x = 0; x < tinfo.WidthToLoad; x+=2)
             {
-                uint8 b = pSrc[dwByteOffset ^ 0x3];
+                uint8 b = pSrc[dwByteOffset ^ S8];
 
                 uint8 bhi = (b&0xf0)>>4;
                 uint8 blo = (b&0x0f);
 
-                pDst[0] = ConvertIA16ToR4G4B4A4(pPal[bhi^1]);   // Remember palette is in different endian order!
-                pDst[1] = ConvertIA16ToR4G4B4A4(pPal[blo^1]);   // Remember palette is in different endian order!
+                pDst[0] = ConvertIA16ToR4G4B4A4(pPal[bhi^S16]);   // Remember palette is in different endian order!
+                pDst[1] = ConvertIA16ToR4G4B4A4(pPal[blo^S16]);   // Remember palette is in different endian order!
                 pDst+=2;
 
                 dwByteOffset++;
@@ -760,9 +760,9 @@ void ConvertCI8_RGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
         for (uint32 y = 0; y < tinfo.HeightToLoad; y++)
         {
             if ((y%2) == 0)
-                nFiddle = 0x3;
+                nFiddle = S8;
             else
-                nFiddle = 0x7;
+                nFiddle = 0x4|S8;
 
             uint16 *pDst = (uint16 *)((uint8 *)dInfo.lpSurface + y * dInfo.lPitch);
 
@@ -772,7 +772,7 @@ void ConvertCI8_RGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
             {
                 uint8 b = pSrc[dwByteOffset ^ nFiddle];
 
-                *pDst++ = Convert555ToR4G4B4A4(pPal[b^1]);  // Remember palette is in different endian order!
+                *pDst++ = Convert555ToR4G4B4A4(pPal[b^S16]);  // Remember palette is in different endian order!
 
                 dwByteOffset++;
             }
@@ -791,9 +791,9 @@ void ConvertCI8_RGBA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
             
             for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
             {
-                uint8 b = pSrc[dwByteOffset ^ 0x3];
+                uint8 b = pSrc[dwByteOffset ^ S8];
 
-                *pDst++ = Convert555ToR4G4B4A4(pPal[b^1]);  // Remember palette is in different endian order!
+                *pDst++ = Convert555ToR4G4B4A4(pPal[b^S16]);  // Remember palette is in different endian order!
 
                 dwByteOffset++;
             }
@@ -823,9 +823,9 @@ void ConvertCI8_IA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
         for (uint32 y = 0; y < tinfo.HeightToLoad; y++)
         {
             if ((y%2) == 0)
-                nFiddle = 0x3;
+                nFiddle = S8;
             else
-                nFiddle = 0x7;
+                nFiddle = 0x4|S8;
 
             uint16 *pDst = (uint16 *)((uint8 *)dInfo.lpSurface + y * dInfo.lPitch);
 
@@ -835,7 +835,7 @@ void ConvertCI8_IA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
             {
                 uint8 b = pSrc[dwByteOffset ^ nFiddle];
 
-                *pDst++ = ConvertIA16ToR4G4B4A4(pPal[b^1]); // Remember palette is in different endian order!
+                *pDst++ = ConvertIA16ToR4G4B4A4(pPal[b^S16]); // Remember palette is in different endian order!
 
                 dwByteOffset++;
             }
@@ -854,9 +854,9 @@ void ConvertCI8_IA16_16(CTexture *pTexture, const TxtrInfo &tinfo)
             
             for (uint32 x = 0; x < tinfo.WidthToLoad; x++)
             {
-                uint8 b = pSrc[dwByteOffset ^ 0x3];
+                uint8 b = pSrc[dwByteOffset ^ S8];
 
-                *pDst++ = ConvertIA16ToR4G4B4A4(pPal[b^1]); // Remember palette is in different endian order!
+                *pDst++ = ConvertIA16ToR4G4B4A4(pPal[b^S16]); // Remember palette is in different endian order!
 
                 dwByteOffset++;
             }
@@ -896,10 +896,10 @@ void ConvertYUV_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
             for (x = 0; x < tinfo.WidthToLoad/2; x++)
             {
-                int y0 = *(uint8*)&pByteSrc[(dwWordOffset+1)^nFiddle];
-                int y1 = *(uint8*)&pByteSrc[(dwWordOffset+3)^nFiddle];
-                int u0 = *(uint8*)&pByteSrc[(dwWordOffset  )^nFiddle];
-                int v0 = *(uint8*)&pByteSrc[(dwWordOffset+2)^nFiddle];
+                int y0 = *(uint8*)&pByteSrc[(dwWordOffset+(2^S8))^nFiddle];
+                int y1 = *(uint8*)&pByteSrc[(dwWordOffset+(0^S8))^nFiddle];
+                int u0 = *(uint8*)&pByteSrc[(dwWordOffset+(3^S8))^nFiddle];
+                int v0 = *(uint8*)&pByteSrc[(dwWordOffset+(1^S8))^nFiddle];
 
                 wDst[x*2+0] = ConvertYUV16ToR4G4B4(y0,u0,v0);
                 wDst[x*2+1] = ConvertYUV16ToR4G4B4(y1,u0,v0);
@@ -921,9 +921,9 @@ void ConvertYUV_16(CTexture *pTexture, const TxtrInfo &tinfo)
             for (y = 0; y < tinfo.HeightToLoad; y++)
             {
                 if ((y%2) == 0)
-                    nFiddle = 0x2;
+                    nFiddle = S8;
                 else
-                    nFiddle = 0x2 | 0x4;
+                    nFiddle = S8 | 0x4;
 
                 // dwDst points to start of destination row
                 uint16 * wDst = (uint16 *)((uint8 *)dInfo.lpSurface + y*dInfo.lPitch);
@@ -934,10 +934,10 @@ void ConvertYUV_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
                 for (x = 0; x < tinfo.WidthToLoad/2; x++)
                 {
-                    uint32 y0 = *(uint8*)&pByteSrc[(dwWordOffset+1)^nFiddle];
-                    uint32 y1 = *(uint8*)&pByteSrc[(dwWordOffset+3)^nFiddle];
-                    uint32 u0 = *(uint8*)&pByteSrc[(dwWordOffset  )^nFiddle];
-                    uint32 v0 = *(uint8*)&pByteSrc[(dwWordOffset+2)^nFiddle];
+                    uint32 y0 = *(uint8*)&pByteSrc[(dwWordOffset+(2^S8))^nFiddle];
+                    uint32 y1 = *(uint8*)&pByteSrc[(dwWordOffset+(0^S8))^nFiddle];
+                    uint32 u0 = *(uint8*)&pByteSrc[(dwWordOffset+(3^S8))^nFiddle];
+                    uint32 v0 = *(uint8*)&pByteSrc[(dwWordOffset+(1^S8))^nFiddle];
 
                     wDst[x*2+0] = ConvertYUV16ToR4G4B4(y0,u0,v0);
                     wDst[x*2+1] = ConvertYUV16ToR4G4B4(y1,u0,v0);
@@ -959,10 +959,10 @@ void ConvertYUV_16(CTexture *pTexture, const TxtrInfo &tinfo)
 
                 for (x = 0; x < tinfo.WidthToLoad/2; x++)
                 {
-                    uint32 y0 = *(uint8*)&pByteSrc[(dwWordOffset+1)^3];
-                    uint32 y1 = *(uint8*)&pByteSrc[(dwWordOffset+3)^3];
-                    uint32 u0 = *(uint8*)&pByteSrc[(dwWordOffset  )^3];
-                    uint32 v0 = *(uint8*)&pByteSrc[(dwWordOffset+2)^3];
+                    uint32 y0 = *(uint8*)&pByteSrc[(dwWordOffset+(2^S8))^S8];
+                    uint32 y1 = *(uint8*)&pByteSrc[(dwWordOffset+(0^S8))^S8];
+                    uint32 u0 = *(uint8*)&pByteSrc[(dwWordOffset+(3^S8))^S8];
+                    uint32 v0 = *(uint8*)&pByteSrc[(dwWordOffset+(1^S8))^S8];
 
                     wDst[x*2+0] = ConvertYUV16ToR4G4B4(y0,u0,v0);
                     wDst[x*2+1] = ConvertYUV16ToR4G4B4(y1,u0,v0);
@@ -1018,13 +1018,13 @@ void Convert4b_16(CTexture *pTexture, const TxtrInfo &tinfo)
             if (tinfo.bSwapped)
             {
                 if ((y%2) == 0)
-                    nFiddle = 0x3;
+                    nFiddle = S8;
                 else
-                    nFiddle = 0x7;
+                    nFiddle = 0x4|S8;
             }
             else
             {
-                nFiddle = 3;
+                nFiddle = S8;
             }
         }
         else
@@ -1051,8 +1051,8 @@ void Convert4b_16(CTexture *pTexture, const TxtrInfo &tinfo)
                     }
                     else
                     {
-                        pDst[0] = ConvertIA16ToR4G4B4A4(pPal[bhi^1]);
-                        pDst[1] = ConvertIA16ToR4G4B4A4(pPal[blo^1]);
+                        pDst[0] = ConvertIA16ToR4G4B4A4(pPal[bhi^S16]);
+                        pDst[1] = ConvertIA16ToR4G4B4A4(pPal[blo^S16]);
                     }
                 }
                 else
@@ -1064,8 +1064,8 @@ void Convert4b_16(CTexture *pTexture, const TxtrInfo &tinfo)
                     }
                     else
                     {
-                        pDst[0] = Convert555ToR4G4B4A4(pPal[bhi^1]);
-                        pDst[1] = Convert555ToR4G4B4A4(pPal[blo^1]);
+                        pDst[0] = Convert555ToR4G4B4A4(pPal[bhi^S16]);
+                        pDst[1] = Convert555ToR4G4B4A4(pPal[blo^S16]);
                     }
                 }
             }
@@ -1123,13 +1123,13 @@ void Convert8b_16(CTexture *pTexture, const TxtrInfo &tinfo)
             if (tinfo.bSwapped)
             {
                 if ((y%2) == 0)
-                    nFiddle = 0x3;
+                    nFiddle = S8;
                 else
-                    nFiddle = 0x7;
+                    nFiddle = 0x4|S8;
             }
             else
             {
-                nFiddle = 3;
+                nFiddle = S8;
             }
         }
         else
@@ -1150,14 +1150,14 @@ void Convert8b_16(CTexture *pTexture, const TxtrInfo &tinfo)
                     if( tinfo.tileNo>=0 )
                         *pDst = ConvertIA16ToR4G4B4A4(g_Tmem.g_Tmem16bit[0x400+(b<<2)]);
                     else
-                        *pDst = ConvertIA16ToR4G4B4A4(pPal[b^1]);
+                        *pDst = ConvertIA16ToR4G4B4A4(pPal[b^S16]);
                 }
                 else
                 {
                     if( tinfo.tileNo>=0 )
                         *pDst = Convert555ToR4G4B4A4(g_Tmem.g_Tmem16bit[0x400+(b<<2)]);
                     else
-                        *pDst = Convert555ToR4G4B4A4(pPal[b^1]);
+                        *pDst = Convert555ToR4G4B4A4(pPal[b^S16]);
                 }
             }
             else if( tinfo.Format == TXT_FMT_IA )
@@ -1207,13 +1207,13 @@ void Convert16b_16(CTexture *pTexture, const TxtrInfo &tinfo)
             if (tinfo.bSwapped)
             {
                 if ((y&1) == 0)
-                    nFiddle = 0x1;
+                    nFiddle = S16;
                 else
-                    nFiddle = 0x3;
+                    nFiddle = 0x2|S16;
             }
             else
             {
-                nFiddle = 0x1;
+                nFiddle = S16;
             }
         }
         else
@@ -1247,4 +1247,3 @@ void Convert16b_16(CTexture *pTexture, const TxtrInfo &tinfo)
     pTexture->EndUpdate(&dInfo);
     pTexture->SetOthersVariables();
 }
-

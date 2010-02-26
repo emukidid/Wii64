@@ -112,6 +112,10 @@ inline void RSP_Vtx_Clipping(int i) {}
 ALIGN(16,RSP_Options gRSP)
 ALIGN(16,RDP_Options gRDP)
 
+#ifdef __GX__
+GX_Options gGX;
+#endif //__GX__    
+
 static ALIGN(16,XVECTOR4 g_normal)
 //static int norms[3];
 
@@ -837,7 +841,12 @@ void ComputeLOD(bool openGL)
     dt = sqrtf((s0-s1)*(s0-s1)+(t0-t1)*(t0-t1));
 
     float lod = dt/d;
+#ifndef __GX__
+	//TODO: Replace log10f() with something compatible with newlib.
     float frac = log10f(lod)/log10f(2.0f);
+#else //!__GX__
+    float frac = log10(lod)/log10(2.0f);
+#endif //__GX__
     //DEBUGGER_IF_DUMP(pauseAtNext,{DebuggerAppendMsg("LOD frac = %f", frac);});
     frac = (lod / powf(2.0f,floorf(frac)));
     frac = frac - floorf(frac);
@@ -1274,11 +1283,11 @@ inline void ReplaceAlphaWithFogFactor(int i)
     {
         // Use fog factor to replace vertex alpha
         if( g_vecProjected[i].z > 1 )
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = 0xFF;
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = 0xFF;
         if( g_vecProjected[i].z < 0 )
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = 0;
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = 0;
         else
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = (uint8)(g_vecProjected[i].z*255);    
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = (uint8)(g_vecProjected[i].z*255);    
     }
 }
 
@@ -1362,7 +1371,7 @@ void ProcessVertexDataSSE(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
                 g_dwVtxDifColor[i] = SSELightVert();
             else
                 g_dwVtxDifColor[i] = LightVert(g_normal, i);
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vert.rgba.a; // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8) = vert.rgba.a; // still use alpha from the vertex
         }
         else
         {
@@ -1479,7 +1488,7 @@ void ProcessVertexDataNoSSE(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
             Vec3TransformNormal(g_normal, gRSPmodelViewTop);
             g_dwVtxDifColor[i] = LightVert(g_normal, i);
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vert.rgba.a; // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = vert.rgba.a; // still use alpha from the vertex
         }
         else
         {
@@ -1647,7 +1656,7 @@ void SetPrimitiveDepth(uint32 z, uint32 dwDZ)
 
     //gRDP.fPrimitiveDepth = gRDP.fPrimitiveDepth*2-1;  
     /*
-    z=0xFFFF    ->  1   the farest
+    z=0xFFFF    ->  1   the farthest
     z=0         ->  -1  the nearest
     */
 
@@ -1773,9 +1782,9 @@ void ProcessVertexDataDKR(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
     {
         XVECTOR3 w;
 
-        g_vtxNonTransformed[i].x = (float)*(short*)((pVtxBase+nOff + 0) ^ 2);
-        g_vtxNonTransformed[i].y = (float)*(short*)((pVtxBase+nOff + 2) ^ 2);
-        g_vtxNonTransformed[i].z = (float)*(short*)((pVtxBase+nOff + 4) ^ 2);
+        g_vtxNonTransformed[i].x = (float)*(short*)((pVtxBase+nOff + 0) ^ S16);
+        g_vtxNonTransformed[i].y = (float)*(short*)((pVtxBase+nOff + 2) ^ S16);
+        g_vtxNonTransformed[i].z = (float)*(short*)((pVtxBase+nOff + 4) ^ S16);
 
         //if( status.isSSEEnabled )
         //  SSEVec3TransformDKR(g_vtxTransformed[i], g_vtxNonTransformed[i]);
@@ -1816,8 +1825,8 @@ void ProcessVertexDataDKR(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
         RSP_Vtx_Clipping(i);
 
-        short wA = *(short*)((pVtxBase+nOff + 6) ^ 2);
-        short wB = *(short*)((pVtxBase+nOff + 8) ^ 2);
+        short wA = *(short*)((pVtxBase+nOff + 6) ^ S16);
+        short wB = *(short*)((pVtxBase+nOff + 8) ^ S16);
 
         s8 r = (s8)(wA >> 8);
         s8 g = (s8)(wA);
@@ -1898,10 +1907,10 @@ void ProcessVertexDataPD(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
         RSP_Vtx_Clipping(i);
 
         uint8 *addr = g_pRDRAMu8+dwPDCIAddr+ (vert.cidx&0xFF);
-        uint32 a = addr[0];
-        uint32 r = addr[3];
-        uint32 g = addr[2];
-        uint32 b = addr[1];
+        uint32 a = addr[3 ^ S8];
+        uint32 r = addr[0 ^ S8];
+        uint32 g = addr[1 ^ S8];
+        uint32 b = addr[2 ^ S8];
 
         if( gRSP.bLightingEnable )
         {
@@ -1920,7 +1929,7 @@ void ProcessVertexDataPD(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
                 Vec3TransformNormal(g_normal, gRSPmodelViewTop);
                 g_dwVtxDifColor[i] = LightVert(g_normal, i);
             }
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = (uint8)a;    // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = (uint8)a;    // still use alpha from the vertex
         }
         else
         {
@@ -2047,7 +2056,7 @@ void ProcessVertexDataConker(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
                 g_dwVtxDifColor[i] |= (b    );          
             }
 
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vert.rgba.a; // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = vert.rgba.a; // still use alpha from the vertex
         }
         else
         {
@@ -2076,9 +2085,9 @@ void ProcessVertexDataConker(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
         // can't generate tex coord)
         if (gRSP.bTextureGen && gRSP.bLightingEnable )
         {
-                g_normal.x = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+0)^3)+dwConkerVtxZAddr);
-                g_normal.y = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+1)^3)+dwConkerVtxZAddr);
-                g_normal.z = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+2)^3)+dwConkerVtxZAddr);
+                g_normal.x = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+0)^S8)+dwConkerVtxZAddr);
+                g_normal.y = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+1)^S8)+dwConkerVtxZAddr);
+                g_normal.z = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+2)^S8)+dwConkerVtxZAddr);
                 Vec3TransformNormal(g_normal, gRSPmodelViewTop);
                 TexGen(g_fVtxTxtCoords[i].x, g_fVtxTxtCoords[i].y);
         }
@@ -2095,13 +2104,21 @@ void ProcessVertexDataConker(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
 
 typedef struct{
+#ifndef _BIG_ENDIAN
     short y;
     short x;
     short flag;
     short z;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    short x;
+    short y;
+    short z;
+    short flag;
+#endif // _BIG_ENDIAN
 } RS_Vtx_XYZ;
 
 typedef union {
+#ifndef _BIG_ENDIAN
     struct {
         uint8 a;
         uint8 b;
@@ -2114,6 +2131,20 @@ typedef union {
         char ny;    //g
         char nx;    //r
     };
+#else // !_BIG_ENDIAN - Big Endian fix.
+    struct {
+        uint8 r;
+        uint8 g;
+        uint8 b;
+        uint8 a;
+    };
+    struct {
+        char nx;    //r
+        char ny;    //g
+        char nz;    //b
+        char na;
+    };
+#endif // _BIG_ENDIAN
 } RS_Vtx_Color;
 
 
@@ -2182,7 +2213,7 @@ void ProcessVertexData_Rogue_Squadron(uint32 dwXYZAddr, uint32 dwColorAddr, uint
                 Vec3TransformNormal(g_normal, gRSPmodelViewTop);
                 g_dwVtxDifColor[i] = LightVert(g_normal, i);
             }
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vertcolors.a;    // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = vertcolors.a;    // still use alpha from the vertex
         }
         else
         {
@@ -2371,6 +2402,20 @@ void UpdateCombinedMatrix()
     if( gRSP.bMatrixIsUpdated )
     {
         gRSPworldProject = gRSP.modelviewMtxs[gRSP.modelViewMtxTop] * gRSP.projectionMtxs[gRSP.projectionMtxTop];
+#ifdef __GX__
+//		if(gRSP.projectionMtxs[gRSP.projectionMtxTop].m[3][2] != 0)
+		if(gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][3] != 0)
+		{
+//			gGX.GXprojW[2][2] = -GXprojZOffset - (GXprojZScale*gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][2]/gRSP.projectionMtxs[gRSP.projectionMtxTop].m[3][2]);
+//			gGX.GXprojW[2][3] = GXprojZScale*(gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][3] - (gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][2]*gRSP.projectionMtxs[gRSP.projectionMtxTop].m[3][3]/gRSP.projectionMtxs[gRSP.projectionMtxTop].m[3][2]));
+			gGX.GXprojW[2][2] = -GXprojZOffset - (GXprojZScale*gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][2]/gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][3]);
+			gGX.GXprojW[2][3] = GXprojZScale*(gRSP.projectionMtxs[gRSP.projectionMtxTop].m[3][2] - (gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][2]*gRSP.projectionMtxs[gRSP.projectionMtxTop].m[3][3]/gRSP.projectionMtxs[gRSP.projectionMtxTop].m[2][3]));
+//			gGX.GXprojW[2][3] = gGX.GXprojW[2][3]-0.25;
+			gGX.GXuseProjW = true;
+		}
+		else
+			gGX.GXuseProjW = false;
+#endif //__GX__
         gRSP.bMatrixIsUpdated = false;
         gRSP.bCombinedMatrixIsUpdated = true;
     }

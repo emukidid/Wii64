@@ -247,14 +247,14 @@ void RDP_GFX_DumpVtxInfoDKR(uint32 dwAddr, uint32 dwV0, uint32 dwN)
         i = 0;
         for (dwV = dwV0; dwV < dwV0 + dwN; dwV++)
         {
-            float x = (float)psSrc[(i + 0) ^ 1];
-            float y = (float)psSrc[(i + 1) ^ 1];
-            float z = (float)psSrc[(i + 2) ^ 1];
+            float x = (float)psSrc[(i + 0) ^ S16];
+            float y = (float)psSrc[(i + 1) ^ S16];
+            float z = (float)psSrc[(i + 2) ^ S16];
 
             //uint16 wFlags = CRender::g_pRender->m_dwVecFlags[dwV]; //(uint16)psSrc[3^0x1];
 
-            uint16 wA = psSrc[(i + 3) ^ 1];
-            uint16 wB = psSrc[(i + 4) ^ 1];
+            uint16 wA = psSrc[(i + 3) ^ S16];
+            uint16 wB = psSrc[(i + 4) ^ S16];
 
             uint8 a = wA>>8;
             uint8 b = (uint8)wA;
@@ -276,11 +276,11 @@ void RDP_GFX_DumpVtxInfoDKR(uint32 dwAddr, uint32 dwV0, uint32 dwN)
         for (dwV = dwV0; dwV < dwV0 + dwN; dwV++)
         {
             LOG_UCODE(" #%02d %04x %04x %04x %04x %04x",
-                dwV, pwSrc[(i + 0) ^ 1],
-                pwSrc[(i + 1) ^ 1],
-                pwSrc[(i + 2) ^ 1],
-                pwSrc[(i + 3) ^ 1],
-                pwSrc[(i + 4) ^ 1]);
+                dwV, pwSrc[(i + 0) ^ S16],
+                pwSrc[(i + 1) ^ S16],
+                pwSrc[(i + 2) ^ S16],
+                pwSrc[(i + 3) ^ S16],
+                pwSrc[(i + 4) ^ S16]);
 
             i += 5;
         }
@@ -411,7 +411,7 @@ void TexRectToN64FrameBuffer_YUV_16b(uint32 x0, uint32 y0, uint32 width, uint32 
             int y1 = (uint8)(val>>16)&0xFF;
             int u  = (uint8)(val>>24)&0xFF;
 
-            pN64Dst[x+x0] = ConvertYUVtoR5G5B5X1(y0,u,v);
+            pN64Dst[x+x0+0] = ConvertYUVtoR5G5B5X1(y0,u,v); //Note: This should be Endian-independent
             pN64Dst[x+x0+1] = ConvertYUVtoR5G5B5X1(y1,u,v);
         }
     }
@@ -1480,8 +1480,8 @@ void PD_LoadMatrix_0xb4(uint32 addr)
     {
         for (j = 0; j < 4; j++) 
         {
-            int     hi = *(short *)((unsigned char*)data + (((i<<3)+(j<<1)     )^0x2));
-            int  lo = *(uint16*)((unsigned char*)data + (((i<<3)+(j<<1) + 32)^0x2));
+            int  hi = *(short *)((unsigned char*)data + (((i<<3)+(j<<1)     )^(S16<<1)));
+            int  lo = *(uint16*)((unsigned char*)data + (((i<<3)+(j<<1) + 32)^(S16<<1)));
             matToLoad.m[i][j] = (float)((hi<<16) | lo) * fRecip;
         }
     }

@@ -17,16 +17,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
 #include <vector>
 #include <fstream>
 
 #include <stdlib.h>
 #include <limits.h> // PATH_MAX
+#ifdef __GX__
+#include <sys\syslimits.h> //PATH_MAX
+#endif //__GX__
 
 #include "osal_preproc.h"
 #include "m64p_types.h"
 #include "m64p_plugin.h"
 #include "m64p_config.h"
+#ifndef __GX__
+#include "../main/version.h"
+#else //!__GX__
+#include "version.h"
+#endif //__GX__
 
 #include "Config.h"
 #include "Debugger.h"
@@ -1303,6 +1314,18 @@ static int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* sz
 
     // Generate the CRC-ID for this rom:
     sprintf((char*)szCRC, "%08x%08x-%02x", (unsigned int)dwCRC1, (unsigned int)dwCRC2, nCountryID);
+#ifdef _BIG_ENDIAN
+	// Fix the CRC-ID for Big Endian
+    CHAR szCRCtmp[50+1];
+    strcpy((char*)szCRCtmp, (char*)szCRC);
+	for (i = 0; i < 4; i++)
+	{
+		szCRC[2*i] = szCRCtmp[2*(3-i)];
+		szCRC[2*i+1] = szCRCtmp[2*(3-i)+1];
+		szCRC[2*i+8] = szCRCtmp[2*(3-i)+8];
+		szCRC[2*i+9] = szCRCtmp[2*(3-i)+9];
+	}
+#endif
 
     for (i = 0; i < IniSections.size(); i++)
     {

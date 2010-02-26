@@ -100,10 +100,17 @@ typedef enum {
 
 
 typedef struct {
+#ifndef _BIG_ENDIAN
     uint8 a;
     uint8 b;
     uint8 c;
     uint8 d;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    uint8 d;
+    uint8 c;
+    uint8 b;
+    uint8 a;
+#endif // _BIG_ENDIAN
 } N64CombinerType;
 
 #define CONST_FLAG4(a,b,c,d)    (a|(b<<8)|(c<<16)|(d<<24))  //(A-B)*C+D

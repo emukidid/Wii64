@@ -1241,12 +1241,12 @@ uint32 dwPalAddress = g_TI.dwAddr + dwRDRAMOffset;
 //Copy PAL to the PAL memory
 uint16 *srcPal = (uint16*)(g_pRDRAMu8 + (dwPalAddress& (g_dwRamSize-1)) );
 for (uint32 i=0; i<dwCount && i<0x100; i++)
-    g_wRDPTlut[(i+dwTMEMOffset)^1] = srcPal[i^1];
+    g_wRDPTlut[(i+dwTMEMOffset)^S16] = srcPal[i^S16];
 
 if( options.bUseFullTMEM )
     {
     for (uint32 i=0; i<dwCount && i+tile.dwTMem<0x200; i++)
-        *(uint16*)(&g_Tmem.g_Tmem64bit[tile.dwTMem+i]) = srcPal[i^1];
+        *(uint16*)(&g_Tmem.g_Tmem64bit[tile.dwTMem+i]) = srcPal[i^S16];
     }
 
 LOG_TEXTURE(

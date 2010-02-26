@@ -17,6 +17,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#include "GFXPlugin.h"
+#endif //__GX__
+
 #include <vector>
 
 #include <stdarg.h>
@@ -38,6 +43,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "TextureManager.h"
 #include "Video.h"
 #include "version.h"
+
+#ifdef DEBUGON
+extern "C" { void _break(); }
+#endif
 
 //=======================================================
 // local variables
@@ -95,6 +104,28 @@ ptr_VidExt_ToggleFullScreen      CoreVideo_ToggleFullScreen = NULL;
 ptr_VidExt_GL_GetProcAddress     CoreVideo_GL_GetProcAddress = NULL;
 ptr_VidExt_GL_SetAttribute       CoreVideo_GL_SetAttribute = NULL;
 ptr_VidExt_GL_SwapBuffers        CoreVideo_GL_SwapBuffers = NULL;
+
+//---------------------------------------------------------------------------------------
+// Wii64 Interface Functions
+#ifdef __GX__
+//TODO: Move to VI?
+char printToScreen;
+char showFPSonScreen;
+/*bool updateDEBUGflag;
+bool new_fb;
+unsigned int* xfb[2];
+int which_fb;*/
+
+void VI_GX_setFB(unsigned int* fb1, unsigned int* fb2);
+
+void gfx_set_fb(unsigned int* fb1, unsigned int* fb2){
+	VI_GX_setFB(fb1, fb2);
+}
+
+void showLoadProgress(float percent){
+//	VI_GX_showLoadProg(percent);
+}
+#endif // __GX__
 
 //---------------------------------------------------------------------------------------
 // Forward function declarations
@@ -262,6 +293,7 @@ static bool StartVideo(void)
     g_CritialSection.Lock();
 
     memcpy(&g_curRomInfo.romheader, g_GraphicsInfo.HEADER, sizeof(ROMHeader));
+#ifndef _BIG_ENDIAN
     unsigned char *puc = (unsigned char *) &g_curRomInfo.romheader;
     unsigned int i;
     unsigned char temp;
@@ -274,7 +306,7 @@ static bool StartVideo(void)
         puc[i+1] = puc[i+2];
         puc[i+2] = temp;
     }
-
+#endif //_BIG_ENDIAN
     ROM_GetRomNameFromHeader(g_curRomInfo.szGameName, &g_curRomInfo.romheader);
     Ini_GetRomOptions(&g_curRomInfo);
     char *p = (char *) g_curRomInfo.szGameName + (strlen((char *) g_curRomInfo.szGameName) -1);     // -1 to skip null
@@ -295,6 +327,9 @@ static bool StartVideo(void)
     InitExternalTextures();
 
     try {
+#ifdef __GX__
+		CDeviceBuilder::SelectDeviceType(OGL_DEVICE);
+#endif //__GX__
         CDeviceBuilder::GetBuilder()->CreateGraphicsContext();
         CGraphicsContext::InitWindowInfo();
 
@@ -674,7 +709,15 @@ EXPORT int CALL RomOpen(void)
     }
     status.bDisableFPS=false;
 
+#ifdef __GX__
+# ifdef USE_EXPANSION
    g_dwRamSize = 0x800000;
+# else
+   g_dwRamSize = 0x400000;
+# endif
+#else //__GX__
+   g_dwRamSize = 0x800000;
+#endif //!__GX__
     
 #ifdef DEBUGGER
     if( debuggerPause )
@@ -698,7 +741,12 @@ EXPORT void CALL UpdateScreen(void)
     {
         static unsigned int lastTick=0;
         static int frames=0;
+#ifndef __GX__
         unsigned int nowTick = SDL_GetTicks();
+#else //!__GX__
+		//TODO: Replace with proper function
+        unsigned int nowTick = 0;
+#endif //__GX__
         frames++;
         if(lastTick + 5000 <= nowTick)
         {
@@ -898,6 +946,8 @@ EXPORT void CALL ReadScreen(void **dest, int *width, int *height)
    if (*dest == 0)
      return;
    
+#ifndef __GX__
+   //TODO: Replace with GX commands
    GLint oldMode;
    glGetIntegerv( GL_READ_BUFFER, &oldMode );
    glReadBuffer( GL_FRONT );
@@ -905,6 +955,7 @@ EXPORT void CALL ReadScreen(void **dest, int *width, int *height)
    glReadPixels( 0, 0, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight,
          GL_RGB, GL_UNSIGNED_BYTE, *dest );
    glReadBuffer( oldMode );
+#endif //!__GX__
 }
     
 

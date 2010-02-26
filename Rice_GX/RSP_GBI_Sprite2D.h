@@ -40,6 +40,7 @@ void RSP_GBI_Sprite2DBase(Gfx *gfx)
 }
 
 typedef struct{
+#ifndef _BIG_ENDIAN
     uint32 SourceImagePointer;
     uint32 TlutPointer;
 
@@ -61,7 +62,29 @@ typedef struct{
 
     char  dummy2[2]; 
     short py;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    uint32 SourceImagePointer;
+    uint32 TlutPointer;
 
+    short Stride;
+    short SubImageWidth;
+
+    short SubImageHeight;
+    char  SourceImageType;
+    char  SourceImageBitSize;
+
+    short scaleX;
+    short scaleY;
+
+    char  dummy1[2]; 
+    short SourceImageOffsetS;
+
+    short SourceImageOffsetT;
+    short px;
+
+    short py;
+    char  dummy2[2]; 
+#endif // _BIG_ENDIAN
 } PuzzleMasterSprite;
 
 void RSP_GBI_Sprite2D_PuzzleMaster64(Gfx *gfx)

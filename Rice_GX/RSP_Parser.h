@@ -439,6 +439,7 @@ struct LoadCmdInfo
 };
 
 typedef struct {    // This is in Intel format
+#ifndef _BIG_ENDIAN
   uint32 SourceImagePointer;
   uint32 TlutPointer;
 
@@ -453,6 +454,22 @@ typedef struct {    // This is in Intel format
   short SourceImageOffsetS;
 
   char  dummy[4]; 
+#else // !_BIG_ENDIAN - Big Endian fix.
+  uint32 SourceImagePointer;
+  uint32 TlutPointer;
+
+  short Stride;
+  short SubImageWidth;
+
+  short SubImageHeight;
+  char  SourceImageType;
+  char  SourceImageBitSize;
+
+  short SourceImageOffsetS;
+  short SourceImageOffsetT;
+
+  char  dummy[4]; 
+#endif // _BIG_ENDIAN
 } SpriteStruct;         //Converted Sprint struct in Intel format
 
 typedef struct{
@@ -468,6 +485,7 @@ typedef struct{
 
 typedef struct
 {
+#ifndef _BIG_ENDIAN
     unsigned int    c2_m2b:2;
     unsigned int    c1_m2b:2;
     unsigned int    c2_m2a:2;
@@ -476,6 +494,16 @@ typedef struct
     unsigned int    c1_m1b:2;
     unsigned int    c2_m1a:2;
     unsigned int    c1_m1a:2;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    unsigned int    c1_m1a:2;
+    unsigned int    c2_m1a:2;
+    unsigned int    c1_m1b:2;
+    unsigned int    c2_m1b:2;
+    unsigned int    c1_m2a:2;
+    unsigned int    c2_m2a:2;
+    unsigned int    c1_m2b:2;
+    unsigned int    c2_m2b:2;
+#endif // _BIG_ENDIAN
 } RDP_BlenderSetting;
 
 typedef struct
@@ -484,6 +512,7 @@ typedef struct
     {
         struct
         {
+#ifndef _BIG_ENDIAN
             // Low bits
             unsigned int        alpha_compare : 2;          // 0..1
             unsigned int        depth_source : 1;           // 2..2
@@ -524,6 +553,48 @@ typedef struct
             unsigned int        atomic_prim : 1;                // 23..23
 
             unsigned int        pad : 8;                    // 24..31 - padding
+#else // !_BIG_ENDIAN - Big Endian fix.
+            // Low bits
+            unsigned int        blender : 16;               // 16..31
+
+        //  unsigned int        render_mode : 13;           // 3..15
+            unsigned int        tex_edge : 1;               // 15 - Not used
+            unsigned int        force_bl : 1;               // 14
+            unsigned int        alpha_cvg_sel : 1;          // 13
+            unsigned int        cvg_x_alpha : 1;            // 12
+
+            unsigned int        zmode : 2;                  // 10..11
+            unsigned int        cvg_dst : 2;                // 8..9
+
+            unsigned int        clr_on_cvg : 1;             // 7
+            unsigned int        im_rd : 1;                  // 6
+            unsigned int        z_upd : 1;                  // 5
+            unsigned int        z_cmp : 1;                  // 4
+            unsigned int        aa_en : 1;                  // 3
+
+            unsigned int        depth_source : 1;           // 2..2
+			unsigned int        alpha_compare : 2;          // 0..1
+
+            // High bits
+            unsigned int        pad : 8;                    // 24..31 - padding
+
+            unsigned int        atomic_prim : 1;                // 23..23
+            unsigned int        reserved : 1;               // 22..22 - not supported
+            unsigned int        cycle_type : 2;             // 20..21
+            unsigned int        text_persp : 1;             // 19..19
+            unsigned int        text_detail : 1;            // 17..18
+            unsigned int        text_sharpen : 1;           // 17..18
+            unsigned int        text_lod : 1;               // 16..16
+
+            unsigned int        text_tlut : 2;              // 14..15
+            unsigned int        text_filt : 2;              // 12..13
+            unsigned int        text_conv : 3;              // 9..11
+            unsigned int        key_en : 1;             // 8..8
+
+            unsigned int        rgb_dither : 2;             // 6..7
+            unsigned int        alpha_dither : 2;           // 4..5
+            unsigned int        blend_mask : 4;             // 0..3 - not supported
+#endif // _BIG_ENDIAN
 
         };
         uint64          _u64;
@@ -563,16 +634,16 @@ typedef struct
 #define RSPSegmentAddr(seg) ( gRSP.segments[((seg)>>24)&0x0F] + ((seg)&0x00FFFFFF) )
 #define RDRAM_UWORD(addr)   (*(uint32 *)((addr)+g_pRDRAMu8))
 #define RDRAM_SWORD(addr)   (*(s32 *)((addr)+g_pRDRAMu8))
-#define RDRAM_UHALF(addr)   (*(uint16 *)(((addr)^2)+g_pRDRAMu8))
-#define RDRAM_SHALF(addr)   (*(short *)(((addr)^2)+g_pRDRAMu8))
-#define RDRAM_UBYTE(addr)   (*(uint8 *)(((addr)^3)+g_pRDRAMu8))
-#define RDRAM_SBYTE(addr)   (*(s8 *)(((addr)^3)+g_pRDRAMu8))
+#define RDRAM_UHALF(addr)   (*(uint16 *)(((addr)^(S16<<1))+g_pRDRAMu8))
+#define RDRAM_SHALF(addr)   (*(short *)(((addr)^(S16<<1))+g_pRDRAMu8))
+#define RDRAM_UBYTE(addr)   (*(uint8 *)(((addr)^S8)+g_pRDRAMu8))
+#define RDRAM_SBYTE(addr)   (*(s8 *)(((addr)^S8)+g_pRDRAMu8))
 #define pRDRAM_UWORD(addr)  ((uint32 *)((addr)+g_pRDRAMu8))
 #define pRDRAM_SWORD(addr)  ((s32 *)((addr)+g_pRDRAMu8))
-#define pRDRAM_UHALF(addr)  ((uint16 *)(((addr)^2)+g_pRDRAMu8))
-#define pRDRAM_SHALF(addr)  ((short *)(((addr)^2)+g_pRDRAMu8))
-#define pRDRAM_UBYTE(addr)  ((uint8 *)(((addr)^3)+g_pRDRAMu8))
-#define pRDRAM_SBYTE(addr)  ((s8 *)(((addr)^3)+g_pRDRAMu8))
+#define pRDRAM_UHALF(addr)  ((uint16 *)(((addr)^(S16<<1))+g_pRDRAMu8))
+#define pRDRAM_SHALF(addr)  ((short *)(((addr)^(S16<<1))+g_pRDRAMu8))
+#define pRDRAM_UBYTE(addr)  ((uint8 *)(((addr)^S8)+g_pRDRAMu8))
+#define pRDRAM_SBYTE(addr)  ((s8 *)(((addr)^S8)+g_pRDRAMu8))
 
 extern uint16 g_wRDPTlut[];
 extern const char *textluttype[4];

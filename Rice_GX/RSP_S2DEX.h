@@ -41,6 +41,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define S2DEX_BGLT_LOADTILE     0xfff4
 
 typedef struct  {       //Intel format
+#ifndef _BIG_ENDIAN
   uint32    type;   
   uint32    image;
   
@@ -52,9 +53,23 @@ typedef struct  {       //Intel format
 
   uint32    flag;   
   uint32    mask;   
+#else // !_BIG_ENDIAN - Big Endian fix.
+  uint32    type;   
+  uint32    image;
+  
+  uint16    tmem;   
+  uint16    tsize;  
+  
+  uint16    tline;  
+  uint16    sid;    
+
+  uint32    flag;   
+  uint32    mask;   
+#endif // _BIG_ENDIAN
 } uObjTxtrBlock;    
 
 typedef struct  {       //Intel Format
+#ifndef _BIG_ENDIAN
   uint32    type;   
   uint32    image;
 
@@ -66,9 +81,23 @@ typedef struct  {       //Intel Format
 
   uint32    flag;   
   uint32    mask;   
+#else // !_BIG_ENDIAN - Big Endian fix.
+  uint32    type;   
+  uint32    image;
+
+  uint16    tmem;   
+  uint16    twidth; 
+
+  uint16    theight;
+  uint16    sid;    
+
+  uint32    flag;   
+  uint32    mask;   
+#endif // _BIG_ENDIAN
 } uObjTxtrTile;         // 24 bytes
 
 typedef struct  {       // Intel Format
+#ifndef _BIG_ENDIAN
   uint32    type;   
   uint32    image;
   
@@ -80,6 +109,19 @@ typedef struct  {       // Intel Format
   
   uint32    flag;   
   uint32    mask;   
+#else // !_BIG_ENDIAN - Big Endian fix.
+  uint32    type;   
+  uint32    image;
+  
+  uint16    phead;  
+  uint16    pnum;   
+  
+  uint16   zero;    
+  uint16    sid;    
+  
+  uint32    flag;   
+  uint32    mask;   
+#endif // _BIG_ENDIAN
 } uObjTxtrTLUT;     
 
 typedef union {
@@ -89,6 +131,7 @@ typedef union {
 } uObjTxtr;
 
 typedef struct {        // Intel format
+#ifndef _BIG_ENDIAN
   uint16  scaleW;       
   short  objX;          
   
@@ -108,6 +151,27 @@ typedef struct {        // Intel format
   uint8   imagePal;     
   uint8   imageSiz;     
   uint8   imageFmt;     
+#else // !_BIG_ENDIAN - Big Endian fix.
+  short  objX;          
+  uint16  scaleW;       
+  
+  uint16  imageW;       
+  uint16  paddingX;     
+  
+  short  objY;          
+  uint16  scaleH;       
+  
+  uint16  imageH;       
+  uint16  paddingY;     
+  
+  uint16  imageStride;  
+  uint16  imageAdrs;    
+
+  uint8   imageFmt;     
+  uint8   imageSiz;     
+  uint8   imagePal;     
+  uint8   imageFlags;   
+#endif // _BIG_ENDIAN
 } uObjSprite;           
 
 
@@ -117,6 +181,7 @@ typedef struct  {
 } uObjTxSprite;     /* 48 bytes */
 
 typedef struct {        // Intel format
+#ifndef _BIG_ENDIAN
   s32       A, B, C, D; 
 
   short     Y;          
@@ -124,6 +189,15 @@ typedef struct {        // Intel format
 
   uint16   BaseScaleY;  
   uint16   BaseScaleX;  
+#else // !_BIG_ENDIAN - Big Endian fix.
+  s32       A, B, C, D; 
+
+  short     X;          
+  short     Y;          
+
+  uint16   BaseScaleX;  
+  uint16   BaseScaleY;  
+#endif // _BIG_ENDIAN
 } uObjMtx;              
 
 typedef struct {
@@ -135,13 +209,21 @@ typedef struct {
 } uObjMtxReal;
 
 typedef struct {        //Intel format
+#ifndef _BIG_ENDIAN
   short   Y;            
   short   X;            
   uint16   BaseScaleY;  
   uint16   BaseScaleX;  
+#else // !_BIG_ENDIAN - Big Endian fix.
+  short   X;            
+  short   Y;            
+  uint16   BaseScaleX;  
+  uint16   BaseScaleY;  
+#endif // _BIG_ENDIAN
 } uObjSubMtx;           
 
 typedef struct  {       // Intel Format
+#ifndef _BIG_ENDIAN
   uint16    imageW;     
   uint16    imageX;     
 
@@ -169,9 +251,39 @@ typedef struct  {       // Intel Format
   uint16    tmemLoadSH; 
   uint16    tmemSize;   
   uint16    tmemSizeW;  
+#else // !_BIG_ENDIAN - Big Endian fix.
+  uint16    imageX;     
+  uint16    imageW;     
+
+  short     frameX;     
+  uint16    frameW;     
+
+  uint16    imageY;     
+  uint16    imageH;     
+
+  short     frameY;     
+  uint16    frameH;     
+
+  uint32    imagePtr;   
+
+  uint16    imageLoad;  
+  uint8     imageFmt;   
+  uint8     imageSiz;   
+
+  uint16    imagePal;   
+  uint16    imageFlip;  
+
+  uint16    tmemW;      
+  uint16    tmemH;      
+  uint16    tmemLoadSH; 
+  uint16    tmemLoadTH; 
+  uint16    tmemSizeW;  
+  uint16    tmemSize;   
+#endif // _BIG_ENDIAN
 } uObjBg;               
 
 typedef struct  {   // Intel Format
+#ifndef _BIG_ENDIAN
   uint16    imageW;     
   uint16    imageX;     
 
@@ -198,6 +310,34 @@ typedef struct  {   // Intel Format
 
   s32       imageYorig; 
   uint8     padding[4];
+#else // !_BIG_ENDIAN - Big Endian fix.
+  uint16    imageX;     
+  uint16    imageW;     
+
+  short     frameX;     
+  uint16    frameW;     
+
+  uint16    imageY;     
+  uint16    imageH;     
+
+  short     frameY;     
+  uint16    frameH;     
+
+  uint32    imagePtr;   
+
+  uint16    imageLoad;  
+  uint8     imageFmt;   
+  uint8     imageSiz;   
+
+  uint16    imagePal;   
+  uint16    imageFlip;  
+
+  uint16    scaleW;     
+  uint16    scaleH;     
+
+  s32       imageYorig; 
+  uint8     padding[4];
+#endif // _BIG_ENDIAN
 } uObjScaleBg;
 
 #endif

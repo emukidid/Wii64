@@ -266,8 +266,8 @@ void DumpTlut(uint16* palAddr)
     for( uint32 i=0; i<0x100; i+=8 )
     {
         DebuggerAppendMsg("0x%4X 0x%4X 0x%4X 0x%4X 0x%4X 0x%4X 0x%4X 0x%4X ", 
-            g_wRDPTlut[i], g_wRDPTlut[i+1], g_wRDPTlut[i+2], g_wRDPTlut[i+2], 
-            g_wRDPTlut[i+4], g_wRDPTlut[i+5], g_wRDPTlut[i+6], g_wRDPTlut[i+7]);
+            g_wRDPTlut[i^S16], g_wRDPTlut[i+1^S16], g_wRDPTlut[i+2^S16], g_wRDPTlut[i+3^S16], 
+            g_wRDPTlut[i+4^S16], g_wRDPTlut[i+5^S16], g_wRDPTlut[i+6^S16], g_wRDPTlut[i+7^S16]);
     }
 }
 
@@ -312,8 +312,8 @@ void DumpMatrixAt(uint32 dwPC)
     for (dwI = 0; dwI < 4; dwI++) {
         for (dwJ = 0; dwJ < 4; dwJ++) {
 
-            int nDataHi = *(short  *)(g_pRDRAMu8 + ((dwPC+(dwI<<3)+(dwJ<<1)     )^0x2));
-            int nDataLo = *(uint16 *)(g_pRDRAMu8 + ((dwPC+(dwI<<3)+(dwJ<<1) + 32)^0x2));
+            int nDataHi = *(((short  *)(g_pRDRAMu8 + ((dwPC+(dwI<<3)+(dwJ<<1)     ))))^S16);
+            int nDataLo = *(((uint16 *)(g_pRDRAMu8 + ((dwPC+(dwI<<3)+(dwJ<<1) + 32))))^S16);
             mat.m[dwI][dwJ] = (float)((nDataHi << 16) | nDataLo) * fRecip;
         }
     }

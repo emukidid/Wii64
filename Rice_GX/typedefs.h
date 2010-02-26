@@ -23,6 +23,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "osal_preproc.h"
 #include "VectorMath.h"
 
+#ifdef _BIG_ENDIAN
+#define S8 0
+#define S16 0
+#else
+#define S8 3
+#define S16 1
+#endif
+
 #define uchar  unsigned char
 #define uint16 unsigned short
 #define uint32 unsigned int
@@ -44,6 +52,7 @@ typedef struct _COORDRECT
 #define COLOR_RGBA(r,g,b,a) (((r&0xFF)<<16) | ((g&0xFF)<<8) | ((b&0xFF)<<0) | ((a&0xFF)<<24))
 #define SURFFMT_A8R8G8B8 21
 
+//Note: These should be BE safe because they are matched with COLOR_RGBA()
 #define RGBA_GETALPHA(rgb)      ((rgb) >> 24)
 #define RGBA_GETRED(rgb)        (((rgb) >> 16) & 0xff)
 #define RGBA_GETGREEN(rgb)      (((rgb) >> 8) & 0xff)
@@ -163,10 +172,17 @@ typedef struct {
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     COLOR  dcSpecular;
@@ -178,10 +194,17 @@ typedef struct {
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     COLOR  dcSpecular;
@@ -194,10 +217,17 @@ typedef struct {
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     COLOR  dcSpecular;
@@ -221,10 +251,17 @@ typedef struct
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     float u,v;
@@ -284,14 +321,22 @@ typedef struct
 
 typedef struct
 {
+#ifndef _BIG_ENDIAN
     char na;
     char nz;    // b
     char ny;    //g
     char nx;    //r
+#else // !_BIG_ENDIAN - Big Endian fix.
+    char nx;    //r
+    char ny;    //g
+    char nz;    // b
+    char na;
+#endif // _BIG_ENDIAN
 }NormalStruct;
 
 typedef struct
 {
+#ifndef _BIG_ENDIAN
     short y;
     short x;
     
@@ -310,9 +355,29 @@ typedef struct
         } rgba;
         NormalStruct norma;
     };
+#else // !_BIG_ENDIAN - Big Endian fix.
+    short x;
+    short y;
+    
+    short z;
+    short flag;
+    
+    short tu;
+    short tv;
+    
+    union {
+        struct {
+            uint8 r;
+            uint8 g;
+            uint8 b;
+            uint8 a;
+        } rgba;
+        NormalStruct norma;
+    };
+#endif // _BIG_ENDIAN
 } FiddledVtx;
 
-typedef struct
+typedef struct //Note: This struct isn't used anywhere.
 {
     short y;
     short x;
@@ -328,12 +393,21 @@ typedef struct
 
 typedef struct 
 {
+#ifndef _BIG_ENDIAN
     short y;
     short   x;
     uint16  cidx;
     short z;
     short t;
     short s;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    short   x;
+    short y;
+    short z;
+    uint16  cidx;
+    short s;
+    short t;
+#endif // _BIG_ENDIAN
 } N64VtxPD;
 
 class CTexture;

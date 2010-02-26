@@ -50,6 +50,7 @@ class DecodedMux
 public:
     union {
         struct {
+#ifndef _BIG_ENDIAN
             uint8 aRGB0;
             uint8 bRGB0;
             uint8 cRGB0;
@@ -69,6 +70,27 @@ public:
             uint8 bA1;
             uint8 cA1;
             uint8 dA1;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 dRGB0;
+            uint8 cRGB0;
+            uint8 bRGB0;
+            uint8 aRGB0;
+            
+            uint8 dA0;
+            uint8 cA0;
+            uint8 bA0;
+            uint8 aA0;
+            
+            uint8 dRGB1;
+            uint8 cRGB1;
+            uint8 bRGB1;
+            uint8 aRGB1;
+            
+            uint8 dA1;
+            uint8 cA1;
+            uint8 bA1;
+            uint8 aA1;
+#endif // _BIG_ENDIAN
         };
         uint8  m_bytes[16];
         uint32 m_dWords[4];
