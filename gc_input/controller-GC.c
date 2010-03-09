@@ -132,11 +132,11 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	c->U_CBUTTON    = isHeld(config->CU);
 
 	if(config->analog->mask == ANALOG_AS_ANALOG){
-		c->X_AXIS = PAD_StickX(Control);
-		c->Y_AXIS = PAD_StickY(Control);
+		c->X_AXIS = 5*PAD_StickX(Control)/6;
+		c->Y_AXIS = 5*PAD_StickY(Control)/6;
 	} else if(config->analog->mask == C_STICK_AS_ANALOG){
-		c->X_AXIS = PAD_SubStickX(Control);
-		c->Y_AXIS = PAD_SubStickY(Control);
+		c->X_AXIS = 5*PAD_SubStickX(Control)/6;
+		c->Y_AXIS = 5*PAD_SubStickY(Control)/6;
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 

@@ -175,11 +175,11 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	c->U_CBUTTON    = isHeld(config->CU);
 
 	if(config->analog->mask == L_STICK_AS_ANALOG){
-		c->X_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_X, 127);
-		c->Y_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_Y, 127);
+		c->X_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_X, 80);
+		c->Y_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_Y, 80);
 	} else if(config->analog->mask == R_STICK_AS_ANALOG){
-		c->X_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_X, 127);
-		c->Y_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_Y, 127);
+		c->X_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_X, 80);
+		c->Y_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_Y, 80);
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 

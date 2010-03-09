@@ -101,6 +101,8 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config,
                     int (*available)(int),
                     unsigned int (*getButtons)(WPADData*))
 {
+	static signed char last_x, last_y; // For IR leaving the screen
+	
 	if(wpadNeedScan){ WPAD_ScanPads(); wpadNeedScan = 0; }
 	WPADData* wpad = WPAD_Data(Control);
 	BUTTONS* c = Keys;
@@ -134,22 +136,23 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config,
 	c->U_CBUTTON    = isHeld(config->CU);
 
 	if(config->analog->mask == NUNCHUK_AS_ANALOG){
-		c->X_AXIS = getStickValue(&wpad->exp.nunchuk.js, STICK_X, 127);
-		c->Y_AXIS = getStickValue(&wpad->exp.nunchuk.js, STICK_Y, 127);
+		c->X_AXIS = getStickValue(&wpad->exp.nunchuk.js, STICK_X, 80);
+		c->Y_AXIS = getStickValue(&wpad->exp.nunchuk.js, STICK_Y, 80);
 	} else if(config->analog->mask == IR_AS_ANALOG){
 		if(wpad->ir.smooth_valid){
-			c->X_AXIS = ((short)(wpad->ir.sx - 512)) >> 2;
-			c->Y_AXIS = -(signed char)((wpad->ir.sy - 384) / 3);
+			last_x = c->X_AXIS = 8*((short)(wpad->ir.sx - 512))/25;
+			last_y = c->Y_AXIS = -(signed char)(5*(wpad->ir.sy - 384)/24);
 		} else {
-			c->X_AXIS = 0;
-			c->Y_AXIS = 0;
+			// Use the last valid value until the pointer is back
+			c->X_AXIS = last_x;
+			c->Y_AXIS = last_y;
 		}
 	} else if(config->analog->mask == TILT_AS_ANALOG){
-		c->X_AXIS = -wpad->orient.pitch;
-		c->Y_AXIS = wpad->orient.roll;
+		c->X_AXIS = -5*wpad->orient.pitch/8;
+		c->Y_AXIS = 5*wpad->orient.roll/8;
 	} else if(config->analog->mask == WHEEL_AS_ANALOG){
-		c->X_AXIS = 512 - wpad->accel.y;
-		c->Y_AXIS = wpad->accel.z - 512;
+		c->X_AXIS = 5*(512 - wpad->accel.y)/8;
+		c->Y_AXIS = 5*(wpad->accel.z - 512)/8;
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 
