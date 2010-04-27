@@ -143,7 +143,7 @@ static fileBrowser_file* dir_entries;
 static int				num_entries;
 static int				current_page;
 static int				max_page;
-static char				feedback_string[36];
+static char				feedback_string[256];
 
 void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir);
 void fileBrowserFrame_Error(fileBrowser_file* dir, int error_code);
@@ -334,7 +334,7 @@ void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir)
 	num_entries = romFile_readDir(dir, &dir_entries);
 	if(num_entries <= 0)
 	{ 
-		if(dir_entries) free(dir_entries); 
+		if(dir_entries) { free(dir_entries); dir_entries = NULL; } 
 		fileBrowserFrame_Error(dir, num_entries); 
 		return;
 	}
