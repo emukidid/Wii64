@@ -143,7 +143,6 @@ static fileBrowser_file* dir_entries;
 static int				num_entries;
 static int				current_page;
 static int				max_page;
-static char				feedback_string[256];
 
 void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir);
 void fileBrowserFrame_Error(fileBrowser_file* dir, int error_code);
@@ -349,10 +348,11 @@ void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir)
 
 void fileBrowserFrame_Error(fileBrowser_file* dir, int error_code)
 {
+	char feedback_string[256];
 	//disable all buttons
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
 		FRAME_BUTTONS[i].button->setActive(false);
-	for (int i = 1; i<NUM_FILE_SLOTS; i++)
+	for (int i = 0; i<NUM_FILE_SLOTS; i++)
 		FRAME_BUTTONS[i+2].buttonString = FRAME_STRINGS[2];
 	if(error_code == NO_HW_ACCESS) {
   	sprintf(feedback_string,"DVDX v2 not found");
@@ -427,6 +427,7 @@ void Func_SetPlayGame();
 
 void fileBrowserFrame_LoadFile(int i)
 {
+	char feedback_string[256];
 	if(dir_entries[i].attr & FILE_BROWSER_ATTR_DIR){
 		// Here we are 'recursing' into a subdirectory
 		// We have to do a little dance here to avoid a dangling pointer
