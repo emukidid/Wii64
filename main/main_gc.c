@@ -16,7 +16,6 @@
 #include "../gui/gui_GX.h"
 #include "../r4300/r4300.h"
 #include "../gc_memory/memory.h"
-#include "../gc_memory/ARAM.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "ROM-Cache.h" 
 #include "winlnxdefs.h"
@@ -162,8 +161,6 @@ int main(){
 
 
 	while(TRUE){
-	
-		ARAM_manager_init();
 		TLBCache_init();
 		SDCARD_Init();
 		DVD_Init();
@@ -264,7 +261,6 @@ int main(){
 		free(ROM_HEADER);
 		ROM_HEADER = NULL;
 		free_memory();
-		ARAM_manager_deinit();
 		
 		VIDEO_SetNextFramebuffer (xfb[0]); //switch xfb to show console
 		VIDEO_Flush ();

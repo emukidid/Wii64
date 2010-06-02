@@ -52,7 +52,6 @@ extern "C" {
 
 #include "../r4300/r4300.h"
 #include "../gc_memory/memory.h"
-#include "../gc_memory/ARAM.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "../gc_memory/tlb.h"
 #include "../gc_memory/pif.h"
@@ -194,13 +193,13 @@ int main(int argc, char* argv[]){
 #endif
 
 	Initialise(); // Stock OGC initialization
-//	vmode = VIDEO_GetPreferredMode(NULL);
+#ifndef HW_RVL
+  AR_Init(NULL, 0);
+  DVD_Init();
+#endif
 	MenuContext *menu = new MenuContext(vmode);
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
-#ifndef WII
-	DVD_Init();
-#endif
-//	menuInit();
+
 #ifdef DEBUGON
 	//DEBUG_Init(GDBSTUB_DEVICE_TCP,GDBSTUB_DEF_TCPPORT); //Default port is 2828
 //	DEBUG_Init(GDBSTUB_DEVICE_USB, 1);
@@ -379,21 +378,15 @@ int loadROM(fileBrowser_file* rom){
 		closeDLL_input();
 		closeDLL_audio();
 		closeDLL_gfx();
-
 		ROMCache_deinit();
 		free_memory();
-#ifndef HW_RVL
-		ARAM_manager_deinit();
-#endif
 	}
 	format_mempacks();
 	reset_flashram();
 	init_eeprom();
 	hasLoadedROM = TRUE;
 #ifndef HW_RVL
-	ARAM_manager_init();
-#endif
-#ifdef USE_TLB_CACHE
+  AR_Clear(AR_ARAMINTUSER);
 	TLBCache_init();
 #else
 	tlb_mem2_init();

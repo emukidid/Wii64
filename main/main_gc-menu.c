@@ -55,7 +55,6 @@ unsigned int MALLOC_MEM2 = 0;
 
 #include "../r4300/r4300.h"
 #include "../gc_memory/memory.h"
-#include "../gc_memory/ARAM.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "../gc_memory/tlb.h"
 #include "../gc_memory/pif.h"
@@ -127,7 +126,8 @@ int main(){
 #endif
 
 	Initialise(); // Stock OGC initialization
-#ifndef WII
+#ifndef HW_RVL
+  AR_Init(NULL, 0);
 	DVD_Init();
 #endif
 	menuInit();
@@ -248,21 +248,16 @@ int loadROM(fileBrowser_file* rom){
 
 		ROMCache_deinit();
 		free_memory();
-#ifndef HW_RVL
-		ARAM_manager_deinit();
-#endif
 	}
 	format_mempacks();
 	hasLoadedROM = TRUE;
 #ifndef HW_RVL
-	ARAM_manager_init();
-#endif
-#ifdef USE_TLB_CACHE
+  AR_Clear(AR_ARAMINTUSER);
 	TLBCache_init();
 #else
 	tlb_mem2_init();
 #endif
-	//romFile_init(rom);
+
 	if(rom_read(rom)){	// Something failed while trying to read the ROM.
 		hasLoadedROM = FALSE;
 		return -1;
