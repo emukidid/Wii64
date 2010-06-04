@@ -35,6 +35,7 @@
 #include "../gui/GUI.h"
 #include "rom.h"
 #include "ROM-Cache.h"
+#include "wii64config.h"
 #include "../gc_memory/memory.h"
 #include "../fileBrowser/fileBrowser.h"
 
@@ -66,8 +67,9 @@ int init_byte_swap(u32 magicWord){
 	return ROM_byte_swap;
 }
 
-#define TOTAL_NUM_16KBIT 36
-static unsigned int CRC_TABLE[36][2] = {
+#define TOTAL_NUM_16KBIT 40
+static unsigned int CRC_TABLE[40][2] = {
+  { 0x975B7845, 0xA2505C18},  //77a Special Edition by Count0 (PD)
   { 0x514B6900, 0xB4B19881},  //Banjo to Kazooie no Daibouken 2 (J) [!]
   { 0x155B7CDF, 0xF0DA7325},  //Banjo-Tooie (A) [!]
   { 0xC9176D39, 0xEA4779D1},  //Banjo-Tooie (E) [!]
@@ -85,8 +87,11 @@ static unsigned int CRC_TABLE[36][2] = {
   { 0x202A8EE4, 0x83F88B89},  //Excitebike 64 (E) [!]
   { 0x861C3519, 0xF6091CE5},  //Excitebike 64 (J) [!]
   { 0x07861842, 0xA12EBC9F},  //Excitebike 64 (U) [!]
+  { 0xAF754F7B ,0x1DD17381},  //Excitebike 64 (U) (Kiosk Demo) [!]
   { 0x1739EFBA, 0xD0B43A68},  //Kobe Bryant's NBA Courtside (E) [!]
   { 0x616B8494, 0x8A509210},  //Kobe Bryant's NBA Courtside (U) [!]
+  { 0xA197CB52 ,0x7520DE0E},  //Madden Football 64 (E) [!]
+  { 0x13836389 ,0x265B3C76},  //Madden Football 64 (U) [!]
   { 0xD7134F8D, 0xC11A00B5},  //Madden NFL 2002 (U) [!]
   { 0xC5674160, 0x0F5F453C},  //Mario Party 3 (E) [!]
   { 0x0B0AB4CD, 0x7B158937},  //Mario Party 3 (J) [!]
@@ -116,7 +121,7 @@ bool isEEPROM16k()
 {
   int i = 0;
   unsigned int curCRC[2];
-  ROMCache_read((unsigned int*)&curCRC[0], 0x10, sizeof(unsigned int)*2);
+  ROMCache_read((u8*)&curCRC[0], 0x10, sizeof(unsigned int)*2);
 
   for (i = 0; i < TOTAL_NUM_16KBIT; i++)
   {
@@ -172,7 +177,7 @@ int rom_read(fileBrowser_file* file){
      return ret;
    }
    if(!ROM_HEADER) ROM_HEADER = malloc(sizeof(rom_header));
-   ROMCache_read((u32*)ROM_HEADER, 0, sizeof(rom_header));
+   ROMCache_read((u8*)ROM_HEADER, 0, sizeof(rom_header));
 
    // Swap country code back since I know the emulator relies on this being little endian.
   char temp = ((char*)&ROM_HEADER->Country_code)[0];
