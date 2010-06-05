@@ -24,16 +24,17 @@
 
 #ifdef ARAM_TLBCACHE
 
+#include <ogc/arqueue.h>
 #include <gccore.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
+#include "ARAM.h"
 #include "TLB-Cache.h"
 #include "../gui/DEBUG.h"
 
-#define ARAM_READ  1
-#define ARAM_WRITE 0
+static ARQRequest ARQ_request_TLB;
 
 #define TLB_W_TYPE                                0
 #define TLB_R_TYPE                                1
@@ -128,9 +129,9 @@ void ARAM_ReadTLBBlock(u32 addr, int type)
 {
   int base_addr = (type == TLB_W_TYPE) ? TLB_W_CACHE_ADDR : TLB_R_CACHE_ADDR;
   int dest_addr = (type == TLB_W_TYPE) ? (int)&tlb_block[TLB_W_TYPE] : (int)&tlb_block[TLB_R_TYPE];
+  ARQ_PostRequest(&ARQ_request_TLB, 0x2EAD, AR_ARAMTOMRAM, ARQ_PRIO_LO,
+			                (int)(base_addr + addr), dest_addr, CACHED_TLB_SIZE);
 	DCInvalidateRange((void*)dest_addr, CACHED_TLB_SIZE);
-  AR_StartDMA(ARAM_READ, dest_addr, (u32)(base_addr + addr), CACHED_TLB_SIZE);
-  while (AR_GetDMAStatus());
 }
 
 //addr == addr of 4kb block of PowerPC_block ptrs to pull out from ARAM
@@ -139,8 +140,8 @@ void ARAM_WriteTLBBlock(u32 addr, int type)
   int base_addr = (type == TLB_W_TYPE) ? TLB_W_CACHE_ADDR : TLB_R_CACHE_ADDR;
   int dest_addr = (type == TLB_W_TYPE) ? (int)&tlb_block[TLB_W_TYPE] : (int)&tlb_block[TLB_R_TYPE];
   DCFlushRange((void*)dest_addr, CACHED_TLB_SIZE);
-  AR_StartDMA(ARAM_WRITE, (u32) dest_addr, (u32)(base_addr + addr), CACHED_TLB_SIZE);
-  while (AR_GetDMAStatus());
+	ARQ_PostRequest(&ARQ_request_TLB, 0x10AD, AR_MRAMTOARAM, ARQ_PRIO_HI,
+			                (int)(base_addr + addr), dest_addr, CACHED_TLB_SIZE);
 }
 
 #endif

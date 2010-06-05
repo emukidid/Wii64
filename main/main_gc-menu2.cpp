@@ -194,8 +194,9 @@ int main(int argc, char* argv[]){
 
 	Initialise(); // Stock OGC initialization
 #ifndef HW_RVL
+  DVD_Init();  
   AR_Init(NULL, 0);
-  DVD_Init();
+  ARQ_Init();
 #endif
 	MenuContext *menu = new MenuContext(vmode);
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
@@ -386,7 +387,6 @@ int loadROM(fileBrowser_file* rom){
 	init_eeprom();
 	hasLoadedROM = TRUE;
 #ifndef HW_RVL
-  AR_Clear(AR_ARAMINTUSER);
 	TLBCache_init();
 #else
 	tlb_mem2_init();

@@ -21,6 +21,7 @@
 **/
 #ifdef ARAM_BLOCKCACHE
 
+#include <ogc/arqueue.h>
 #include <gctypes.h>
 #include <gccore.h>
 #include <stdlib.h>
@@ -32,8 +33,7 @@
 #include "ARAM-blocks.h"
 #include "../gui/DEBUG.h"
 
-#define ARAM_READ  1
-#define ARAM_WRITE 0
+static ARQRequest ARQ_request_blocks;
 
 #define BLOCKS_CACHE_ADDR   0xC00000
 #define NUM_CACHE_BLOCKS           8
@@ -98,17 +98,17 @@ void blocks_set(u32 addr, PowerPC_block* ptr){
 //addr == addr of 4kb block of PowerPC_block ptrs to pull out from ARAM
 void ARAM_ReadBlock(u32 addr, int block_num)
 {
+  ARQ_PostRequest(&ARQ_request_blocks, 0x2EAD, AR_ARAMTOMRAM, ARQ_PRIO_LO,
+			                (int)(BLOCKS_CACHE_ADDR + addr), (int)&cached_block[block_num][0], CACHED_BLOCK_SIZE);
 	DCInvalidateRange((void*)&cached_block[block_num][0], CACHED_BLOCK_SIZE);
-  AR_StartDMA(ARAM_READ, (int)&cached_block[block_num][0], (u32)(BLOCKS_CACHE_ADDR + addr), CACHED_BLOCK_SIZE);
-  while (AR_GetDMAStatus());
 }
 
 //addr == addr of 4kb block of PowerPC_block ptrs to pull out from ARAM
 void ARAM_WriteBlock(u32 addr, int block_num)
 {
   DCFlushRange((void*)&cached_block[block_num][0], CACHED_BLOCK_SIZE);
-  AR_StartDMA(ARAM_WRITE, (u32)&cached_block[block_num][0], (u32)(BLOCKS_CACHE_ADDR + addr), CACHED_BLOCK_SIZE);
-  while (AR_GetDMAStatus());
+	ARQ_PostRequest(&ARQ_request_blocks, 0x10AD, AR_MRAMTOARAM, ARQ_PRIO_HI,
+			                (int)(BLOCKS_CACHE_ADDR + addr), (int)&cached_block[block_num][0], CACHED_BLOCK_SIZE);
 }
 
 #else //inlined wrapper for Wii

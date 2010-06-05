@@ -127,8 +127,9 @@ int main(){
 
 	Initialise(); // Stock OGC initialization
 #ifndef HW_RVL
+  DVD_Init();
   AR_Init(NULL, 0);
-	DVD_Init();
+  ARQ_Init();
 #endif
 	menuInit();
 #ifdef DEBUGON
@@ -252,7 +253,6 @@ int loadROM(fileBrowser_file* rom){
 	format_mempacks();
 	hasLoadedROM = TRUE;
 #ifndef HW_RVL
-  AR_Clear(AR_ARAMINTUSER);
 	TLBCache_init();
 #else
 	tlb_mem2_init();
