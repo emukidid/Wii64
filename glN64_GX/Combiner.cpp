@@ -64,7 +64,9 @@ void Combiner_Init()
 			break;
 #else // !__GX__
 		case TEV_COMBINE:
+#ifdef SHOW_DEBUG
 			DEBUG_print((char*)"Combiner: TEV_Combiner",DBG_CCINFO);
+#endif
 			Init_TEV_combine();
 			break;
 #endif // __GX__

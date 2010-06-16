@@ -95,6 +95,7 @@ void gSPLoadUcodeEx( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 #endif
 # endif // __GX__
 	}
+#ifdef SHOW_DEBUG	
 	else
 #ifdef RSPTHREAD
 		SetEvent( RSP.threadMsg[RSPMSG_CLOSE] );
@@ -109,6 +110,7 @@ void gSPLoadUcodeEx( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// Unknown microcode: 0x%08X, 0x%08X, %s\n", uc_crc, uc_dcrc, uc_str );
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPLoadUcodeEx( 0x%08X, 0x%08X, %i );\n", uc_start, uc_dstart, uc_dsize );
+#endif
 #endif
 }
 
@@ -1113,7 +1115,9 @@ void gSPTriangle( s32 v0, s32 v1, s32 v2, s32 flag )
 			s32 clippedIndex = 0;
 
 #ifdef __GX__
+#ifdef SHOW_DEBUG
 			DEBUG_print((char*)"NoN clipping triangles!!!",DBG_TXINFO1); //5
+#endif
 #endif // __GX__
 
 			s32 v[3] = { v0, v1, v2 };

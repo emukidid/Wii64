@@ -11,25 +11,22 @@
 #include <sys/dir.h>
 #include "DEBUG.h"
 #include "TEXT.h"
-//#include "usb.h"
 
-char text[DEBUG_TEXT_HEIGHT][DEBUG_TEXT_WIDTH];
 char printToSD;
+#ifdef SHOW_DEBUG
 
 char txtbuffer[1024];
-long long texttimes[DEBUG_TEXT_HEIGHT];
 extern long long gettime();
+long long texttimes[DEBUG_TEXT_HEIGHT];
+char text[DEBUG_TEXT_HEIGHT][DEBUG_TEXT_WIDTH];
 extern unsigned int diff_sec(long long start,long long end);
 
-#ifdef SHOW_DEBUG
 static void check_heap_space(void){
 	sprintf(txtbuffer,"At least %dKB MEM1 available", SYS_GetArena1Size()/1024);
 	DEBUG_print(txtbuffer,DBG_MEMFREEINFO);
 }
-#endif
 
 void DEBUG_update() {
-	#ifdef SHOW_DEBUG
 	int i;
 	long long nowTick = gettime();
 	for(i=0; i<DEBUG_TEXT_HEIGHT; i++){
@@ -38,8 +35,7 @@ void DEBUG_update() {
 			memset(text[i],0,DEBUG_TEXT_WIDTH);
 		}
 	}
-//	check_heap_space();
-	#endif
+	check_heap_space();
 }
 
 int flushed = 0;
@@ -49,7 +45,6 @@ char *dump_filename = "dev0:\\N64ROMS\\debug.txt";
 FILE* f = NULL;
 void DEBUG_print(char* string,int pos){
 
-	#ifdef SHOW_DEBUG
 		if(pos == DBG_USBGECKO) {
 			#ifdef PRINTGECKO
 			if(!flushed){
@@ -89,8 +84,6 @@ void DEBUG_print(char* string,int pos){
 			memset(text[DEBUG_TEXT_WIDTH-1],0,1);
 			texttimes[pos] = gettime();
 		}
-	#endif
-	
 }
 
 
@@ -99,7 +92,6 @@ unsigned int stats_buffer[MAX_STATS];
 unsigned int avge_counter[MAX_STATS];
 void DEBUG_stats(int stats_id, char *info, unsigned int stats_type, unsigned int adjustment_value) 
 {
-	#ifdef SHOW_DEBUG
 	switch(stats_type)
 	{
 		case STAT_TYPE_ACCUM:	//accumulate
@@ -121,6 +113,6 @@ void DEBUG_stats(int stats_id, char *info, unsigned int stats_type, unsigned int
 	
 	sprintf(txtbuffer,"%s [ %i ]", info, value);
 	DEBUG_print(txtbuffer,DBG_STATSBASE+stats_id);
-	#endif
-}
 
+}
+#endif

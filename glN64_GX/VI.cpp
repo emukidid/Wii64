@@ -414,6 +414,7 @@ extern char text[DEBUG_TEXT_HEIGHT][DEBUG_TEXT_WIDTH];
 
 void VI_GX_showDEBUG()
 {
+#ifdef SHOW_DEBUG
 	int i = 0;
 	GXColor fontColor = {150, 255, 150, 255};
 //	VI_GX_showStats();
@@ -428,6 +429,7 @@ void VI_GX_showDEBUG()
 	if(printToScreen)
 		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
 			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
+#endif
 #endif
 
 	//Reset any stats in DEBUG_stats

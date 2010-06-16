@@ -835,9 +835,10 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 			dest = (u32*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
 		}
 	}
+#ifdef SHOW_DEBUG
 	else
 		DEBUG_print((char*)"Textures: Trying to malloc a 0 byte GX texture",DBG_TXINFO);
-
+#endif
 	clampSClamp = texInfo->width - 1;
 	clampTClamp = texInfo->height - 1;
 
@@ -906,7 +907,10 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 			}
 			break;
 		default:
+#ifdef SHOW_DEBUG
 			DEBUG_print((char*)"Textures: Converting Invalid Texture Format",DBG_TXINFO);
+#endif
+      break;
 		}
 	}
 	else //	!cache.enable2xSaI
@@ -1117,8 +1121,10 @@ void TextureCache_Load( CachedTexture *texInfo )
 			dest = (u32*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
 		}
 	}
+#ifdef SHOW_DEBUG
 	else
 		DEBUG_print((char*)"Textures: Trying to malloc a 0 byte GX texture",DBG_TXINFO);
+#endif
 
 #endif // __GX__
 
@@ -1238,7 +1244,10 @@ void TextureCache_Load( CachedTexture *texInfo )
 			}
 			break;
 		default:
+#ifdef SHOW_DEBUG
 			DEBUG_print((char*)"Textures: Converting Invalid Texture Format",DBG_TXINFO);
+#endif
+      break;
 		}
 	}
 	else if (texInfo->textureBytes > 0) //	!cache.enable2xSaI
