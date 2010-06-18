@@ -49,10 +49,11 @@ extern PowerPC_block *actual;
 extern precomp_block *blocks[0x100000], *actual;
 #endif
 extern int stop, llbit;
-extern long long int reg[34];
+extern long long int reg[36]; // r0-32, hi, lo, branch destination
 #define hi (reg[32])
 #define lo (reg[33])
-extern long long int local_rs, local_rt;
+#define local_rs (reg[34])
+#define local_rt (reg[35])
 extern unsigned long reg_cop0[32];
 extern long local_rs32, local_rt32;
 extern unsigned long jump_target;

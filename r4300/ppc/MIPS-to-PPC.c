@@ -1748,9 +1748,14 @@ static int JR(MIPS_instr mips){
 		genCallInterp(mips);
 		return INTERPRETED;
 	}
-
+	
 	flushRegisters();
 	reset_code_addr();
+	
+	GEN_STW(ppc, mapRegister(MIPS_GET_RS(mips)),
+			REG_LOCALRS*8+4, DYNAREG_REG);
+	set_next_dst(ppc);
+	invalidateRegisters();
 
 	// Check the delay slot, and note how big it is
 	PowerPC_instr* preDelay = get_curr_dst();
@@ -1764,7 +1769,7 @@ static int JR(MIPS_instr mips){
 	genUpdateCount(0);
 
 #ifdef INTERPRET_JR
-	genJumpTo(MIPS_GET_RS(mips), JUMPTO_REG);
+	genJumpTo(REG_LOCALRS, JUMPTO_REG);
 #else // INTERPRET_JR
 	// TODO: jr
 #endif
@@ -1790,6 +1795,11 @@ static int JALR(MIPS_instr mips){
 
 	flushRegisters();
 	reset_code_addr();
+	
+	GEN_STW(ppc, mapRegister(MIPS_GET_RS(mips)),
+			REG_LOCALRS*8+4, DYNAREG_REG);
+	set_next_dst(ppc);
+	invalidateRegisters();
 
 	// Check the delay slot, and note how big it is
 	PowerPC_instr* preDelay = get_curr_dst();
@@ -1814,7 +1824,7 @@ static int JALR(MIPS_instr mips){
 	flushRegisters();
 
 #ifdef INTERPRET_JALR
-	genJumpTo(MIPS_GET_RS(mips), JUMPTO_REG);
+	genJumpTo(REG_LOCALRS, JUMPTO_REG);
 #else // INTERPRET_JALR
 	// TODO: jalr
 #endif
