@@ -76,8 +76,24 @@ void refresh_stat()
 	sprintf(txtbuffer, "interp=%f%%", 100.0f * (float)time_in_section[INTERP_SECTION] / (float)time_in_section[0]);
 	DEBUG_print(txtbuffer, DBG_PROFILE_INTERP);
 	
+	sprintf(txtbuffer, "funcs=%f%% ", 100.0f * (float)time_in_section[FUNCS_SECTION] / (float)time_in_section[0]);
+	DEBUG_print(txtbuffer, DBG_PROFILE_FUNCS);
+
 	sprintf(txtbuffer, "tramp=%f%%", 100.0f * (float)time_in_section[TRAMP_SECTION] / (float)time_in_section[0]);
 	DEBUG_print(txtbuffer, DBG_PROFILE_TRAMP);
+	
+	sprintf(txtbuffer, "link=%f%% ", 100.0f * (float)time_in_section[LINK_SECTION] / (float)time_in_section[0]);
+	DEBUG_print(txtbuffer, DBG_PROFILE_LINK);
+	
+	sprintf(txtbuffer, "unlink=%f%% ", 100.0f * (float)time_in_section[UNLINK_SECTION] / (float)time_in_section[0]);
+	DEBUG_print(txtbuffer, DBG_PROFILE_UNLINK);
+	
+	sprintf(txtbuffer, "dynamem=%f%% ", 100.0f * (float)time_in_section[DYNAMEM_SECTION] / (float)time_in_section[0]);
+	DEBUG_print(txtbuffer, DBG_PROFILE_DYNAMEM);
+	
+#ifdef GECKO_PROFILE
+	DEBUG_print("\r", DBG_USBGECKO);
+#endif
 	
 	int i;
 	for(i=1; i<=NUM_SECTIONS; ++i) time_in_section[i] = 0;
