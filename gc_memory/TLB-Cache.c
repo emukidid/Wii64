@@ -38,7 +38,7 @@
 #define CACHED_TLB_ENTRIES                     1024
 #define CACHED_TLB_SIZE      CACHED_TLB_ENTRIES * 4
 
-unsigned long tlb_block[TLB_NUM_BLOCKS][CACHED_TLB_ENTRIES] __attribute__((aligned(32)));
+static u32    tlb_block[TLB_NUM_BLOCKS][CACHED_TLB_ENTRIES] __attribute__((aligned(32)));
 static u32    tlb_block_type[TLB_NUM_BLOCKS];
 static u32    tlb_block_addr[TLB_NUM_BLOCKS];
 
@@ -71,8 +71,6 @@ static unsigned int TLBCache_get(int type, unsigned int page){
       return tlb_block[i][calc_index(page)];
     }
   }
-  // If we hit here, this is big trouble (just need to increase the amount of entries..)
-  *(u32*)0 = 0x13370001;
   return 0;
 }
 
