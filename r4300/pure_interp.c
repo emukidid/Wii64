@@ -52,7 +52,7 @@ extern void update_debugger();
 #include "ARAM-blocks.h"
 
 static void invalidate_func(unsigned int addr){
-  PowerPC_block* block = blocks_get(address>>12);
+  PowerPC_block* block = blocks_get(addr>>12);
 	PowerPC_func* func = find_func(&block->funcs, addr);
 	if(func)
 		RecompCache_Free(func->start_addr);
@@ -1177,38 +1177,10 @@ static void MTC0()
 	break;
       case 12:   // Status
 	if((rrt & 0x04000000) != (Status & 0x04000000))
-	  {
-	     if (rrt & 0x04000000)
-	       {
-		  int i;
-		  for (i=0; i<32; i++)
-		    {
-		       //reg_cop1_fgr_64[i]=reg_cop1_fgr_32[i];
-		       reg_cop1_double[i]=(double*)&reg_cop1_fgr_64[i];
-		       reg_cop1_simple[i]=(float*)&reg_cop1_fgr_64[i];
-		    }
-	       }
-	     else
-	       {
-		  int i;
-		  for (i=0; i<32; i++)
-		    {
-		       //reg_cop1_fgr_32[i]=reg_cop1_fgr_64[i]&0xFFFFFFFF;
-		       //if (i<16) reg_cop1_double[i*2]=(double*)&reg_cop1_fgr_32[i*2];
-		       //reg_cop1_double[i]=(double*)&reg_cop1_fgr_64[i & 0xFFFE];
-		       if(!(i&1))
-			 reg_cop1_double[i]=(double*)&reg_cop1_fgr_64[i>>1];
-		       //reg_cop1_double[i]=(double*)&reg_cop1_fgr_64[i];
-		       //reg_cop1_simple[i]=(float*)&reg_cop1_fgr_32[i];
-		       //reg_cop1_simple[i]=(float*)&reg_cop1_fgr_64[i & 0xFFFE]+(i&1);
-#ifndef _BIG_ENDIAN
-		       reg_cop1_simple[i]=(float*)&reg_cop1_fgr_64[i>>1]+(i&1);
-#else
-		       reg_cop1_simple[i]=(float*)&reg_cop1_fgr_64[i>>1]+(1-(i&1));
-#endif
-		    }
-	       }
-	  }
+	{
+		shuffle_fpr_data(Status, rrt);
+		set_fpr_pointers(rrt);
+	}
 	Status = rrt;
 	interp_addr+=4;
 	check_interupt();
