@@ -382,14 +382,16 @@ int loadROM(fileBrowser_file* rom){
 		closeDLL_gfx();
 		ROMCache_deinit();
 		free_memory();
+#ifndef HW_RVL
 		ARAM_manager_deinit();
+#endif
 	}
-  ARAM_manager_init();
 	format_mempacks();
 	reset_flashram();
 	init_eeprom();
 	hasLoadedROM = TRUE;
 #ifndef HW_RVL
+  ARAM_manager_init();
 	TLBCache_init();
 #else
 	tlb_mem2_init();
