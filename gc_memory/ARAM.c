@@ -42,24 +42,21 @@ static int initialized=0;
 /* Our ARAM Layout is:
   AR_GetSize() == 16,777,216 bytes
       bytes       type
-  1. 16,384     DSP reserved
-  2. 49,152     empty
-  3. 4,128,768  ROM cache (63*64kb blocks)
-  3. 8,388,608  TLB LUTs
+  1. 40,960     DSP/AESND reserved
+  2. 24,576     empty
+  3. 12,517,376 ROM cache (191*64kb blocks)
   4. 4,194,304  blocks (dynarec)
 */
 
 void ARAM_manager_init(void){
 	if(initialized) return;
-	
-	AR_Init(NULL, 0);
 
-	max_blocks = (AR_GetSize() - (64*1024) - (4*1024*1024) - (8*1024*1024))/BLOCK_SIZE;
+	max_blocks = (AR_GetSize() - (64*1024) - (4*1024*1024))/BLOCK_SIZE;
 	ARAM_blocks = malloc(max_blocks * sizeof(ARAM_block));
 	int i, addr = 64*1024;
 	for(i=0; i<max_blocks; ++i){
 		ARAM_blocks[i].valid = FALSE;
-		ARAM_blocks[i].addr  = addr;
+		ARAM_blocks[i].addr  = (unsigned char*)addr;
 		ARAM_blocks[i].ptr   = NULL;
 		ARAM_blocks[i].owner = 0;
 		addr += BLOCK_SIZE;
@@ -67,12 +64,9 @@ void ARAM_manager_init(void){
 	
 	alloced_blocks = 0;
 	initialized = 1;
-	ARQ_Reset();
-	ARQ_Init();
 }
 
 void ARAM_manager_deinit(void){
-	AR_Reset();
 	if(ARAM_blocks) free(ARAM_blocks);
 	ARAM_blocks = NULL;
 	initialized = 0;
@@ -99,7 +93,7 @@ int ARAM_block_available_contiguous(void){
 	return max;
 }
 
-char* ARAM_block_alloc(unsigned char** ptr, unsigned char owner){
+unsigned char* ARAM_block_alloc(unsigned char** ptr, unsigned char owner){
 	if(!initialized || alloced_blocks == max_blocks) return NULL;
 	
 	int i;
@@ -114,7 +108,7 @@ char* ARAM_block_alloc(unsigned char** ptr, unsigned char owner){
 	return *ptr = ARAM_blocks[i].addr;
 }
 
-char* ARAM_block_alloc_contiguous(unsigned char** ptr, unsigned char owner, unsigned int num_blocks){
+unsigned char* ARAM_block_alloc_contiguous(unsigned char** ptr, unsigned char owner, unsigned int num_blocks){
 	if(!initialized || alloced_blocks+num_blocks > max_blocks) return NULL;
 	
 	int count = 0, block = 0, i;

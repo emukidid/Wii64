@@ -37,8 +37,8 @@ int ARAM_block_available_contiguous(void);
 // ptr [in/out]: the pointer to the new ARAM_block pointer, e.g. &ROM_blocks[rom_offset>>20]
 // owner [in]: a char unique to the owner of the block
 // [out]: the address of the new block
-char* ARAM_block_alloc(unsigned char** ptr, unsigned char owner);
-char* ARAM_block_alloc_contiguous(unsigned char** ptr, unsigned char owner, unsigned int num_blocks);
+unsigned char* ARAM_block_alloc(unsigned char** ptr, unsigned char owner);
+unsigned char* ARAM_block_alloc_contiguous(unsigned char** ptr, unsigned char owner, unsigned int num_blocks);
 void ARAM_block_free(unsigned char** ptr);
 void ARAM_block_free_contiguous(unsigned char** ptr, unsigned int num_blocks);
 

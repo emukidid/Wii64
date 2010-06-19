@@ -75,6 +75,7 @@ OBJ		=main/rom_gc.o \
 		r4300/ARAM-blocks.o \
 		r4300/Recomp-Cache-Heap.o \
 		gc_memory/tlb.o \
+		gc_memory/ARAM.o \
 		gc_memory/TLB-Cache.o \
 		gc_memory/memory.o \
 		gc_memory/dma.o \

@@ -51,6 +51,7 @@ extern "C" {
 #include "../gc_input/controller.h"
 
 #include "../r4300/r4300.h"
+#include "../gc_memory/aram.h"
 #include "../gc_memory/memory.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "../gc_memory/tlb.h"
@@ -381,7 +382,9 @@ int loadROM(fileBrowser_file* rom){
 		closeDLL_gfx();
 		ROMCache_deinit();
 		free_memory();
+		ARAM_manager_deinit();
 	}
+  ARAM_manager_init();
 	format_mempacks();
 	reset_flashram();
 	init_eeprom();
