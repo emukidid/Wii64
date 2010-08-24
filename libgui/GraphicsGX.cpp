@@ -21,6 +21,9 @@
 #include <math.h>
 #include "GraphicsGX.h"
 #include "../main/wii64config.h"
+#ifdef HW_RVL
+#include "../gc_memory/MEM2.h"
+#endif
 
 #define DEFAULT_FIFO_SIZE		(256 * 1024)
 
@@ -62,8 +65,13 @@ Graphics::Graphics(GXRModeObj *rmode)
 
 	VIDEO_Configure(vmode);
 
+#ifdef MEM2XFB
+	xfb[0] = XFB0_LO;
+	xfb[1] = XFB1_LO;
+#else
 	xfb[0] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(vmode));
 	xfb[1] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(vmode));
+#endif
 
 	console_init (xfb[0], 20, 64, vmode->fbWidth, vmode->xfbHeight, vmode->fbWidth * 2);
 
