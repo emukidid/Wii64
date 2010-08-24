@@ -81,7 +81,16 @@ extern void pauseAudio(void);
 extern void resumeAudio(void);
 extern BOOL hasLoadedROM;
 
-void* ROMCache_pointer(u32 rom_offset){return 0;}
+static u32 oldPointerOffset = -1;
+static u8 oldPointerBlock[4096];
+
+// Pretty fast on GC but we could do better imho
+void* ROMCache_pointer(u32 rom_offset){
+  if((rom_offset != oldPointerOffset) || (oldPointerOffset == -1)) {
+    ROMCache_read(&oldPointerBlock[0], rom_offset, 4096);
+  }
+  return &oldPointerBlock[0];
+}
 
 void ROMCache_init(fileBrowser_file* file){
   readBefore = 0; //de-init byteswapping
