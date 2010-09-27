@@ -22,11 +22,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if !defined(OGL_EXTENSIONS_H)
 #define OGL_EXTENSIONS_H
 
+#ifdef __GX__
+#include "gl.h"
+#include "glext.h"
+#include "glATI.h"
+#else
 #include <SDL_opengl.h>
+#endif
 
 /* Just call this one function to load up the function pointers. */
 void OGLExtensions_Init(void);
 
+#ifndef __GX__
 /* The function pointer types are defined here because as of 2009 some OpenGL drivers under Linux do 'incorrect' things which
    mess up the SDL_opengl.h header, resulting in no function pointer typedefs at all, and thus compilation errors.
 */
@@ -65,6 +72,26 @@ extern PFUNCGLGENPROGRAMSARBPROC            pglGenProgramsARB;
 extern PFUNCGLPROGRAMENVPARAMETER4FVARBPROC pglProgramEnvParameter4fvARB;
 extern PFUNCGLFOGCOORDPOINTEREXTPROC        pglFogCoordPointerEXT;
 extern PFUNCGLCLIENTACTIVETEXTUREARBPROC    pglClientActiveTextureARB;
+
+#else //!__GX__
+#define PFUNCGLCOMBINERPARAMETERFVNVPROC     
+#define PFUNCGLFINALCOMBINERINPUTNVPROC      
+#define PFUNCGLCOMBINEROUTPUTNVPROC          
+#define PFUNCGLCOMBINERINPUTNVPROC           
+#define PFUNCGLCOMBINERPARAMETERINVPROC      
+
+#define PFUNCGLACTIVETEXTUREPROC             
+#define PFUNCGLACTIVETEXTUREARBPROC          
+#define PFUNCGLMULTITEXCOORD2FPROC           
+#define PFUNCGLMULTITEXCOORD2FVPROC          
+#define PFUNCGLDELETEPROGRAMSARBPROC         
+#define PFUNCGLPROGRAMSTRINGARBPROC          
+#define PFUNCGLBINDPROGRAMARBPROC            
+#define PFUNCGLGENPROGRAMSARBPROC            
+#define PFUNCGLPROGRAMENVPARAMETER4FVARBPROC 
+#define PFUNCGLFOGCOORDPOINTEREXTPROC        
+#define PFUNCGLCLIENTACTIVETEXTUREARBPROC    
+#endif //__GX__
 
 #endif  // OGL_EXTENSIONS_H
 

@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 /* This source file contains code for assigning function pointers to some OpenGL functions */
 /* This is only necessary because Windows does not contain development support for OpenGL versions beyond 1.1 */
 
+#ifndef __GX__
 #include <SDL_opengl.h>
 #include "OGLExtensions.h"
 #include "Video.h"
@@ -69,4 +70,7 @@ void OGLExtensions_Init(void)
     INIT_ENTRY_POINT(PFUNCGLCLIENTACTIVETEXTUREARBPROC,    glClientActiveTextureARB);
 }
 
+#else //!__GX__
+void OGLExtensions_Init(void) {};
+#endif //__GX__
 

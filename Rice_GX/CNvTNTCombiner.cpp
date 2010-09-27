@@ -16,7 +16,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+#ifndef __GX__
 #include <SDL_opengl.h>
+#endif
 
 #include "CNvTNTCombiner.h"
 
@@ -49,6 +51,7 @@ bool isComb(uint32 val);
 
 int CNvTNTCombiner::ParseDecodedMux()
 {
+#ifndef __GX__
     TNT2CombinerSaveType res;
     res.numOfUnits = 2;
 
@@ -253,6 +256,7 @@ int CNvTNTCombiner::ParseDecodedMux()
 
     ParseDecodedMuxForConstants(res);
     return SaveParserResult(res);
+#endif //!__GX__
 }
 
 int CNvTNTCombiner::SaveParserResult(TNT2CombinerSaveType &result)

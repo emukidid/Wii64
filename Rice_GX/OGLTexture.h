@@ -19,7 +19,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef _OGL_TEXTURE_H_
 #define _OGL_TEXTURE_H_
 
+#ifdef __GX__
+#include "gl.h"
+//#include "glext.h"
+//#include "glATI.h"
+//#include "SDL_opengl.h"
+#else
 #include <SDL_opengl.h>
+#endif
 
 #include "TextureManager.h"
 

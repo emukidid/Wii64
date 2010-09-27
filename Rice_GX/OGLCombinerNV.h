@@ -21,7 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <vector>
 
+#ifdef __GX__
+#include "gl.h"
+#else
 #include <SDL_opengl.h>
+#endif
 
 #include "OGLExtCombiner.h"
 #include "OGLDecodedMux.h"

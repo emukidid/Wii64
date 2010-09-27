@@ -15,6 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
 
 #include "OGLExtensions.h"
 #include "OGLDebug.h"
@@ -25,9 +28,12 @@ void COGLExtRender::Initialize(void)
 {
     OGLRender::Initialize();
 
+#ifndef __GX__
+	//TODO: Implement in GX
     // Initialize multitexture
     glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB,&m_maxTexUnits);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
 
     for( int i=0; i<8; i++ )
         m_textureUnitMap[i] = -1;
@@ -44,10 +50,13 @@ void COGLExtRender::BindTexture(GLuint texture, int unitno)
         {
             if( m_curBoundTex[unitno] != texture )
             {
+#ifndef __GX__
+				//TODO: Implement in GX
                 pglActiveTexture(GL_TEXTURE0_ARB+unitno);
                 OPENGL_CHECK_ERRORS;
                 glBindTexture(GL_TEXTURE_2D,texture);
                 OPENGL_CHECK_ERRORS;
+#endif //!__GX__
                 m_curBoundTex[unitno] = texture;
             }
         }
@@ -62,10 +71,13 @@ void COGLExtRender::DisBindTexture(GLuint texture, int unitno)
 {
     if( m_bEnableMultiTexture )
     {
+#ifndef __GX__
+		//TODO: Implement in GX
         pglActiveTexture(GL_TEXTURE0_ARB+unitno);
         OPENGL_CHECK_ERRORS;
         glBindTexture(GL_TEXTURE_2D, 0);    //Not to bind any texture
         OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     }
     else
         OGLRender::DisBindTexture(texture, unitno);
@@ -79,7 +91,10 @@ void COGLExtRender::TexCoord2f(float u, float v)
         {
             if( m_textureUnitMap[i] >= 0 )
             {
+#ifndef __GX__
+		//TODO: Implement in GX
                 pglMultiTexCoord2f(GL_TEXTURE0_ARB+i, u, v);
+#endif //!__GX__
             }
         }
     }
@@ -95,7 +110,10 @@ void COGLExtRender::TexCoord(TLITVERTEX &vtxInfo)
         {
             if( m_textureUnitMap[i] >= 0 )
             {
+#ifndef __GX__
+		//TODO: Implement in GX
                 pglMultiTexCoord2fv(GL_TEXTURE0_ARB+i, &(vtxInfo.tcord[m_textureUnitMap[i]].u));
+#endif //!__GX__
             }
         }
     }
@@ -112,8 +130,11 @@ void COGLExtRender::SetTexWrapS(int unitno,GLuint flag)
     {
         mtex[unitno] = m_curBoundTex[0];
         mflag[unitno] = flag;
+#ifndef __GX__
+		//TODO: Implement in GX
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, flag);
         OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     }
 }
 void COGLExtRender::SetTexWrapT(int unitno,GLuint flag)
@@ -124,8 +145,11 @@ void COGLExtRender::SetTexWrapT(int unitno,GLuint flag)
     {
         mtex[unitno] = m_curBoundTex[0];
         mflag[unitno] = flag;
+#ifndef __GX__
+		//TODO: Implement in GX
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, flag);
         OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     }
 }
 
@@ -161,8 +185,11 @@ void COGLExtRender::SetTextureUFlag(TextureUVFlag dwFlag, uint32 dwTile)
     {
         if( m_textureUnitMap[textureNo] == tex )
         {
+#ifndef __GX__
+			//TODO: Implement in GX
             pglActiveTexture(GL_TEXTURE0_ARB+textureNo);
             OPENGL_CHECK_ERRORS;
+#endif //!__GX__
             COGLTexture* pTexture = g_textures[(gRSP.curTile+tex)&7].m_pCOGLTexture;
             if( pTexture ) 
             {
@@ -222,18 +249,22 @@ void COGLExtRender::EnableTexUnit(int unitno, BOOL flag)
     if( m_texUnitEnabled[unitno] != flag )
     {
         m_texUnitEnabled[unitno] = flag;
+#ifndef __GX__
+		//TODO: Implement in GX
         pglActiveTexture(GL_TEXTURE0_ARB+unitno);
         OPENGL_CHECK_ERRORS;
         if( flag == TRUE )
             glEnable(GL_TEXTURE_2D);
         else
             glDisable(GL_TEXTURE_2D);
-        OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     }
 }
 
 void COGLExtRender::ApplyTextureFilter()
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     static uint32 minflag[8], magflag[8];
     static uint32 mtex[8];
     for( int i=0; i<m_maxTexUnits; i++ )
@@ -275,6 +306,7 @@ void COGLExtRender::ApplyTextureFilter()
             }
         }
     }
+#endif //!__GX__
 }
 
 void COGLExtRender::SetTextureToTextureUnitMap(int tex, int unit)

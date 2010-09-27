@@ -17,6 +17,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include <stdlib.h>
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
 
 #include "Config.h"
 #include "Debugger.h"
@@ -31,8 +34,11 @@ COGLTexture::COGLTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     // Fix me, if usage is AS_RENDER_TARGET, we need to create pbuffer instead of regular texture
 
     m_dwTextureFmt = TEXTURE_FMT_A8R8G8B8;  // Always use 32bit to load texture
+#ifndef __GX__
+	//TODO: Implement in GX
     glGenTextures( 1, &m_dwTextureName );
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
 
     // Make the width and height be the power of 2
     uint32 w;
@@ -69,8 +75,11 @@ COGLTexture::~COGLTexture()
 {
     // Fix me, if usage is AS_RENDER_TARGET, we need to destroy the pbuffer
 
+#ifndef __GX__
+	//TODO: Implement in GX
     glDeleteTextures(1, &m_dwTextureName );
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     free(m_pTexture);
     m_pTexture = NULL;
     m_dwWidth = 0;
@@ -94,6 +103,8 @@ bool COGLTexture::StartUpdate(DrawInfo *di)
 
 void COGLTexture::EndUpdate(DrawInfo *di)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glBindTexture(GL_TEXTURE_2D, m_dwTextureName);
     OPENGL_CHECK_ERRORS;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -103,6 +114,7 @@ void COGLTexture::EndUpdate(DrawInfo *di)
     // Copy the image data from main memory to video card texture memory
     glTexImage2D(GL_TEXTURE_2D, 0, m_glFmt, m_dwCreatedTextureWidth, m_dwCreatedTextureHeight, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, m_pTexture);
     OPENGL_CHECK_ERRORS;
+#endif //__GX__
 }
 
 

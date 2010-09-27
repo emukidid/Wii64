@@ -229,6 +229,21 @@ typedef struct {
 
 extern ALIGN(16, RDP_Options gRDP)
 
+#ifdef __GX__
+#define GXprojZScale		 0.5  //0.25 //0.5
+#define GXprojZOffset		-0.5 //-0.5
+#define GXpolyOffsetFactor	 5.0e-4 //Tweaked for co-planar polygons. Interestingly, Z resolution should be 5.96e-8.
+
+typedef struct {
+	Mtx44	GXprojW;
+	Mtx44	GXprojIdent;
+	Mtx		GXmodelViewIdent;
+	bool	GXuseProjW;
+} GX_Options;
+
+extern GX_Options gGX;
+#endif //__GX__    
+
 /*
 *   Global functions
 */

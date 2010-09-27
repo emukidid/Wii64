@@ -19,6 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef __GX__
 #include <gccore.h>
+#include <malloc.h>
+#include <stdlib.h>
 #include "GFXPlugin.h"
 #endif //__GX__
 
@@ -26,7 +28,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <stdarg.h>
 
+#ifndef __GX__
 #include <SDL_opengl.h>
+#endif
 
 #include "m64p_types.h"
 #include "m64p_plugin.h"
@@ -118,6 +122,7 @@ int which_fb;*/
 
 void VI_GX_setFB(unsigned int* fb1, unsigned int* fb2);
 
+extern "C" {
 void gfx_set_fb(unsigned int* fb1, unsigned int* fb2){
 	VI_GX_setFB(fb1, fb2);
 }
@@ -125,6 +130,10 @@ void gfx_set_fb(unsigned int* fb1, unsigned int* fb2){
 void showLoadProgress(float percent){
 //	VI_GX_showLoadProg(percent);
 }
+}
+
+void gfx_set_window(int x, int y, int width, int height) {};
+
 #endif // __GX__
 
 //---------------------------------------------------------------------------------------
@@ -327,9 +336,6 @@ static bool StartVideo(void)
     InitExternalTextures();
 
     try {
-#ifdef __GX__
-		CDeviceBuilder::SelectDeviceType(OGL_DEVICE);
-#endif //__GX__
         CDeviceBuilder::GetBuilder()->CreateGraphicsContext();
         CGraphicsContext::InitWindowInfo();
 
@@ -564,6 +570,9 @@ extern "C" {
 EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Context,
                                    void (*DebugCallback)(void *, int, const char *))
 {
+#ifdef DEBUGON
+	_break();
+#endif
     if (l_PluginInit)
         return M64ERR_ALREADY_INIT;
 
@@ -571,6 +580,7 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
     l_DebugCallback = DebugCallback;
     l_DebugCallContext = Context;
 
+#ifndef __GX__
     /* Get the core config function pointers from the library handle */
     ConfigOpenSection = (ptr_ConfigOpenSection) osal_dynlib_getproc(CoreLibHandle, "ConfigOpenSection");
     ConfigSetParameter = (ptr_ConfigSetParameter) osal_dynlib_getproc(CoreLibHandle, "ConfigSetParameter");
@@ -616,6 +626,7 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
         DebugMessage(M64MSG_ERROR, "Couldn't connect to Core video extension functions");
         return M64ERR_INCOMPATIBLE;
     }
+#endif //!__GX__
 
     /* open config section handles and set parameter default values */
     if (!InitConfiguration())
@@ -625,7 +636,11 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
     return M64ERR_SUCCESS;
 }
 
+#ifndef __GX__
 EXPORT m64p_error CALL PluginShutdown(void)
+#else //!__GX__
+EXPORT m64p_error CALL CloseDLL(void)
+#endif //__GX__
 {
     if (!l_PluginInit)
         return M64ERR_NOT_INIT;
@@ -699,8 +714,15 @@ EXPORT void CALL RomClosed(void)
 
 EXPORT int CALL RomOpen(void)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
+
     /* Read RiceVideoLinux.ini file, set up internal variables by reading values from core configuration API */
     LoadConfiguration();
+#ifdef DEBUGON
+//	_break();
+#endif
 
     if( g_CritialSection.IsLocked() )
     {
@@ -781,6 +803,9 @@ EXPORT void CALL ViWidthChanged(void)
 
 EXPORT BOOL CALL InitiateGFX(GFX_INFO Gfx_Info)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
     memset(&status, 0, sizeof(status));
     memcpy(&g_GraphicsInfo, &Gfx_Info, sizeof(GFX_INFO));
 

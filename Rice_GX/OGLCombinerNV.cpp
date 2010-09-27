@@ -16,6 +16,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
+
 #include "OGLExtensions.h"
 
 #include "OGLCombinerNV.h"
@@ -36,6 +40,7 @@ typedef struct {
     GLenum  componentUsage;
 }RGBMapType;
 
+#ifndef __GX__
 RGBMapType RGBmap1[] =
 {
     {GL_ZERO,                   GL_UNSIGNED_IDENTITY_NV,    GL_RGB},    //MUX_0 = 0,
@@ -59,6 +64,7 @@ RGBMapType RGBmap1[] =
     {GL_SECONDARY_COLOR_NV,     GL_UNSIGNED_IDENTITY_NV,    GL_RGB},    //MUX_SECONDARY_COLOR,
     {GL_SPARE0_NV,              GL_SIGNED_IDENTITY_NV,      GL_RGB},    //MUX_COMBINED_SIGNED,
 };
+#endif //!__GX__
 
 
 //========================================================================
@@ -79,6 +85,7 @@ COGLColorCombinerNvidia::~COGLColorCombinerNvidia()
 
 bool COGLColorCombinerNvidia::Initialize(void)
 {
+#ifndef __GX__
     m_bNVSupported = false;
 
     if( COGLColorCombiner4::Initialize() )
@@ -100,6 +107,7 @@ bool COGLColorCombinerNvidia::Initialize(void)
     }
 
     glDisable(GL_REGISTER_COMBINERS_NV);
+#endif //!__GX__
     return false;
 }
 
@@ -107,7 +115,9 @@ void COGLColorCombinerNvidia::InitCombinerCycle12(void)
 {
     if( !m_bNVSupported )   {COGLColorCombiner4::InitCombinerCycle12(); return;}
 
+#ifndef __GX__
     glEnable(GL_REGISTER_COMBINERS_NV);
+#endif //!__GX__
 
 #ifdef DEBUGGER
     if( debuggerDropCombiners )
@@ -767,6 +777,7 @@ void COGLColorCombinerNvidia::GenerateNVRegisterCombinerSettingConstants(int ind
 
     float *pf;
 
+#ifndef __GX__
     for( int i=0; i<2; i++ )
     {
         switch( consts[i] )
@@ -789,10 +800,12 @@ void COGLColorCombinerNvidia::GenerateNVRegisterCombinerSettingConstants(int ind
             }
         }
     }
+#endif //!__GX__
 }
 
 void COGLColorCombinerNvidia::GenerateNVRegisterCombinerSetting(int index)
 {
+#ifndef __GX__
     if( index < 0 || index >= (int)m_vCompiledSettings.size() )
     {
         TRACE0("NV Register combiner, vector index out of range");
@@ -856,6 +869,7 @@ void COGLColorCombinerNvidia::GenerateNVRegisterCombinerSetting(int index)
         pglFinalCombinerInputNV(info.finalStage[i].variable, info.finalStage[i].input, 
             info.finalStage[i].mapping, info.finalStage[i].componentUsage );
     }
+#endif //!__GX__
 }
 
 GLenum COGLColorCombinerNvidia::ConstMap(uint8 c)
@@ -888,6 +902,7 @@ GLenum COGLColorCombinerNvidia::ConstMap(uint8 c)
 
 void Set1Variable(GLenum variable, uint8 val, NVCombinerInputType &record, const NVRegisterCombinerParserType &result, bool forRGB=true)
 {
+#ifndef __GX__
     record.variable = variable;
     record.componentUsage = RGBmap1[val&MUX_MASK].componentUsage;
     record.input = RGBmap1[val&MUX_MASK].input;
@@ -931,10 +946,12 @@ void Set1Variable(GLenum variable, uint8 val, NVCombinerInputType &record, const
     {
         record.componentUsage = GL_ALPHA;
     }
+#endif //!__GX__
 }
 
 int COGLColorCombinerNvidia::SaveParserResult(const NVRegisterCombinerParserType &result)
 {
+#ifndef __GX__
     NVRegisterCombinerSettingType save;
 
     // Stage 1 RGB
@@ -1030,35 +1047,45 @@ int COGLColorCombinerNvidia::SaveParserResult(const NVRegisterCombinerParserType
     m_vCompiledSettings.push_back(save);
 
     return m_vCompiledSettings.size()-1;    // Return the index of the last element
+#endif //!__GX__
 }
 
 
 void COGLColorCombinerNvidia::DisableCombiner(void)
 {
+#ifndef __GX__
     glDisable(GL_REGISTER_COMBINERS_NV);
+#endif //!__GX__
     COGLColorCombiner4::DisableCombiner();
 }
 
 void COGLColorCombinerNvidia::InitCombinerCycleCopy(void)
 {
+#ifndef __GX__
     glDisable(GL_REGISTER_COMBINERS_NV);
+#endif //!__GX__
     COGLColorCombiner4::InitCombinerCycleCopy();
 }
 
 void COGLColorCombinerNvidia::InitCombinerCycleFill(void)
 {
+#ifndef __GX__
     glDisable(GL_REGISTER_COMBINERS_NV);
+#endif //!__GX__
     COGLColorCombiner4::InitCombinerCycleFill();
 }
 
 void COGLColorCombinerNvidia::InitCombinerBlenderForSimpleTextureDraw(uint32 tile)
 {
+#ifndef __GX__
     glDisable(GL_REGISTER_COMBINERS_NV);
+#endif //!__GX__
     COGLColorCombiner::InitCombinerBlenderForSimpleTextureDraw(tile);
 }
 
 void COGLColorCombinerNvidia::ApplyFogAtFinalStage()
 {
+#ifndef __GX__
     // If we need to enable fog at final stage, the current flag stage setting
     // will be affect, which means correct combiner setting at final stage is lost
     // in order to use fog
@@ -1070,6 +1097,7 @@ void COGLColorCombinerNvidia::ApplyFogAtFinalStage()
         pglFinalCombinerInputNV(GL_VARIABLE_C_NV, GL_FOG, GL_UNSIGNED_IDENTITY_NV, GL_RGB );
         pglFinalCombinerInputNV(GL_VARIABLE_D_NV, GL_ZERO, GL_UNSIGNED_IDENTITY_NV, GL_RGB );
     }
+#endif //!__GX__
 }
 
 #ifdef DEBUGGER

@@ -15,8 +15,18 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
 
+#ifdef __GX__
+#include "gl.h"
+//#include "glext.h"
+//#include "glATI.h"
+//#include "SDL_opengl.h"
+#else
 #include <SDL_opengl.h>
+#endif
 
 #include "OGLRender.h"
 
@@ -32,6 +42,8 @@ void OGLRender::DrawText(const char* str, RECT *rect)
 
 void OGLRender::DrawSpriteR_Render()    // With Rotation
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
 
     GLboolean cullface = glIsEnabled(GL_CULL_FACE);
@@ -61,6 +73,7 @@ void OGLRender::DrawSpriteR_Render()    // With Rotation
     glEnd();
 
     if( cullface ) glEnable(GL_CULL_FACE);
+#endif //!__GX__
 }
 
 

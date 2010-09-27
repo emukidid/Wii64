@@ -16,6 +16,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
+
 #include "OGLExtensions.h"
 #include "OGLDebug.h"
 #include "OGLFragmentShaders.h"
@@ -89,8 +93,10 @@ COGL_FragmentProgramCombiner::~COGL_FragmentProgramCombiner()
     for (int i=0; i<size; i++)
     {
         GLuint ID = m_vCompiledShaders[i].programID;
+#ifndef __GX__
         pglDeleteProgramsARB(1, &ID);
         OPENGL_CHECK_ERRORS;
+#endif //!__GX__
         m_vCompiledShaders[i].programID = 0;
     }
 
@@ -115,22 +121,31 @@ bool COGL_FragmentProgramCombiner::Initialize(void)
 
 void COGL_FragmentProgramCombiner::DisableCombiner(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glDisable(GL_FRAGMENT_PROGRAM_ARB);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     COGLColorCombiner4::DisableCombiner();
 }
 
 void COGL_FragmentProgramCombiner::InitCombinerCycleCopy(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glDisable(GL_FRAGMENT_PROGRAM_ARB);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     COGLColorCombiner4::InitCombinerCycleCopy();
 }
 
 void COGL_FragmentProgramCombiner::InitCombinerCycleFill(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glDisable(GL_FRAGMENT_PROGRAM_ARB);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     COGLColorCombiner4::InitCombinerCycleFill();
 }
 
@@ -308,19 +323,24 @@ int COGL_FragmentProgramCombiner::ParseDecodedMux()
 
     OGLShaderCombinerSaveType res;
 
+#ifndef __GX__
+	//TODO: Implement in GX
     pglGenProgramsARB( 1, &res.programID);
     OPENGL_CHECK_ERRORS;
     pglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, res.programID);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     GenerateProgramStr();
 
+#ifndef __GX__
+	//TODO: Implement in GX
     pglProgramStringARB( GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, strlen(oglNewFP), oglNewFP);
     OPENGL_CHECK_ERRORS;
     //pglProgramStringARB(   GL_FRAGMENT_PROGRAM_ARB, GL_PROGRAM_FORMAT_ASCII_ARB, strlen(oglFPTest), oglFPTest);
 
     if (glGetError() != 0)
     {
-        GLint position;
+        int position;
 #ifdef DEBUGGER
         char *str = (char*)glGetString(GL_PROGRAM_ERROR_STRING_ARB);
 #endif
@@ -338,6 +358,7 @@ int COGL_FragmentProgramCombiner::ParseDecodedMux()
 
     glEnable(GL_FRAGMENT_PROGRAM_ARB);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     res.dwMux0 = m_pDecodedMux->m_dwMux0;
     res.dwMux1 = m_pDecodedMux->m_dwMux1;
     res.fogIsUsed = gRDP.bFogEnableInBlender && gRSP.bFogEnabled;
@@ -351,14 +372,19 @@ int COGL_FragmentProgramCombiner::ParseDecodedMux()
 void COGL_FragmentProgramCombiner::GenerateCombinerSetting(int index)
 {
     GLuint ID = m_vCompiledShaders[index].programID;
+#ifndef __GX__
+	//TODO: Implement in GX
     pglBindProgramARB( GL_FRAGMENT_PROGRAM_ARB, ID );
     OPENGL_CHECK_ERRORS;
     glEnable(GL_FRAGMENT_PROGRAM_ARB);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
 }
 
 void COGL_FragmentProgramCombiner::GenerateCombinerSettingConstants(int index)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     float *pf;
     pf = GetEnvColorfv();
     pglProgramEnvParameter4fvARB(GL_FRAGMENT_PROGRAM_ARB, 1, pf);
@@ -382,6 +408,7 @@ void COGL_FragmentProgramCombiner::GenerateCombinerSettingConstants(int index)
     OPENGL_CHECK_ERRORS;
     pglProgramEnvParameter4fvARB(GL_FRAGMENT_PROGRAM_ARB, 6, tempf3);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
 }
 
 int COGL_FragmentProgramCombiner::FindCompiledMux()

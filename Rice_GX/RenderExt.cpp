@@ -16,8 +16,13 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
 
+#ifndef __GX__
 #include <SDL_opengl.h>
+#endif
 #include "OGLDebug.h"
 #include "FrameBuffer.h"
 #include "Render.h"
@@ -782,6 +787,8 @@ void CRender::DrawSprite(uObjTxSprite &sprite, bool rectR)  //Without Ratation
         }
     }
 
+#ifndef __GX__
+	//TODO: Implement in GX
     // save the current clamp type
     GLint iClampS, iClampT;
     glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, &iClampS);
@@ -793,16 +800,20 @@ void CRender::DrawSprite(uObjTxSprite &sprite, bool rectR)  //Without Ratation
     OPENGL_CHECK_ERRORS;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     // draw the 2D sprite as 2 triangles
     float depth = (gRDP.otherMode.depth_source == 1 ? gRDP.fPrimitiveDepth : 0.0f);
     CTexture *pTexture = g_textures[0].m_pCTexture;
     DrawSimple2DTexture(x0, y0, x1, y1, 0, 0, 1/pTexture->m_fXScale, 1/pTexture->m_fYScale, 
         difColor, speColor, depth, 1);
+#ifndef __GX__
+	//TODO: Implement in GX
     // return clamp type to original setting
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, iClampS);
     OPENGL_CHECK_ERRORS;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, iClampT);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
 }
 
 

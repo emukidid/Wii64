@@ -17,6 +17,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#include <stdlib.h>
+#endif //__GX__
+
 #include "osal_files.h"
 
 #include "m64p_plugin.h"
@@ -991,6 +996,7 @@ BOOL PathFileExists(char* pszPath)
 
 void FindAllTexturesFromFolder(char *foldername, CSortedList<uint64,ExtTxtrInfo> &infos, bool extraCheck, bool bRecursive)
 {
+#ifndef __GX__
     if (!osal_is_directory(foldername))
         return;
 
@@ -1195,13 +1201,16 @@ void FindAllTexturesFromFolder(char *foldername, CSortedList<uint64,ExtTxtrInfo>
     } while(foundfilename != NULL);
 
     osal_search_dir_close(dir);
+#endif //!__GX__
 }
 
 bool CheckAndCreateFolder(const char* pathname)
 {
     if( !PathFileExists((char*)pathname) )
     {
+#ifndef __GX__
         if (osal_mkdirp(pathname, 0700) != 0)
+#endif //!__GX__
         {
             DebugMessage(M64MSG_WARNING, "Can not create new folder: %s", pathname);
             return false;
@@ -1286,6 +1295,7 @@ void FindAllHiResTextures(void)
     strcat(foldername,(const char*)g_curRomInfo.szGameName);
     strcat(foldername, OSAL_DIR_SEPARATOR_STR);
     gHiresTxtrInfos.clear();
+#ifndef __GX__
     if (!osal_is_directory(foldername))
     {
         return;
@@ -1294,6 +1304,7 @@ void FindAllHiResTextures(void)
     {
         FindAllTexturesFromFolder(foldername,gHiresTxtrInfos, true, true);
     }
+#endif //!__GX__
 }
 
 void CloseHiresTextures(void)

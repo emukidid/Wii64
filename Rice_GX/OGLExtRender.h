@@ -42,7 +42,7 @@ protected:
     friend class OGLDeviceBuilder;
     COGLExtRender() {};
     ~COGLExtRender() {};
-    GLint m_maxTexUnits;
+    int m_maxTexUnits;
     int m_textureUnitMap[8];
 
 };

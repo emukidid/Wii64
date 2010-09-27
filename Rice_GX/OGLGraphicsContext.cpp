@@ -16,7 +16,24 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+#ifdef __GX__
+#include <stdio.h>
+#include <gccore.h>
+# ifdef MENU_V2
+#include "../libgui/IPLFont.h"
+#include "../menu/MenuResources.h"
+# else // MENU_V2
+#include "../gui/font.h"
+# endif //!MENU_V2
+#include "../gui/DEBUG.h"
+#include "../main/timers.h"
+#endif // __GX__
+
+#ifdef __GX__
+#include "gl.h"
+#else
 #include <SDL_opengl.h>
+#endif
 
 #include "m64p_plugin.h"
 #include "Config.h"
@@ -80,6 +97,7 @@ bool COGLGraphicsContext::Initialize(uint32 dwWidth, uint32 dwHeight, BOOL bWind
     int  colorBufferDepth = 32;
     if( options.colorQuality == TEXTURE_FMT_A4R4G4B4 ) colorBufferDepth = 16;
 
+#ifndef __GX__
     // init sdl & gl
     DebugMessage(M64MSG_VERBOSE, "Initializing video subsystem...");
     if (CoreVideo_Init() != M64ERR_SUCCESS)   
@@ -105,7 +123,8 @@ bool COGLGraphicsContext::Initialize(uint32 dwWidth, uint32 dwHeight, BOOL bWind
     char caption[500];
     sprintf(caption, "%s v%i.%i.%i", PLUGIN_NAME, VERSION_PRINTF_SPLIT(PLUGIN_VERSION));
     CoreVideo_SetCaption(caption);
-    SetWindowMode();
+#endif //!__GX__
+   SetWindowMode();
 
     InitState();
     InitOGLExtension();
@@ -115,6 +134,7 @@ bool COGLGraphicsContext::Initialize(uint32 dwWidth, uint32 dwHeight, BOOL bWind
 
     Unlock();
 
+	//TODO: don't blank out screen on ROM load
     Clear(CLEAR_COLOR_AND_DEPTH_BUFFER);    // Clear buffers
     UpdateFrame();
     Clear(CLEAR_COLOR_AND_DEPTH_BUFFER);
@@ -128,6 +148,8 @@ bool COGLGraphicsContext::Initialize(uint32 dwWidth, uint32 dwHeight, BOOL bWind
 
 void COGLGraphicsContext::InitState(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     m_pRenderStr = glGetString(GL_RENDERER);
     m_pExtensionStr = glGetString(GL_EXTENSIONS);
     m_pVersionStr = glGetString(GL_VERSION);
@@ -184,10 +206,13 @@ void COGLGraphicsContext::InitState(void)
     
     glDepthRange(-1, 1);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
 }
 
 void COGLGraphicsContext::InitOGLExtension(void)
 {
+#ifndef __GX__
+	//TODO: Answer these for GX
     // important extension features, it is very bad not to have these feature
     m_bSupportMultiTexture = IsExtensionSupported("GL_ARB_multitexture");
     m_bSupportTextureEnvCombine = IsExtensionSupported("GL_EXT_texture_env_combine");
@@ -209,7 +234,7 @@ void COGLGraphicsContext::InitOGLExtension(void)
     m_bSupportBlendColor = IsExtensionSupported("GL_EXT_blend_color");
     m_bSupportBlendSubtract = IsExtensionSupported("GL_EXT_blend_subtract");
     m_bSupportNVTextureEnvCombine4 = IsExtensionSupported("GL_NV_texture_env_combine4");
-
+#endif //!__GX__
 }
 
 bool COGLGraphicsContext::IsExtensionSupported(const char* pExtName)
@@ -255,20 +280,166 @@ void COGLGraphicsContext::Clear(ClearFlag dwFlags, uint32 color, float depth)
     float g = ((color>> 8)&0xFF)/255.0f;
     float b = ((color    )&0xFF)/255.0f;
     float a = ((color>>24)&0xFF)/255.0f;
+#ifndef __GX__
+	//TODO: Implement in GX
     glClearColor(r, g, b, a);
     OPENGL_CHECK_ERRORS;
     glClearDepth(depth);
     OPENGL_CHECK_ERRORS;
     glClear(flag);  //Clear color buffer and depth buffer
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
 }
+
+#ifdef __GX__
+//Functions needed for UpdateFrame
+extern "C" {
+extern long long gettime();
+extern unsigned int diff_sec(long long start,long long end);
+};
+
+extern char printToScreen;
+extern char showFPSonScreen;
+
+struct VIInfo
+{
+	unsigned int* xfb[2];
+	int which_fb;
+	bool updateOSD;
+	bool copy_fb;
+};
+
+VIInfo VI;
+
+void VI_GX_setFB(unsigned int* fb1, unsigned int* fb2){
+	VI.xfb[0] = fb1;
+	VI.xfb[1] = fb2;
+}
+
+extern timers Timers;
+
+void VI_GX_showFPS(){
+	static char caption[25];
+
+	TimerUpdate();
+
+	sprintf(caption, "%.1f VI/s, %.1f FPS",Timers.vis,Timers.fps);
+	
+	GXColor fontColor = {150,255,150,255};
+#ifndef MENU_V2
+	write_font_init_GX(fontColor);
+	if(showFPSonScreen)
+		write_font(10,35,caption, 1.0);
+#else
+	menu::IplFont::getInstance().drawInit(fontColor);
+	if(showFPSonScreen)
+		menu::IplFont::getInstance().drawString(10,35,caption, 1.0, false);
+#endif
+
+	//reset swap table from GUI/DEBUG
+//	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
+	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+
+/*	static long long lastTick=0;
+	static int frames=0;
+	static int VIs=0;
+	static char caption[20];
+	
+	long long nowTick = gettime();
+	VIs++;
+//	if (VI.updateOSD)
+//		frames++;
+	if (diff_sec(lastTick,nowTick)>=1) {
+		sprintf(caption, "%02d VI/s, %02d FPS",VIs,frames);
+		frames = 0;
+		VIs = 0;
+		lastTick = nowTick;
+	}
+	
+//	if (VI.updateOSD)
+//	{
+		GXColor fontColor = {150,255,150,255};
+		write_font_init_GX(fontColor);
+		if(showFPSonScreen)
+			write_font(10,35,caption, 1.0);
+		//write_font(10,10,caption,xfb,which_fb);
+
+		//reset swap table from GUI/DEBUG
+		GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
+		GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+//	}*/
+}
+
+extern char text[DEBUG_TEXT_HEIGHT][DEBUG_TEXT_WIDTH];
+
+void VI_GX_showDEBUG()
+{
+	int i = 0;
+	GXColor fontColor = {150, 255, 150, 255};
+	DEBUG_update();
+#ifndef MENU_V2
+	write_font_init_GX(fontColor);
+	if(printToScreen)
+		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
+			write_font(10,(10*i+60),text[i], 0.5); 
+#else
+	menu::IplFont::getInstance().drawInit(fontColor);
+	if(printToScreen)
+		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
+			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
+#endif
+
+	//Reset any stats in DEBUG_stats
+//	DEBUG_stats(8, "RecompCache Blocks Freed", STAT_TYPE_CLEAR, 1);
+
+   //reset swap table from GUI/DEBUG
+//	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
+	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+/*
+//	if (VI.updateOSD)
+//	{
+		int i = 0;
+		GXColor fontColor = {150, 255, 150, 255};
+		DEBUG_update();
+#ifndef MENU_V2
+		write_font_init_GX(fontColor);
+		if(printToScreen)
+			for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
+				write_font(10,(10*i+60),text[i], 0.5); 
+#else
+		menu::IplFont::getInstance().drawInit(fontColor);
+		if(printToScreen)
+			for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
+				menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
+#endif
+		
+	   //reset swap table from GUI/DEBUG
+		GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
+		GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+//	}*/
+}
+
+void VI_GX_showStats()
+{
+/*	if (VI.updateOSD)
+	{
+		sprintf(txtbuffer,"texCache: %d bytes in %d cached textures; %d FB textures",cache.cachedBytes,cache.numCached,frameBuffer.numBuffers);
+		DEBUG_print(txtbuffer,DBG_CACHEINFO); 
+	}*/
+}
+
+
+#endif //__GX__
 
 void COGLGraphicsContext::UpdateFrame(bool swaponly)
 {
     status.gFrameCount++;
 
+#ifndef __GX__
+	//TODO: Implement in GX
     glFlush();
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     //glFinish();
     //wglSwapIntervalEXT(0);
 
@@ -321,7 +492,35 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
    if(renderCallback)
        (*renderCallback)();
 
+#ifndef __GX__
+	//TODO: Implement in GX
    CoreVideo_GL_SwapBuffers();
+#else
+
+//	VI_GX_cleanUp();
+//	VI_GX_showStats();
+	VI_GX_showFPS();
+	VI_GX_showDEBUG();
+//	if(VI.updateOSD)
+//	{
+//		if(VI.copy_fb)
+//			VIDEO_WaitVSync();
+		GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
+		GX_CopyDisp (VI.xfb[VI.which_fb], GX_TRUE);	//clear the EFB before executing new Dlist
+		GX_DrawDone(); //Wait until EFB->XFB copy is complete
+//		doCaptureScreen();
+		VI.updateOSD = false;
+		VI.copy_fb = true;
+//	}
+
+	//Following is from retrace callback
+	VIDEO_SetNextFramebuffer(VI.xfb[VI.which_fb]);
+	VIDEO_Flush();
+	VI.which_fb ^= 1;
+//	VI.copy_fb = false;
+
+
+#endif //!__GX__
    
    /*if(options.bShowFPS)
      {
@@ -339,15 +538,23 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
       }
      }*/
 
+#ifndef __GX__
+	//TODO: Implement in GX
     glDepthMask(GL_TRUE);
     OPENGL_CHECK_ERRORS;
     glClearDepth(1.0);
     OPENGL_CHECK_ERRORS;
+#endif //!__GX__
     if( !g_curRomInfo.bForceScreenClear ) 
+#ifndef __GX__
+		//TODO: Implement in GX
     {
         glClear(GL_DEPTH_BUFFER_BIT);
         OPENGL_CHECK_ERRORS;
     }
+#else //!__GX__
+		{}
+#endif //__GX__
     else
         needCleanScene = true;
 
@@ -369,6 +576,8 @@ bool COGLGraphicsContext::SetWindowMode()
 }
 int COGLGraphicsContext::ToggleFullscreen()
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     if (CoreVideo_ToggleFullScreen() == M64ERR_SUCCESS)
     {
         m_bWindowed = !m_bWindowed;
@@ -377,6 +586,7 @@ int COGLGraphicsContext::ToggleFullscreen()
         else
             SetFullscreenMode();
     }
+#endif //!__GX__
 
     return m_bWindowed?0:1;
 }

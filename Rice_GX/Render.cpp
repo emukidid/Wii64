@@ -17,6 +17,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#include <stdlib.h>
+#endif //__GX__
+
 #include "osal_preproc.h"
 #include "m64p_plugin.h"
 

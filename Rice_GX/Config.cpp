@@ -46,7 +46,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "TextureManager.h"
 #include "Video.h"
 
+#ifdef __GX__
+#define CONFIG_FILE     "sd:/wii64/RiceVideo.cfg"
+#define INI_FILE        "sd:/wii64/RiceVideoLinux.ini"
+#else //__GX__
 #define INI_FILE        "RiceVideoLinux.ini"
+#endif //!__GX__
 
 static m64p_handle l_ConfigVideoRice = NULL;
 static m64p_handle l_ConfigVideoGeneral = NULL;
@@ -311,6 +316,7 @@ void GenerateFrameBufferOptions(void)
 
 BOOL InitConfiguration(void)
 {
+#ifndef __GX__
     if (ConfigOpenSection("Video-General", &l_ConfigVideoGeneral) != M64ERR_SUCCESS)
     {
         DebugMessage(M64MSG_ERROR, "Unable to open Video-General configuration section");
@@ -363,6 +369,7 @@ BOOL InitConfiguration(void)
     ConfigSetDefaultInt(l_ConfigVideoRice, "OpenGLDepthBufferSetting", 16, "Z-buffer depth (only 16 or 32)");
     ConfigSetDefaultInt(l_ConfigVideoRice, "ColorQuality", TEXTURE_FMT_A8R8G8B8, "Color bit depth for rendering window (0=32 bits, 1=16 bits)");
     ConfigSetDefaultInt(l_ConfigVideoRice, "OpenGLRenderSetting", OGL_DEVICE, "OpenGL level to support (0=auto, 1=OGL_1.1, 2=OGL_1.2, 3=OGL_1.3, 4=OGL_1.4, 5=OGL_1.4_V2, 6=OGL_TNT2, 7=NVIDIA_OGL, 8=OGL_FRAGMENT_PROGRAM)");
+#endif //__GX__
     return TRUE;
 }
 
@@ -433,6 +440,7 @@ bool isSSESupported()
 
 static void ReadConfiguration(void)
 {
+#ifndef __GX__
     windowSetting.bDisplayFullscreen = ConfigGetParamBool(l_ConfigVideoGeneral, "Fullscreen");
     windowSetting.uDisplayWidth = ConfigGetParamInt(l_ConfigVideoGeneral, "ScreenWidth");
     windowSetting.uDisplayHeight = ConfigGetParamInt(l_ConfigVideoGeneral, "ScreenHeight");
@@ -471,6 +479,47 @@ static void ReadConfiguration(void)
     options.OpenglDepthBufferSetting = ConfigGetParamInt(l_ConfigVideoRice, "OpenGLDepthBufferSetting");
     options.colorQuality = ConfigGetParamInt(l_ConfigVideoRice, "ColorQuality");
     options.OpenglRenderSetting = ConfigGetParamInt(l_ConfigVideoRice, "OpenGLRenderSetting");
+#else //!__GX__
+	//TODO: Read from file or implement m64p functions?
+    windowSetting.bDisplayFullscreen = 0;
+    windowSetting.uDisplayWidth = 640;
+    windowSetting.uDisplayHeight = 480;
+
+    defaultRomOptions.N64FrameBufferEmuType = FRM_BUF_NONE;
+    defaultRomOptions.N64FrameBufferWriteBackControl = FRM_BUF_WRITEBACK_NORMAL;
+    defaultRomOptions.N64RenderToTextureEmuType = TXT_BUF_NONE;
+    defaultRomOptions.screenUpdateSetting = SCREEN_UPDATE_AT_VI_UPDATE;
+
+    defaultRomOptions.bNormalBlender = FALSE;
+    defaultRomOptions.bFastTexCRC = FALSE;
+    defaultRomOptions.bAccurateTextureMapping = TRUE;
+    defaultRomOptions.bInN64Resolution = FALSE;
+    defaultRomOptions.bSaveVRAM = FALSE;
+    defaultRomOptions.bDoubleSizeForSmallTxtrBuf = FALSE;
+    defaultRomOptions.bNormalCombiner = FALSE;
+
+    options.bEnableHacks = TRUE;
+    options.bEnableFog = FALSE;
+    options.bWinFrameMode = FALSE;
+    options.bFullTMEM = FALSE;
+    options.bOGLVertexClipper = FALSE;
+    options.bEnableSSE = TRUE;
+    options.bEnableVertexShader = FALSE;
+    options.bSkipFrame = FALSE;
+    options.bTexRectOnly = FALSE;
+    options.bSmallTextureOnly = FALSE;
+    options.bLoadHiResTextures = FALSE;
+    options.bDumpTexturesToFiles = FALSE;
+    options.bShowFPS = FALSE;
+
+    options.textureEnhancement = 0;
+    options.textureEnhancementControl = 0;
+    options.forceTextureFilter = 0;
+    options.textureQuality = TXT_QUALITY_DEFAULT;
+    options.OpenglDepthBufferSetting = 16;
+    options.colorQuality = TEXTURE_FMT_A8R8G8B8;
+    options.OpenglRenderSetting = OGL_DEVICE;
+#endif //__GX__
 
     CDeviceBuilder::SelectDeviceType((SupportedDeviceType)options.OpenglRenderSetting);
 
@@ -508,11 +557,13 @@ BOOL LoadConfiguration(void)
         return FALSE;
     }
 
+#ifndef __GX__
     if (l_ConfigVideoGeneral == NULL || l_ConfigVideoRice == NULL)
     {
         DebugMessage(M64MSG_ERROR, "Rice Video configuration sections are not open!");
         return FALSE;
     }
+#endif //!__GX__
     
     // Read config parameters from core config API and set up internal variables
     ReadConfiguration();
@@ -942,7 +993,11 @@ BOOL ReadIniFile()
 {
     std::ifstream inifile;
     char readinfo[100];
+#ifndef __GX__
     const char *ini_filepath = ConfigGetSharedDataFilepath(szIniFileName);
+#else //!__GX__
+    const char *ini_filepath = szIniFileName;
+#endif //__GX__
 
     DebugMessage(M64MSG_VERBOSE, "Reading .ini file: %s", ini_filepath);
     inifile.open(ini_filepath);
@@ -1316,7 +1371,7 @@ static int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* sz
     sprintf((char*)szCRC, "%08x%08x-%02x", (unsigned int)dwCRC1, (unsigned int)dwCRC2, nCountryID);
 #ifdef _BIG_ENDIAN
 	// Fix the CRC-ID for Big Endian
-    CHAR szCRCtmp[50+1];
+    char szCRCtmp[50+1];
     strcpy((char*)szCRCtmp, (char*)szCRC);
 	for (i = 0; i < 4; i++)
 	{

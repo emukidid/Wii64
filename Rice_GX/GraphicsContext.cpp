@@ -18,11 +18,15 @@
 
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#endif //__GX__
+
 #include "m64p_plugin.h"
 #include "m64p_vidext.h"
 
-#include "FrameBuffer.h"
 #include "OGLGraphicsContext.h"
+#include "FrameBuffer.h"
 #include "Video.h"
 
 CGraphicsContext* CGraphicsContext::g_pGraphicsContext = NULL;
@@ -124,6 +128,7 @@ void CGraphicsContext::InitDeviceParameters(void)
     memset(&CGraphicsContext::m_FullScreenResolutions, 0, 40*2*sizeof(int));
     memset(&CGraphicsContext::m_ColorBufferDepths, 0, 4*sizeof(unsigned int));
 
+#ifndef __GX__
     if (CoreVideo_Init() != M64ERR_SUCCESS)   
         return;
 
@@ -154,6 +159,7 @@ void CGraphicsContext::InitDeviceParameters(void)
 
     qsort( &CGraphicsContext::m_FullScreenRefreshRates, numOfFrequency, sizeof(unsigned int), SortFrequenciesCallback );
     qsort( &CGraphicsContext::m_FullScreenResolutions, CGraphicsContext::m_numOfResolutions, sizeof(int)*2, SortResolutionsCallback );
+#endif //!__GX__
 
     // To initialze device parameters for OpenGL
     COGLGraphicsContext::InitDeviceParameters();

@@ -17,8 +17,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifdef __GX__
+#include <gccore.h>
+#include <ogc\lwp_watchdog.h>
+#endif //__GX__
+
 #include <algorithm>
+#ifndef __GX__
 #include <SDL.h>
+#endif //!__GX__
 
 #include "ConvertImage.h"
 #include "GraphicsContext.h"
@@ -819,7 +826,11 @@ void DLParser_Process(OSTask * pTask)
 //    struct timeval tv;
 //    gettimeofday(&tv, 0);
 //    status.gRDPTime = tv.tv_usec;
+#ifndef __GX__
     status.gRDPTime = (uint32) SDL_GetTicks();
+#else
+    status.gRDPTime = gettick();
+#endif
 
     status.gDlistCount++;
 
@@ -1637,7 +1648,11 @@ void RDP_DLParser_Process(void)
 //    struct timeval tv;
 //    gettimeofday(&tv, 0);
 //    status.gRDPTime = tv.tv_usec;
+#ifndef __GX__
     status.gRDPTime = (uint32) SDL_GetTicks();
+#else
+    status.gRDPTime = gettick();
+#endif
 
     status.gDlistCount++;
 

@@ -21,7 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <vector>
 
+#ifndef __GX__
 #include <SDL_opengl.h>
+#endif
 
 #include "OGLCombiner.h"
 #include "GeneralCombiner.h"
@@ -136,7 +138,7 @@ protected:
     bool m_bOGLExtCombinerSupported;        // Is this OGL extension combiner supported by the video card driver?
     bool m_bSupportModAdd_ATI;
     bool m_bSupportModSub_ATI;
-    GLint m_maxTexUnits;
+    int m_maxTexUnits;
     int m_lastIndex;
     uint32 m_dwLastMux0;
     uint32 m_dwLastMux1;
