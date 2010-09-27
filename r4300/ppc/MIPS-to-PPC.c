@@ -20,10 +20,8 @@
  *
 **/
 
-/* TODO: FP conversion to/from longs
-         Optimize idle branches (generate a call to gen_interrupt)
+/* TODO: Optimize idle branches (generate a call to gen_interrupt)
          Optimize instruction scheduling & reduce branch instructions
-   FIXME: Branch comparisons need to operate on 64-bit values when necessary
  */
 
 #include <string.h>
