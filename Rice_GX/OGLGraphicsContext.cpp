@@ -108,6 +108,20 @@ bool COGLGraphicsContext::Initialize(uint32 dwWidth, uint32 dwHeight, BOOL bWind
     CoreVideo_GL_SetAttribute(M64P_GL_BUFFER_SIZE, colorBufferDepth);
     CoreVideo_GL_SetAttribute(M64P_GL_DEPTH_SIZE, depthBufferDepth);
    
+    /* set multisampling */
+    if (options.multiSampling > 0)
+    {
+        CoreVideo_GL_SetAttribute(M64P_GL_MULTISAMPLEBUFFERS, 1);
+        if (options.multiSampling <= 2)
+            CoreVideo_GL_SetAttribute(M64P_GL_MULTISAMPLESAMPLES, 2);
+        else if (options.multiSampling <= 4)
+            CoreVideo_GL_SetAttribute(M64P_GL_MULTISAMPLESAMPLES, 4);
+        else if (options.multiSampling <= 8)
+            CoreVideo_GL_SetAttribute(M64P_GL_MULTISAMPLESAMPLES, 8);
+        else
+            CoreVideo_GL_SetAttribute(M64P_GL_MULTISAMPLESAMPLES, 16);
+    }
+   
     /* Set the video mode */
     m64p_video_mode ScreenMode = bWindowed ? M64VIDEO_WINDOWED : M64VIDEO_FULLSCREEN;
     if (CoreVideo_SetVideoMode(windowSetting.uDisplayWidth, windowSetting.uDisplayHeight, colorBufferDepth, ScreenMode) != M64ERR_SUCCESS)
@@ -128,7 +142,7 @@ bool COGLGraphicsContext::Initialize(uint32 dwWidth, uint32 dwHeight, BOOL bWind
 
     InitState();
     InitOGLExtension();
-    sprintf(m_strDeviceStats, "%s - %s : %s", m_pVendorStr, m_pRenderStr, m_pVersionStr);
+    sprintf(m_strDeviceStats, "%.60s - %.128s : %.60s", m_pVendorStr, m_pRenderStr, m_pVersionStr);
     TRACE0(m_strDeviceStats);
     DebugMessage(M64MSG_INFO, "Using OpenGL: %s", m_strDeviceStats);
 
@@ -225,6 +239,31 @@ void COGLGraphicsContext::InitOGLExtension(void)
     // Optional extension features
     m_bSupportRescaleNormal = IsExtensionSupported("GL_EXT_rescale_normal");
     m_bSupportLODBias = IsExtensionSupported("GL_EXT_texture_lod_bias");
+    m_bSupportAnisotropicFiltering = IsExtensionSupported("GL_EXT_texture_filter_anisotropic");
+
+    // Compute maxAnisotropicFiltering
+    m_maxAnisotropicFiltering = 0;
+
+    if( m_bSupportAnisotropicFiltering
+    && (options.anisotropicFiltering == 2
+        || options.anisotropicFiltering == 4
+        || options.anisotropicFiltering == 8
+        || options.anisotropicFiltering == 16))
+    {
+        //Get the max value of aniso that the graphic card support
+        glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &m_maxAnisotropicFiltering);
+        OPENGL_CHECK_ERRORS;
+
+        // If user want more aniso than hardware can do
+        if(options.anisotropicFiltering > (uint32) m_maxAnisotropicFiltering)
+        {
+            DebugMessage(M64MSG_INFO, "A value of '%i' is set for AnisotropicFiltering option but the hardware has a maximum value of '%i' so this will be used", options.anisotropicFiltering, m_maxAnisotropicFiltering);
+        }
+
+        //check if user want less anisotropy than hardware can do
+        if((uint32) m_maxAnisotropicFiltering > options.anisotropicFiltering)
+        m_maxAnisotropicFiltering = options.anisotropicFiltering;
+    }
 
     // Nvidia only extension features (optional)
     m_bSupportNVRegisterCombiner = IsExtensionSupported("GL_NV_register_combiners");
@@ -597,3 +636,13 @@ void COGLGraphicsContext::InitDeviceParameters()
     status.isVertexShaderEnabled = false;   // Disable it for now
 }
 
+// Get methods
+bool COGLGraphicsContext::IsSupportAnisotropicFiltering()
+{
+    return m_bSupportAnisotropicFiltering;
+}
+
+int COGLGraphicsContext::getMaxAnisotropicFiltering()
+{
+    return m_maxAnisotropicFiltering;
+}
