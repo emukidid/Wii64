@@ -117,7 +117,10 @@ void dynarec(unsigned int address){
 		sprintf(txtbuffer, "trampolining to 0x%08x\n", address);
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
 		*/
-		if(!paddr){ stop=1; return; }
+		if(!paddr){ 
+			address = paddr = update_invalid_addr(interp_addr);
+			dst_block = blocks[address>>12]; 
+		}
 		
 		if(!dst_block){
 			/*sprintf(txtbuffer, "block at %08x doesn't exist\n", address&~0xFFF);
@@ -168,10 +171,10 @@ void dynarec(unsigned int address){
 			RecompCache_Link(last_func, link_branch, func, code);
 		clear_freed_funcs();
 		
-		address = dyna_run(func, code);
+		interp_addr = address = dyna_run(func, code);
 
 		if(!noCheckInterrupt){
-			last_addr = interp_addr = address;
+			last_addr = interp_addr;
 			// Check for interrupts
 			if(next_interupt <= Count){
 				gen_interupt();

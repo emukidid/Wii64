@@ -100,9 +100,11 @@ void TLB_refill_exception(unsigned long address, int w)
     if (!interpcore && !dynacore) { //wii64: used to be just (!interpcore) here in mupen64 0.5 code
       EPC = w!=2 ? PC->addr: address; //wii64: this path should NEVER be taken, but what is w!=2 ?
     }
-    else {
-      EPC = interp_addr;
-    }
+	else if(dynacore && w==2) {
+		EPC = address;
+	} else {
+		EPC = interp_addr;
+	}
        
     Cause &= ~0x80000000;
     Status |= 0x2; //EXL=1
