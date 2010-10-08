@@ -49,6 +49,8 @@
 
 #include "Audio_#1.1.h"
 
+//#define DEBUG_RSP 1
+
 RSP_INFO rsp;
 
 BOOL AudioHle = FALSE, GraphicsHle = TRUE, SpecificHle = FALSE;
@@ -230,6 +232,10 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 		switch(sum) {
 			case 0x9E2: // banjo tooie (U) boot code
 			{
+#ifdef DEBUG_RSP
+				sprintf(txtbuffer, "RSP: Tooie (U) Boot sum: %08X\r\n",sum);
+				DEBUG_print(txtbuffer, DBG_USBGECKO);
+#endif
 				int i,j;
 			 	memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
 			 	for (j=0; j<0xfc; j++) {
@@ -241,6 +247,10 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 			}
 			case 0x9F2: // banjo tooie (E) + zelda oot (E) boot code
 			{
+#ifdef DEBUG_RSP
+				sprintf(txtbuffer, "RSP: Tooie,OOT (E) Boot sum: %08X\r\n",sum);
+				DEBUG_print(txtbuffer, DBG_USBGECKO);
+#endif
 				int i,j;
 			 	memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
 			 	for (j=0; j<0xfc; j++) {
@@ -250,16 +260,54 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 				}
 			 	return Cycles;
 			}
+			case 0x7243C:	// Pokemon Stadium
+			{
+#ifdef DEBUG_RSP
+					DEBUG_print("RSP: Pokemon Audio ucode sum\r\n", DBG_USBGECKO);
+#endif
+				if (!audio_ucode(task)) {
+					return Cycles;
+				}
+#ifdef DEBUG_RSP
+				else {
+
+					for (i=0; i<(task->ucode_size/2); i++) {
+						sum += *(rsp.RDRAM + task->ucode + i);
+					}
+					sprintf(txtbuffer, "RSP: Unknown Audio task sum: %08X\r\n",sum);
+					DEBUG_print(txtbuffer, DBG_USBGECKO);
+				}
+				break;
+#endif
+			}
+			default:
+#ifdef DEBUG_RSP
+				sprintf(txtbuffer, "RSP: Unknown Boot code task! size: %08X sum: %08X\r\n",task->ucode_size,sum);
+				DEBUG_print(txtbuffer, DBG_USBGECKO);
+#endif
+				break;
 		}
 	}
 	// Audio / JPEG task
 	else {
 		switch(task->type) {
 			case 2: // audio
+#ifdef DEBUG_RSP
+					DEBUG_print("RSP: Audio ucode\r\n", DBG_USBGECKO);
+#endif
 				if (!audio_ucode(task)) {
 					return Cycles;
+				} 
+#ifdef DEBUG_RSP
+				else {
+					for (i=0; i<(task->ucode_size/2); i++) {
+						sum += *(rsp.RDRAM + task->ucode + i);
+					}
+					sprintf(txtbuffer, "RSP: Unknown Audio task sum: %08X\r\n",sum);
+					DEBUG_print(txtbuffer, DBG_USBGECKO);
 				}
 				break;
+#endif
 			case 4: // jpeg
 		 	{
 			 	for (i=0; i<(task->ucode_size/2); i++) {
@@ -267,15 +315,34 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 				}
 			 	switch(sum) {
 					case 0x278: // used by zelda during boot
+#ifdef DEBUG_RSP
+		 				DEBUG_print("RSP: Zelda Boot\r\n", DBG_USBGECKO);
+#endif
 		 				*rsp.SP_STATUS_REG |= 0x200;
 		 				return Cycles;
 					case 0x2e4fc: // uncompress
+#ifdef DEBUG_RSP
+		 				DEBUG_print("RSP: JPEG Uncompress\r\n", DBG_USBGECKO);
+#endif
 		 				jpg_uncompress(task);
 		 				return Cycles;
 					default:	// unknown
+#ifdef DEBUG_RSP
+						sprintf(txtbuffer, "RSP: Unknown JPEG task sum: %08X\r\n",sum);
+						DEBUG_print(txtbuffer, DBG_USBGECKO);
+#endif
 						break;
 				}
 			}
+			default:
+#ifdef DEBUG_RSP
+				for (i=0; i<(task->ucode_size/2); i++) {
+					sum += *(rsp.RDRAM + task->ucode + i);
+				}
+				sprintf(txtbuffer, "Unknown task! type: %i sum: %08X\r\n",task->type, sum);
+				DEBUG_print(txtbuffer, DBG_USBGECKO);
+#endif
+				break;
 		}
 		memcpy(rsp.DMEM, rsp.RDRAM+task->ucode_data, task->ucode_data_size);
 	    memcpy(rsp.IMEM+0x80, rsp.RDRAM+task->ucode, 0xF7F);
