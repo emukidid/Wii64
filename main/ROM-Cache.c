@@ -205,19 +205,19 @@ void ROMCache_read(u8* ram_dest, u32 rom_offset, u32 length){
 			int i, min_i = 0;
 			for(i=0; i<L1_NUM_BLOCKS; ++i){
 				if(rom_offset >> L1_BLOCK_SHIFT == L1tag[i]){
-					DEBUG_stats(7, "ROMCache L1 transfers", STAT_TYPE_ACCUM, 1);
+//					DEBUG_stats(7, "ROMCache L1 transfers", STAT_TYPE_ACCUM, 1);
 					memcpy(ram_dest, L1[i] + (rom_offset&L1_BLOCK_MASK), length);
 					return;
 				} else if(L1tag[i] < 0 || L1LRU[i] < L1LRU[min_i])
 					min_i = i;
 			}
 			
-			DEBUG_stats(6, "ROMCache L1 misses", STAT_TYPE_ACCUM, 1);
+//			DEBUG_stats(6, "ROMCache L1 misses", STAT_TYPE_ACCUM, 1);
 			L1tag[min_i] = rom_offset >> L1_BLOCK_SHIFT;
 			ARAM_ReadFromBlock(ROM,(rom_offset&(~L1_BLOCK_MASK)),L1_BLOCK_SIZE,(char*)L1[min_i]);
 			L1LRU[min_i] = nextL1LRUValue++;
 			
-			DEBUG_stats(7, "ROMCache L1 transfers", STAT_TYPE_ACCUM, 1);
+//			DEBUG_stats(7, "ROMCache L1 transfers", STAT_TYPE_ACCUM, 1);
 			memcpy(ram_dest, L1[min_i] + (rom_offset&L1_BLOCK_MASK), length);
 		} else
 #endif

@@ -119,7 +119,7 @@ void dynarec(unsigned int address){
 		*/
 		if(!paddr){ 
 			address = paddr = update_invalid_addr(interp_addr);
-			dst_block = blocks[address>>12]; 
+			dst_block = blocks_get(address>>12); 
 		}
 		
 		if(!dst_block){
