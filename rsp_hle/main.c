@@ -225,12 +225,8 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 
 	// Boot code task
 	if (task->ucode_size > 0x1000) {
-		// Calculate the sum of the task
-		for (i=0; i<(0x1000/2); i++) {
-			sum += *(rsp.IMEM + i);
-		}
-		switch(sum) {
-			case 0x9E2: // banjo tooie (U) boot code
+		switch(rsp.IMEM[4]) {
+			case 0x16: // banjo tooie (U) boot code
 			{
 #ifdef DEBUG_RSP
 				sprintf(txtbuffer, "RSP: Tooie (U) Boot sum: %08X\r\n",sum);
@@ -245,7 +241,7 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 				}
 			 	return Cycles;
 			}
-			case 0x9F2: // banjo tooie (E) + zelda oot (E) boot code
+			case 0x26: // banjo tooie (E) + zelda oot (E) boot code
 			{
 #ifdef DEBUG_RSP
 				sprintf(txtbuffer, "RSP: Tooie,OOT (E) Boot sum: %08X\r\n",sum);
@@ -260,28 +256,12 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 				}
 			 	return Cycles;
 			}
-			case 0x7243C:	// Pokemon Stadium
-			{
-#ifdef DEBUG_RSP
-					DEBUG_print("RSP: Pokemon Audio ucode sum\r\n", DBG_USBGECKO);
-#endif
-				if (!audio_ucode(task)) {
-					return Cycles;
-				}
-#ifdef DEBUG_RSP
-				else {
-
-					for (i=0; i<(task->ucode_size/2); i++) {
-						sum += *(rsp.RDRAM + task->ucode + i);
-					}
-					sprintf(txtbuffer, "RSP: Unknown Audio task sum: %08X\r\n",sum);
-					DEBUG_print(txtbuffer, DBG_USBGECKO);
-				}
-				break;
-#endif
-			}
 			default:
 #ifdef DEBUG_RSP
+				// Calculate the sum of the task
+				for (i=0; i<(0x1000/2); i++) {
+					sum += *(rsp.IMEM + i);
+				}
 				sprintf(txtbuffer, "RSP: Unknown Boot code task! size: %08X sum: %08X\r\n",task->ucode_size,sum);
 				DEBUG_print(txtbuffer, DBG_USBGECKO);
 #endif
