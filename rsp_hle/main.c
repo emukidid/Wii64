@@ -172,7 +172,7 @@ static int audio_ucode(OSTask_t *task)
 __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 {
 	OSTask_t *task = (OSTask_t*)(rsp.DMEM + 0xFC0);
-	unsigned int i, sum=0;
+
 #ifdef __WIN32__
 	if(firstTime) {
 		firstTime=FALSE;
@@ -223,14 +223,13 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 		rsp.CheckInterrupts();
 	 } 
 
-	// Boot code task
-	if (task->ucode_size > 0x1000) {
+	// Boot code task (TODO why is ucode_size messed up for Pokemon Stadium? 0x8000D48C)
+	if ((task->ucode_size > 0x1000) && (task->ucode_size != 0x8000D48C)) {
 		switch(rsp.IMEM[4]) {
 			case 0x16: // banjo tooie (U) boot code
 			{
 #ifdef DEBUG_RSP
-				sprintf(txtbuffer, "RSP: Tooie (U) Boot sum: %08X\r\n",sum);
-				DEBUG_print(txtbuffer, DBG_USBGECKO);
+				DEBUG_print("RSP: Tooie (U) Boot\r\n", DBG_USBGECKO);
 #endif
 				int i,j;
 			 	memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
@@ -244,8 +243,7 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 			case 0x26: // banjo tooie (E) + zelda oot (E) boot code
 			{
 #ifdef DEBUG_RSP
-				sprintf(txtbuffer, "RSP: Tooie,OOT (E) Boot sum: %08X\r\n",sum);
-				DEBUG_print(txtbuffer, DBG_USBGECKO);
+				DEBUG_print("RSP: Tooie,OOT (E) Boot\r\n", DBG_USBGECKO);
 #endif
 				int i,j;
 			 	memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
@@ -257,14 +255,17 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 			 	return Cycles;
 			}
 			default:
+			{
 #ifdef DEBUG_RSP
+				unsigned int sum = 0, i = 0;
 				// Calculate the sum of the task
 				for (i=0; i<(0x1000/2); i++) {
 					sum += *(rsp.IMEM + i);
 				}
-				sprintf(txtbuffer, "RSP: Unknown Boot code task! size: %08X sum: %08X\r\n",task->ucode_size,sum);
+				sprintf(txtbuffer, "RSP: Unknown Boot code task! size: %08X sum: %08X\r\n",(task->ucode_size),sum);
 				DEBUG_print(txtbuffer, DBG_USBGECKO);
 #endif
+			}
 				break;
 		}
 	}
@@ -280,6 +281,7 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 				} 
 #ifdef DEBUG_RSP
 				else {
+					unsigned int sum = 0, i = 0;
 					for (i=0; i<(task->ucode_size/2); i++) {
 						sum += *(rsp.RDRAM + task->ucode + i);
 					}
@@ -290,38 +292,45 @@ __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 #endif
 			case 4: // jpeg
 		 	{
-			 	for (i=0; i<(task->ucode_size/2); i++) {
-					sum += *(rsp.RDRAM + task->ucode + i);
-				}
-			 	switch(sum) {
-					case 0x278: // used by zelda during boot
+			 	
+			 	switch(*(u8*)(rsp.RDRAM + task->ucode)) {
+					case 0xE8: // used by zelda during boot
 #ifdef DEBUG_RSP
 		 				DEBUG_print("RSP: Zelda Boot\r\n", DBG_USBGECKO);
 #endif
 		 				*rsp.SP_STATUS_REG |= 0x200;
 		 				return Cycles;
-					case 0x2e4fc: // uncompress
+					case 0x8C: // uncompress
 #ifdef DEBUG_RSP
 		 				DEBUG_print("RSP: JPEG Uncompress\r\n", DBG_USBGECKO);
 #endif
 		 				jpg_uncompress(task);
 		 				return Cycles;
 					default:	// unknown
+					{
 #ifdef DEBUG_RSP
+						unsigned int sum = 0, i = 0;
+						for (i=0; i<(task->ucode_size/2); i++) {
+							sum += *(rsp.RDRAM + task->ucode + i);
+						}
 						sprintf(txtbuffer, "RSP: Unknown JPEG task sum: %08X\r\n",sum);
 						DEBUG_print(txtbuffer, DBG_USBGECKO);
 #endif
 						break;
+					}
 				}
 			}
 			default:
+			{
 #ifdef DEBUG_RSP
+				unsigned int sum = 0, i = 0;
 				for (i=0; i<(task->ucode_size/2); i++) {
 					sum += *(rsp.RDRAM + task->ucode + i);
 				}
 				sprintf(txtbuffer, "Unknown task! type: %i sum: %08X\r\n",task->type, sum);
 				DEBUG_print(txtbuffer, DBG_USBGECKO);
 #endif
+			}
 				break;
 		}
 		memcpy(rsp.DMEM, rsp.RDRAM+task->ucode_data, task->ucode_data_size);
