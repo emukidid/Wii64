@@ -16,8 +16,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+#ifndef __GX__
 #define GL_GLEXT_PROTOTYPES
 #include <SDL_opengl.h>
+#endif //!__GX__
 
 #include "stdafx.h"
 
@@ -125,7 +127,7 @@ void COGLColorCombinerTNT2::DisplaySimpleMuxString(void)
 #endif
 
 //========================================================================
-
+#ifndef __GX__
 GLint COGLColorCombinerTNT2::RGBArgsMap[] =
 {
     GL_ZERO,                        //MUX_0
@@ -147,13 +149,18 @@ GLint COGLColorCombinerTNT2::RGBArgsMap[] =
     GL_ZERO,                        //MUX_K5
     GL_ZERO                     //MUX_UNK
 };
+#endif //!__GX__
 
 
 //========================================================================
 
 GLint COGLColorCombinerTNT2::MapRGBArgs(uint8 arg)
 {
+#ifndef __GX__
     return RGBArgsMap[arg&MUX_MASK];
+#else //!__GX__
+    return GL_ZERO;
+#endif //__GX__
 }
 
 GLint COGLColorCombinerTNT2::MapRGBArgFlags(uint8 arg)
@@ -179,7 +186,11 @@ GLint COGLColorCombinerTNT2::MapRGBArgFlags(uint8 arg)
 
 GLint COGLColorCombinerTNT2::MapAlphaArgs(uint8 arg)
 {
+#ifndef __GX__
     return RGBArgsMap[arg&MUX_MASK];
+#else //!__GX__
+    return GL_ZERO;
+#endif //__GX__
 }
 
 GLint COGLColorCombinerTNT2::MapAlphaArgFlags(uint8 arg)
@@ -196,6 +207,7 @@ GLint COGLColorCombinerTNT2::MapAlphaArgFlags(uint8 arg)
 
 void COGLColorCombinerTNT2::GenerateCombinerSetting(int index)
 {
+#ifndef __GX__
     TNT2CombinerSaveType &res = m_vCompiledTNTSettings[index];
 
     // Texture unit 0
@@ -290,10 +302,12 @@ void COGLColorCombinerTNT2::GenerateCombinerSetting(int index)
     {
         //m_pOGLRender->EnableTexUnit(1,FALSE);
     }
+#endif //!__GX__
 }
 
 void COGLColorCombinerTNT2::GenerateCombinerSettingConstants(int index)
 {
+#ifndef __GX__
     TNT2CombinerSaveType &res = m_vCompiledTNTSettings[index];
     for( int i=0; i<2; i++ )
     {
@@ -325,6 +339,7 @@ void COGLColorCombinerTNT2::GenerateCombinerSettingConstants(int index)
             }
         }
     }
+#endif //!__GX__
 }
 
 

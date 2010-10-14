@@ -25,7 +25,9 @@ COGLTexture::COGLTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     // Fix me, if usage is AS_RENDER_TARGET, we need to create pbuffer instead of regular texture
 
     m_dwTextureFmt = TEXTURE_FMT_A8R8G8B8;  // Always use 32bit to load texture
+#ifndef __GX__
     glGenTextures( 1, &m_dwTextureName );
+#endif //!__GX__
 
     // Make the width and height be the power of 2
     uint32 w;
@@ -62,7 +64,9 @@ COGLTexture::~COGLTexture()
 {
     // Fix me, if usage is AS_RENDER_TARGET, we need to destroy the pbuffer
 
+#ifndef __GX__
     glDeleteTextures(1, &m_dwTextureName );
+#endif //!__GX__
     free(m_pTexture);
     m_pTexture = NULL;
     m_dwWidth = 0;
@@ -86,6 +90,7 @@ bool COGLTexture::StartUpdate(DrawInfo *di)
 
 void COGLTexture::EndUpdate(DrawInfo *di)
 {
+#ifndef __GX__
     glBindTexture(GL_TEXTURE_2D, m_dwTextureName);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -97,6 +102,7 @@ void COGLTexture::EndUpdate(DrawInfo *di)
 	//Change to GL_UNSIGNED_INT_8_8_8_8 for X forwarding to X86
     glTexImage2D(GL_TEXTURE_2D, 0, m_glFmt, m_dwCreatedTextureWidth, m_dwCreatedTextureHeight, 0, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, m_pTexture);
 #endif //_BIG_ENDIAN
+#endif //!__GX__
 }
 
 

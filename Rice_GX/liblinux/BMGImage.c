@@ -24,7 +24,11 @@
 // POSSESSION, USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
+#ifdef __GX__
+#include <malloc.h>
+#else //__GX__
 #include <memory.h>
+#endif //!__GX__
 #include <setjmp.h>
 #include <stdlib.h>
 

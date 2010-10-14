@@ -17,10 +17,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include <limits.h> // PATH_MAX
-
 #include "stdafx.h"
+#ifndef __GX__
+#include <limits.h> // PATH_MAX
 #include "../main/version.h"
+#else //!__GX__
+#include <stdlib.h>
+#include <sys\syslimits.h> //PATH_MAX
+#include "version.h"
+#endif //__GX__
 
 #define INI_FILE        "RiceVideoLinux.ini"
 #define CONFIG_FILE     "RiceVideo.cfg"
@@ -2085,6 +2090,8 @@ uint32 CountryCodeToTVSystem(uint32 countryCode)
 
     return system;
 }
+
+#ifndef __GX__
 #include <gtk/gtk.h>
 #include "messagebox.h"
 
@@ -3550,4 +3557,5 @@ else if(g_curRomInfo.UseCIWidthAndRatio == 2)
 
 gtk_widget_show_all(configDialog->dialog);
 }
+#endif //!__GX__
 

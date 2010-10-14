@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <dirent.h>
 #include <stdarg.h>
+#ifndef __GX__
 #include <limits.h> // PATH_MAX
 
 #include <SDL_opengl.h>
@@ -27,6 +28,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "messagebox.h"
 
 #include "../main/version.h"
+#else //!__GX__
+#include "GFXPlugin.h"
+#include "stdafx.h"
+#include <stdlib.h>
+#include <sys\syslimits.h> // PATH_MAX
+#include <malloc.h>
+#include "version.h"
+#endif //__GX__
+
+#ifdef DEBUGON
+extern "C" { void _break(); }
+#endif
 
 PluginStatus status;
 char generalText[256];
@@ -67,9 +80,36 @@ bool frameWriteByCPURectFlag[20][20];
 std::vector<uint32> frameWriteRecord;
 
 //---------------------------------------------------------------------------------------
+// Wii64 Interface Functions
+#ifdef __GX__
+//TODO: Move to VI?
+char printToScreen;
+char showFPSonScreen;
+/*bool updateDEBUGflag;
+bool new_fb;
+unsigned int* xfb[2];
+int which_fb;*/
+
+void VI_GX_setFB(unsigned int* fb1, unsigned int* fb2);
+
+extern "C" {
+void gfx_set_fb(unsigned int* fb1, unsigned int* fb2){
+	VI_GX_setFB(fb1, fb2);
+}
+
+void showLoadProgress(float percent){
+//	VI_GX_showLoadProg(percent);
+}
+}
+
+void gfx_set_window(int x, int y, int width, int height) {};
+
+#endif // __GX__
 
 void GetPluginDir( char * Directory ) 
 {
+#ifndef __GX__
+	//TODO: This function is unnecessary.
    if(strlen(g_ConfigDir) > 0)
    {
       strncpy(Directory, g_ConfigDir, PATH_MAX);
@@ -120,6 +160,9 @@ void GetPluginDir( char * Directory )
       strcat(path, "plugins/");
       strcpy(Directory, path);
    }
+#else //!__GX__
+	strcpy(Directory, "sd:/wii64/");
+#endif //__GX__
 }
 
 //-------------------------------------------------------------------------------------
@@ -155,7 +198,9 @@ EXPORT void CALL DllTest ( HWND hParent )
 
 EXPORT void CALL DllConfig ( HWND hParent )
 {
+#ifndef __GX__
    ShowConfigBox();
+#endif //!__GX__
 }
 
 void ChangeWindowStep2()
@@ -203,6 +248,9 @@ void GenerateCurrentRomOptions();
 extern void InitExternalTextures(void);
 void StartVideo(void)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
     windowSetting.dps = windowSetting.fps = -1;
     windowSetting.lastSecDlistCount = windowSetting.lastSecFrameCount = 0xFFFFFFFF;
 
@@ -243,6 +291,9 @@ void StartVideo(void)
     InitExternalTextures();
 
     try {
+#ifdef __GX__
+		CDeviceBuilder::SelectDeviceType(OGL_DEVICE);
+#endif //__GX__
         CDeviceBuilder::GetBuilder()->CreateGraphicsContext();
         CGraphicsContext::InitWindowInfo();
         
@@ -362,6 +413,10 @@ uint32 VideoThreadProc( LPVOID lpParameter )
 //---------------------------------------------------------------------------------------
 EXPORT void CALL RomClosed(void)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
+
     TRACE0("To stop video");
     Ini_StoreRomOptions(&g_curRomInfo);
 #ifdef USING_THREAD
@@ -385,6 +440,10 @@ EXPORT void CALL RomClosed(void)
 
 EXPORT void CALL RomOpen(void)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
+
    InitConfiguration();
 
     if( g_CritialSection.IsLocked() )
@@ -394,7 +453,15 @@ EXPORT void CALL RomOpen(void)
     }
     status.bDisableFPS=false;
 
+#ifdef __GX__
+# ifdef USE_EXPANSION
    g_dwRamSize = 0x800000;
+# else
+   g_dwRamSize = 0x400000;
+# endif
+#else //__GX__
+   g_dwRamSize = 0x800000;
+#endif //!__GX__
     
 #ifdef _DEBUG
     if( debuggerPause )
@@ -684,17 +751,27 @@ void UpdateScreenStep2 (void)
 
 EXPORT void CALL UpdateScreen(void)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
+
     if(options.bShowFPS)
     {
         static unsigned int lastTick=0;
         static int frames=0;
+#ifndef __GX__
         unsigned int nowTick = SDL_GetTicks();
+#else //!__GX__
+		//TODO: Replace with proper function
+        unsigned int nowTick = 0;
+#endif //__GX__
         frames++;
         if(lastTick + 5000 <= nowTick)
         {
             char caption[200];
             sprintf(caption, "RiceVideoLinux N64 Plugin %s - %.3f VI/S", PLUGIN_VERSION, frames/5.0);
             SDL_WM_SetCaption(caption, caption);
+#endif //!__GX__
             frames = 0;
             lastTick = nowTick;
         }
@@ -751,6 +828,9 @@ EXPORT BOOL CALL GetFullScreenStatus(void)
 
 EXPORT BOOL CALL InitiateGFX(GFX_INFO Gfx_Info)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
     memset(&status, 0, sizeof(status));
     windowSetting.bDisplayFullscreen = FALSE;
     memcpy(&g_GraphicsInfo, &Gfx_Info, sizeof(GFX_INFO));
@@ -768,7 +848,9 @@ EXPORT BOOL CALL InitiateGFX(GFX_INFO Gfx_Info)
     CGraphicsContext::InitWindowInfo();
     CGraphicsContext::InitDeviceParameters();
 
+#ifndef __GX__
     gui_init();
+#endif //!__GX__
     return(TRUE);
 }
 
@@ -782,8 +864,10 @@ void __cdecl MsgInfo (char * Message, ...)
     vsprintf( Msg, Message, ap );
     va_end( ap );
 
+#ifndef __GX__
     sprintf(generalText, "%s %s",project_name, PLUGIN_VERSION);
    messagebox(generalText, MB_OK|MB_ICONINFORMATION, Msg);
+#endif //!__GX__
 }
 
 void __cdecl ErrorMsg (const char* Message, ...)
@@ -795,8 +879,10 @@ void __cdecl ErrorMsg (const char* Message, ...)
     vsprintf( Msg, Message, ap );
     va_end( ap );
     
+#ifndef __GX__
     sprintf(generalText, "%s %s",project_name, PLUGIN_VERSION);
    messagebox(generalText, MB_OK|MB_ICONERROR, Msg);
+#endif //!__GX__
 }
 
 //---------------------------------------------------------------------------------------
@@ -898,6 +984,9 @@ EXPORT void CALL ProcessRDPList(void)
 
 EXPORT void CALL ProcessDList(void)
 {
+#ifdef DEBUGON
+//	_break();
+#endif
 #ifdef USING_THREAD
     if (videoThread)
     {
@@ -1078,6 +1167,7 @@ EXPORT void CALL ReadScreen(void **dest, int *width, int *height)
    if (*dest == 0)
      return;
    
+#ifndef __GX__
    GLint oldMode;
    glGetIntegerv( GL_READ_BUFFER, &oldMode );
    glReadBuffer( GL_FRONT );
@@ -1085,6 +1175,7 @@ EXPORT void CALL ReadScreen(void **dest, int *width, int *height)
    glReadPixels( 0, 0, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight,
          GL_RGB, GL_UNSIGNED_BYTE, *dest );
    glReadBuffer( oldMode );
+#endif //!__GX__
 }
     
 /******************************************************************

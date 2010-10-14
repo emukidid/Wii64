@@ -45,7 +45,10 @@ protected:
     bool SetFullscreenMode();
     bool SetWindowMode();
 
+#ifndef __GX__
+	//TODO: make this a pointer to the xfb?
     SDL_Surface *m_pScreen;
+#endif //!__GX__
 
     // Important OGL extension features
     bool    m_bSupportMultiTexture;

@@ -18,7 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "stdafx.h"
+#ifndef __GX__
 #include "../main/version.h"
+#endif
 
 #ifndef _DEBUG
 void __cdecl DebuggerAppendMsg(const char * Message, ...) {}

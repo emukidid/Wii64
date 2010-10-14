@@ -18,6 +18,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "stdafx.h"
+
+#ifdef __GX__
+#include <stdlib.h>
+#endif //__GX__
 #include "liblinux/BMGLibPNG.h"
 
 extern FiddledVtx * g_pVtxBase;

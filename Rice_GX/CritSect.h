@@ -20,32 +20,50 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if !defined(CRITSECT_H)
 #define CRITSECT_H
 
+#ifndef __GX__
 #include <SDL.h>
+#endif //__GX__
 
 class CCritSect
 {
  public:
    CCritSect()
      {
+#ifndef __GX__
     cs = SDL_CreateMutex();
+#else //!__GX__
+    LWP_MutexInit(&cs,GX_FALSE);
+#endif //__GX__
     locked = 0;
      }
    
    ~CCritSect()
      {
+#ifndef __GX__
     SDL_DestroyMutex(cs);
+#else //!__GX__
+    LWP_MutexDestroy(cs);
+#endif //__GX__
      }
    
    void Lock()
      {
+#ifndef __GX__
     SDL_LockMutex(cs);
+#else //!__GX__
+    LWP_MutexLock(cs);
+#endif //__GX__
     locked = 1;
      }
    
    void Unlock()
      {
     locked = 0;
+#ifndef __GX__
     SDL_UnlockMutex(cs);
+#else //!__GX__
+	LWP_MutexUnlock(cs);
+#endif //__GX__
      }
    
    bool IsLocked()
@@ -54,7 +72,11 @@ class CCritSect
      }
    
  protected:
+#ifndef __GX__
    SDL_mutex *cs;
+#else //!__GX__
+   mutex_t cs;
+#endif //__GX__
    int locked;
 };
 

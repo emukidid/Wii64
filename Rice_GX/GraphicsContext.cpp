@@ -137,6 +137,7 @@ void CGraphicsContext::InitDeviceParameters(void)
     memset(&CGraphicsContext::m_FullScreenResolutions, 0, 40*2*sizeof(int));
     memset(&CGraphicsContext::m_ColorBufferDepths, 0, 4*sizeof(UINT));
 
+#ifndef __GX__
    if(SDL_InitSubSystem(SDL_INIT_VIDEO) == -1)
      printf("(EE) Error initializing SDL video subsystem: %s\n", SDL_GetError());
    
@@ -181,6 +182,7 @@ void CGraphicsContext::InitDeviceParameters(void)
 
     qsort( &CGraphicsContext::m_FullScreenRefreshRates, numOfFrequency, sizeof(UINT), SortFrequenciesCallback );
     qsort( &CGraphicsContext::m_FullScreenResolutions, CGraphicsContext::m_numOfResolutions, sizeof(int)*2, SortResolutionsCallback );
+#endif //!__GX__
 
     // To initialze device parameters for OpenGL
     COGLGraphicsContext::InitDeviceParameters();

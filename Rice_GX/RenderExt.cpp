@@ -779,21 +779,25 @@ void CRender::DrawSprite(uObjTxSprite &sprite, bool rectR)  //Without Ratation
         }
     }
 
-    // save the current clamp type
+#ifndef __GX__
+	// save the current clamp type
     GLint iClampS, iClampT;
     glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, &iClampS);
     glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, &iClampT);
     // force clamp type to CLAMP_EDGE (experiments show sometimes this is set to hex 0x2901 - invalid value)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+#endif //!__GX__
     // draw the 2D sprite as 2 triangles
     float depth = (gRDP.otherMode.depth_source == 1 ? gRDP.fPrimitiveDepth : 0.0f);
     CTexture *pTexture = g_textures[0].m_pCTexture;
     DrawSimple2DTexture(x0, y0, x1, y1, 0, 0, 1/pTexture->m_fXScale, 1/pTexture->m_fYScale, 
         difColor, speColor, depth, 1);
-    // return clamp type to original setting
+#ifndef __GX__
+	// return clamp type to original setting
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, iClampS);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, iClampT);
+#endif //!__GX__
 }
 
 

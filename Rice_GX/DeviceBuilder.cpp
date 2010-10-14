@@ -19,6 +19,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "stdafx.h"
 
+#ifdef __GX__
+#include <stdlib.h>
+#endif //__GX__
+
 //========================================================================
 CDeviceBuilder* CDeviceBuilder::m_pInstance=NULL;
 SupportedDeviceType CDeviceBuilder::m_deviceType = DIRECTX_DEVICE;
@@ -235,6 +239,8 @@ CColorCombiner * OGLDeviceBuilder::CreateColorCombiner(CRender *pRender)
             {
                 GLint maxUnit = 2;
                 COGLGraphicsContext *pcontext = (COGLGraphicsContext *)(CGraphicsContext::g_pGraphicsContext);
+#ifndef __GX__
+				//TODO: Replace all of this OGL code with GX
                 glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB,&maxUnit);
 
                 if( pcontext->IsExtensionSupported("GL_ARB_fragment_program") )
@@ -288,6 +294,11 @@ CColorCombiner * OGLDeviceBuilder::CreateColorCombiner(CRender *pRender)
                     m_pColorCombiner = new COGLColorCombiner(pRender);
                     printf("[RiceVideo] OpenGL Combiner: Basic OGL");
                 }
+#else //!__GX__
+				//TODO: Tailor this to GX?
+                m_pColorCombiner = new COGLColorCombiner(pRender);
+                printf("[RiceVideo] OpenGL Combiner: Basic OGL");
+#endif //__GX__
             }
             else
             {

@@ -19,7 +19,9 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#ifndef __GX__
 #include <SDL_opengl.h>
+#endif //!__GX__
 
 #include "stdafx.h"
 
@@ -67,6 +69,7 @@ bool COGLColorCombiner::Initialize(void)
     m_bSupportMultiTexture = false;
 
     COGLGraphicsContext *pcontext = (COGLGraphicsContext *)(CGraphicsContext::g_pGraphicsContext);
+#ifndef __GX__
     if( pcontext->IsExtensionSupported("GL_ARB_texture_env_add") || pcontext->IsExtensionSupported("GL_EXT_texture_env_add") )
     {
         m_bSupportAdd = true;
@@ -76,12 +79,16 @@ bool COGLColorCombiner::Initialize(void)
     {
         m_bSupportSubtract = true;
     }
+#else //!__GX__
+#endif //__GX__
 
     return true;
 }
 
 void COGLColorCombiner::DisableCombiner(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     m_pOGLRender->DisableMultiTexture();
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ZERO);
@@ -108,6 +115,7 @@ void COGLColorCombiner::DisableCombiner(void)
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
         m_pOGLRender->EnableTexUnit(0,FALSE);
     }
+#endif //!__GX__
 }
 
 void COGLColorCombiner::InitCombinerCycleCopy(void)
@@ -127,7 +135,10 @@ void COGLColorCombiner::InitCombinerCycleCopy(void)
     }
 #endif
 
+#ifndef __GX__
+	//TODO: Implement in GX
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+#endif //!__GX__
 }
 
 void COGLColorCombiner::InitCombinerCycleFill(void)
@@ -139,6 +150,8 @@ void COGLColorCombiner::InitCombinerCycleFill(void)
 
 void COGLColorCombiner::InitCombinerCycle12(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     m_pOGLRender->DisableMultiTexture();
     if( !m_bTexelsEnable )
     {
@@ -262,38 +275,56 @@ void COGLColorCombiner::InitCombinerCycle12(void)
     {
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     }
+#endif //!__GX__
 }
 
 void COGLBlender::NormalAlphaBlender(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#endif //!__GX__
 }
 
 void COGLBlender::DisableAlphaBlender(void)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ZERO);
+#endif //!__GX__
 }
 
 
 void COGLBlender::BlendFunc(uint32 srcFunc, uint32 desFunc)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glBlendFunc(DirectX_OGL_BlendFuncMaps[srcFunc], DirectX_OGL_BlendFuncMaps[desFunc]);
+#endif //!__GX__
 }
 
 void COGLBlender::Enable()
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glEnable(GL_BLEND);
+#endif //!__GX__
 }
 
 void COGLBlender::Disable()
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     glDisable(GL_BLEND);
+#endif //!__GX__
 }
 
 void COGLColorCombiner::InitCombinerBlenderForSimpleTextureDraw(uint32 tile)
 {
+#ifndef __GX__
+	//TODO: Implement in GX
     m_pOGLRender->DisableMultiTexture();
     if( g_textures[tile].m_pCTexture )
     {
@@ -308,6 +339,7 @@ void COGLColorCombiner::InitCombinerBlenderForSimpleTextureDraw(uint32 tile)
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); // Linear Filtering
 
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+#endif //!__GX__
     m_pOGLRender->SetAlphaTestEnable(FALSE);
 }
 

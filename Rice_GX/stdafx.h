@@ -22,7 +22,16 @@
 #if !defined(_STDAFX_H_)
 #define _STDAFX_H_
 
+#ifndef __GX__
 #include <SDL/SDL.h>
+#else //!__GX__
+#include <gccore.h>
+#include <stdlib.h>
+#include <string.h>
+#include "gl.h"
+#include "glATI.h"
+#include "glext.h"
+#endif //__GX__
 
 #define EXPORT              __declspec(dllexport)
 

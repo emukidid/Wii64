@@ -106,6 +106,10 @@ inline void RSP_Vtx_Clipping(int i) {}
 ALIGN(16,RSP_Options gRSP)
 ALIGN(16,RDP_Options gRDP)
 
+#ifdef __GX__
+GX_Options gGX;
+#endif //__GX__    
+
 static ALIGN(16,XVECTOR4 g_normal)
 //static int norms[3];
 
@@ -831,7 +835,12 @@ void ComputeLOD(bool openGL)
     dt = sqrtf((s0-s1)*(s0-s1)+(t0-t1)*(t0-t1));
 
     float lod = dt/d;
+#ifndef __GX__
+	//TODO: Replace log10f() with something compatible with newlib.
     float frac = log10f(lod)/log10f(2.0f);
+#else //!__GX__
+    float frac = log10(lod)/log10(2.0f);
+#endif //__GX__
     //DEBUGGER_IF_DUMP(pauseAtNext,{DebuggerAppendMsg("LOD frac = %f", frac);});
     frac = (lod / powf(2.0f,floorf(frac)));
     frac = frac - floorf(frac);

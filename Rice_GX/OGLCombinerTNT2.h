@@ -19,7 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef _OGL_COMBINER_TNT2_H_
 #define _OGL_COMBINER_TNT2_H_
 
+#ifndef __GX__
 #include <SDL_opengl.h>
+#endif //!__GX__
 
 #define GL_SOURCE3_RGB_EXT                0x8583
 #define GL_SOURCE3_ALPHA_EXT              0x858B

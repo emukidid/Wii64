@@ -24,7 +24,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#ifndef __GX__
 #include <limits.h> // PATH_MAX
+#else //!__GX__
+#include <sys/syslimits.h> // PATH_MAX
+#include <stdlib.h>
+#endif //__GX__
 
 /************************************************************************/
 /* 2X filters                                                           */
