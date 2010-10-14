@@ -29,10 +29,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 class IColor {
 public:
+#ifndef _BIG_ENDIAN
     uint8 r;
     uint8 g;
     uint8 b;
     uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    uint8 a;
+    uint8 b;
+    uint8 g;
+    uint8 r;
+#endif // _BIG_ENDIAN
 
     IColor(COLOR rgba)
     {

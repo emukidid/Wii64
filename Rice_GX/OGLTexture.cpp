@@ -90,7 +90,13 @@ void COGLTexture::EndUpdate(DrawInfo *di)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // Copy the image data from main memory to video card texture memory
+#ifndef _BIG_ENDIAN
     glTexImage2D(GL_TEXTURE_2D, 0, m_glFmt, m_dwCreatedTextureWidth, m_dwCreatedTextureHeight, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, m_pTexture);
+#else //!_BIG_ENDIAN
+	//Fix Me: Currently 16bit textures are never used in Rice...
+	//Change to GL_UNSIGNED_INT_8_8_8_8 for X forwarding to X86
+    glTexImage2D(GL_TEXTURE_2D, 0, m_glFmt, m_dwCreatedTextureWidth, m_dwCreatedTextureHeight, 0, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, m_pTexture);
+#endif //_BIG_ENDIAN
 }
 
 

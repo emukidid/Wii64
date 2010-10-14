@@ -668,7 +668,11 @@ COLOR OGLRender::PostProcessDiffuseColor(COLOR curDiffuseColor)
     uint32 alphaflag = m_pColorCombiner->m_pDecodedMux->m_dwShadeAlphaChannelFlag;
     if( colorflag+alphaflag != MUX_0 )
     {
+#ifndef _BIG_ENDIAN
         if( (colorflag & 0xFFFFFF00) == 0 && (alphaflag & 0xFFFFFF00) == 0 )
+#else // !_BIG_ENDIAN
+        if( (colorflag & 0x00FFFFFF) == 0 && (alphaflag & 0x00FFFFFF) == 0 )
+#endif // _BIG_ENDIAN
         {
             color = (m_pColorCombiner->GetConstFactor(colorflag, alphaflag, curDiffuseColor));
         }

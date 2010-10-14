@@ -1924,6 +1924,18 @@ int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* szName)
 
     // Generate the CRC-ID for this rom:
     sprintf((char*)szCRC, "%08x%08x-%02x", (unsigned int)dwCRC1, (unsigned int)dwCRC2, nCountryID);
+#ifdef _BIG_ENDIAN
+	// Fix the CRC-ID for Big Endian
+    CHAR szCRCtmp[50+1];
+    strcpy((char*)szCRCtmp, (char*)szCRC);
+	for (i = 0; i < 4; i++)
+	{
+		szCRC[2*i] = szCRCtmp[2*(3-i)];
+		szCRC[2*i+1] = szCRCtmp[2*(3-i)+1];
+		szCRC[2*i+8] = szCRCtmp[2*(3-i)+8];
+		szCRC[2*i+9] = szCRCtmp[2*(3-i)+9];
+	}
+#endif
 
     for (i = 0; i < IniSections.size(); i++)
     {

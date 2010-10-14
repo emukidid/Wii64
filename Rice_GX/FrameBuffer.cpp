@@ -495,14 +495,14 @@ void TexRectToFrameBuffer_8b(uint32 dwXL, uint32 dwYL, uint32 dwXH, uint32 dwYH,
 
         for (uint32 x = 0; x < dwWidth; x++)
         {
-            if( (((y+dwTop)*dwDstPitch+x+dwLeft)^0x3) > maxOff )
+            if( (((y+dwTop)*dwDstPitch+x+dwLeft)^S8) > maxOff )
             {
 #ifdef _DEBUG
                 TRACE0("Warning: Offset exceeds limit");
 #endif
                 continue;
             }
-            dwDst[((y+dwTop)*dwDstPitch+x+dwLeft)^0x3] = dwSrc[(uint32)(dwByteOffset+x*xScale) ^ 0x3];
+            dwDst[((y+dwTop)*dwDstPitch+x+dwLeft)^S8] = dwSrc[(uint32)(dwByteOffset+x*xScale) ^ S8];
         }
     }
 
@@ -1884,13 +1884,13 @@ void FrameBufferManager::CopyBufferToRDRAM(uint32 addr, uint32 fmt, uint32 siz, 
                 for( uint32 j=0; j<width; j++ )
                 {
                     // Point
-                    uint8 r = pS0[indexes[j]+2];
-                    uint8 g = pS0[indexes[j]+1];
-                    uint8 b = pS0[indexes[j]+0];
-                    uint8 a = pS0[indexes[j]+3];
+                    uint8 r = pS0[indexes[j]+(1^S8)];
+                    uint8 g = pS0[indexes[j]+(2^S8)];
+                    uint8 b = pS0[indexes[j]+(3^S8)];
+                    uint8 a = pS0[indexes[j]+(0^S8)];
 
                     // Liner
-                    *(pD+(j^1)) = ConvertRGBATo555( r, g, b, a);
+                    *(pD+(j^S16)) = ConvertRGBATo555( r, g, b, a);
 
                 }
             }
@@ -1916,12 +1916,12 @@ void FrameBufferManager::CopyBufferToRDRAM(uint32 addr, uint32 fmt, uint32 siz, 
                 for( uint32 j=0; j<width; j++ )
                 {
                     int pos = 4*(j*bufWidth/width);
-                    tempword = ConvertRGBATo555((pS[pos+2]),        // Red
-                        (pS[pos+1]),        // G
-                        (pS[pos+0]),        // B
-                        (pS[pos+3]));       // Alpha
+                    tempword = ConvertRGBATo555((pS[pos+(1^S8)]),        // Red
+                        (pS[pos+(2^S8)]),        // G
+                        (pS[pos+(3^S8)]),        // B
+                        (pS[pos+(0^S8)]));       // Alpha
                     //*pD = CIFindIndex(tempword);
-                    *(pD+(j^3)) = RevTlutTable[tempword];
+                    *(pD+(j^S8)) = RevTlutTable[tempword];
                 }
             }
         }
@@ -1950,12 +1950,12 @@ void FrameBufferManager::CopyBufferToRDRAM(uint32 addr, uint32 fmt, uint32 siz, 
                 for( uint32 j=0; j<width; j++ )
                 {
                     // Point
-                    uint32 r = pS0[indexes[j]+2];
-                    uint32 g = pS0[indexes[j]+1];
-                    uint32 b = pS0[indexes[j]+0];
+                    uint32 r = pS0[indexes[j]+(1^S8)];
+                    uint32 g = pS0[indexes[j]+(2^S8)];
+                    uint32 b = pS0[indexes[j]+(3^S8)];
 
                     // Liner
-                    *(pD+(j^3)) = (uint8)((r+b+g)/3);
+                    *(pD+(j^S8)) = (uint8)((r+b+g)/3);
 
                 }
             }

@@ -22,6 +22,8 @@
 #ifndef WINLNXDEFS_H
 #define WINLNXDEFS_H
 
+#define ALIGN(BYTES,DATA) DATA __attribute__((aligned(BYTES)));
+
 typedef unsigned int BOOL;
 typedef unsigned short WORD;
 typedef unsigned int DWORD, *LPDWORD;

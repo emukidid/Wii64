@@ -88,6 +88,7 @@ enum {
     NEXT_SCALE_IMG,
     NEXT_LOADTLUT,
     NEXT_SWITCH_UCODE,
+	NEXT_NONE,
 };
 
 void DebuggerPause();

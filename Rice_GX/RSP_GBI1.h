@@ -232,25 +232,25 @@ void DisplayVertexInfo(uint32 dwAddr, uint32 dwV0, uint32 dwN)
 
         for (uint32 dwV = dwV0; dwV < dwV0 + dwN; dwV++)
         {
-            float x = (float)psSrc[0^0x1];
-            float y = (float)psSrc[1^0x1];
-            float z = (float)psSrc[2^0x1];
+            float x = (float)psSrc[0^S16];
+            float y = (float)psSrc[1^S16];
+            float z = (float)psSrc[2^S16];
 
             //uint32 wFlags = g_dwVtxFlags[dwV]; //(uint16)psSrc[3^0x1];
             uint32 wFlags = 0;
 
-            uint8 a = pcSrc[12^0x3];
-            uint8 b = pcSrc[13^0x3];
-            uint8 c = pcSrc[14^0x3];
-            uint8 d = pcSrc[15^0x3];
+            uint8 a = pcSrc[12^S8];
+            uint8 b = pcSrc[13^S8];
+            uint8 c = pcSrc[14^S8];
+            uint8 d = pcSrc[15^S8];
             
-            //LONG nTU = (LONG)(short)(psSrc[4^0x1]<<4);
-            //LONG nTV = (LONG)(short)(psSrc[5^0x1]<<4);
+            //int nTU = (int)(short)(psSrc[4^0x1]<<4);
+            //int nTV = (int)(short)(psSrc[5^0x1]<<4);
 
             //float tu = (float)(nTU>>4);
             //float tv = (float)(nTV>>4);
-            float tu = (float)(short)(psSrc[4^0x1]);
-            float tv = (float)(short)(psSrc[5^0x1]);
+            float tu = (float)(short)(psSrc[4^S16]);
+            float tv = (float)(short)(psSrc[5^S16]);
 
             XVECTOR4 & t = g_vecProjected[dwV];
 
@@ -281,22 +281,22 @@ void RSP_MoveMemLight(uint32 dwLight, uint32 dwAddr)
         gRSPn64lights[dwLight].dwRGBA       = pdwBase[0];
         gRSPn64lights[dwLight].dwRGBACopy   = pdwBase[1];
         short* pdwBase16 = (short*)pcBase;
-        x       = pdwBase16[5];
-        y       = pdwBase16[4];
-        z       = pdwBase16[7];
-        range   = pdwBase16[6];
+        x       = pdwBase16[4 ^ S16];
+        y       = pdwBase16[5 ^ S16];
+        z       = pdwBase16[6 ^ S16];
+        range   = pdwBase16[7 ^ S16];
     }
     else
     {
         gRSPn64lights[dwLight].dwRGBA       = pdwBase[0];
         gRSPn64lights[dwLight].dwRGBACopy   = pdwBase[1];
-        x       = pcBase[8 ^ 0x3];
-        y       = pcBase[9 ^ 0x3];
-        z       = pcBase[10 ^ 0x3];
+        x       = pcBase[8 ^ S8];
+        y       = pcBase[9 ^ S8];
+        z       = pcBase[10 ^ S8];
     }
 
                     
-    LOG_UCODE("       RGBA: 0x%08x, RGBACopy: 0x%08x, x: %d, y: %d, z: %d", 
+    LOG_UCODE("       RGBA: 0x%08x, RGBACopy: 0x%08x, x: %f, y: %f, z: %f", 
         gRSPn64lights[dwLight].dwRGBA,
         gRSPn64lights[dwLight].dwRGBACopy,
         x, y, z);
@@ -340,15 +340,15 @@ void RSP_MoveMemViewport(uint32 dwAddr)
     short trans[4];
 
     // dwAddr is offset into RD_RAM of 8 x 16bits of data...
-    scale[0] = *(short *)(g_pRDRAMu8 + ((dwAddr+(0*2))^0x2));
-    scale[1] = *(short *)(g_pRDRAMu8 + ((dwAddr+(1*2))^0x2));
-    scale[2] = *(short *)(g_pRDRAMu8 + ((dwAddr+(2*2))^0x2));
-    scale[3] = *(short *)(g_pRDRAMu8 + ((dwAddr+(3*2))^0x2));
+    scale[0] = *(short *)(g_pRDRAMu8 + ((dwAddr+(0*2))^(S16<<1)));
+    scale[1] = *(short *)(g_pRDRAMu8 + ((dwAddr+(1*2))^(S16<<1)));
+    scale[2] = *(short *)(g_pRDRAMu8 + ((dwAddr+(2*2))^(S16<<1)));
+    scale[3] = *(short *)(g_pRDRAMu8 + ((dwAddr+(3*2))^(S16<<1)));
 
-    trans[0] = *(short *)(g_pRDRAMu8 + ((dwAddr+(4*2))^0x2));
-    trans[1] = *(short *)(g_pRDRAMu8 + ((dwAddr+(5*2))^0x2));
-    trans[2] = *(short *)(g_pRDRAMu8 + ((dwAddr+(6*2))^0x2));
-    trans[3] = *(short *)(g_pRDRAMu8 + ((dwAddr+(7*2))^0x2));
+    trans[0] = *(short *)(g_pRDRAMu8 + ((dwAddr+(4*2))^(S16<<1)));
+    trans[1] = *(short *)(g_pRDRAMu8 + ((dwAddr+(5*2))^(S16<<1)));
+    trans[2] = *(short *)(g_pRDRAMu8 + ((dwAddr+(6*2))^(S16<<1)));
+    trans[3] = *(short *)(g_pRDRAMu8 + ((dwAddr+(7*2))^(S16<<1)));
 
 
     int nCenterX = trans[0]/4;
@@ -365,7 +365,7 @@ void RSP_MoveMemViewport(uint32 dwAddr)
     int nRight= nCenterX + nWidth;
     int nBottom= nCenterY + nHeight;
 
-    //LONG maxZ = scale[2];
+    //int maxZ = scale[2];
     int maxZ = 0x3FF;
 
     CRender::g_pRender->SetViewport(nLeft, nTop, nRight, nBottom, maxZ);

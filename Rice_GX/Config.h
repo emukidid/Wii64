@@ -352,12 +352,21 @@ struct ROMHeader
     uint64   qwUnknown1;
     char  szName[20];
     uint32 dwUnknown2;
+#ifdef _BIG_ENDIAN
+    uint8  nManufacturer;
+    uint8  nUnknown4;
+    uint16  wUnknown3;
+    uint8  nUnknown5;
+    s8    nCountryID;
+    uint16  wCartID;
+#else
     uint16  wUnknown3;
     uint8  nUnknown4;
     uint8  nManufacturer;
     uint16  wCartID;
     s8    nCountryID;
     uint8  nUnknown5;
+#endif
 };
 
 typedef struct 

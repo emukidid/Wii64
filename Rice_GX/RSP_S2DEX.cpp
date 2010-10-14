@@ -339,7 +339,7 @@ void RSP_S2DEX_SPObjLoadTxtr(Gfx *gfx)
 
         for( int i=offset; i<offset+size; i++ )
         {
-            g_wRDPTlut[i^1] = RDRAM_UHALF(addr);
+            g_wRDPTlut[i^S16] = RDRAM_UHALF(addr);
             addr += 2;
             //g_wRDPTlut[i] = (*(uint16 *)(addr+g_pRDRAMu8));
             //g_wRDPTlut[i] = *(srcPal++);

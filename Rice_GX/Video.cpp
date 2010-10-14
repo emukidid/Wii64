@@ -209,6 +209,7 @@ void StartVideo(void)
     g_CritialSection.Lock();
 
     memcpy(&g_curRomInfo.romheader, g_GraphicsInfo.HEADER, sizeof(ROMHeader));
+#ifndef _BIG_ENDIAN
     unsigned char *puc = (unsigned char *) &g_curRomInfo.romheader;
     unsigned int i;
     unsigned char temp;
@@ -221,6 +222,7 @@ void StartVideo(void)
         puc[i+1] = puc[i+2];
         puc[i+2] = temp;
     }
+#endif //_BIG_ENDIAN
     ROM_GetRomNameFromHeader(g_curRomInfo.szGameName, &g_curRomInfo.romheader);
     Ini_GetRomOptions(&g_curRomInfo);
     char *p = (char *) g_curRomInfo.szGameName + (strlen((char *) g_curRomInfo.szGameName) -1);     // -1 to skip null

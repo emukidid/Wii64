@@ -103,15 +103,15 @@ inline void RSP_Vtx_Clipping(int i) {}
 /*
  *  Global variables
  */
-RSP_Options gRSP __attribute__((aligned(16)));
-RDP_Options gRDP __attribute__((aligned(16)));
+ALIGN(16,RSP_Options gRSP)
+ALIGN(16,RDP_Options gRDP)
 
-static XVECTOR4 g_normal __attribute__((aligned(16)));
+static ALIGN(16,XVECTOR4 g_normal)
 //static int norms[3];
 
-XVECTOR4    g_vtxNonTransformed[MAX_VERTS] __attribute__((aligned(16)));
-XVECTOR4    g_vecProjected[MAX_VERTS] __attribute__((aligned(16)));
-XVECTOR4    g_vtxTransformed[MAX_VERTS] __attribute__((aligned(16)));
+ALIGN(16,XVECTOR4 g_vtxNonTransformed[MAX_VERTS])
+ALIGN(16,XVECTOR4 g_vecProjected[MAX_VERTS])
+ALIGN(16,XVECTOR4 g_vtxTransformed[MAX_VERTS])
 
 float       g_vtxProjected5[1000][5];
 float       g_vtxProjected5Clipped[2000][5];
@@ -140,11 +140,12 @@ float               gRSPfFogDivider;
 
 uint32          gRSPnumLights;
 Light   gRSPlights[16];
-Matrix  gRSPworldProjectTransported __attribute__((aligned(16)));
-Matrix  gRSPworldProject __attribute__((aligned(16)));
-Matrix  gRSPmodelViewTop __attribute__((aligned(16)));
-Matrix  gRSPmodelViewTopTranspose __attribute__((aligned(16)));
-Matrix  dkrMatrixTransposed __attribute__((aligned(16)));
+
+ALIGN(16,Matrix  gRSPworldProjectTransported)
+ALIGN(16,Matrix  gRSPworldProject)
+ALIGN(16,Matrix  gRSPmodelViewTop)
+ALIGN(16,Matrix  gRSPmodelViewTopTranspose)
+ALIGN(16,Matrix  dkrMatrixTransposed)
 
 N64Light        gRSPn64lights[16];
 
@@ -246,7 +247,7 @@ __asm l3:   \
 #endif
 
 
-#if defined(__INTEL_COMPILER) && !defined(NO_ASM)
+#if !defined(__GNUC__) && !defined(NO_ASM)
 __declspec( naked ) void  __fastcall SSEVec3Transform(int i)
 {
     __asm
@@ -474,7 +475,7 @@ void SSEVec3Transform(int i)
 float real255 = 255.0f;
 float real128 = 128.0f;
 
-#if defined(__INTEL_COMPILER) && !defined(NO_ASM)
+#if !defined(__GNUC__) && !defined(NO_ASM)
 __declspec( naked ) void  __fastcall SSEVec3TransformNormal()
 {
     __asm
@@ -1108,7 +1109,7 @@ float zero = 0.0f;
 float onef = 1.0f;
 float fcosT;
 
-#if defined(__INTEL_COMPILER) && !defined(NO_ASM)
+#if !defined(__GNUC__) && !defined(NO_ASM)
 __declspec( naked ) uint32  __fastcall SSELightVert()
 {
     __asm
@@ -1267,11 +1268,11 @@ inline void ReplaceAlphaWithFogFactor(int i)
     {
         // Use fog factor to replace vertex alpha
         if( g_vecProjected[i].z > 1 )
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = 0xFF;
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = 0xFF;
         if( g_vecProjected[i].z < 0 )
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = 0;
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = 0;
         else
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = (uint8)(g_vecProjected[i].z*255);    
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = (uint8)(g_vecProjected[i].z*255);    
     }
 }
 
@@ -1355,7 +1356,7 @@ void ProcessVertexDataSSE(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
                 g_dwVtxDifColor[i] = SSELightVert();
             else
                 g_dwVtxDifColor[i] = LightVert(g_normal, i);
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vert.rgba.a; // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = vert.rgba.a; // still use alpha from the vertex
         }
         else
         {
@@ -1472,7 +1473,7 @@ void ProcessVertexDataNoSSE(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
             Vec3TransformNormal(g_normal, gRSPmodelViewTop);
             g_dwVtxDifColor[i] = LightVert(g_normal, i);
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vert.rgba.a; // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = vert.rgba.a; // still use alpha from the vertex
         }
         else
         {
@@ -1640,7 +1641,7 @@ void SetPrimitiveDepth(uint32 z, uint32 dwDZ)
 
     //gRDP.fPrimitiveDepth = gRDP.fPrimitiveDepth*2-1;  
     /*
-    z=0xFFFF    ->  1   the farest
+    z=0xFFFF    ->  1   the farthest
     z=0         ->  -1  the nearest
     */
 
@@ -1744,7 +1745,7 @@ void ProcessVertexDataDKR(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
     Matrix &matWorldProject = gRSP.DKRMatrixes[gRSP.DKRCMatrixIndex];
 
     uint32 i;
-    LONG nOff;
+    int nOff;
 
     bool addbase=false;
     if ((!gRSP.DKRBillBoard) || (gRSP.DKRCMatrixIndex != 2) )
@@ -1766,9 +1767,9 @@ void ProcessVertexDataDKR(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
     {
         XVECTOR3 w;
 
-        g_vtxNonTransformed[i].x = (float)*(short*)((pVtxBase+nOff + 0) ^ 2);
-        g_vtxNonTransformed[i].y = (float)*(short*)((pVtxBase+nOff + 2) ^ 2);
-        g_vtxNonTransformed[i].z = (float)*(short*)((pVtxBase+nOff + 4) ^ 2);
+        g_vtxNonTransformed[i].x = (float)*(short*)((pVtxBase+nOff + 0) ^ S16);
+        g_vtxNonTransformed[i].y = (float)*(short*)((pVtxBase+nOff + 2) ^ S16);
+        g_vtxNonTransformed[i].z = (float)*(short*)((pVtxBase+nOff + 4) ^ S16);
 
         //if( status.isSSEEnabled )
         //  SSEVec3TransformDKR(g_vtxTransformed[i], g_vtxNonTransformed[i]);
@@ -1809,8 +1810,8 @@ void ProcessVertexDataDKR(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
         RSP_Vtx_Clipping(i);
 
-        short wA = *(short*)((pVtxBase+nOff + 6) ^ 2);
-        short wB = *(short*)((pVtxBase+nOff + 8) ^ 2);
+        short wA = *(short*)((pVtxBase+nOff + 6) ^ S16);
+        short wB = *(short*)((pVtxBase+nOff + 8) ^ S16);
 
         s8 r = (s8)(wA >> 8);
         s8 g = (s8)(wA);
@@ -1833,7 +1834,7 @@ void ProcessVertexDataDKR(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
         }
         else
         {
-            LONG nR, nG, nB, nA;
+            int nR, nG, nB, nA;
 
             nR = r;
             nG = g;
@@ -1891,10 +1892,10 @@ void ProcessVertexDataPD(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
         RSP_Vtx_Clipping(i);
 
         uint8 *addr = g_pRDRAMu8+dwPDCIAddr+ (vert.cidx&0xFF);
-        uint32 a = addr[0];
-        uint32 r = addr[3];
-        uint32 g = addr[2];
-        uint32 b = addr[1];
+        uint32 a = addr[3 ^ S8];
+        uint32 r = addr[0 ^ S8];
+        uint32 g = addr[1 ^ S8];
+        uint32 b = addr[2 ^ S8];
 
         if( gRSP.bLightingEnable )
         {
@@ -1913,7 +1914,7 @@ void ProcessVertexDataPD(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
                 Vec3TransformNormal(g_normal, gRSPmodelViewTop);
                 g_dwVtxDifColor[i] = LightVert(g_normal, i);
             }
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = (uint8)a;    // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = (uint8)a;    // still use alpha from the vertex
         }
         else
         {
@@ -2040,7 +2041,7 @@ void ProcessVertexDataConker(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
                 g_dwVtxDifColor[i] |= (b    );          
             }
 
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vert.rgba.a; // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = vert.rgba.a; // still use alpha from the vertex
         }
         else
         {
@@ -2069,9 +2070,9 @@ void ProcessVertexDataConker(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
         // can't generate tex coord)
         if (gRSP.bTextureGen && gRSP.bLightingEnable )
         {
-                g_normal.x = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+0)^3)+dwConkerVtxZAddr);
-                g_normal.y = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+1)^3)+dwConkerVtxZAddr);
-                g_normal.z = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+2)^3)+dwConkerVtxZAddr);
+                g_normal.x = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+0)^S8)+dwConkerVtxZAddr);
+                g_normal.y = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+1)^S8)+dwConkerVtxZAddr);
+                g_normal.z = (float)*(char*)(g_pRDRAMu8+ (((i<<1)+2)^S8)+dwConkerVtxZAddr);
                 Vec3TransformNormal(g_normal, gRSPmodelViewTop);
                 TexGen(g_fVtxTxtCoords[i].x, g_fVtxTxtCoords[i].y);
         }
@@ -2088,13 +2089,21 @@ void ProcessVertexDataConker(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
 
 typedef struct{
+#ifndef _BIG_ENDIAN
     short y;
     short x;
     short flag;
     short z;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    short x;
+    short y;
+    short z;
+    short flag;
+#endif // _BIG_ENDIAN
 } RS_Vtx_XYZ;
 
 typedef union {
+#ifndef _BIG_ENDIAN
     struct {
         uint8 a;
         uint8 b;
@@ -2107,6 +2116,20 @@ typedef union {
         char ny;    //g
         char nx;    //r
     };
+#else // !_BIG_ENDIAN - Big Endian fix.
+    struct {
+        uint8 r;
+        uint8 g;
+        uint8 b;
+        uint8 a;
+    };
+    struct {
+        char nx;    //r
+        char ny;    //g
+        char nz;    //b
+        char na;
+    };
+#endif // _BIG_ENDIAN
 } RS_Vtx_Color;
 
 
@@ -2175,7 +2198,7 @@ void ProcessVertexData_Rogue_Squadron(uint32 dwXYZAddr, uint32 dwColorAddr, uint
                 Vec3TransformNormal(g_normal, gRSPmodelViewTop);
                 g_dwVtxDifColor[i] = LightVert(g_normal, i);
             }
-            *(((uint8*)&(g_dwVtxDifColor[i]))+3) = vertcolors.a;    // still use alpha from the vertex
+            *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) = vertcolors.a;    // still use alpha from the vertex
         }
         else
         {

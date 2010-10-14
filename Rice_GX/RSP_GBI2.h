@@ -751,9 +751,9 @@ void RSP_GBI2_MoveMem(Gfx *gfx)
             {
                 s8 * pcBase = g_pRDRAMs8 + addr;
                 LOG_UCODE("    RSP_GBI1_MV_MEM_LOOKATX %f %f %f",
-                    (float)pcBase[8 ^ 0x3],
-                    (float)pcBase[9 ^ 0x3],
-                    (float)pcBase[10 ^ 0x3]);
+                    (float)pcBase[8 ^ S8],
+                    (float)pcBase[9 ^ S8],
+                    (float)pcBase[10 ^ S8]);
 
             }
             break;
@@ -761,9 +761,9 @@ void RSP_GBI2_MoveMem(Gfx *gfx)
             {
                 s8 * pcBase = g_pRDRAMs8 + addr;
                 LOG_UCODE("    RSP_GBI1_MV_MEM_LOOKATY %f %f %f",
-                    (float)pcBase[8 ^ 0x3],
-                    (float)pcBase[9 ^ 0x3],
-                    (float)pcBase[10 ^ 0x3]);
+                    (float)pcBase[8 ^ S8],
+                    (float)pcBase[9 ^ S8],
+                    (float)pcBase[10 ^ S8]);
             }
             break;
         default:        //0x30/48/60

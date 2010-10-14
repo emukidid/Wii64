@@ -20,6 +20,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef _TYPEDEFS_H_
 #define _TYPEDEFS_H_
 
+#ifdef _BIG_ENDIAN
+#define S8 0
+#define S16 0
+#else
+#define S8 3
+#define S16 1
+#endif
+
 #define uchar  unsigned char
 #define uint16 unsigned short
 #define uint32 unsigned int
@@ -28,12 +36,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef unsigned char               uint8;
 
 typedef signed char                 s8; 
-typedef int                     s32;
+typedef int                         s32;
 typedef unsigned int                u32;
 typedef unsigned char               u8;
 
 
-//Fix me, these macro should not be used anymore in DirectX 8
+//Note: These should be BE safe because they are matched with COLOR_RGBA()
 #define RGBA_GETALPHA(rgb)      ((rgb) >> 24)
 #define RGBA_GETRED(rgb)        (((rgb) >> 16) & 0xff)
 #define RGBA_GETGREEN(rgb)      (((rgb) >> 8) & 0xff)
@@ -153,10 +161,17 @@ typedef struct {
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     COLOR  dcSpecular;
@@ -168,10 +183,17 @@ typedef struct {
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     COLOR  dcSpecular;
@@ -184,10 +206,17 @@ typedef struct {
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     COLOR  dcSpecular;
@@ -201,6 +230,7 @@ typedef struct {
     COLOR dcDiffuse;
 } FILLRECTVERTEX, *LPFILLRECTVERTEX;
 
+#include "COLOR.h"
 #include "IColor.h"
 
 typedef struct
@@ -210,10 +240,17 @@ typedef struct
     union {
         COLOR  dcDiffuse;
         struct {
+#ifndef _BIG_ENDIAN
             uint8 b;
             uint8 g;
             uint8 r;
             uint8 a;
+#else // !_BIG_ENDIAN - Big Endian fix.
+            uint8 a;
+            uint8 r;
+            uint8 g;
+            uint8 b;
+#endif // _BIG_ENDIAN
         };
     };
     float u,v;
@@ -273,14 +310,22 @@ typedef struct
 
 typedef struct
 {
-    char na;
-    char nz;    // b
-    char ny;    //g
-    char nx;    //r
+#ifndef _BIG_ENDIAN
+    signed char na;
+    signed char nz;    // b
+    signed char ny;    //g
+    signed char nx;    //r
+#else // !_BIG_ENDIAN - Big Endian fix.
+    signed char nx;    //r
+    signed char ny;    //g
+    signed char nz;    // b
+    signed char na;
+#endif // _BIG_ENDIAN
 }NormalStruct;
 
 typedef struct
 {
+#ifndef _BIG_ENDIAN
     short y;
     short x;
     
@@ -299,9 +344,29 @@ typedef struct
         } rgba;
         NormalStruct norma;
     };
+#else // !_BIG_ENDIAN - Big Endian fix.
+    short x;
+    short y;
+    
+    short z;
+    short flag;
+    
+    short tu;
+    short tv;
+    
+    union {
+        struct {
+            uint8 r;
+            uint8 g;
+            uint8 b;
+            uint8 a;
+        } rgba;
+        NormalStruct norma;
+    };
+#endif // _BIG_ENDIAN
 } FiddledVtx;
 
-typedef struct
+typedef struct //Note: This struct isn't used anywhere.
 {
     short y;
     short x;
@@ -317,12 +382,21 @@ typedef struct
 
 typedef struct 
 {
+#ifndef _BIG_ENDIAN
     short y;
     short   x;
     uint16  cidx;
     short z;
     short t;
     short s;
+#else // !_BIG_ENDIAN - Big Endian fix.
+    short   x;
+    short y;
+    short z;
+    uint16  cidx;
+    short s;
+    short t;
+#endif // _BIG_ENDIAN
 } N64VtxPD;
 
 class CTexture;
@@ -348,24 +422,24 @@ typedef struct {
 
 typedef struct
 {
-    unsigned __int32    dwFormat;
-    unsigned __int32    dwSize;
-    unsigned __int32    dwWidth;
-    unsigned __int32    dwAddr;
+    unsigned int    dwFormat;
+    unsigned int    dwSize;
+    unsigned int    dwWidth;
+    unsigned int    dwAddr;
 
-    unsigned __int32    dwLastWidth;
-    unsigned __int32    dwLastHeight;
+    unsigned int    dwLastWidth;
+    unsigned int    dwLastHeight;
 
-    unsigned __int32    dwHeight;
-    unsigned __int32    dwMemSize;
+    unsigned int    dwHeight;
+    unsigned int    dwMemSize;
 
     bool                bCopied;
-    unsigned __int32    dwCopiedAtFrame;
+    unsigned int    dwCopiedAtFrame;
 
-    unsigned __int32    dwCRC;
-    unsigned __int32    lastUsedFrame;
-    unsigned __int32    bUsedByVIAtFrame;
-    unsigned __int32    lastSetAtUcode;
+    unsigned int    dwCRC;
+    unsigned int    lastUsedFrame;
+    unsigned int    bUsedByVIAtFrame;
+    unsigned int    lastSetAtUcode;
 } RecentCIInfo;
 
 typedef struct
@@ -417,7 +491,7 @@ typedef struct {
 
 typedef union {
     uint8   g_Tmem8bit[0x1000];
-    __int16 g_Tmem16bit[0x800];
+    short   g_Tmem16bit[0x800];
     uint32  g_Tmem32bit[0x300];
     uint64  g_Tmem64bit[0x200];
 } TmemType;

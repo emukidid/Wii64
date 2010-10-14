@@ -422,6 +422,16 @@ DWordInterleaveLoop:
          : "memory", "cc", "%esi", "%edi", "%ecx", "%eax"
          );
 # endif // PIC
+#else //NO_ASM
+	int tmp;
+	while( numDWords-- )
+	{
+		tmp = *(int *)((int)mem + 0);
+		*(int *)((int)mem + 0) = *(int *)((int)mem + 4);
+		*(int *)((int)mem + 4) = tmp;
+
+		mem = (void *)((int)mem + 8);
+	}
 #endif
 }
 
@@ -524,6 +534,21 @@ QWordInterleaveLoop:
         : "memory", "cc", "%esi", "%edi", "%ecx", "%eax"
         );
 # endif // PIC
+#else //NO_ASM
+	int tmp;
+	numDWords >>= 1; // qwords
+	while( numDWords-- )
+	{
+		tmp = *(int *)((int)mem + 0);
+		*(int *)((int)mem + 0) = *(int *)((int)mem + 8);
+		*(int *)((int)mem + 8) = tmp;
+
+		tmp = *(int *)((int)mem + 4);
+		*(int *)((int)mem + 4) = *(int *)((int)mem + 12);
+		*(int *)((int)mem + 12) = tmp;
+
+		mem = (void *)((int)mem + 16);
+	}
 #endif
 }
 
@@ -1362,12 +1387,12 @@ uint32 dwPalAddress = g_TI.dwAddr + dwRDRAMOffset;
 //Copy PAL to the PAL memory
 uint16 *srcPal = (uint16*)(g_pRDRAMu8 + (dwPalAddress& (g_dwRamSize-1)) );
 for (uint32 i=0; i<dwCount && i<0x100; i++)
-    g_wRDPTlut[(i+dwTMEMOffset)^1] = srcPal[i^1];
+    g_wRDPTlut[(i+dwTMEMOffset)^S16] = srcPal[i^S16];
 
 if( options.bUseFullTMEM )
     {
     for (uint32 i=0; i<dwCount && i+tile.dwTMem<0x200; i++)
-        *(uint16*)(&g_Tmem.g_Tmem64bit[tile.dwTMem+i]) = srcPal[i^1];
+        *(uint16*)(&g_Tmem.g_Tmem64bit[tile.dwTMem+i]) = srcPal[i^S16];
     }
 
 LOG_TEXTURE(
@@ -1498,7 +1523,11 @@ void DLParser_LoadBlock(Gfx *gfx)
 
             for (uint32 y = 0; y < height; y++)
             {
+#ifndef _BIG_ENDIAN
                 UnswapCopy( src, dest, bpl );
+#else // !_BIG_ENDIAN
+                memcpy( dest, src, bpl );
+#endif // _BIG_ENDIAN
                 if (y & 1) Interleave( dest, line );
 
                 src += line;
@@ -1506,7 +1535,11 @@ void DLParser_LoadBlock(Gfx *gfx)
             }
         }
         else
+#ifndef _BIG_ENDIAN
             UnswapCopy( src, dest, bytes );
+#else // !_BIG_ENDIAN
+            memcpy( dest, src, bytes );
+#endif // _BIG_ENDIAN
     }
 
 
@@ -1605,7 +1638,11 @@ void DLParser_LoadTile(Gfx *gfx)
 
         for (y = 0; y < height; y++)
         {
+#ifndef _BIG_ENDIAN
             UnswapCopy( src, dest, bpl );
+#else // !_BIG_ENDIAN
+            memcpy( dest, src, bpl );
+#endif // _BIG_ENDIAN
             if (y & 1) Interleave( dest, line );
 
             src += g_TI.bpl;
