@@ -26,24 +26,8 @@
 #include "stdafx.h"
 
 //========================================================================
-uint32 DirectX_OGL_BlendFuncMaps [] =
+uint32 GX_BlendFuncMaps [] =
 {
-#ifdef __GX__
-    GL_SRC_ALPHA,       //Nothing
-    GL_ZERO,            //BLEND_ZERO               = 1,
-    GL_ONE,             //BLEND_ONE                = 2,
-    GL_SRC_COLOR,       //BLEND_SRCCOLOR           = 3,
-    GL_ONE_MINUS_SRC_COLOR,     //BLEND_INVSRCCOLOR        = 4,
-    GL_SRC_ALPHA,               //BLEND_SRCALPHA           = 5,
-    GL_ONE_MINUS_SRC_ALPHA,     //BLEND_INVSRCALPHA        = 6,
-    GL_DST_ALPHA,               //BLEND_DESTALPHA          = 7,
-    GL_ONE_MINUS_DST_ALPHA,     //BLEND_INVDESTALPHA       = 8,
-    GL_DST_COLOR,               //BLEND_DESTCOLOR          = 9,
-    GL_ONE_MINUS_DST_COLOR,     //BLEND_INVDESTCOLOR       = 10,
-    GL_SRC_ALPHA_SATURATE,      //BLEND_SRCALPHASAT        = 11,
-    GL_SRC_ALPHA_SATURATE,      //BLEND_BOTHSRCALPHA       = 12,    
-    GL_SRC_ALPHA_SATURATE,      //BLEND_BOTHINVSRCALPHA    = 13,
-#else //!__GX__
     GX_BL_SRCALPHA,      //Nothing
     GX_BL_ZERO,          //BLEND_ZERO               = 1,
     GX_BL_ONE,           //BLEND_ONE                = 2,
@@ -58,57 +42,43 @@ uint32 DirectX_OGL_BlendFuncMaps [] =
     GX_BL_SRCALPHA,      //BLEND_SRCALPHASAT        = 11,
     GX_BL_SRCALPHA,      //BLEND_BOTHSRCALPHA       = 12,    
     GX_BL_SRCALPHA,      //BLEND_BOTHINVSRCALPHA    = 13,
-#endif //__GX__
 };
 
 //========================================================================
-COGLColorCombiner::COGLColorCombiner(CRender *pRender) :
-    CColorCombiner(pRender),
-    m_pOGLRender((OGLRender*)pRender),
-    m_bSupportAdd(false), m_bSupportSubtract(false)
+CTEVColorCombiner::CTEVColorCombiner(CRender *pRender) :
+	CColorCombiner(pRender),
+	m_pOGLRender((OGLRender*)pRender),
+	m_lastIndex(-1),
+	m_dwLastMux0(0), m_dwLastMux1(0)
 {
     m_pDecodedMux = new COGLDecodedMux;
-    m_pDecodedMux->m_maxConstants = 0;
-    m_pDecodedMux->m_maxTextures = 1;
+//    m_pDecodedMux->m_maxConstants = 0; //Only used for setting const textures
+//    m_pDecodedMux->m_maxTextures = 1;  //Only used for setting const textures
 }
 
-COGLColorCombiner::~COGLColorCombiner()
+CTEVColorCombiner::~CTEVColorCombiner()
 {
     delete m_pDecodedMux;
     m_pDecodedMux = NULL;
 }
 
-bool COGLColorCombiner::Initialize(void)
+bool CTEVColorCombiner::Initialize(void)
 {
-    m_bSupportAdd = false;
-    m_bSupportSubtract = false;
-    m_supportedStages = 1;
-    m_bSupportMultiTexture = false;
+    m_supportedStages = 16; //If >1, then single stage combines are split
+    m_bSupportMultiTexture = true;
 
     COGLGraphicsContext *pcontext = (COGLGraphicsContext *)(CGraphicsContext::g_pGraphicsContext);
-#ifndef __GX__
-    if( pcontext->IsExtensionSupported("GL_ARB_texture_env_add") || pcontext->IsExtensionSupported("GL_EXT_texture_env_add") )
-    {
-        m_bSupportAdd = true;
-    }
-
-    if( pcontext->IsExtensionSupported("GL_EXT_blend_subtract") )
-    {
-        m_bSupportSubtract = true;
-    }
-#else //!__GX__
-#endif //__GX__
 
     return true;
 }
 
-void COGLColorCombiner::DisableCombiner(void)
+void CTEVColorCombiner::DisableCombiner(void)
 {
-#ifndef __GX__
 	//TODO: Implement in GX
     m_pOGLRender->DisableMultiTexture();
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ZERO);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_ONE, GL_ZERO);
+	GX_SetBlendMode(GX_BM_BLEND, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR); 
     
     if( m_bTexelsEnable )
     {
@@ -116,9 +86,16 @@ void COGLColorCombiner::DisableCombiner(void)
         if( pTexture ) 
         {
             m_pOGLRender->EnableTexUnit(0,TRUE);
+#ifndef __GX__
             m_pOGLRender->BindTexture(pTexture->m_dwTextureName, 0);
             glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
             m_pOGLRender->SetAllTexelRepeatFlag();
+#else //!__GX__
+            m_pOGLRender->BindTexture(pTexture, 0);
+            m_pOGLRender->SetAllTexelRepeatFlag();
+			//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+#endif //__GX__
         }
 #ifdef _DEBUG
         else
@@ -126,31 +103,37 @@ void COGLColorCombiner::DisableCombiner(void)
             DebuggerAppendMsg("Check me, texture is NULL but it is enabled");
         }
 #endif
+		//Set Modulate TEV mode
+		GX_SetNumTevStages(1);
+		GX_SetNumChans (1);
+		GX_SetNumTexGens (1);
+		GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+		GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
     }
     else
     {
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-        m_pOGLRender->EnableTexUnit(0,FALSE);
+		//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		m_pOGLRender->EnableTexUnit(0,FALSE);
+		//Set PassColor TEV mode
+		GX_SetNumTevStages(1);
+		GX_SetNumChans (1);
+		GX_SetNumTexGens (0);
+		GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+		GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
     }
-#else //!__GX__
-	sprintf(txtbuffer,"COGLColorCombiner::DisableCombiner");
-	DEBUG_print(txtbuffer,DBG_RICE+1); 
-#endif //__GX__
 }
 
-void COGLColorCombiner::InitCombinerCycleCopy(void)
+void CTEVColorCombiner::InitCombinerCycleCopy(void)
 {
     m_pOGLRender->DisableMultiTexture();
     m_pOGLRender->EnableTexUnit(0,TRUE);
     COGLTexture* pTexture = g_textures[gRSP.curTile].m_pCOGLTexture;
     if( pTexture )
     {
-#ifndef __GX__
-        m_pOGLRender->BindTexture(pTexture->m_dwTextureName, 0);
-#else
-		GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
-#endif //!__GX__
+        //m_pOGLRender->BindTexture(pTexture->m_dwTextureName, 0);
+        m_pOGLRender->BindTexture(pTexture, 0);
         m_pOGLRender->SetTexelRepeatFlags(gRSP.curTile);
+		GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
     }
 #ifdef _DEBUG
     else
@@ -159,31 +142,40 @@ void COGLColorCombiner::InitCombinerCycleCopy(void)
     }
 #endif
 
-#ifndef __GX__
-	//TODO: Implement in GX
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-#else //!__GX__
-	sprintf(txtbuffer,"COGLColorCombiner::InitCombinerCycleCopy");
-	DEBUG_print(txtbuffer,DBG_RICE+2); 
-#endif //__GX__
+	//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	//Set Replace TEV mode
+	GX_SetNumTevStages(1);
+	GX_SetNumChans (0);
+	GX_SetNumTexGens (1);
+	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORZERO);
+	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
 }
 
-void COGLColorCombiner::InitCombinerCycleFill(void)
+void CTEVColorCombiner::InitCombinerCycleFill(void)
 {
+	//TODO: Call this over all TexUnits??
+//    for( int i=0; i<m_supportedStages; i++ )
+//    {
+        //glActiveTexture(GL_TEXTURE0_ARB+i);
+//        m_pOGLRender->EnableTexUnit(i,FALSE);
+//    }
+
     m_pOGLRender->DisableMultiTexture();
     m_pOGLRender->EnableTexUnit(0,FALSE);
-#ifdef __GX__
-	sprintf(txtbuffer,"COGLColorCombiner::InitCombinerCycleFill");
-	DEBUG_print(txtbuffer,DBG_RICE+3); 
-#endif //__GX__
+
+	//Set PassColor TEV mode
+	GX_SetNumTevStages(1);
+	GX_SetNumChans (1);
+	GX_SetNumTexGens (0);
+	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
 }
 
-
-void COGLColorCombiner::InitCombinerCycle12(void)
+void CTEVColorCombiner::InitCombinerCycle12(void)
 {
 #ifdef __GX__
-	sprintf(txtbuffer,"COGLColorCombiner::InitCombinerCycle12");
-	DEBUG_print(txtbuffer,DBG_RICE+4); 
+//	sprintf(txtbuffer,"CTEVColorCombiner::InitCombinerCycle12");
+//	DEBUG_print(txtbuffer,DBG_RICE+4); 
 #endif //__GX__
 #ifndef __GX__
 	//TODO: Implement in GX
@@ -379,11 +371,11 @@ void COGLColorCombiner::InitCombinerCycle12(void)
         case CM_FMT_TYPE_A_SUB_B:           // = A-B
             if( shadeIsUsedInColor && texIsUsedInColor )
             {
-                if( m_bSupportSubtract )
+//                if( m_bSupportSubtract )
 					GXTevMode = GX_MODULATE;
                     //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_SUBTRACT_ARB);
-                else
-					GXTevMode = GX_BLEND;
+//                else
+//					GXTevMode = GX_BLEND;
                     //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_BLEND);
             }
             else if( texIsUsedInColor )
@@ -461,14 +453,18 @@ void COGLColorCombiner::InitCombinerCycle12(void)
 
 	
 	GX_SetTevOp(GX_TEVSTAGE0,GXTevMode);
-    if( pTexture )
+	if( pTexture )
 		GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 
+	GX_SetNumTevStages(1);
+	GX_SetNumChans (1);
+	GX_SetNumTexGens (1);
+	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 
 #endif //__GX__
 }
 
-void COGLBlender::NormalAlphaBlender(void)
+void CTEVBlender::NormalAlphaBlender(void)
 {
 #ifndef __GX__
     glEnable(GL_BLEND);
@@ -478,7 +474,7 @@ void COGLBlender::NormalAlphaBlender(void)
 #endif //__GX__
 }
 
-void COGLBlender::DisableAlphaBlender(void)
+void CTEVBlender::DisableAlphaBlender(void)
 {
 #ifndef __GX__
     glEnable(GL_BLEND);
@@ -489,30 +485,30 @@ void COGLBlender::DisableAlphaBlender(void)
 }
 
 
-void COGLBlender::BlendFunc(uint32 srcFunc, uint32 desFunc)
+void CTEVBlender::BlendFunc(uint32 srcFunc, uint32 desFunc)
 {
 #ifndef __GX__
     glBlendFunc(DirectX_OGL_BlendFuncMaps[srcFunc], DirectX_OGL_BlendFuncMaps[desFunc]);
 #else //!__GX__
 	//TODO: Bring over additional functions from glN64
-	GX_SetBlendMode(GX_BM_BLEND,(u8) DirectX_OGL_BlendFuncMaps[srcFunc],
-		(u8) DirectX_OGL_BlendFuncMaps[desFunc], GX_LO_CLEAR); 
+	GX_SetBlendMode(GX_BM_BLEND,(u8) GX_BlendFuncMaps[srcFunc],
+		(u8) GX_BlendFuncMaps[desFunc], GX_LO_CLEAR); 
 
 	u8 GXblenddstfactor, GXblendsrcfactor, GXblendmode;
 
-	GXblendmode = GX_BM_BLEND;
+/*	GXblendmode = GX_BM_BLEND;
 			GXblendmode = GX_BM_NONE;
 					GXblendsrcfactor = GX_BL_ONE;
 					GXblenddstfactor = GX_BL_ONE;
 		GX_SetBlendMode(GXblendmode, GXblendsrcfactor, GXblenddstfactor, GX_LO_CLEAR); 
 		GX_SetColorUpdate(GX_ENABLE);
 		GX_SetAlphaUpdate(GX_ENABLE);
-		GX_SetDstAlpha(GX_DISABLE, 0xFF);
+		GX_SetDstAlpha(GX_DISABLE, 0xFF);*/
 
 #endif //__GX__
 }
 
-void COGLBlender::Enable()
+void CTEVBlender::Enable()
 {
 #ifndef __GX__
     glEnable(GL_BLEND);
@@ -521,7 +517,7 @@ void COGLBlender::Enable()
 #endif //__GX__
 }
 
-void COGLBlender::Disable()
+void CTEVBlender::Disable()
 {
 #ifndef __GX__
     glDisable(GL_BLEND);
@@ -530,7 +526,7 @@ void COGLBlender::Disable()
 #endif //__GX__
 }
 
-void COGLColorCombiner::InitCombinerBlenderForSimpleTextureDraw(uint32 tile)
+void CTEVColorCombiner::InitCombinerBlenderForSimpleTextureDraw(uint32 tile)
 {
 #ifndef __GX__
 	//TODO: Implement in GX
@@ -556,7 +552,7 @@ void COGLColorCombiner::InitCombinerBlenderForSimpleTextureDraw(uint32 tile)
 
 #ifdef _DEBUG
 extern const char *translatedCombTypes[];
-void COGLColorCombiner::DisplaySimpleMuxString(void)
+void CTEVColorCombiner::DisplaySimpleMuxString(void)
 {
     TRACE0("\nSimplified Mux\n");
     m_pDecodedMux->DisplaySimpliedMuxString("Used");

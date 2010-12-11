@@ -29,9 +29,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 UVFlagMap OGLXUVFlagMaps[] =
 {
+#ifndef __GX__
 {TEXTURE_UV_FLAG_WRAP, GL_REPEAT},
 {TEXTURE_UV_FLAG_MIRROR, GL_MIRRORED_REPEAT_ARB},
 {TEXTURE_UV_FLAG_CLAMP, GL_CLAMP},
+#else //!__GX__
+{TEXTURE_UV_FLAG_WRAP, GX_REPEAT},
+{TEXTURE_UV_FLAG_MIRROR, GX_MIRROR},
+{TEXTURE_UV_FLAG_CLAMP, GX_CLAMP},
+#endif //__GX__
 };
 
 //===================================================================
@@ -49,6 +55,11 @@ OGLRender::OGLRender()
         m_texUnitEnabled[i]=FALSE;
     }
     m_bEnableMultiTexture = false;
+#ifdef __GX__
+		GXenableZmode = GX_DISABLE;
+		GXZfunc = GX_ALWAYS;
+		GXZupdate = GX_FALSE;
+#endif //__GX__
 }
 
 OGLRender::~OGLRender()
@@ -143,18 +154,31 @@ void OGLRender::Initialize(void)
         glEnable(GL_DEPTH_CLAMP_NV);
     }
 #else //!__GX__
-	guMtxIdentity(gGX.GXprojW);
+	//Reset projection matrix
+	guMtxIdentity(gGX.GXcombW);
+//	guMtxIdentity(OGL.GXprojWnear);
 	guMtxIdentity(gGX.GXprojIdent);
-	guMtxIdentity(gGX.GXmodelViewIdent);
-	gGX.GXprojW[3][2] = -1;
-	gGX.GXprojW[3][3] = 0;
+//	guOrtho(OGL.GXprojIdent, -1, 1, -1, 1, 1.0f, -1.0f);
+	//N64 Z clip space is backwards, so mult z components by -1
+	//N64 Z [-1,1] whereas GC Z [-1,0], so mult by 0.5 and shift by -0.5
+	gGX.GXcombW[3][2] = -1;
+	gGX.GXcombW[3][3] = 0;
+//	OGL.GXprojWnear[2][2] = 0.0f;
+//	OGL.GXprojWnear[2][3] = -0.5f;
+//	OGL.GXprojWnear[3][2] = -1.0f;
+//	OGL.GXprojWnear[3][3] = 0.0f;
 	gGX.GXprojIdent[2][2] = GXprojZScale; //0.5;
 	gGX.GXprojIdent[2][3] = GXprojZOffset; //-0.5;
+//	gGX.GXpolyOffset = false;
 
     glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
 
+	GX_LoadProjectionMtx(gGX.GXprojIdent, GX_ORTHOGRAPHIC);
 	GX_LoadPosMtxImm(gGX.GXmodelViewIdent,GX_PNMTX0);
-	GX_SetViewport((f32) 0,(f32) 0,(f32) 640,(f32) 480, 0.0f, 1.0f); // <- remove this
+//	GX_SetViewport((f32) 0,(f32) 0,(f32) 640,(f32) 480, 0.0f, 1.0f); // <- remove this
+
+	GX_SetClipMode(GX_CLIP_ENABLE);
+//	GX_SetClipMode(GX_CLIP_DISABLE);
 
 	//These are here temporarily until combining/blending is sorted out...
 	//Set PassColor TEV mode
@@ -176,17 +200,21 @@ void OGLRender::Initialize(void)
 //===================================================================
 TextureFilterMap OglTexFilterMap[2]=
 {
+#ifndef __GX__
     {FILTER_POINT, GL_NEAREST},
     {FILTER_LINEAR, GL_LINEAR},
+#else //!__GX__
+    {FILTER_POINT, GX_NEAR},
+    {FILTER_LINEAR, GX_LINEAR},
+#endif //__GX__
 };
 
 void OGLRender::ApplyTextureFilter()
 {
     static uint32 minflag=0xFFFF, magflag=0xFFFF;
+#ifndef __GX__
     static uint32 mtex;
 
-#ifndef __GX__
-	//TODO: Implement in GX
     if( m_texUnitEnabled[0] )
     {
         if( mtex != m_curBoundTex[0] )
@@ -211,6 +239,28 @@ void OGLRender::ApplyTextureFilter()
             }   
         }
     }
+#else //!__GX__
+    static COGLTexture* mtex;
+
+    if( m_texUnitEnabled[0] )
+    {
+        if( mtex != m_curBoundTex[0] )
+        {
+            mtex = m_curBoundTex[0];
+            minflag = m_dwMinFilter;
+            magflag = m_dwMagFilter;
+
+            if (mtex) GX_InitTexObjFilterMode(&mtex->GXtex,(u8) OglTexFilterMap[m_dwMinFilter].realFilter,
+				(u8) OglTexFilterMap[m_dwMagFilter].realFilter);
+        }
+        else if( (minflag != (unsigned int)m_dwMinFilter) || (magflag != (unsigned int)m_dwMagFilter) )
+        {
+            minflag = m_dwMinFilter;
+            magflag = m_dwMagFilter;
+            if (mtex) GX_InitTexObjFilterMode(&mtex->GXtex,(u8) OglTexFilterMap[m_dwMinFilter].realFilter,
+				(u8) OglTexFilterMap[m_dwMagFilter].realFilter);
+        }
+    }
 #endif //!__GX__
 }
 
@@ -231,7 +281,6 @@ void OGLRender::ZBufferEnable(BOOL bZBuffer)
     if( g_curRomInfo.bForceDepthBuffer )
         bZBuffer = TRUE;
 #ifndef __GX__
-	//TODO: Implement in GX
     if( bZBuffer )
     {
         glDepthMask(GL_TRUE);
@@ -244,7 +293,19 @@ void OGLRender::ZBufferEnable(BOOL bZBuffer)
         //glDisable(GL_DEPTH_TEST);
         glDepthFunc( GL_ALWAYS );
     }
-#endif //!__GX__
+#else //!__GX__
+    if( bZBuffer )
+	{
+		GXenableZmode = GX_ENABLE;
+		GXZfunc = GX_LEQUAL;
+	}
+    else
+	{
+		GXenableZmode = GX_DISABLE;
+		GXZfunc = GX_ALWAYS;
+	}
+	GX_SetZMode(GXenableZmode,GXZfunc,GXZupdate);
+#endif //__GX__
 }
 
 void OGLRender::ClearBuffer(bool cbuffer, bool zbuffer)
@@ -277,14 +338,19 @@ void OGLRender::SetZCompare(BOOL bZCompare)
 
     gRSP.bZBufferEnabled = bZCompare;
 #ifndef __GX__
-	//TODO: Implement in GX
     if( bZCompare == TRUE )
         //glEnable(GL_DEPTH_TEST);
         glDepthFunc( GL_LEQUAL );
     else
         //glDisable(GL_DEPTH_TEST);
         glDepthFunc( GL_ALWAYS );
-#endif //!__GX__
+#else //!__GX__
+    if( bZCompare == TRUE )
+		GXZfunc = GX_LEQUAL;
+    else
+		GXZfunc = GX_ALWAYS;
+	GX_SetZMode(GXenableZmode,GXZfunc,GXZupdate);
+#endif //__GX__
 }
 
 void OGLRender::SetZUpdate(BOOL bZUpdate)
@@ -293,7 +359,6 @@ void OGLRender::SetZUpdate(BOOL bZUpdate)
         bZUpdate = TRUE;
 
 #ifndef __GX__
-	//TODO: Implement in GX
     if( bZUpdate )
     {
         //glEnable(GL_DEPTH_TEST);
@@ -303,7 +368,13 @@ void OGLRender::SetZUpdate(BOOL bZUpdate)
     {
         glDepthMask(GL_FALSE);
     }
-#endif //!__GX__
+#else //!__GX__
+	if( bZUpdate )
+		GXZupdate = GX_TRUE;
+	else
+		GXZupdate = GX_FALSE;
+	GX_SetZMode(GXenableZmode,GXZfunc,GXZupdate);
+#endif //__GX__
 }
 
 void OGLRender::ApplyZBias(int bias)
@@ -337,19 +408,24 @@ void OGLRender::SetAlphaRef(uint32 dwAlpha)
     {
         m_dwAlpha = dwAlpha;
 #ifndef __GX__
-		//TODO: Implement in GX
         glAlphaFunc(GL_GEQUAL, (float)dwAlpha);
-#endif //!__GX__
+#else //!__GX__
+		//TODO: Set Z compare location and use Ztex?
+		//TODO: Double-check range of dwAlpha... should be 0~255
+		GX_SetAlphaCompare(GX_GEQUAL,(u8) dwAlpha,GX_AOP_AND,GX_ALWAYS,0);
+#endif //__GX__
     }
 }
 
 void OGLRender::ForceAlphaRef(uint32 dwAlpha)
 {
 #ifndef __GX__
-	//TODO: Implement in GX
     float ref = dwAlpha/255.0f;
     glAlphaFunc(GL_GEQUAL, ref);
-#endif //!__GX__
+#else //!__GX__
+	//TODO: Set Z compare location and use Ztex?
+	GX_SetAlphaCompare(GX_GEQUAL,(u8) dwAlpha,GX_AOP_AND,GX_ALWAYS,0);
+#endif //__GX__
 }
 
 void OGLRender::SetFillMode(FillMode mode)
@@ -367,7 +443,6 @@ void OGLRender::SetCullMode(bool bCullFront, bool bCullBack)
 {
     CRender::SetCullMode(bCullFront, bCullBack);
 #ifndef __GX__
-	//TODO: Implement in GX
     if( bCullFront && bCullBack )
     {
         glCullFace(GL_FRONT_AND_BACK);
@@ -387,7 +462,16 @@ void OGLRender::SetCullMode(bool bCullFront, bool bCullBack)
     {
         glDisable(GL_CULL_FACE);
     }
-#endif //!__GX__
+#else // !__GX__
+	if( bCullFront && bCullBack )
+		GX_SetCullMode (GX_CULL_ALL);
+	else if( bCullFront )
+		GX_SetCullMode (GX_CULL_BACK);	// GC vertex winding is backwards.
+	else if( bCullBack )
+		GX_SetCullMode (GX_CULL_FRONT);	// GC vertex winding is backwards.
+	else
+		GX_SetCullMode (GX_CULL_NONE);
+#endif // __GX__
 }
 
 bool OGLRender::SetCurrentTexture(int tile, CTexture *handler,uint32 dwTileWidth, uint32 dwTileHeight, TxtrCacheEntry *pTextureEntry)
@@ -446,7 +530,11 @@ void OGLRender::SetAddressVAllStages(uint32 dwTile, TextureUVFlag dwFlag)
 void OGLRender::SetTexWrapS(int unitno,GLuint flag)
 {
     static GLuint mflag;
-    static GLuint mtex;
+#ifndef __GX__
+	static GLuint mtex;
+#else //!__GX__
+	static COGLTexture* mtex;
+#endif //__GX__
 #ifdef _DEBUG
     if( unitno != 0 )
     {
@@ -458,23 +546,31 @@ void OGLRender::SetTexWrapS(int unitno,GLuint flag)
         mtex = m_curBoundTex[0];
         mflag = flag;
 #ifndef __GX__
-		//TODO: Implement in GX
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, flag);
-#endif //!__GX__
+#else //!__GX__
+		if (mtex) mtex->GXwrapS = (u8) flag;
+        if (mtex) GX_InitTexObjWrapMode(&mtex->GXtex, mtex->GXwrapS, mtex->GXwrapT);
+#endif //__GX__
     }
 }
 void OGLRender::SetTexWrapT(int unitno,GLuint flag)
 {
     static GLuint mflag;
-    static GLuint mtex;
+#ifndef __GX__
+	static GLuint mtex;
+#else //!__GX__
+	static COGLTexture* mtex;
+#endif //__GX__
     if( m_curBoundTex[0] != mtex || mflag != flag )
     {
         mtex = m_curBoundTex[0];
         mflag = flag;
 #ifndef __GX__
-		//TODO: Implement in GX
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, flag);
-#endif //!__GX__
+#else //!__GX__
+		if (mtex) mtex->GXwrapT = (u8) flag;
+        if (mtex) GX_InitTexObjWrapMode(&mtex->GXtex, mtex->GXwrapS, mtex->GXwrapT);
+#endif //__GX__
     }
 }
 
@@ -487,7 +583,11 @@ void OGLRender::SetTextureUFlag(TextureUVFlag dwFlag, uint32 dwTile)
         if( pTexture )
         {
             EnableTexUnit(0,TRUE);
+#ifndef __GX__
             BindTexture(pTexture->m_dwTextureName, 0);
+#else //!__GX__
+            BindTexture(pTexture, 0);
+#endif //__GX__
         }
         SetTexWrapS(0, OGLXUVFlagMaps[dwFlag].realFlag);
         m_bClampS[0] = dwFlag==TEXTURE_UV_FLAG_CLAMP?true:false;
@@ -502,7 +602,11 @@ void OGLRender::SetTextureVFlag(TextureUVFlag dwFlag, uint32 dwTile)
         if( pTexture ) 
         {
             EnableTexUnit(0,TRUE);
+#ifndef __GX__
             BindTexture(pTexture->m_dwTextureName, 0);
+#else //!__GX__
+            BindTexture(pTexture, 0);
+#endif //__GX__
         }
         SetTexWrapT(0, OGLXUVFlagMaps[dwFlag].realFlag);
         m_bClampT[0] = dwFlag==TEXTURE_UV_FLAG_CLAMP?true:false;
@@ -513,10 +617,10 @@ void OGLRender::SetTextureVFlag(TextureUVFlag dwFlag, uint32 dwTile)
 
 bool OGLRender::RenderTexRect()
 {
-#ifndef __GX__
-	//TODO: Implement in GX
     glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
 
+#ifndef __GX__
+	//TODO: Implement in GX
     GLboolean cullface = glIsEnabled(GL_CULL_FACE);
     glDisable(GL_CULL_FACE);
 
@@ -544,6 +648,49 @@ bool OGLRender::RenderTexRect()
 
     if( cullface ) glEnable(GL_CULL_FACE);
 #else //!__GX__
+
+	//TODO: Save cull mode
+//    GLboolean cullface = glIsEnabled(GL_CULL_FACE);
+//    glDisable(GL_CULL_FACE);
+	GX_SetCullMode (GX_CULL_NONE);
+
+    float depth = -(g_texRectTVtx[3].z*2-1);
+
+	//set vertex description here
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
+//	GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
+//	GX_SetVtxDesc(GX_VA_TEX2MTXIDX, GX_TEXMTX0);
+	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+//	GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
+//	GX_SetVtxDesc(GX_VA_TEX2, GX_DIRECT);
+	//set vertex attribute formats here
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+//	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
+//	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX2, GX_TEX_ST, GX_F32, 0);
+	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+	for (int i = 3; i>=0; i--)
+	{
+		//glVertex3f(g_texRectTVtx[3].x, g_texRectTVtx[3].y, depth);
+		GX_Position3f32( g_texRectTVtx[i].x, g_texRectTVtx[i].y, depth );
+		//glColor4f(g_texRectTVtx[3].r, g_texRectTVtx[3].g, g_texRectTVtx[3].b, g_texRectTVtx[3].a);
+		GX_Color4u8( (u8) (g_texRectTVtx[i].r*255),
+			(u8) (g_texRectTVtx[i].g*255),
+			(u8) (g_texRectTVtx[i].b*255),
+			(u8) (g_texRectTVtx[i].a*255));
+		//TexCoord(g_texRectTVtx[3]);
+		//glTexCoord2f(vtxInfo.tcord[0].u, vtxInfo.tcord[0].v);
+		GX_TexCoord2f32( g_texRectTVtx[i].tcord[0].u, g_texRectTVtx[i].tcord[0].v );
+	}
+	GX_End();
+
+//    if( cullface ) glEnable(GL_CULL_FACE);
+
 #ifdef RICE_STATS
 	DEBUG_stats(RICE_STATS+0, "RenderTexRect", STAT_TYPE_ACCUM, 1);
 #endif
@@ -557,7 +704,6 @@ bool OGLRender::RenderTexRect()
 bool OGLRender::RenderFillRect(uint32 dwColor, float depth)
 {
 #ifndef __GX__
-	//TODO: Implement in GX
     float a = (dwColor>>24)/255.0f;
     float r = ((dwColor>>16)&0xFF)/255.0f;
     float g = ((dwColor>>8)&0xFF)/255.0f;
@@ -577,6 +723,40 @@ bool OGLRender::RenderFillRect(uint32 dwColor, float depth)
 
     if( cullface ) glEnable(GL_CULL_FACE);
 #else //!__GX__
+	GXColor GXcol;
+	GXcol.r = (u8) ((dwColor>>16)&0xFF);
+	GXcol.g = (u8) ((dwColor>>8)&0xFF);
+	GXcol.b = (u8) (dwColor&0xFF);
+	GXcol.a = (u8) (dwColor>>24);
+
+    glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
+
+	//TODO: Implement in GX
+//    GLboolean cullface = glIsEnabled(GL_CULL_FACE);
+//    glDisable(GL_CULL_FACE);
+	GX_SetCullMode (GX_CULL_NONE);
+
+	//set vertex description here
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	//set vertex attribute formats here
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+		GX_Position3f32( m_fillRectVtx[0].x, m_fillRectVtx[1].y, depth );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_Position3f32( m_fillRectVtx[1].x, m_fillRectVtx[1].y, depth );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_Position3f32( m_fillRectVtx[1].x, m_fillRectVtx[0].y, depth );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_Position3f32( m_fillRectVtx[0].x, m_fillRectVtx[0].y, depth );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+	GX_End();
+
+//    if( cullface ) glEnable(GL_CULL_FACE);
+
 #ifdef RICE_STATS
 	DEBUG_stats(RICE_STATS+1, "RenderFillRect", STAT_TYPE_ACCUM, 1);
 #endif
@@ -592,10 +772,9 @@ bool OGLRender::RenderLine3D()
     ApplyZBias(0);  // disable z offsets
 
 #ifndef __GX__
-	//TODO: Implement in GX
     glBegin(GL_TRIANGLE_FAN);
 
-    glColor4f(m_line3DVtx[1].r, m_line3DVtx[1].g, m_line3DVtx[1].b, m_line3DVtx[1].a);
+    glColor4ub(m_line3DVtx[1].r, m_line3DVtx[1].g, m_line3DVtx[1].b, m_line3DVtx[1].a);
     glVertex3f(m_line3DVector[3].x, m_line3DVector[3].y, -m_line3DVtx[3].z);
     glVertex3f(m_line3DVector[2].x, m_line3DVector[2].y, -m_line3DVtx[2].z);
     
@@ -605,6 +784,24 @@ bool OGLRender::RenderLine3D()
 
     glEnd();
 #else //!__GX__
+	//set vertex description here
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	//set vertex attribute formats here
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+		GX_Position3f32( m_line3DVector[3].x, m_line3DVector[3].y, -m_line3DVtx[3].z );
+		GX_Color4u8( m_line3DVtx[1].r,m_line3DVtx[1].g, m_line3DVtx[1].b, m_line3DVtx[1].a );
+		GX_Position3f32( m_line3DVector[2].x, m_line3DVector[2].y, -m_line3DVtx[2].z );
+		GX_Color4u8( m_line3DVtx[1].r,m_line3DVtx[1].g, m_line3DVtx[1].b, m_line3DVtx[1].a );
+		GX_Position3f32( m_line3DVector[1].x, m_line3DVector[1].y, -m_line3DVtx[1].z );
+		GX_Color4u8( m_line3DVtx[0].r,m_line3DVtx[0].g, m_line3DVtx[0].b, m_line3DVtx[0].a );
+		GX_Position3f32( m_line3DVector[0].x, m_line3DVector[0].y, -m_line3DVtx[0].z );
+		GX_Color4u8( m_line3DVtx[0].r,m_line3DVtx[0].g, m_line3DVtx[0].b, m_line3DVtx[0].a );
+	GX_End();
 #ifdef RICE_STATS
 	DEBUG_stats(RICE_STATS+2, "RenderLine3D", STAT_TYPE_ACCUM, 1);
 #endif
@@ -648,29 +845,30 @@ bool OGLRender::RenderFlushTris()
 #ifdef RICE_STATS
 		DEBUG_stats(RICE_STATS+3, "RenderFlush Tris - gRSP.numVert", STAT_TYPE_ACCUM, gRSP.numVertices);
 #endif
+
+
 //		printf("RenderFlushTris: gRSP.numVert = %d\n",gRSP.numVertices);
 
 	//These are here temporarily until combining/blending is sorted out...
 	//Set PassColor TEV mode
-	GX_SetNumChans (1);
+/*	GX_SetNumChans (1);
 	GX_SetNumTexGens (0);
 	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
-	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
+	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);*/
 	//Set CopyModeDraw blend modes here
-	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR); //Fix src alpha
+/*	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR); //Fix src alpha
 	GX_SetColorUpdate(GX_ENABLE);
 	GX_SetAlphaUpdate(GX_ENABLE);
 	GX_SetDstAlpha(GX_DISABLE, 0xFF);
 
 	GX_SetZMode(GX_ENABLE,GX_LEQUAL,GX_TRUE);
+*/
 
-
-	if(gGX.GXuseProjW) GX_LoadProjectionMtx(gGX.GXprojW, GX_PERSPECTIVE); 
-	else GX_LoadProjectionMtx(gGX.GXprojIdent, GX_ORTHOGRAPHIC); 
 
 	//set vertex description here
 	GX_ClearVtxDesc();
 	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
 //	if (combiner.usesT0) GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
 //	if (combiner.usesT1) GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
 //	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
@@ -679,6 +877,7 @@ bool OGLRender::RenderFlushTris()
 	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
 //	if (lighting) GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT);
 	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
 //	if (combiner.usesT0) GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
 //	if (combiner.usesT1) GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
 //	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
@@ -692,7 +891,7 @@ bool OGLRender::RenderFlushTris()
 	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
 //	if (combiner.usesT0) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 //	if (combiner.usesT1) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
-//	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 //	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
 //	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX2, GX_TEX_ST, GX_F32, 0);
 
@@ -707,7 +906,7 @@ bool OGLRender::RenderFlushTris()
 //	GX_Begin(GX_LINESTRIP, GX_VTXFMT0, gRSP.numVertices);
 	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, gRSP.numVertices);
 	for (int i = 0; i < gRSP.numVertices; i++) {
-		if(gGX.GXuseProjW)
+		if(gGX.GXuseCombW)
 			GX_Position3f32( g_vtxProjected5[g_vtxIndex[i]][0], g_vtxProjected5[g_vtxIndex[i]][1], -g_vtxProjected5[g_vtxIndex[i]][3] );
 //			GX_Position3f32( OGL.vertices[i].x, OGL.vertices[i].y, -OGL.vertices[i].w );
 		else
@@ -728,6 +927,7 @@ bool OGLRender::RenderFlushTris()
 		GXcol.a = g_oglVtxColors[g_vtxIndex[i]][3];
 //		GX_Color4u8(g_oglVtxColors[g_vtxIndex[i]][0], g_oglVtxColors[g_vtxIndex[i]][1], g_oglVtxColors[g_vtxIndex[i]][2], g_oglVtxColors[g_vtxIndex[i]][3]); 
 		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32(g_vtxBuffer[i].tcord[0].u,g_vtxBuffer[i].tcord[0].v);
 //		if (combiner.usesT0) GX_TexCoord2f32(OGL.vertices[i].s0,OGL.vertices[i].t0);
 //		if (combiner.usesT1) GX_TexCoord2f32(OGL.vertices[i].s1,OGL.vertices[i].t1);
 //		if (combiner.usesT0) GX_TexCoord2f32(OGL.vertices[i].s0,OGL.vertices[i].t0);
@@ -799,7 +999,6 @@ void OGLRender::DrawSimple2DTexture(float x0, float y0, float x1, float y1, floa
     StartDrawSimple2DTexture(x0, y0, x1, y1, u0, v0, u1, v1, dif, spe, z, rhw);
 
 #ifndef __GX__
-	//TODO: Replace with GX
     GLboolean cullface = glIsEnabled(GL_CULL_FACE);
     glDisable(GL_CULL_FACE);
 
@@ -834,6 +1033,66 @@ void OGLRender::DrawSimple2DTexture(float x0, float y0, float x1, float y1, floa
 
     if( cullface ) glEnable(GL_CULL_FACE);
 #else //!__GX__
+	//TODO: Save cull mode
+//    GLboolean cullface = glIsEnabled(GL_CULL_FACE);
+//    glDisable(GL_CULL_FACE);
+	GX_SetCullMode (GX_CULL_NONE);
+
+	glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
+
+	GXColor GXcol;
+	GXcol.r = (u8) ((g_texRectTVtx[0].dcDiffuse>>16)&0xFF);
+	GXcol.g = (u8) ((g_texRectTVtx[0].dcDiffuse>>8)&0xFF);
+	GXcol.b = (u8) (g_texRectTVtx[0].dcDiffuse&0xFF);
+	GXcol.a = (u8) (g_texRectTVtx[0].dcDiffuse >>24);
+
+	//set vertex description here
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
+//	GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
+//	GX_SetVtxDesc(GX_VA_TEX2MTXIDX, GX_TEXMTX0);
+	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+//	GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
+//	GX_SetVtxDesc(GX_VA_TEX2, GX_DIRECT);
+	//set vertex attribute formats here
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+//	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
+//	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX2, GX_TEX_ST, GX_F32, 0);
+	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 6);
+
+		GX_Position3f32( g_texRectTVtx[0].x, g_texRectTVtx[0].y, -g_texRectTVtx[0].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[0].tcord[0].u, g_texRectTVtx[0].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[1].x, g_texRectTVtx[1].y, -g_texRectTVtx[1].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[1].tcord[0].u, g_texRectTVtx[1].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[2].x, g_texRectTVtx[2].y, -g_texRectTVtx[2].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[2].tcord[0].u, g_texRectTVtx[2].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[0].x, g_texRectTVtx[0].y, -g_texRectTVtx[0].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[0].tcord[0].u, g_texRectTVtx[0].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[2].x, g_texRectTVtx[2].y, -g_texRectTVtx[2].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[2].tcord[0].u, g_texRectTVtx[2].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[3].x, g_texRectTVtx[3].y, -g_texRectTVtx[3].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[3].tcord[0].u, g_texRectTVtx[3].tcord[0].v );
+
+	GX_End();
+
+//    if( cullface ) glEnable(GL_CULL_FACE);
+
 #ifdef RICE_STATS
 	DEBUG_stats(RICE_STATS+4, "DrawSimple2DTexture", STAT_TYPE_ACCUM, 1);
 #endif
@@ -842,7 +1101,7 @@ void OGLRender::DrawSimple2DTexture(float x0, float y0, float x1, float y1, floa
 #endif //__GX__
 }
 
-void OGLRender::DrawSimpleRect(LONG nX0, LONG nY0, LONG nX1, LONG nY1, uint32 dwColor, float depth, float rhw)
+void OGLRender::DrawSimpleRect(LONG nX0, LONG nY0, LONG nX1, LONG nY1, uint32 dwColor, float depth, float rhw) //This function is never called..
 {
     StartDrawSimpleRect(nX0, nY0, nX1, nY1, dwColor, depth, rhw);
 
@@ -875,7 +1134,7 @@ void OGLRender::DrawSimpleRect(LONG nX0, LONG nY0, LONG nX1, LONG nY1, uint32 dw
 #endif //__GX__
 }
 
-void OGLRender::InitCombinerBlenderForSimpleRectDraw(uint32 tile)
+void OGLRender::InitCombinerBlenderForSimpleRectDraw(uint32 tile) //This function is never called..
 {
     //glEnable(GL_CULL_FACE);
     EnableTexUnit(0,FALSE);
@@ -917,10 +1176,7 @@ COLOR OGLRender::PostProcessSpecularColor()
 
 void OGLRender::SetViewportRender()
 {
-#ifndef __GX__
-	//TODO: Replace with GX
     glViewportWrapper(windowSetting.vpLeftW, windowSetting.uDisplayHeight-windowSetting.vpTopW-windowSetting.vpHeightW+windowSetting.statusBarHeightToUse, windowSetting.vpWidthW, windowSetting.vpHeightW);
-#endif //!__GX__
 }
 
 void OGLRender::RenderReset()
@@ -936,7 +1192,14 @@ void OGLRender::RenderReset()
     // position viewer 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-#endif //!__GX__
+#else //!__GX__
+/*	//This is messed up somehow...
+	Mtx44 GXprojection;
+	guMtxIdentity(GXprojection);
+	guOrtho(GXprojection, 0, windowSetting.uDisplayHeight, 0, windowSetting.uDisplayWidth, -1.0f, 1.0f);
+	GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
+	GX_LoadPosMtxImm(gGX.GXmodelViewIdent,GX_PNMTX0);*/
+#endif //__GX__
 }
 
 void OGLRender::SetAlphaTestEnable(BOOL bAlphaTestEnable)
@@ -954,7 +1217,11 @@ void OGLRender::SetAlphaTestEnable(BOOL bAlphaTestEnable)
 #endif //!__GX__
 }
 
+#ifndef __GX__
 void OGLRender::BindTexture(GLuint texture, int unitno)
+#else //!__GX__
+void OGLRender::BindTexture(COGLTexture *texture, int unitno)
+#endif //__GX__
 {
 #ifdef _DEBUG
     if( unitno != 0 )
@@ -965,14 +1232,18 @@ void OGLRender::BindTexture(GLuint texture, int unitno)
     if( m_curBoundTex[0] != texture )
     {
 #ifndef __GX__
-		//TODO: Replace with GX
+		//TODO: Figure out where to load GX textures
         glBindTexture(GL_TEXTURE_2D,texture);
 #endif //!__GX__
         m_curBoundTex[0] = texture;
     }
 }
 
+#ifndef __GX__
 void OGLRender::DisBindTexture(GLuint texture, int unitno)
+#else //!__GX__
+void OGLRender::DisBindTexture(COGLTexture *texture, int unitno)
+#endif //__GX__
 {
     //EnableTexUnit(0,FALSE);
     //glBindTexture(GL_TEXTURE_2D, 0);  //Not to bind any texture
@@ -990,16 +1261,18 @@ void OGLRender::EnableTexUnit(int unitno, BOOL flag)
     {
         m_texUnitEnabled[0] = flag;
 #ifndef __GX__
-		//TODO: Replace with GX
         if( flag == TRUE )
             glEnable(GL_TEXTURE_2D);
         else
             glDisable(GL_TEXTURE_2D);
-#endif //!__GX__
+#else //!__GX__
+		GXactiveTexUnit = unitno;
+		GXtexUnitEnabled[GXactiveTexUnit] = flag;
+#endif //__GX__
     }
 }
 
-void OGLRender::TexCoord2f(float u, float v)
+void OGLRender::TexCoord2f(float u, float v) //This function is never called
 {
 #ifndef __GX__
 	//TODO: Replace with GX
@@ -1162,7 +1435,11 @@ void OGLRender::glViewportWrapper(GLint x, GLint y, GLsizei width, GLsizei heigh
     static GLsizei m_width=0, m_height=0;
     static bool mflag=true;
 
-    if( x!=mx || y!=my || width!=m_width || height!=m_height || mflag!=flag)
+#ifndef __GX__
+	if( x!=mx || y!=my || width!=m_width || height!=m_height || mflag!=flag)
+#else //!__GX__
+    if( x!=mx || y!=my || width!=m_width || height!=m_height || mflag!=flag || gGX.GXupdateMtx)
+#endif //__GX__
     {
         mx=x;
         my=y;
@@ -1178,15 +1455,75 @@ void OGLRender::glViewportWrapper(GLint x, GLint y, GLsizei width, GLsizei heigh
 #else //!__GX__
 		if( flag )
 		{
-			//use guOrtho
+			//Used for rectangles
+			Mtx44 GXprojection;
+			guMtxIdentity(GXprojection);
+			guOrtho(GXprojection, 0, windowSetting.uDisplayHeight, 0, windowSetting.uDisplayWidth, -1.0f, 1.0f);
+//			if(OGL.GXpolyOffset)
+//				GXprojection[2][3] -= GXpolyOffsetFactor;
+			GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
+//			GX_LoadPosMtxImm(OGL.GXmodelViewIdent,GX_PNMTX0);
 		}
 		else
 		{
-			if(gGX.GXuseProjW)
-				GX_LoadProjectionMtx(gGX.GXprojW, GX_PERSPECTIVE); 
-			else
-				GX_LoadProjectionMtx(gGX.GXprojIdent, GX_ORTHOGRAPHIC); 
+			//Used for triangles
+			//Update MV & P Matrices
+//			if(gGX.GXupdateMtx)
+			{
+/*				if(OGL.GXpolyOffset)
+				{
+					if(OGL.GXuseCombW)
+					{
+						if(!OGL.GXuseProjWnear)
+						{
+							CopyMatrix( OGL.GXprojTemp, OGL.GXcombW );
+							OGL.GXprojTemp[2][2] += GXpolyOffsetFactor;
+							GX_LoadProjectionMtx(OGL.GXprojTemp, GX_PERSPECTIVE); 
+						}
+						else
+						{
+							GX_LoadProjectionMtx(OGL.GXprojWnear, GX_PERSPECTIVE); 
+						}
+					}
+					else
+					{
+						CopyMatrix( OGL.GXprojTemp, OGL.GXprojIdent );
+						OGL.GXprojTemp[2][3] -= GXpolyOffsetFactor;
+						GX_LoadProjectionMtx(OGL.GXprojTemp, GX_ORTHOGRAPHIC); 
+					}
+				}
+				else
+*/				{
+					//TODO: handle this case when !G_ZBUFFER
+/*					if(!(gSP.geometryMode & G_ZBUFFER))
+					{
+						CopyMatrix( OGL.GXprojTemp, OGL.GXproj );
+						OGL.GXprojTemp[2][2] =  0.0;
+						OGL.GXprojTemp[2][3] = -1.0;
+						if(OGL.GXprojTemp[3][2] == -1)
+							GX_LoadProjectionMtx(OGL.GXprojTemp, GX_PERSPECTIVE);
+						else
+							GX_LoadProjectionMtx(OGL.GXprojTemp, GX_ORTHOGRAPHIC); 
+					}*/
+					if(gGX.GXuseCombW)
+					{
+//						if(!OGL.GXuseProjWnear)
+						{
+							GX_LoadProjectionMtx(gGX.GXcombW, GX_PERSPECTIVE); 
+						}
+/*						else
+						{
+							GX_LoadProjectionMtx(OGL.GXprojWnear, GX_PERSPECTIVE); 
+						}
+*/					}
+					else
+						GX_LoadProjectionMtx(gGX.GXprojIdent, GX_ORTHOGRAPHIC); 
+				}
+				gGX.GXupdateMtx = false;
+			}
 		}
+		//Possibly move this to Initialize to improve speed?
+		GX_SetViewport((f32) x,(f32) y,(f32) width,(f32) height, 0.0f, 1.0f);
 #endif //__GX__
     }
 }

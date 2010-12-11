@@ -130,6 +130,11 @@ void COGLColorCombiner4::InitCombinerCycleFill(void)
         m_pOGLRender->EnableTexUnit(i,FALSE);
     }
 
+#ifdef __GX__
+	sprintf(txtbuffer,"COGLColorCombiner4::InitCombinerCycleFill");
+	DEBUG_print(txtbuffer,DBG_RICE+3); 
+#endif //__GX__
+
     //glActiveTexture(GL_TEXTURE0_ARB);
     //m_pOGLRender->EnableTexUnit(0,FALSE);
     //glActiveTexture(GL_TEXTURE1_ARB);
@@ -139,6 +144,11 @@ void COGLColorCombiner4::InitCombinerCycleFill(void)
 //////////////////////////////////////////////////////////////////////////
 void COGLColorCombiner4::InitCombinerCycle12(void)
 {
+#ifdef __GX__
+	sprintf(txtbuffer,"COGLColorCombiner4::InitCombinerCycle12");
+	DEBUG_print(txtbuffer,DBG_RICE+4); 
+#endif //__GX__
+
     if( !m_bOGLExtCombinerSupported )   
     {
         COGLColorCombiner::InitCombinerCycle12();
@@ -903,6 +913,7 @@ void COGLColorCombiner4::GenerateCombinerSetting(int index)
     COGLTexture* pTexture = NULL;
     COGLTexture* pTexture1 = NULL;
 
+#ifndef __GX__
     if( m_bTex0Enabled || m_bTex1Enabled || gRDP.otherMode.cycle_type  == CYCLE_TYPE_COPY )
     {
         if( m_bTex0Enabled || gRDP.otherMode.cycle_type  == CYCLE_TYPE_COPY )
@@ -916,6 +927,7 @@ void COGLColorCombiner4::GenerateCombinerSetting(int index)
             if( pTexture1 ) m_pOGLRender->BindTexture(pTexture1->m_dwTextureName, 1);
         }
     }
+#endif //!__GX__
 
 
 #ifndef __GX__
@@ -1179,7 +1191,9 @@ void COGLColorCombiner2::GenerateCombinerSetting(int index)
             prender->SetTextureToTextureUnitMap(res.units[i].tex,i);
             m_pOGLRender->EnableTexUnit(i,TRUE);
             COGLTexture* pTexture = g_textures[(gRSP.curTile+res.units[i].tex)&7].m_pCOGLTexture;
+#ifndef __GX__
             if( pTexture )  m_pOGLRender->BindTexture(pTexture->m_dwTextureName, i);
+#endif //!__GX__
         }
         /*
         else

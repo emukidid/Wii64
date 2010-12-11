@@ -770,6 +770,7 @@ EXPORT void CALL UpdateScreen(void)
         {
             char caption[200];
             sprintf(caption, "RiceVideoLinux N64 Plugin %s - %.3f VI/S", PLUGIN_VERSION, frames/5.0);
+#ifndef __GX__
             SDL_WM_SetCaption(caption, caption);
 #endif //!__GX__
             frames = 0;

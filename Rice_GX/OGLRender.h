@@ -67,8 +67,13 @@ public:
     void SetAddressVAllStages(uint32 dwTile, TextureUVFlag dwFlag);
     void SetTextureUFlag(TextureUVFlag dwFlag, uint32 tile);
     void SetTextureVFlag(TextureUVFlag dwFlag, uint32 tile);
+#ifndef __GX__
     virtual void BindTexture(GLuint texture, int unitno);
     virtual void DisBindTexture(GLuint texture, int unitno);
+#else //!__GX__
+    virtual void BindTexture(COGLTexture *texture, int unitno);
+    virtual void DisBindTexture(COGLTexture *texture, int unitno);
+#endif //__GX__
     virtual void TexCoord2f(float u, float v);
     virtual void TexCoord(TLITVERTEX &vtxInfo);
 
@@ -109,10 +114,21 @@ protected:
     bool m_bClampS[2];
     bool m_bClampT[2];
 
+#ifndef __GX__
     GLuint  m_curBoundTex[8];
+#else //!__GX__
+    COGLTexture*  m_curBoundTex[8];
+    int GXactiveTexUnit;		//Currently active TexUnit
+    bool GXtexUnitEnabled[8];	//TexUnit enabled
+#endif //__GX__
     BOOL    m_texUnitEnabled[8];
 
     bool m_bEnableMultiTexture;
+
+#ifdef __GX__
+	//Zbuffer settings
+	u8 GXenableZmode, GXZfunc, GXZupdate;
+#endif //__GX__
 };
 
 #endif

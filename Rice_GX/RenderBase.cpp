@@ -2417,6 +2417,42 @@ void UpdateCombinedMatrix()
         }
 #endif
         gRSP.bCombinedMatrixIsUpdated = false;
+
+#ifdef __GX__
+		//Note: UpdateCombineMatrix() is called for every ProcessVertexData*(), so we only need GX matrix code here.
+		//Note: It seems like CRender::DrawTriangles() is called everytime tris are added already.
+		//if (OGL.numTriangles)
+		//	OGL_DrawTriangles();
+		gGX.GXupdateMtx = true;
+
+		//if(gSP.matrix.combined[2][3] != 0)
+		if(gRSPworldProject.m[2][3] != 0)
+		{
+			gGX.GXcombW[2][2] = -GXprojZOffset - (GXprojZScale*gRSPworldProject.m[2][2]/gRSPworldProject.m[2][3]);
+			gGX.GXcombW[2][3] = GXprojZScale*(gRSPworldProject.m[3][2] - (gRSPworldProject.m[2][2]*gRSPworldProject.m[3][3]/gRSPworldProject.m[2][3]));
+//			gGX.GXcombW[2][3] = gGX.GXcombW[2][3]-0.25;
+			gGX.GXuseCombW = true;
+
+			//Transform for zPrime
+			if (gRSPworldProject.m[2][2] != 0)
+			{
+				gGX.GXzPrimeScale		= -gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2];
+				gGX.GXzPrimeTranslate	= -(gRSPworldProject.m[3][2] - (gRSPworldProject.m[2][2]*gRSPworldProject.m[3][3]/gRSPworldProject.m[2][3]))*(gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2]);
+//				gGX.GXzPrimeScale		= gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2];
+//				gGX.GXzPrimeTranslate	= -(gRSPworldProject.m[3][2] + (gRSPworldProject.m[2][2]*gRSPworldProject.m[3][3]/gRSPworldProject.m[2][3]))*(gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2]);
+			}
+			else
+			{
+				gGX.GXzPrimeScale = gGX.GXzPrimeTranslate = 0;
+# ifdef SHOW_DEBUG
+				//sprintf(txtbuffer,"gSPCombineMtx: zPrime Error!");
+				//DEBUG_print(txtbuffer,6+1); 
+# endif
+			}
+		}
+		else
+			gGX.GXuseCombW = false;
+#endif //__GX__
     }
 
     //if( gRSP.bWorldMatrixIsUpdated || gRSP.bLightIsUpdated )

@@ -4,7 +4,7 @@ CC		=powerpc-eabi-gcc
 CXX		=powerpc-eabi-g++
 AS		=powerpc-eabi-as
 
-CFLAGS  = -g -O0 -Wall $(MACHDEP) $(INCLUDE) \
+CFLAGS  = -g -O3 -Wall $(MACHDEP) $(INCLUDE) \
 	  -DCPU_SHUTDOWN -DSPC700_SHUTDOWN -DVAR_CYCLES -DSOUND \
 	  -DNOASM -DNGC -DNOASM -DPIXEL_FORMAT=RGB565  \
 	  -Wno-unused-parameter -pipe \
@@ -175,19 +175,14 @@ OBJ_RICE_GX = Rice_GX/OGLGraphicsContext.o \
 	Rice_GX/liblinux/pngrw.o \
 	Rice_GX/OGLRender.o \
 	Rice_GX/OGLTexture.o \
-	Rice_GX/OGLFragmentShaders.o \
-	Rice_GX/OGLCombinerNV.o \
-	Rice_GX/OGLCombinerTNT2.o \
-	Rice_GX/OGLExtCombiner.o \
-	Rice_GX/OGLCombiner.o \
+	Rice_GX/TEVCombiner.o \
 	Rice_GX/OGLExtRender.o \
 	Rice_GX/blender.o \
 	Rice_GX/math.o \
 	Rice_GX/Combiner.o \
 	Rice_GX/RSP_S2DEX.o \
 	Rice_GX/RenderExt.o \
-	Rice_GX/ConvertImage.o \
-	Rice_GX/ConvertImage16.o \
+	Rice_GX/ConvertImageGX.o \
 	Rice_GX/DecodedMux.o \
 	Rice_GX/RenderTexture.o \
 	Rice_GX/liblinux/BMGUtils.o \
@@ -206,10 +201,6 @@ OBJ_RICE_GX = Rice_GX/OGLGraphicsContext.o \
 	Rice_GX/liblinux/pngwutil.o \
 	Rice_GX/liblinux/pngwio.o \
 	Rice_GX/liblinux/pngwtran.o \
-	Rice_GX/CNvTNTCombiner.o \
-	Rice_GX/GeneralCombiner.o \
-	Rice_GX/DirectXDecodedMux.o \
-	Rice_GX/CombinerTable.o \
 	Rice_GX/OGLRenderExt.o
 
 HEADER		=main/rom.h \

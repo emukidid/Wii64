@@ -40,7 +40,14 @@ CTexture::CTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     m_bIsEnhancedTexture(false),
     m_Usage(usage),
         m_pTexture(NULL),
+#ifndef __GX__
         m_dwTextureFmt(TEXTURE_FMT_A8R8G8B8)
+#else //!__GX__
+        m_dwTextureFmt(TEXTURE_FMT_A8R8G8B8),
+		GXtexfmt(GX_TF_RGBA8),
+		GXwrapS(GX_REPEAT),
+		GXwrapT(GX_REPEAT)
+#endif //__GX__
 {
     // fix me, do something here
 }
@@ -48,6 +55,10 @@ CTexture::CTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
 
 CTexture::~CTexture(void)
 {
+#ifdef __GX__
+	if (m_pTexture)	__lwp_heap_free(GXtexCache, m_pTexture);
+	m_pTexture = NULL;
+#endif //__GX__
 }
 
 TextureFmt CTexture::GetSurfaceFormat(void)
@@ -60,10 +71,19 @@ TextureFmt CTexture::GetSurfaceFormat(void)
 
 uint32 CTexture::GetPixelSize()
 {
+#ifndef __GX__
     if( m_dwTextureFmt == TEXTURE_FMT_A8R8G8B8 )
         return 4;
     else
         return 2;
+#else //!__GX__
+    if( GXtexfmt == GX_TF_RGBA8 )
+        return 4;
+    else if ( GXtexfmt == GX_TF_IA4 )
+        return 1;
+	else //GX_TF_RGB5A3 or GX_TF_IA8
+		return 2;
+#endif //__GX__
 }
 
 
@@ -77,6 +97,9 @@ uint32 CTexture::GetPixelSize()
 // limition
 void CTexture::ScaleImageToSurface(bool scaleS, bool scaleT)
 {
+#ifdef __GX__
+	return; // This function is never used.
+#else //__GX__
     uint8 g_ucTempBuffer[1024*1024*4];
 
     if( scaleS==false && scaleT==false) return;
@@ -159,10 +182,14 @@ void CTexture::ScaleImageToSurface(bool scaleS, bool scaleT)
 
     if( scaleS ) m_bScaledS = true;
     if( scaleT ) m_bScaledT = true;
+#endif //!__GX__
 }
 
 void CTexture::ClampImageToSurfaceS()
 {
+#ifdef __GX__
+	return;	// In GX we can always use the exact texture width.
+#else //__GX__
     if( !m_bClampedS && m_dwWidth < m_dwCreatedTextureWidth )
     {       
         DrawInfo di;
@@ -196,10 +223,14 @@ void CTexture::ClampImageToSurfaceS()
         }
     }
     m_bClampedS = true;
+#endif //!__GX__
 }
 
 void CTexture::ClampImageToSurfaceT()
 {
+#ifdef __GX__
+	return;	// In GX we can always use the exact texture height.
+#else //__GX__
     if( !m_bClampedT && m_dwHeight < m_dwCreatedTextureHeight )
     {
         DrawInfo di;
@@ -233,6 +264,7 @@ void CTexture::ClampImageToSurfaceT()
         }
     }
     m_bClampedT = true;
+#endif //!__GX__
 }
 
 void CTexture::RestoreAlphaChannel(void)
@@ -272,5 +304,41 @@ void CTexture::RestoreAlphaChannel(void)
     {
         //TRACE0("Cannot lock texture");
     }
+}
+
+void CTexture::GXallocateTexture(void)
+{
+	//Set texture size based on
+	uint32 GXtileX = 4;
+	uint32 GXtileY = 4;
+	uint32 GXbpp = 4;
+
+	switch (GXtexfmt)
+	{
+	case GX_TF_IA4:
+		GXtileX = 8;
+		GXbpp = 1;
+		break;
+	case GX_TF_IA8:
+	case GX_TF_RGB5A3:
+		GXbpp = 2;
+		break;
+	case GX_TF_RGBA8:
+		GXbpp = 4;
+	}
+
+	GXwidth = m_dwCreatedTextureWidth + GXtileX - (m_dwCreatedTextureWidth%GXtileX);
+	GXheight = m_dwCreatedTextureHeight + GXtileY - (m_dwCreatedTextureHeight%GXtileY);
+
+	GXtextureBytes = GXwidth*GXheight*GXbpp;
+
+	m_pTexture = (u32*) __lwp_heap_allocate(GXtexCache,GXtextureBytes);
+	while(!m_pTexture)
+	{
+		gTextureManager.PurgeOldestTexture();
+//		RemoveTexture(m_pOldestTexture);
+		m_pTexture = (u32*) __lwp_heap_allocate(GXtexCache,GXtextureBytes);
+	}
+
 }
 

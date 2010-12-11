@@ -7,6 +7,7 @@
 
 //#define SDPRINT
 
+#define DBG_RICE 12
 #define DBG_DLIST 0
 #define DBG_DLISTTYPE 1
 #define DBG_RSPINFO 2

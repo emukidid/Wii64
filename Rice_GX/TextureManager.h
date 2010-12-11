@@ -228,11 +228,14 @@ public:
     TxtrCacheEntry * GetConstantColorTexture(uint32 constant);
     TxtrCacheEntry * GetTexture(TxtrInfo * pgti, bool fromTMEM, bool doCRCCheck=true, bool AutoExtendTexture = false);
     
-    void PurgeOldTextures();
+	void PurgeOldTextures();
+#ifdef __GX__
+	void PurgeOldestTexture();
+#endif //__GX__
     void RecycleAllTextures();
     void RecheckHiresForAllTextures();
     bool CleanUp();
-    
+
 #ifdef _DEBUG
     TxtrCacheEntry * GetCachedTexture(uint32 tex);
     uint32 GetNumOfCachedTexture();
@@ -241,6 +244,10 @@ public:
 
 extern CTextureManager gTextureManager;     // The global instance of CTextureManager class
 extern void DumpCachedTexture(TxtrCacheEntry &entry);
+
+#ifdef __GX__
+extern heap_cntrl* GXtexCache;
+#endif //__GX__
 
 #endif
 

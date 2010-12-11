@@ -72,6 +72,14 @@ public:
     
     TextureUsage    m_Usage;
 
+#ifdef __GX__
+	uint8	GXtexfmt, GXwrapS, GXwrapT;
+	uint32	GXtextureBytes, GXwidth, GXheight;
+	GXTexObj	GXtex;
+
+	void	GXallocateTexture(void);
+#endif //__GX__
+
     virtual void ScaleImageToSurface(bool scaleS=true, bool scaleT=true);
     virtual void ClampImageToSurfaceS();
     virtual void ClampImageToSurfaceT();

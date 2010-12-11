@@ -214,6 +214,7 @@ CRender * OGLDeviceBuilder::CreateRender(void)
 CTexture * OGLDeviceBuilder::CreateTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage)
 {
     COGLTexture *txtr = new COGLTexture(dwWidth, dwHeight, usage);
+#ifndef __GX__
     if( txtr->m_pTexture == NULL )
     {
         delete txtr;
@@ -221,6 +222,7 @@ CTexture * OGLDeviceBuilder::CreateTexture(uint32 dwWidth, uint32 dwHeight, Text
         return NULL;
     }
     else
+#endif //!__GX__
         return txtr;
 }
 
@@ -234,12 +236,12 @@ CColorCombiner * OGLDeviceBuilder::CreateColorCombiner(CRender *pRender)
         }
         else
         {
+#ifndef __GX__
             m_deviceType = (SupportedDeviceType)options.OpenglRenderSetting;
             if( m_deviceType == OGL_DEVICE )    // Best fit
             {
                 GLint maxUnit = 2;
                 COGLGraphicsContext *pcontext = (COGLGraphicsContext *)(CGraphicsContext::g_pGraphicsContext);
-#ifndef __GX__
 				//TODO: Replace all of this OGL code with GX
                 glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB,&maxUnit);
 
@@ -294,11 +296,6 @@ CColorCombiner * OGLDeviceBuilder::CreateColorCombiner(CRender *pRender)
                     m_pColorCombiner = new COGLColorCombiner(pRender);
                     printf("[RiceVideo] OpenGL Combiner: Basic OGL");
                 }
-#else //!__GX__
-				//TODO: Tailor this to GX?
-                m_pColorCombiner = new COGLColorCombiner(pRender);
-                printf("[RiceVideo] OpenGL Combiner: Basic OGL");
-#endif //__GX__
             }
             else
             {
@@ -337,6 +334,13 @@ CColorCombiner * OGLDeviceBuilder::CreateColorCombiner(CRender *pRender)
                         break;
                 }
             }
+#else //!__GX__
+            m_deviceType = (SupportedDeviceType)options.OpenglRenderSetting;
+            GLint maxUnit = 8;
+            COGLGraphicsContext *pcontext = (COGLGraphicsContext *)(CGraphicsContext::g_pGraphicsContext);
+			m_pColorCombiner = new CTEVColorCombiner(pRender);
+			printf("[RiceVideo] TEV Combiner");
+#endif //__GX__
         }
 
         SAFE_CHECK(m_pColorCombiner);
@@ -349,7 +353,11 @@ CBlender * OGLDeviceBuilder::CreateAlphaBlender(CRender *pRender)
 {
     if( m_pAlphaBlender == NULL )
     {
+#ifndef __GX__
         m_pAlphaBlender = new COGLBlender(pRender);
+#else //!__GX__
+        m_pAlphaBlender = new CTEVBlender(pRender);
+#endif //__GX__
         SAFE_CHECK(m_pAlphaBlender);
     }
 

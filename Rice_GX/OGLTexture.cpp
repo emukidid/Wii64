@@ -27,7 +27,6 @@ COGLTexture::COGLTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     m_dwTextureFmt = TEXTURE_FMT_A8R8G8B8;  // Always use 32bit to load texture
 #ifndef __GX__
     glGenTextures( 1, &m_dwTextureName );
-#endif //!__GX__
 
     // Make the width and height be the power of 2
     uint32 w;
@@ -57,6 +56,13 @@ COGLTexture::COGLTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
             m_glFmt = GL_RGBA4;
         break;
     };
+#else //!__GX__
+	//m_dwCreatedTextureWidth & m_dwCreatedTextureHeight are the same as the N64 textures for GX
+	//This is the default for class Texture
+
+	//m_pTexture will be allocated later once GX texture format is decided
+    //m_pTexture = malloc(m_dwCreatedTextureWidth * m_dwCreatedTextureHeight * GetPixelSize());
+#endif //__GX__
     LOG_TEXTURE(TRACE2("New texture: (%d, %d)", dwWidth, dwHeight));
 }
 
@@ -64,11 +70,11 @@ COGLTexture::~COGLTexture()
 {
     // Fix me, if usage is AS_RENDER_TARGET, we need to destroy the pbuffer
 
-#ifndef __GX__
+#ifndef __GX__ //GX Texture buffers are allocated in CTexture class
     glDeleteTextures(1, &m_dwTextureName );
-#endif //!__GX__
-    free(m_pTexture);
+    if (m_pTexture) free(m_pTexture);
     m_pTexture = NULL;
+#endif //!__GX__
     m_dwWidth = 0;
     m_dwHeight = 0;
 }
@@ -76,7 +82,11 @@ COGLTexture::~COGLTexture()
 bool COGLTexture::StartUpdate(DrawInfo *di)
 {
     if (m_pTexture == NULL)
+#ifndef __GX__
         return false;
+#else //!__GX__
+		GXallocateTexture();
+#endif //__GX__
 
     di->dwHeight = (uint16)m_dwHeight;
     di->dwWidth = (uint16)m_dwWidth;
@@ -102,7 +112,13 @@ void COGLTexture::EndUpdate(DrawInfo *di)
 	//Change to GL_UNSIGNED_INT_8_8_8_8 for X forwarding to X86
     glTexImage2D(GL_TEXTURE_2D, 0, m_glFmt, m_dwCreatedTextureWidth, m_dwCreatedTextureHeight, 0, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, m_pTexture);
 #endif //_BIG_ENDIAN
-#endif //!__GX__
+#else //!__GX__
+//void GX_InitTexObj(GXTexObj *obj,void *img_ptr,u16 wd,u16 ht,u8 fmt,u8 wrap_s,u8 wrap_t,u8 mipmap);
+//if (OGL.GXuseMinMagNearest) GX_InitTexObjLOD(&texture->GXtex, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+//GX_LoadTexObj(&texture->GXtex, t); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+
+GX_InitTexObj(&GXtex, m_pTexture, (u16) m_dwCreatedTextureWidth, (u16) m_dwCreatedTextureHeight, GXtexfmt, GXwrapS, GXwrapT, GX_FALSE);
+#endif //__GX__
 }
 
 

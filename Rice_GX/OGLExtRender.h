@@ -25,8 +25,13 @@ class COGLExtRender : public OGLRender
 {
 public:
     void Initialize(void);
+#ifndef __GX__
     void BindTexture(GLuint texture, int unitno);
     void DisBindTexture(GLuint texture, int unitno);
+#else //!__GX__
+    void BindTexture(COGLTexture *texture, int unitno);
+    void DisBindTexture(COGLTexture *texture, int unitno);
+#endif //__GX__
     void TexCoord2f(float u, float v);
     void TexCoord(TLITVERTEX &vtxInfo);
     void SetTextureUFlag(TextureUVFlag dwFlag, uint32 tile);

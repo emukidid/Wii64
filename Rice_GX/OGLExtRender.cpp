@@ -31,7 +31,9 @@ void COGLExtRender::Initialize(void)
 	//TODO: Implement in GX
     // Initialize multitexture
     glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB,&m_maxTexUnits);
-#endif //!__GX__
+#else //!__GX__
+    m_maxTexUnits = 8;
+#endif //__GX__
 
     for( int i=0; i<8; i++ )
         m_textureUnitMap[i] = -1;
@@ -40,7 +42,11 @@ void COGLExtRender::Initialize(void)
 }
 
 
+#ifndef __GX__
 void COGLExtRender::BindTexture(GLuint texture, int unitno)
+#else //!__GX__
+void COGLExtRender::BindTexture(COGLTexture *texture, int unitno)
+#endif //__GX__
 {
     if( m_bEnableMultiTexture )
     {
@@ -49,7 +55,7 @@ void COGLExtRender::BindTexture(GLuint texture, int unitno)
             if( m_curBoundTex[unitno] != texture )
             {
 #ifndef __GX__
-				//TODO: Implement in GX
+                //TODO: Figure out where to load GX textures
                 glActiveTexture(GL_TEXTURE0_ARB+unitno);
                 glBindTexture(GL_TEXTURE_2D,texture);
 #endif //!__GX__
@@ -63,12 +69,16 @@ void COGLExtRender::BindTexture(GLuint texture, int unitno)
     }
 }
 
+#ifndef __GX__
 void COGLExtRender::DisBindTexture(GLuint texture, int unitno)
+#else //!__GX__
+void COGLExtRender::DisBindTexture(COGLTexture *texture, int unitno)
+#endif //__GX__
 {
     if( m_bEnableMultiTexture )
     {
 #ifndef __GX__
-		//TODO: Implement in GX
+		//TODO: Implement in GX or clear m_curBountTex[unitno]?
         glActiveTexture(GL_TEXTURE0_ARB+unitno);
         glBindTexture(GL_TEXTURE_2D, 0);    //Not to bind any texture
 #endif //!__GX__
@@ -77,7 +87,7 @@ void COGLExtRender::DisBindTexture(GLuint texture, int unitno)
         OGLRender::DisBindTexture(texture, unitno);
 }
 
-void COGLExtRender::TexCoord2f(float u, float v)
+void COGLExtRender::TexCoord2f(float u, float v) //This function is never called
 {
     if( m_bEnableMultiTexture )
     {
@@ -119,29 +129,41 @@ void COGLExtRender::TexCoord(TLITVERTEX &vtxInfo)
 void COGLExtRender::SetTexWrapS(int unitno,GLuint flag)
 {
     static GLuint mflag[8];
+#ifndef __GX__
     static GLuint mtex[8];
+#else //!__GX__
+	static COGLTexture* mtex[8];
+#endif //__GX__
     if( m_curBoundTex[unitno] != mtex[unitno] || mflag[unitno] != flag )
     {
         mtex[unitno] = m_curBoundTex[0];
         mflag[unitno] = flag;
 #ifndef __GX__
-		//TODO: Implement in GX
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, flag);
-#endif //!__GX__
+#else //!__GX__
+		mtex[unitno]->GXwrapS = (u8) flag;
+		if (mtex[unitno]) GX_InitTexObjWrapMode(&mtex[unitno]->GXtex, mtex[unitno]->GXwrapS, mtex[unitno]->GXwrapT);
+#endif //__GX__
     }
 }
 void COGLExtRender::SetTexWrapT(int unitno,GLuint flag)
 {
     static GLuint mflag[8];
+#ifndef __GX__
     static GLuint mtex[8];
+#else //!__GX__
+	static COGLTexture* mtex[8];
+#endif //__GX__
     if( m_curBoundTex[unitno] != mtex[unitno] || mflag[unitno] != flag )
     {
         mtex[unitno] = m_curBoundTex[0];
         mflag[unitno] = flag;
 #ifndef __GX__
-		//TODO: Implement in GX
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, flag);
-#endif //!__GX__
+#else //!__GX__
+		mtex[unitno]->GXwrapT = (u8) flag;
+        if (mtex[unitno]) GX_InitTexObjWrapMode(&mtex[unitno]->GXtex, mtex[unitno]->GXwrapS, mtex[unitno]->GXwrapT);
+#endif //__GX__
     }
 }
 
@@ -185,7 +207,11 @@ void COGLExtRender::SetTextureUFlag(TextureUVFlag dwFlag, uint32 dwTile)
             if( pTexture ) 
             {
                 EnableTexUnit(textureNo,TRUE);
+#ifndef __GX__
                 BindTexture(pTexture->m_dwTextureName, textureNo);
+#else //!__GX__
+                BindTexture(pTexture, textureNo);
+#endif //__GX__
             }
             SetTexWrapS(textureNo, OGLXUVFlagMaps[dwFlag].realFlag);
             m_bClampS[textureNo] = dwFlag==TEXTURE_UV_FLAG_CLAMP?true:false;
@@ -227,7 +253,11 @@ void COGLExtRender::SetTextureVFlag(TextureUVFlag dwFlag, uint32 dwTile)
             if( pTexture )
             {
                 EnableTexUnit(textureNo,TRUE);
+#ifndef __GX__
                 BindTexture(pTexture->m_dwTextureName, textureNo);
+#else //!__GX__
+                BindTexture(pTexture, textureNo);
+#endif //__GX__
             }
             SetTexWrapT(textureNo, OGLXUVFlagMaps[dwFlag].realFlag);
             m_bClampT[textureNo] = dwFlag==TEXTURE_UV_FLAG_CLAMP?true:false;
@@ -247,15 +277,17 @@ void COGLExtRender::EnableTexUnit(int unitno, BOOL flag)
             glEnable(GL_TEXTURE_2D);
         else
             glDisable(GL_TEXTURE_2D);
-#endif //!__GX__
+#else //!__GX__
+		GXactiveTexUnit = unitno;
+		GXtexUnitEnabled[GXactiveTexUnit] = flag;
+#endif //__GX__
     }
 }
 
 void COGLExtRender::ApplyTextureFilter()
 {
-#ifndef __GX__
-	//TODO: Implement in GX
     static uint32 minflag[8], magflag[8];
+#ifndef __GX__
     static uint32 mtex[8];
     for( int i=0; i<m_maxTexUnits; i++ )
     {
@@ -286,6 +318,29 @@ void COGLExtRender::ApplyTextureFilter()
                     glActiveTexture(GL_TEXTURE0_ARB+i);
                     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, iMagFilter);
                 }
+            }
+        }
+    }
+#else //!__GX__
+    static COGLTexture* mtex[8];
+    for( int i=0; i<m_maxTexUnits; i++ )
+    {
+        int iMinFilter = (m_dwMinFilter == FILTER_LINEAR ? GX_LINEAR : GX_NEAR);
+        int iMagFilter = (m_dwMagFilter == FILTER_LINEAR ? GX_LINEAR : GX_NEAR);
+        if( m_texUnitEnabled[i] )
+        {
+            if( mtex[i] != m_curBoundTex[i] )
+            {
+                mtex[i] = m_curBoundTex[i];
+                minflag[i] = m_dwMinFilter;
+                magflag[i] = m_dwMagFilter;
+                if (mtex[i]) GX_InitTexObjFilterMode(&mtex[i]->GXtex,(u8) iMinFilter,(u8) iMagFilter);
+            }
+            else if( (minflag[i] != (unsigned int)m_dwMinFilter) || (magflag[i] != (unsigned int)m_dwMagFilter) )
+            {
+                minflag[i] = m_dwMinFilter;
+                magflag[i] = m_dwMagFilter;
+                if (mtex[i]) GX_InitTexObjFilterMode(&mtex[i]->GXtex,(u8) iMinFilter,(u8) iMagFilter);
             }
         }
     }

@@ -26,11 +26,13 @@
 #include <SDL/SDL.h>
 #else //!__GX__
 #include <gccore.h>
+#include <ogc/lwp_heap.h>
 #include <stdlib.h>
 #include <string.h>
 #include "gl.h"
 #include "glATI.h"
 #include "glext.h"
+#include "../gui/DEBUG.h"
 #endif //__GX__
 
 #define EXPORT              __declspec(dllexport)
@@ -91,11 +93,12 @@
 #include "OGLDecodedMux.h"
 #include "CNvTNTCombiner.h"
 
-#include "OGLCombiner.h"
-#include "OGLExtCombiner.h"
-#include "OGLCombinerNV.h"
-#include "OGLCombinerTNT2.h"
-#include "OGLFragmentShaders.h"
+#include "TEVCombiner.h"
+//#include "OGLCombiner.h"
+//#include "OGLExtCombiner.h"
+//#include "OGLCombinerNV.h"
+//#include "OGLCombinerTNT2.h"
+//#include "OGLFragmentShaders.h"
 
 #include "OGLRender.h"
 #include "OGLExtRender.h"

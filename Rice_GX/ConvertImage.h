@@ -295,5 +295,41 @@ void Convert4b_16(CTexture *pTexture, const TxtrInfo &tinfo);
 void Convert8b_16(CTexture *pTexture, const TxtrInfo &tinfo);
 void Convert16b_16(CTexture *pTexture, const TxtrInfo &tinfo);
 
+#ifdef __GX__
+
+uint32 ConvertYUV16ToR8G8B8_GX(int Y, int U, int V);
+
+inline uint16 GXConvert555ToRGB5A3(uint16 w555)
+{
+	uint16 c = w555;
+	if ((w555&1) != 0)	c = 0x8000|(((c>>11)&0x1F)<<10)|(((c>>6)&0x1F)<<5)|((c>>1)&0x1F);   //opaque texel
+	else				c = 0x0000|(((c>>12)&0xF)<<8)|(((c>>7)&0xF)<<4)|((c>>2)&0xF);   //transparent texel
+	return c;
+}
+
+void ConvertRGBA16_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void ConvertRGBA32_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+
+void ConvertIA4_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void ConvertIA8_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void ConvertIA16_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+
+void ConvertI4_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void ConvertI8_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+
+void ConvertCI4_GX( CTexture *pTexture, const TxtrInfo & ti );
+void ConvertCI8_GX( CTexture *pTexture, const TxtrInfo & ti );
+
+void ConvertCI4_RGBA16_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void ConvertCI4_IA16_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void ConvertCI8_RGBA16_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void ConvertCI8_IA16_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+
+void ConvertYUV_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+
+void Convert4b_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void Convert8b_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+void Convert16b_GX(CTexture *pTexture, const TxtrInfo &tinfo);
+#endif //__GX__
 #endif
 

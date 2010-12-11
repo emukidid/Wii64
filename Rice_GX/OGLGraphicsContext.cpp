@@ -210,7 +210,6 @@ void COGLGraphicsContext::InitState(void)
 void COGLGraphicsContext::InitOGLExtension(void)
 {
 #ifndef __GX__
-	//TODO: Answer these for GX
     // important extension features, it is very bad not to have these feature
     m_bSupportMultiTexture = IsExtensionSupported("GL_ARB_multitexture");
     m_bSupportTextureEnvCombine = IsExtensionSupported("GL_EXT_texture_env_combine");
@@ -232,7 +231,29 @@ void COGLGraphicsContext::InitOGLExtension(void)
     m_bSupportBlendColor = IsExtensionSupported("GL_EXT_blend_color");
     m_bSupportBlendSubtract = IsExtensionSupported("GL_EXT_blend_subtract");
     m_bSupportNVTextureEnvCombine4 = IsExtensionSupported("GL_NV_texture_env_combine4");
-#endif //!__GX__
+#else //!__GX__
+    // important extension features, it is very bad not to have these feature
+    m_bSupportMultiTexture = true;
+    m_bSupportTextureEnvCombine = true;
+    
+    m_bSupportSeparateSpecularColor = true;
+    m_bSupportSecondColor = true;
+    m_bSupportFogCoord = true;
+    m_bSupportTextureObject = true;
+
+    // Optional extension features
+    m_bSupportRescaleNormal = false; //need to look this up: IsExtensionSupported("GL_EXT_rescale_normal");
+    m_bSupportLODBias = true;
+
+    // Nvidia only extension features (optional)
+	m_bSupportNVRegisterCombiner = false;
+    m_bSupportTextureMirrorRepeat = true; //not sure about this
+    m_supportTextureMirror = m_bSupportTextureMirrorRepeat;
+    m_bSupportTextureLOD = true;
+    m_bSupportBlendColor = true;
+    m_bSupportBlendSubtract = true;
+    m_bSupportNVTextureEnvCombine4 = false;
+#endif //__GX__
 }
 
 bool COGLGraphicsContext::IsExtensionSupported(const char* pExtName)

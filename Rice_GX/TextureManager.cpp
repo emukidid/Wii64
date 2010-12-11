@@ -19,6 +19,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "stdafx.h"
 
+#ifdef __GX__
+# ifdef HW_RVL
+# include "../gc_memory/MEM2.h"
+# define GX_TEXTURE_CACHE_SIZE TEXCACHE_SIZE //8MB for Wii
+# else //HW_RVL
+# define GX_TEXTURE_CACHE_SIZE (4*1024*1024) //4MB for GC
+# endif //!HW_RVL
+	heap_cntrl* GXtexCache = NULL;
+#endif //__GX__
+
 CTextureManager gTextureManager;
 
 DWORD g_maxTextureMemUsage = (5*1024*1024);
@@ -97,6 +107,20 @@ CTextureManager::CTextureManager() :
     memset(&m_EnvColorTextureEntry, 0, sizeof(TxtrCacheEntry));
     memset(&m_LODFracTextureEntry, 0, sizeof(TxtrCacheEntry));
     memset(&m_PrimLODFracTextureEntry, 0, sizeof(TxtrCacheEntry));
+
+#ifdef __GX__
+	//Init texture cache heap if not yet inited
+	if(!GXtexCache)
+	{
+		GXtexCache = (heap_cntrl*)malloc(sizeof(heap_cntrl));
+#ifdef HW_RVL
+		__lwp_heap_init(GXtexCache, TEXCACHE_LO,GX_TEXTURE_CACHE_SIZE, 32);
+#else //HW_RVL
+		__lwp_heap_init(GXtexCache, memalign(32,GX_TEXTURE_CACHE_SIZE),GX_TEXTURE_CACHE_SIZE, 32);
+#endif //!HW_RVL
+	}
+#endif //__GX__
+
 }
 
 CTextureManager::~CTextureManager()
@@ -209,6 +233,17 @@ void CTextureManager::PurgeOldTextures()
         }
     }
 }
+
+#ifdef __GX__
+// Purge LRU texture to make room in texture cache
+void CTextureManager::PurgeOldestTexture()
+{
+	TxtrCacheEntry *nextYoungest = m_pOldestTexture->pNextYoungest;
+	RemoveTexture(m_pOldestTexture);
+//	delete m_pOldestTexture;
+	m_pOldestTexture = nextYoungest;
+}
+#endif //__GX__
 
 void CTextureManager::RecycleAllTextures()
 {
@@ -507,12 +542,14 @@ TxtrCacheEntry * CTextureManager::CreateNewCacheEntry(uint32 dwAddr, uint32 dwWi
         }
 
         pEntry->pTexture = CDeviceBuilder::GetBuilder()->CreateTexture(dwWidth, dwHeight);
+#ifndef __GX__
         if (pEntry->pTexture == NULL || pEntry->pTexture->GetTexture() == NULL)
         {
             _VIDEO_DisplayTemporaryMessage("Error to create an texture");
             TRACE2("Warning, unable to create %d x %d texture!", dwWidth, dwHeight);
         }
         else
+#endif //!__GX__
         {
             pEntry->pTexture->m_bScaledS = false;
             pEntry->pTexture->m_bScaledT = false;
@@ -554,6 +591,11 @@ bool lastEntryModified = false;
 TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, bool doCRCCheck, bool AutoExtendTexture)
 {
     TxtrCacheEntry *pEntry;
+#ifdef __GX__
+		static int callcount = 0;
+		sprintf(txtbuffer,"TextureManager::GetTexture %d", callcount++);
+		DEBUG_print(txtbuffer,DBG_RICE-1); 
+#endif //__GX__
 
     if( g_curRomInfo.bDisableTextureCRC )
         doCRCCheck = false;
@@ -730,11 +772,18 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
     {
         if (pEntry->pTexture != NULL)
         {
+#ifdef __GX__
+		static int callcount5 = 0;
+		sprintf(txtbuffer,"TextureManager::tryLoadTex %d", callcount5++);
+		DEBUG_print(txtbuffer,DBG_RICE); 
+#endif //__GX__
             TextureFmt dwType = pEntry->pTexture->GetSurfaceFormat();
             SAFE_DELETE(pEntry->pEnhancedTexture);
             pEntry->dwEnhancementFlag = TEXTURE_NO_ENHANCEMENT;
 
+#ifndef __GX__ //dwType is unknown because tex buffer not yet allocated..
             if (dwType != TEXTURE_FMT_UNKNOWN)
+#endif //!__GX__
             {
                 if( loadFromTextureBuffer )
                 {
@@ -758,12 +807,16 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
                 else
                 {
                     LOG_TEXTURE(TRACE0("   Load new texture from RDRAM:\n"));
+#ifndef __GX__
                     if (dwType == TEXTURE_FMT_A8R8G8B8)
                     {
                         ConvertTexture(pEntry, fromTMEM);
                     }
                     else
                         ConvertTexture_16(pEntry, fromTMEM);
+#else //!__GX__
+					ConvertTexture(pEntry, fromTMEM);
+#endif //__GX__
                     pEntry->FrameLastUpdated = status.gDlistCount;
                     SAFE_DELETE(pEntry->pEnhancedTexture);
                     pEntry->dwEnhancementFlag = TEXTURE_NO_ENHANCEMENT;
@@ -825,17 +878,41 @@ uint8 pnImgSize[4]   = {4, 8, 16, 32};
 const char *textlutname[4] = {"RGB16", "I16?", "RGBA16", "IA16"};
 
 extern uint16 g_wRDPTlut[];
+#ifndef __GX__
 extern ConvertFunction  gConvertFunctions_FullTMEM[ 8 ][ 4 ];
 extern ConvertFunction  gConvertFunctions[ 8 ][ 4 ];
 extern ConvertFunction  gConvertTlutFunctions[ 8 ][ 4 ];
 extern ConvertFunction  gConvertFunctions_16[ 8 ][ 4 ];
 extern ConvertFunction  gConvertFunctions_16_FullTMEM[ 8 ][ 4 ];
 extern ConvertFunction  gConvertTlutFunctions_16[ 8 ][ 4 ];
+#else //!__GX__
+extern ConvertFunction  gConvertFunctions_GX[ 8 ][ 4 ];
+extern ConvertFunction  gConvertFunctions_GX_FullTMEM[ 8 ][ 4 ];
+extern ConvertFunction  gConvertTlutFunctions_GX[ 8 ][ 4 ];
+
+struct VIInfo
+{
+	unsigned int* xfb[2];
+	int which_fb;
+	bool updateOSD;
+	bool copy_fb;
+};
+
+extern VIInfo VI;
+
+char strTable[10] = "";
+int tiFmt, tiSize;
+#endif //__GX__
 void CTextureManager::ConvertTexture(TxtrCacheEntry * pEntry, bool fromTMEM)
 {
     static uint32 dwCount = 0;
-    
+#ifdef __GX__
+		static int texcount2 = 0;
+		sprintf(txtbuffer,"TextureManager::ConvertTexture %d", texcount2++);
+		DEBUG_print(txtbuffer,DBG_RICE+1); 
+#endif //__GX__
     ConvertFunction pF;
+#ifndef __GX__
     if( options.bUseFullTMEM && fromTMEM && status.bAllowLoadFromTMEM )
     {
         pF = gConvertFunctions_FullTMEM[ pEntry->ti.Format ][ pEntry->ti.Size ];
@@ -857,6 +934,52 @@ void CTextureManager::ConvertTexture(TxtrCacheEntry * pEntry, bool fromTMEM)
                 pF = gConvertFunctions[ pEntry->ti.Format ][ pEntry->ti.Size ];
         }
     }
+#else //!__GX__
+    if( options.bUseFullTMEM && fromTMEM && status.bAllowLoadFromTMEM )
+    {
+        pF = gConvertFunctions_GX_FullTMEM[ pEntry->ti.Format ][ pEntry->ti.Size ];
+		sprintf(strTable, "Full");
+		tiFmt = pEntry->ti.Format;
+		tiSize = pEntry->ti.Size;
+    }
+    else
+    {
+        if( gRDP.tiles[7].dwFormat == TXT_FMT_YUV )
+        {
+            if( gRDP.otherMode.text_tlut>=2 )
+			{
+                pF = gConvertTlutFunctions_GX[ TXT_FMT_YUV ][ pEntry->ti.Size ];
+				sprintf(strTable, "Tlut");
+				tiFmt = TXT_FMT_YUV;
+				tiSize = pEntry->ti.Size;
+			}
+            else
+			{
+                pF = gConvertFunctions_GX[ TXT_FMT_YUV ][ pEntry->ti.Size ];
+				sprintf(strTable, "Std");
+				tiFmt = TXT_FMT_YUV;
+				tiSize = pEntry->ti.Size;
+			}
+        }
+        else
+        {
+            if( gRDP.otherMode.text_tlut>=2 )
+			{
+                pF = gConvertTlutFunctions_GX[ pEntry->ti.Format ][ pEntry->ti.Size ];
+				sprintf(strTable, "Tlut");
+				tiFmt = pEntry->ti.Format;
+				tiSize = pEntry->ti.Size;
+			}
+            else
+			{
+                pF = gConvertFunctions_GX[ pEntry->ti.Format ][ pEntry->ti.Size ];
+				sprintf(strTable, "Std");
+				tiFmt = pEntry->ti.Format;
+				tiSize = pEntry->ti.Size;
+			}
+        }
+    }
+#endif //__GX__
 
     if( pF )
     {
@@ -868,6 +991,90 @@ void CTextureManager::ConvertTexture(TxtrCacheEntry * pEntry, bool fromTMEM)
                 pszImgFormat[pEntry->ti.Format], pnImgSize[pEntry->ti.Size]);
             DebuggerAppendMsg("Palette Format: %s (%d)\n", textlutname[pEntry->ti.TLutFmt>>RSP_SETOTHERMODE_SHIFT_TEXTLUT], pEntry->ti.TLutFmt>>RSP_SETOTHERMODE_SHIFT_TEXTLUT);
         });
+#if 0 //def __GX__ //Use the following to show individual converted textures on screen
+		static int texcount = 0;
+		sprintf(txtbuffer,"TextureManager::ConvertTexture %d", texcount++);
+		DEBUG_print(txtbuffer,DBG_RICE); 
+
+#define MAXTEXPOS 9
+		static int texind = 0;
+		static float texpos[MAXTEXPOS][4] = 
+		{{0.2,0.2,0.4,0.4},
+		 {0.4,0.2,0.6,0.4},
+		 {0.6,0.2,0.8,0.4},
+		 {0.2,0.4,0.4,0.6},
+		 {0.4,0.4,0.6,0.6},
+		 {0.6,0.4,0.8,0.6},
+		 {0.2,0.6,0.4,0.8},
+		 {0.4,0.6,0.6,0.8},
+		 {0.6,0.6,0.8,0.8}};
+
+		sprintf(txtbuffer,"Tex %d: pF = %s, %d, %d, bswp = %d", texind, strTable, tiFmt, tiSize, pEntry->ti.bSwapped);
+		DEBUG_print(txtbuffer,DBG_RICE+4+texind); 
+
+
+		//Draw GX texture on screen:
+		GX_LoadTexObj(&pEntry->pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+		GX_SetNumChans (0);
+		GX_SetNumTexGens (1);
+		GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORZERO);
+		GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
+	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR); //Fix src alpha
+	GX_SetColorUpdate(GX_ENABLE);
+	GX_SetAlphaUpdate(GX_ENABLE);
+	GX_SetDstAlpha(GX_DISABLE, 0xFF);
+	GX_SetZMode(GX_DISABLE,GX_LEQUAL,GX_TRUE);
+
+	GX_SetCullMode (GX_CULL_NONE);
+
+	Mtx44 GXprojection;
+	Mtx GXmodelViewIdent;
+	guMtxIdentity(GXprojection);
+	guMtxIdentity(GXmodelViewIdent);
+	guOrtho(GXprojection, 0, 1, 0, 1, 1.0f, -1.0f);
+	GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
+	GX_LoadPosMtxImm(GXmodelViewIdent,GX_PNMTX0);
+
+	//set vertex description here
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
+	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+//	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+	//set vertex attribute formats here
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+//	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+		GX_Position3f32( texpos[texind][0], texpos[texind][1], 0.0 );
+//		GX_Color4u8( GXcol.r, GXcol.g, GXcol.b, GXcol.a ); 
+		GX_TexCoord2f32( 0, 0 );
+		GX_Position3f32( texpos[texind][2], texpos[texind][1], 0.0 );
+//		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( 1, 0 );
+		GX_Position3f32( texpos[texind][2], texpos[texind][3], 0.0 );
+//		GX_Color4u8( GXcol.r, GXcol.g, GXcol.b, GXcol.a ); 
+		GX_TexCoord2f32( 1, 1 );
+		GX_Position3f32( texpos[texind][0], texpos[texind][3], 0.0 );
+//		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( 0, 1 );
+	GX_End();
+
+	texind = (texind+1)%MAXTEXPOS;
+
+	//	GX_DrawDone(); //Wait until EFB->XFB copy is complete
+//	COGLGraphicsContext::UpdateFrame(1);
+	GX_CopyDisp (VI.xfb[VI.which_fb], GX_TRUE);	//clear the EFB before executing new Dlist
+	GX_DrawDone(); //Wait until EFB->XFB copy is complete
+	VIDEO_SetNextFramebuffer(VI.xfb[VI.which_fb]);
+	VIDEO_Flush();
+	VI.which_fb ^= 1;
+
+	while(!(PAD_ButtonsHeld(PAD_CHAN0)&PAD_BUTTON_A)) {	VIDEO_WaitVSync();	PAD_ScanPads();	}
+	while((PAD_ButtonsHeld(PAD_CHAN0)&PAD_BUTTON_A)) {	VIDEO_WaitVSync();	PAD_ScanPads();	}
+
+#endif //__GX__
     }
     else
     {
@@ -879,6 +1086,7 @@ void CTextureManager::ConvertTexture(TxtrCacheEntry * pEntry, bool fromTMEM)
 
 void CTextureManager::ConvertTexture_16(TxtrCacheEntry * pEntry, bool fromTMEM)
 {
+#ifndef __GX__
     static uint32 dwCount = 0;
     
     ConvertFunction pF;
@@ -908,6 +1116,7 @@ void CTextureManager::ConvertTexture_16(TxtrCacheEntry * pEntry, bool fromTMEM)
     }
 
     dwCount++;
+#endif //!__GX__
 }
 
 void CTextureManager::ExpandTexture(TxtrCacheEntry * pEntry, uint32 sizeToLoad, uint32 sizeToCreate, uint32 sizeCreated,
