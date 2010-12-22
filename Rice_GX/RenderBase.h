@@ -240,6 +240,11 @@ typedef struct {
 	BOOL	GXuseProjWnear;
 	BOOL	GXupdateMtx;//
 	int		GXnumVtxMP;
+	u8		GXcullMode;
+	//Zbuffer settings
+	u8		GXenableZmode;
+	u8		GXZfunc;
+	u8		GXZupdate;
 } GX_Options;
 
 extern GX_Options gGX;

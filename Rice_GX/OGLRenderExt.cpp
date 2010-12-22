@@ -34,10 +34,9 @@ void OGLRender::DrawText(const char* str, RECT *rect)
 
 void OGLRender::DrawSpriteR_Render()    // With Rotation
 {
-#ifndef __GX__
-	//TODO: Implement in GX
     glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
 
+#ifndef __GX__
     GLboolean cullface = glIsEnabled(GL_CULL_FACE);
     glDisable(GL_CULL_FACE);
 
@@ -65,7 +64,58 @@ void OGLRender::DrawSpriteR_Render()    // With Rotation
     glEnd();
 
     if( cullface ) glEnable(GL_CULL_FACE);
-#endif //!__GX__
+#else //!__GX__
+	GX_SetCullMode (GX_CULL_NONE);
+
+	GXColor GXcol;
+	GXcol.r = (u8) ((gRDP.primitiveColor>>16)&0xFF);
+	GXcol.g = (u8) ((gRDP.primitiveColor>>8)&0xFF);
+	GXcol.b = (u8) ((gRDP.primitiveColor)&0xFF);
+	GXcol.a = (u8) (gRDP.primitiveColor >>24);
+
+	//set vertex description here
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
+	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+	//set vertex attribute formats here
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+
+	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 6);
+
+		GX_Position3f32( g_texRectTVtx[0].x, g_texRectTVtx[0].y, -g_texRectTVtx[0].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[0].tcord[0].u, g_texRectTVtx[0].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[1].x, g_texRectTVtx[1].y, -g_texRectTVtx[1].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[1].tcord[0].u, g_texRectTVtx[1].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[2].x, g_texRectTVtx[2].y, -g_texRectTVtx[2].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[2].tcord[0].u, g_texRectTVtx[2].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[0].x, g_texRectTVtx[0].y, -g_texRectTVtx[0].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[0].tcord[0].u, g_texRectTVtx[0].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[2].x, g_texRectTVtx[2].y, -g_texRectTVtx[2].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[2].tcord[0].u, g_texRectTVtx[2].tcord[0].v );
+
+		GX_Position3f32( g_texRectTVtx[3].x, g_texRectTVtx[3].y, -g_texRectTVtx[3].z );
+		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
+		GX_TexCoord2f32( g_texRectTVtx[3].tcord[0].u, g_texRectTVtx[3].tcord[0].v );
+
+
+	GX_End();
+
+	GX_SetCullMode(gGX.GXcullMode);
+#endif //__GX__
 }
 
 

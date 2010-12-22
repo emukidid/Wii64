@@ -60,6 +60,9 @@ void COGLExtRender::BindTexture(COGLTexture *texture, int unitno)
                 glBindTexture(GL_TEXTURE_2D,texture);
 #endif //!__GX__
                 m_curBoundTex[unitno] = texture;
+#ifdef __GX__
+				GXreloadTex[unitno] = true;
+#endif //__GX__
             }
         }
     }
@@ -142,7 +145,11 @@ void COGLExtRender::SetTexWrapS(int unitno,GLuint flag)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, flag);
 #else //!__GX__
 		mtex[unitno]->GXwrapS = (u8) flag;
-		if (mtex[unitno]) GX_InitTexObjWrapMode(&mtex[unitno]->GXtex, mtex[unitno]->GXwrapS, mtex[unitno]->GXwrapT);
+		if (mtex[unitno]) 
+		{
+			GX_InitTexObjWrapMode(&mtex[unitno]->GXtex, mtex[unitno]->GXwrapS, mtex[unitno]->GXwrapT);
+			GXreloadTex[unitno] = true;
+		}
 #endif //__GX__
     }
 }
@@ -162,7 +169,11 @@ void COGLExtRender::SetTexWrapT(int unitno,GLuint flag)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, flag);
 #else //!__GX__
 		mtex[unitno]->GXwrapT = (u8) flag;
-        if (mtex[unitno]) GX_InitTexObjWrapMode(&mtex[unitno]->GXtex, mtex[unitno]->GXwrapS, mtex[unitno]->GXwrapT);
+        if (mtex[unitno]) 
+		{
+			GX_InitTexObjWrapMode(&mtex[unitno]->GXtex, mtex[unitno]->GXwrapS, mtex[unitno]->GXwrapT);
+			GXreloadTex[unitno] = true;
+		}
 #endif //__GX__
     }
 }
@@ -218,6 +229,7 @@ void COGLExtRender::SetTextureUFlag(TextureUVFlag dwFlag, uint32 dwTile)
         }
     }
 }
+
 void COGLExtRender::SetTextureVFlag(TextureUVFlag dwFlag, uint32 dwTile)
 {
     TileVFlags[dwTile] = dwFlag;
@@ -334,13 +346,21 @@ void COGLExtRender::ApplyTextureFilter()
                 mtex[i] = m_curBoundTex[i];
                 minflag[i] = m_dwMinFilter;
                 magflag[i] = m_dwMagFilter;
-                if (mtex[i]) GX_InitTexObjFilterMode(&mtex[i]->GXtex,(u8) iMinFilter,(u8) iMagFilter);
+                if (mtex[i]) 
+				{
+					GX_InitTexObjFilterMode(&mtex[i]->GXtex,(u8) iMinFilter,(u8) iMagFilter);
+					GXreloadTex[i] = true;
+				}
             }
             else if( (minflag[i] != (unsigned int)m_dwMinFilter) || (magflag[i] != (unsigned int)m_dwMagFilter) )
             {
                 minflag[i] = m_dwMinFilter;
                 magflag[i] = m_dwMagFilter;
-                if (mtex[i]) GX_InitTexObjFilterMode(&mtex[i]->GXtex,(u8) iMinFilter,(u8) iMagFilter);
+                if (mtex[i]) 
+				{
+					GX_InitTexObjFilterMode(&mtex[i]->GXtex,(u8) iMinFilter,(u8) iMagFilter);
+					GXreloadTex[i] = true;
+				}
             }
         }
     }

@@ -113,11 +113,14 @@ void COGLTexture::EndUpdate(DrawInfo *di)
     glTexImage2D(GL_TEXTURE_2D, 0, m_glFmt, m_dwCreatedTextureWidth, m_dwCreatedTextureHeight, 0, GL_BGRA_EXT, GL_UNSIGNED_INT_8_8_8_8_REV, m_pTexture);
 #endif //_BIG_ENDIAN
 #else //!__GX__
-//void GX_InitTexObj(GXTexObj *obj,void *img_ptr,u16 wd,u16 ht,u8 fmt,u8 wrap_s,u8 wrap_t,u8 mipmap);
-//if (OGL.GXuseMinMagNearest) GX_InitTexObjLOD(&texture->GXtex, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
-//GX_LoadTexObj(&texture->GXtex, t); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+	//void GX_InitTexObj(GXTexObj *obj,void *img_ptr,u16 wd,u16 ht,u8 fmt,u8 wrap_s,u8 wrap_t,u8 mipmap);
+	//if (OGL.GXuseMinMagNearest) GX_InitTexObjLOD(&texture->GXtex, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+	//GX_LoadTexObj(&texture->GXtex, t); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 
-GX_InitTexObj(&GXtex, m_pTexture, (u16) m_dwCreatedTextureWidth, (u16) m_dwCreatedTextureHeight, GXtexfmt, GXwrapS, GXwrapT, GX_FALSE);
+	if(m_pTexture != NULL)
+		DCFlushRange(m_pTexture, GXtextureBytes);
+
+	GX_InitTexObj(&GXtex, m_pTexture, (u16) m_dwCreatedTextureWidth, (u16) m_dwCreatedTextureHeight, GXtexfmt, GXwrapS, GXwrapT, GX_FALSE);
 #endif //__GX__
 }
 

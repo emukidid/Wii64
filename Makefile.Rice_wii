@@ -175,6 +175,7 @@ OBJ_RICE_GX = Rice_GX/OGLGraphicsContext.o \
 	Rice_GX/liblinux/pngrw.o \
 	Rice_GX/OGLRender.o \
 	Rice_GX/OGLTexture.o \
+	Rice_GX/TEVBlender.o \
 	Rice_GX/TEVCombiner.o \
 	Rice_GX/OGLExtRender.o \
 	Rice_GX/blender.o \

@@ -93,6 +93,7 @@
 #include "OGLDecodedMux.h"
 #include "CNvTNTCombiner.h"
 
+#include "TEVBlender.h"
 #include "TEVCombiner.h"
 //#include "OGLCombiner.h"
 //#include "OGLExtCombiner.h"

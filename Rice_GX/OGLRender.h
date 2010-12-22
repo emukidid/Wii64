@@ -73,6 +73,7 @@ public:
 #else //!__GX__
     virtual void BindTexture(COGLTexture *texture, int unitno);
     virtual void DisBindTexture(COGLTexture *texture, int unitno);
+	void GXloadTextures();
 #endif //__GX__
     virtual void TexCoord2f(float u, float v);
     virtual void TexCoord(TLITVERTEX &vtxInfo);
@@ -120,15 +121,12 @@ protected:
     COGLTexture*  m_curBoundTex[8];
     int GXactiveTexUnit;		//Currently active TexUnit
     bool GXtexUnitEnabled[8];	//TexUnit enabled
+	bool GXreloadTex[8];
 #endif //__GX__
     BOOL    m_texUnitEnabled[8];
 
     bool m_bEnableMultiTexture;
 
-#ifdef __GX__
-	//Zbuffer settings
-	u8 GXenableZmode, GXZfunc, GXZupdate;
-#endif //__GX__
 };
 
 #endif

@@ -984,7 +984,7 @@ void CTextureManager::ConvertTexture(TxtrCacheEntry * pEntry, bool fromTMEM)
     if( pF )
     {
         pF( pEntry->pTexture, pEntry->ti );
-    
+
         LOG_TEXTURE(
         {
             DebuggerAppendMsg("Decompress 32bit Texture:\n\tFormat: %s\n\tImage Size:%d\n", 
