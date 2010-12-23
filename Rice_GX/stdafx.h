@@ -29,6 +29,7 @@
 #include <ogc/lwp_heap.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 #include "gl.h"
 #include "glATI.h"
 #include "glext.h"
