@@ -155,6 +155,8 @@ protected:
 	uint32 m_dwLastMux0;
 	uint32 m_dwLastMux1;
 
+	void DisplayTEVMuxString(int index);
+
 #ifdef _DEBUG
 	void DisplaySimpleMuxString(void);
 #endif

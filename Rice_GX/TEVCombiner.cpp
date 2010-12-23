@@ -388,6 +388,8 @@ void CTEVColorCombiner::InitCombinerCycle12(void)
 		gRDP.colorsAreReloaded = false;
 		gRDP.texturesAreReloaded = false; 
     }
+
+//	DisplayTEVMuxString(m_lastIndex);
 #endif
 }
 
@@ -430,7 +432,7 @@ int CTEVColorCombiner::ParseDecodedMux()
     TEVCombinerSaveType res;
 	for (int stage=0; stage<16; stage++)
 	{ //These are the default settings
-		for (int i=1; i<4; i++)
+		for (int i=0; i<4; i++)
 		{
 			res.units[stage].rgbComb.args[i] = CM_IGNORE_BYTE;
 			res.units[stage].alphaComb.args[i] = CM_IGNORE_BYTE;
@@ -824,6 +826,78 @@ void CTEVColorCombiner::InitCombinerBlenderForSimpleTextureDraw(uint32 tile)
 	//This is called only by CRender::DrawFrameBuffer() in RenderExt.cpp
 #endif //__GX__
     m_pOGLRender->SetAlphaTestEnable(FALSE);
+}
+
+extern const char* muxTypeStrs[];
+extern const char *translatedCombTypes[];
+void CTEVColorCombiner::DisplayTEVMuxString(int index)
+{
+
+	int debug_line = DBG_RICE;
+
+//	sprintf(txtbuffer,"RGBA %d Cycle %d Type %s: %s, %s, %s, %s", rgbalpha, cycle, muxTypeStrs[type], 
+//		translatedCombTypes[m.a], translatedCombTypes[m.b], translatedCombTypes[m.c], translatedCombTypes[m.d]);
+//	DEBUG_print(txtbuffer,debug_line++); 
+
+	for( int rgbalpha = 0; rgbalpha<2; rgbalpha++ ) 
+	{
+		for ( int cycle = 0; cycle<2; cycle++ )
+		{
+			CombinerFormatType type = m_pDecodedMux->splitType[cycle*2+rgbalpha];
+			N64CombinerType &m = m_pDecodedMux->m_n64Combiners[cycle*2+rgbalpha];
+
+			sprintf(txtbuffer,"RGBA %d Cycle %d Type %s:", rgbalpha, cycle, muxTypeStrs[type]); 
+			DEBUG_print(txtbuffer,debug_line++); 
+			sprintf(txtbuffer," abcd = %s, %s, %s, %s", translatedCombTypes[m.a], translatedCombTypes[m.b], translatedCombTypes[m.c], translatedCombTypes[m.d]);
+			DEBUG_print(txtbuffer,debug_line++); 
+		}
+	}
+
+	TEVCombinerSaveType &res = m_vCompiledSettings[index];
+
+	COGLTexture* pTexture = NULL;
+	COGLTexture* pTexture1 = NULL;
+	int numTex = 0;
+
+	if( m_bTex0Enabled || m_bTex1Enabled || gRDP.otherMode.cycle_type  == CYCLE_TYPE_COPY )
+	{
+		if( m_bTex0Enabled || gRDP.otherMode.cycle_type  == CYCLE_TYPE_COPY )
+		{
+			pTexture = g_textures[gRSP.curTile].m_pCOGLTexture;
+			if( pTexture )  
+			{
+				m_pOGLRender->BindTexture(pTexture, 0);
+//				GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+			}
+			numTex++;
+		}
+		if( m_bTex1Enabled )
+		{
+			pTexture1 = g_textures[(gRSP.curTile+1)&7].m_pCOGLTexture;
+			if( pTexture1 ) 
+			{
+				m_pOGLRender->BindTexture(pTexture1, 1);
+//				GX_LoadTexObj(&pTexture1->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+			}
+			numTex++;
+		}
+	}
+
+	sprintf(txtbuffer,"TEV Stages: %d, Texs: %d, prim %d, env %d, lod %d", res.numOfUnits, numTex, res.primIsUsed, res.envIsUsed, res.lodFracIsUsed);
+	DEBUG_print(txtbuffer,debug_line++); 
+
+	for( int i=0; i<res.numOfUnits; i++ )
+	{
+		sprintf(txtbuffer,"Stg%d: map %d, col %d, Cin: %d, %d, %d, %d, Op %d, Clmp %d, Reg %d", i, res.units[i].order.texmap, res.units[i].order.color,
+			res.units[i].rgbIn.a, res.units[i].rgbIn.b, res.units[i].rgbIn.c, res.units[i].rgbIn.d,
+			res.units[i].rgbOp.tevop, res.units[i].rgbOp.clamp, res.units[i].rgbOp.tevregid);
+		DEBUG_print(txtbuffer,debug_line++); 
+
+		sprintf(txtbuffer,"Ain: %d, %d, %d, %d, Op %d, Clamp %d, Reg %d; Csel %d, Asel %d", 
+			res.units[i].alphaIn.a, res.units[i].alphaIn.b, res.units[i].alphaIn.c, res.units[i].alphaIn.d,
+			res.units[i].alphaOp.tevop, res.units[i].alphaOp.clamp, res.units[i].alphaOp.tevregid, res.units[i].Kcol, res.units[i].Kalpha);
+		DEBUG_print(txtbuffer,debug_line++); 
+	}
 }
 
 #ifdef _DEBUG
