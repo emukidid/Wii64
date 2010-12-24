@@ -40,6 +40,10 @@ UVFlagMap OGLXUVFlagMaps[] =
 #endif //__GX__
 };
 
+#ifdef __GX__
+COGLTexture** g_curBoundTex; //Needed to clear m_curBoundTex when deleting textures
+#endif //__GX__
+
 //===================================================================
 OGLRender::OGLRender()
 {
@@ -60,6 +64,8 @@ OGLRender::OGLRender()
 	gGX.GXenableZmode = GX_DISABLE;
 	gGX.GXZfunc = GX_ALWAYS;
 	gGX.GXZupdate = GX_FALSE;
+
+	g_curBoundTex = m_curBoundTex;
 #endif //__GX__
 }
 
@@ -159,6 +165,8 @@ void OGLRender::Initialize(void)
 	guMtxIdentity(gGX.GXcombW);
 //	guMtxIdentity(OGL.GXprojWnear);
 	guMtxIdentity(gGX.GXprojIdent);
+	//Reset Modelview matrix
+	guMtxIdentity(gGX.GXmodelViewIdent);
 //	guOrtho(OGL.GXprojIdent, -1, 1, -1, 1, 1.0f, -1.0f);
 	//N64 Z clip space is backwards, so mult z components by -1
 	//N64 Z [-1,1] whereas GC Z [-1,0], so mult by 0.5 and shift by -0.5
@@ -170,7 +178,7 @@ void OGLRender::Initialize(void)
 //	OGL.GXprojWnear[3][3] = 0.0f;
 	gGX.GXprojIdent[2][2] = GXprojZScale; //0.5;
 	gGX.GXprojIdent[2][3] = GXprojZOffset; //-0.5;
-//	gGX.GXpolyOffset = false;
+	gGX.GXpolyOffset = false;
 
     glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
 
@@ -318,25 +326,35 @@ void OGLRender::ZBufferEnable(BOOL bZBuffer)
 
 void OGLRender::ClearBuffer(bool cbuffer, bool zbuffer)
 {
+#ifndef __GX__
     uint32 flag=0;
     if( cbuffer )   flag |= GL_COLOR_BUFFER_BIT;
     if( zbuffer )   flag |= GL_DEPTH_BUFFER_BIT;
     float depth = ((gRDP.originalFillColor&0xFFFF)>>2)/(float)0x3FFF;
-#ifndef __GX__
-	//TODO: Implement in GX
     glClearDepth(depth);
     glClear(flag);
-#endif //!__GX__
+#else //!__GX__
+	gGX.GXclearColorBuffer = cbuffer;
+	gGX.GXclearColor = (GXColor) { 0, 0, 0, 0 };
+	gGX.GXclearDepthBuffer = zbuffer;
+	gGX.GXclearDepth = ((gRDP.originalFillColor&0xFFFF)>>2)/(float)0x3FFF;
+	if (gGX.GXclearColorBuffer || gGX.GXclearDepthBuffer)
+		GXclearEFB();
+#endif //__GX__
 }
 
 void OGLRender::ClearZBuffer(float depth)
 {
-    uint32 flag=GL_DEPTH_BUFFER_BIT;
 #ifndef __GX__
-	//TODO: Implement in GX
+    uint32 flag=GL_DEPTH_BUFFER_BIT;
     glClearDepth(depth);
     glClear(flag);
-#endif //!__GX__
+#else //!__GX__
+	//This function is only ever called with depth = 1.0f
+	gGX.GXclearDepthBuffer = true;
+	gGX.GXclearDepth = depth;
+	GXclearEFB();
+#endif //__GX__
 }
 
 void OGLRender::SetZCompare(BOOL bZCompare)
@@ -387,16 +405,27 @@ void OGLRender::SetZUpdate(BOOL bZUpdate)
 
 void OGLRender::ApplyZBias(int bias)
 {
+#ifndef __GX__
     float f1 = bias > 0 ? -3.0f : 0.0f;  // z offset = -3.0 * max(abs(dz/dx),abs(dz/dy)) per pixel delta z slope
     float f2 = bias > 0 ? -3.0f : 0.0f;  // z offset += -3.0 * 1 bit
-#ifndef __GX__
 	//TODO: Implement in GX
     if (bias > 0)
         glEnable(GL_POLYGON_OFFSET_FILL);  // enable z offsets
     else
         glDisable(GL_POLYGON_OFFSET_FILL);  // disable z offsets
     glPolygonOffset(f1, f2);  // set bias functions
-#endif //!__GX__
+#else //!__GX__
+	if (bias > 0)
+	{
+		gGX.GXpolyOffset = true;
+		gGX.GXupdateMtx = true;
+	}
+	else 
+	{
+		gGX.GXpolyOffset = false;
+		gGX.GXupdateMtx = true;
+	}
+#endif //__GX__
 }
 
 void OGLRender::SetZBias(int bias)
@@ -418,9 +447,12 @@ void OGLRender::SetAlphaRef(uint32 dwAlpha)
 #ifndef __GX__
         glAlphaFunc(GL_GEQUAL, (float)dwAlpha);
 #else //!__GX__
-		//TODO: Set Z compare location and use Ztex?
 		//TODO: Double-check range of dwAlpha... should be 0~255
-		GX_SetAlphaCompare(GX_GEQUAL,(u8) dwAlpha,GX_AOP_AND,GX_ALWAYS,0);
+		//TODO: Set Z compare location based on Ztex
+		GX_SetZCompLoc(GX_FALSE); //Zcomp after texturing
+		gGX.GXalphaFunc = GX_GEQUAL;
+		gGX.GXalphaRef = (u8) dwAlpha;
+		GX_SetAlphaCompare(gGX.GXalphaFunc,gGX.GXalphaRef,GX_AOP_AND,GX_ALWAYS,0);
 #endif //__GX__
     }
 }
@@ -431,8 +463,11 @@ void OGLRender::ForceAlphaRef(uint32 dwAlpha)
     float ref = dwAlpha/255.0f;
     glAlphaFunc(GL_GEQUAL, ref);
 #else //!__GX__
-	//TODO: Set Z compare location and use Ztex?
-	GX_SetAlphaCompare(GX_GEQUAL,(u8) dwAlpha,GX_AOP_AND,GX_ALWAYS,0);
+	//TODO: Set Z compare location based on Ztex
+	GX_SetZCompLoc(GX_FALSE); //Zcomp after texturing
+	gGX.GXalphaFunc = GX_GEQUAL;
+	gGX.GXalphaRef = (u8) dwAlpha;
+	GX_SetAlphaCompare(gGX.GXalphaFunc,gGX.GXalphaRef,GX_AOP_AND,GX_ALWAYS,0);
 #endif //__GX__
 }
 
@@ -920,7 +955,7 @@ bool OGLRender::RenderFlushTris()
 
 //	GX_Begin(GX_LINESTRIP, GX_VTXFMT0, gRSP.numVertices);
 	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, gRSP.numVertices);
-	for (int i = 0; i < gRSP.numVertices; i++) {
+	for (int i = 0; i < (int) gRSP.numVertices; i++) {
 		if(gGX.GXuseCombW)
 			GX_Position3f32( g_vtxProjected5[g_vtxIndex[i]][0], g_vtxProjected5[g_vtxIndex[i]][1], -g_vtxProjected5[g_vtxIndex[i]][3] );
 //			GX_Position3f32( OGL.vertices[i].x, OGL.vertices[i].y, -OGL.vertices[i].w );
@@ -1208,12 +1243,12 @@ void OGLRender::RenderReset()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 #else //!__GX__
-/*	//This is messed up somehow...
+	//This is messed up somehow...
 	Mtx44 GXprojection;
 	guMtxIdentity(GXprojection);
 	guOrtho(GXprojection, 0, windowSetting.uDisplayHeight, 0, windowSetting.uDisplayWidth, -1.0f, 1.0f);
 	GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
-	GX_LoadPosMtxImm(gGX.GXmodelViewIdent,GX_PNMTX0);*/
+	GX_LoadPosMtxImm(gGX.GXmodelViewIdent,GX_PNMTX0);
 #endif //__GX__
 }
 
@@ -1229,7 +1264,18 @@ void OGLRender::SetAlphaTestEnable(BOOL bAlphaTestEnable)
         glEnable(GL_ALPHA_TEST);
     else
         glDisable(GL_ALPHA_TEST);
-#endif //!__GX__
+#else //!__GX__
+    if( bAlphaTestEnable )
+	{
+		GX_SetAlphaCompare(gGX.GXalphaFunc,gGX.GXalphaRef,GX_AOP_AND,GX_ALWAYS,0);
+		GX_SetZCompLoc(GX_FALSE); //Zcomp after texturing
+	}
+    else
+	{
+		GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
+		GX_SetZCompLoc(GX_TRUE); //Zcomp before texturing for better performance
+	}
+#endif //__GX__
 }
 
 #ifndef __GX__
@@ -1452,14 +1498,17 @@ void OGLRender::SetFogColor(uint32 r, uint32 g, uint32 b, uint32 a)
 void OGLRender::DisableMultiTexture()
 {
 #ifndef __GX__
-	//TODO: Replace with GX
     glActiveTexture(GL_TEXTURE1_ARB);
     EnableTexUnit(1,FALSE);
     glActiveTexture(GL_TEXTURE0_ARB);
     EnableTexUnit(0,FALSE);
     glActiveTexture(GL_TEXTURE0_ARB);
     EnableTexUnit(0,TRUE);
-#endif //!__GX__
+#else //!__GX__
+    EnableTexUnit(1,FALSE);
+    EnableTexUnit(0,FALSE);
+    EnableTexUnit(0,TRUE);
+#endif //__GX__
 }
 
 void OGLRender::EndRendering(void)
@@ -1502,8 +1551,8 @@ void OGLRender::glViewportWrapper(GLint x, GLint y, GLsizei width, GLsizei heigh
 			Mtx44 GXprojection;
 			guMtxIdentity(GXprojection);
 			guOrtho(GXprojection, 0, windowSetting.uDisplayHeight, 0, windowSetting.uDisplayWidth, -1.0f, 1.0f);
-//			if(OGL.GXpolyOffset)
-//				GXprojection[2][3] -= GXpolyOffsetFactor;
+			if(gGX.GXpolyOffset)
+				GXprojection[2][3] -= GXpolyOffsetFactor;
 			GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
 //			GX_LoadPosMtxImm(OGL.GXmodelViewIdent,GX_PNMTX0);
 		}
@@ -1511,32 +1560,36 @@ void OGLRender::glViewportWrapper(GLint x, GLint y, GLsizei width, GLsizei heigh
 		{
 			//Used for triangles
 			//Update MV & P Matrices
-//			if(gGX.GXupdateMtx)
+//			if(gGX.GXupdateMtx)  //TODO: uncomment this? Maybe set GXupdateMtx above in if(flag)
 			{
-/*				if(OGL.GXpolyOffset)
+				if(gGX.GXpolyOffset)
 				{
-					if(OGL.GXuseCombW)
+					if(gGX.GXuseCombW)
 					{
-						if(!OGL.GXuseProjWnear)
+//						if(!OGL.GXuseProjWnear)
 						{
-							CopyMatrix( OGL.GXprojTemp, OGL.GXcombW );
-							OGL.GXprojTemp[2][2] += GXpolyOffsetFactor;
-							GX_LoadProjectionMtx(OGL.GXprojTemp, GX_PERSPECTIVE); 
+							//TODO: use PS matrix copy?
+//							CopyMatrix( gGX.GXprojTemp, gGX.GXcombW );
+							guMtxCopy( gGX.GXcombW, gGX.GXprojTemp  ); //void c_guMtxCopy(Mtx src,Mtx dst);
+							gGX.GXprojTemp[2][2] += GXpolyOffsetFactor;
+							GX_LoadProjectionMtx(gGX.GXprojTemp, GX_PERSPECTIVE); 
 						}
-						else
+/*						else
 						{
 							GX_LoadProjectionMtx(OGL.GXprojWnear, GX_PERSPECTIVE); 
 						}
-					}
+*/					}
 					else
 					{
-						CopyMatrix( OGL.GXprojTemp, OGL.GXprojIdent );
-						OGL.GXprojTemp[2][3] -= GXpolyOffsetFactor;
-						GX_LoadProjectionMtx(OGL.GXprojTemp, GX_ORTHOGRAPHIC); 
+						//TODO: use PS matrix copy?
+//						CopyMatrix( gGX.GXprojTemp, gGX.GXprojIdent );
+						guMtxCopy( gGX.GXprojIdent, gGX.GXprojTemp  ); //void c_guMtxCopy(Mtx src,Mtx dst);
+						gGX.GXprojTemp[2][3] -= GXpolyOffsetFactor;
+						GX_LoadProjectionMtx(gGX.GXprojTemp, GX_ORTHOGRAPHIC); 
 					}
 				}
 				else
-*/				{
+				{
 					//TODO: handle this case when !G_ZBUFFER
 /*					if(!(gSP.geometryMode & G_ZBUFFER))
 					{
@@ -1592,4 +1645,98 @@ void OGLRender::GXloadTextures()
 {
 	if (GXreloadTex[0] && m_curBoundTex[0])	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 	if (GXreloadTex[1] && m_curBoundTex[1])	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+}
+
+extern GXRModeObj *vmode, *rmode;
+
+void OGLRender::GXclearEFB()
+{
+#if 0 //def __GX__
+		static int callcount = 0;
+		sprintf(txtbuffer,"GXclearEFB %d", callcount++);
+		DEBUG_print(txtbuffer,DBG_RICE); 
+#endif //__GX__
+
+	//Note: EFB is RGB8, so no need to clear alpha
+	if(gGX.GXclearColorBuffer)	GX_SetColorUpdate(GX_ENABLE);
+	else						GX_SetColorUpdate(GX_DISABLE);
+	if(gGX.GXclearDepthBuffer)	GX_SetZMode(GX_ENABLE,GX_GEQUAL,GX_TRUE);
+	else						GX_SetZMode(GX_ENABLE,GX_GEQUAL,GX_FALSE);
+
+	unsigned int cycle_type = gRDP.otherMode.cycle_type;
+	gRDP.otherMode.cycle_type = CYCLE_TYPE_FILL;
+	m_pColorCombiner->InitCombinerMode();
+	m_pAlphaBlender->Disable();
+
+	GX_SetZTexture(GX_ZT_DISABLE,GX_TF_Z16,0);	//GX_ZT_DISABLE or GX_ZT_REPLACE; set in gDP.cpp
+	GX_SetZCompLoc(GX_TRUE);	// Do Z-compare before texturing.
+	GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
+	GX_SetFog(GX_FOG_NONE,0.1,1.0,0.0,1.0,(GXColor){0,0,0,255});
+	//TODO: add this when implement pillar_box
+//	GX_SetViewport((f32) OGL.GXorigX,(f32) OGL.GXorigY,(f32) OGL.GXwidth,(f32) OGL.GXheight, 0.0f, 1.0f);
+//	GX_SetScissor((u32) 0,(u32) 0,(u32) OGL.width+1,(u32) OGL.height+1);	//Disable Scissor
+////	GX_SetScissor(0,0,rmode->fbWidth,rmode->efbHeight);
+	GX_SetCullMode (GX_CULL_NONE);
+	Mtx44 GXprojection;
+	guMtxIdentity(GXprojection);
+//	guOrtho(GXprojection, 0, OGL.height-1, 0, OGL.width-1, 0.0f, 1.0f);
+	guOrtho(GXprojection, 0, windowSetting.uDisplayHeight-1, 0, windowSetting.uDisplayWidth-1, 0.0f, 1.0f);
+//	guOrtho(GXprojection, 0, 480, 0, 640, 0.0f, 1.0f);
+	GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
+	GX_LoadPosMtxImm(gGX.GXmodelViewIdent,GX_PNMTX0);
+
+	//set vertex description here
+	GX_ClearVtxDesc();
+	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+//	f32 ZmaxDepth = (f32) -0xFFFFFF/0x1000000;
+	f32 ZmaxDepth = ((f32) -0xFFFFFF/0x1000000) * gGX.GXclearDepth;
+
+	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+		GX_Position3f32(-1.0f, -1.0f, ZmaxDepth);
+		GX_Color4u8(gGX.GXclearColor.r, gGX.GXclearColor.g, gGX.GXclearColor.b, gGX.GXclearColor.a); 
+		GX_Position3f32((f32) windowSetting.uDisplayWidth+1, -1.0f, ZmaxDepth);
+//		GX_Position3f32((f32) OGL.width+1, -1.0f, ZmaxDepth);
+		GX_Color4u8(gGX.GXclearColor.r, gGX.GXclearColor.g, gGX.GXclearColor.b, gGX.GXclearColor.a); 
+		GX_Position3f32((f32) windowSetting.uDisplayWidth+1,(f32) windowSetting.uDisplayHeight+1, ZmaxDepth);
+//		GX_Position3f32((f32) OGL.width+1,(f32) OGL.height+1, ZmaxDepth);
+		GX_Color4u8(gGX.GXclearColor.r, gGX.GXclearColor.g, gGX.GXclearColor.b, gGX.GXclearColor.a); 
+		GX_Position3f32(-1.0f,(f32) windowSetting.uDisplayHeight+1, ZmaxDepth);
+//		GX_Position3f32(-1.0f,(f32) OGL.height+1, ZmaxDepth);
+		GX_Color4u8(gGX.GXclearColor.r, gGX.GXclearColor.g, gGX.GXclearColor.b, gGX.GXclearColor.a); 
+	GX_End();
+
+	//TODO: implement the following line?
+	//if (gGX.GXclearColorBuffer) VI.EFBcleared = true;
+	gGX.GXclearColorBuffer = false;
+	gGX.GXclearDepthBuffer = false;
+	gGX.GXupdateMtx = true;
+	gGX.GXupdateFog = true;
+	GX_SetColorUpdate(GX_ENABLE);
+	GX_SetCullMode(gGX.GXcullMode);
+	//TODO: reset the following
+//	OGL_UpdateViewport();
+//	gDP.changed |= CHANGED_SCISSOR | CHANGED_COMBINE | CHANGED_RENDERMODE;	//Restore scissor in OGL_UpdateStates() before drawing next geometry.
+	//CHANGED_SCISSOR
+	GX_SetZMode(gGX.GXenableZmode,gGX.GXZfunc,gGX.GXZupdate);
+	gRDP.otherMode.cycle_type = cycle_type;
+
+
+/*	OGL.GXclearBufferTex = (u8*) memalign(32,640*480/2);
+	GX_SetCopyClear (OGL.GXclearColor, 0xFFFFFF);
+	if(OGL.GXclearColorBuffer)	GX_SetColorUpdate(GX_ENABLE);
+	else						GX_SetColorUpdate(GX_DISABLE);
+	if(OGL.GXclearDepthBuffer)	GX_SetZMode(GX_ENABLE,GX_ALWAYS,GX_TRUE);
+	else						GX_SetZMode(GX_ENABLE,GX_ALWAYS,GX_FALSE);
+	GX_SetTexCopySrc(0, 0, 640, 480);
+	GX_SetTexCopyDst(640, 480, GX_TF_I4, GX_FALSE);
+	GX_CopyTex(OGL.GXclearBufferTex, GX_TRUE);
+	GX_PixModeSync();
+//	GX_DrawDone();
+	GX_SetColorUpdate(GX_ENABLE);
+	free(OGL.GXclearBufferTex);
+	gDP.changed |= CHANGED_RENDERMODE;*/
 }

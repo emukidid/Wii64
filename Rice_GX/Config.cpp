@@ -737,7 +737,11 @@ void ReadConfiguration(void)
 #endif
     {
         ProcessVertexData = ProcessVertexDataNoSSE;
+#ifndef __GX__
         printf("[RiceVideo] Disabled SSE processing.\n");
+#else //!__GX__
+        DEBUG_print("[RiceVideo] Disabled SSE processing.\n",DBG_RICE);
+#endif //__GX__
     }
 
     status.isVertexShaderEnabled = status.isVertexShaderSupported && options.bEnableVertexShader;
@@ -916,7 +920,12 @@ void GenerateCurrentRomOptions()
     }
 
     if (options.enableHackForGames != NO_HACK_FOR_GAME)
+#ifndef __GX__
         printf("[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
+#else //!__GX__
+        sprintf(txtbuffer,"[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
+		DEBUG_print(txtbuffer,DBG_RICE); 
+#endif //__GX__
 
     if( currentRomOptions.N64FrameBufferEmuType == 0 )      currentRomOptions.N64FrameBufferEmuType = defaultRomOptions.N64FrameBufferEmuType;
     else currentRomOptions.N64FrameBufferEmuType--;
@@ -1946,7 +1955,12 @@ int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* szName)
     {
         if (strcasecmp((char*)szCRC, IniSections[i].crccheck) == 0)
         {
+#ifndef __GX__
             printf("[RiceVideo] Found ROM '%s', CRC %s\n", IniSections[i].name, szCRC);
+#else //!__GX__
+        sprintf(txtbuffer,"[RiceVideo] Found ROM '%s', CRC %s\n", IniSections[i].name, szCRC);
+		DEBUG_print(txtbuffer,DBG_RICE); 
+#endif //__GX__
             return i;
         }
     }

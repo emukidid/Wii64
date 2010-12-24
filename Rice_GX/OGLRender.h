@@ -74,6 +74,7 @@ public:
     virtual void BindTexture(COGLTexture *texture, int unitno);
     virtual void DisBindTexture(COGLTexture *texture, int unitno);
 	void GXloadTextures();
+	void GXclearEFB();
 #endif //__GX__
     virtual void TexCoord2f(float u, float v);
     virtual void TexCoord(TLITVERTEX &vtxInfo);

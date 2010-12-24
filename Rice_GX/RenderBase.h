@@ -239,12 +239,27 @@ typedef struct {
 	BOOL	GXuseCombW;//
 	BOOL	GXuseProjWnear;
 	BOOL	GXupdateMtx;//
+	BOOL	GXpolyOffset;
 	int		GXnumVtxMP;
 	u8		GXcullMode;
 	//Zbuffer settings
 	u8		GXenableZmode;
 	u8		GXZfunc;
 	u8		GXZupdate;
+	//AlphaComp settings
+	u8		GXalphaFunc;
+	u8		GXalphaRef;
+
+	BOOL	GXclearColorBuffer;
+	BOOL	GXclearDepthBuffer;
+	GXColor	GXclearColor;
+	float	GXclearDepth;
+
+	float	GXfogStartZ;
+	float	GXfogEndZ;
+	GXColor	GXfogColor;
+	u8		GXfogType;
+	bool	GXupdateFog;
 } GX_Options;
 
 extern GX_Options gGX;

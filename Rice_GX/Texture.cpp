@@ -52,11 +52,19 @@ CTexture::CTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     // fix me, do something here
 }
 
+#ifdef __GX__
+extern COGLTexture** g_curBoundTex; //Needed to clear m_curBoundTex when deleting textures
+#endif //__GX__
 
 CTexture::~CTexture(void)
 {
 #ifdef __GX__
-	if (m_pTexture)	__lwp_heap_free(GXtexCache, m_pTexture);
+	if (m_pTexture)	
+	{
+		if (g_curBoundTex[0] == m_pTexture) g_curBoundTex[0] = NULL;
+		if (g_curBoundTex[1] == m_pTexture) g_curBoundTex[1] = NULL;
+		__lwp_heap_free(GXtexCache, m_pTexture);
+	}
 	m_pTexture = NULL;
 #endif //__GX__
 }

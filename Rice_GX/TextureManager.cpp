@@ -591,7 +591,7 @@ bool lastEntryModified = false;
 TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, bool doCRCCheck, bool AutoExtendTexture)
 {
     TxtrCacheEntry *pEntry;
-#ifdef __GX__
+#if 0//def __GX__
 		static int callcount = 0;
 		sprintf(txtbuffer,"TextureManager::GetTexture %d", callcount++);
 		DEBUG_print(txtbuffer,DBG_RICE-1); 
@@ -772,7 +772,7 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
     {
         if (pEntry->pTexture != NULL)
         {
-#ifdef __GX__
+#if 0//def __GX__
 		static int callcount5 = 0;
 		sprintf(txtbuffer,"TextureManager::tryLoadTex %d", callcount5++);
 		DEBUG_print(txtbuffer,DBG_RICE); 
@@ -906,7 +906,7 @@ int tiFmt, tiSize;
 void CTextureManager::ConvertTexture(TxtrCacheEntry * pEntry, bool fromTMEM)
 {
     static uint32 dwCount = 0;
-#ifdef __GX__
+#if 0//def __GX__
 		static int texcount2 = 0;
 		sprintf(txtbuffer,"TextureManager::ConvertTexture %d", texcount2++);
 		DEBUG_print(txtbuffer,DBG_RICE+1); 
