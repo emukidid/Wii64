@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "GFXPlugin.h"
 #include "stdafx.h"
 #include <stdlib.h>
-#include <sys\syslimits.h> // PATH_MAX
+#include <sys/syslimits.h> // PATH_MAX
 #include <malloc.h>
 #include "version.h"
 #endif //__GX__
