@@ -35,10 +35,6 @@ extern BOOL hasLoadedROM;
 extern int stop;
 
 #ifdef HW_RVL
-#define DEVICE_REMOVAL_THREAD
-#endif
-
-#ifdef HW_RVL
 #include <sdcard/wiisd_io.h>
 #include <ogc/usbstorage.h>
 const DISC_INTERFACE* frontsd = &__io_wiisd;
@@ -53,7 +49,7 @@ const DISC_INTERFACE* cardb = &__io_gcsdb;
 #define CARD_A  2
 #define CARD_B  3
 static lwp_t removalThread = LWP_THREAD_NULL;
-static int rThreadRun = 0;
+static int rThreadRunning = 0;
 static int rThreadCreated = 0;
 static char sdMounted  = 0;
 static char sdNeedsUnmount  = 0;
@@ -94,20 +90,20 @@ fileBrowser_file saveDir_libfat_USB =
 
 void continueRemovalThread()
 {
-#ifdef DEVICE_REMOVAL_THREAD 
-  if(rThreadRun)
+#ifdef HW_RVL 
+  if(rThreadRunning)
     return;
-  rThreadRun = 1;
+  rThreadRunning = 1;
   LWP_ResumeThread(removalThread);
 #endif
 }
 
 void pauseRemovalThread()
 {
-#ifdef DEVICE_REMOVAL_THREAD  
-  if(!rThreadRun)
+#ifdef HW_RVL  
+  if(!rThreadRunning)
     return;
-  rThreadRun = 0;
+  rThreadRunning = 0;
 
   // wait for thread to finish
   while(!LWP_ThreadIsSuspended(removalThread)) usleep(THREAD_SLEEP);
@@ -118,9 +114,10 @@ static int devsleep = 1*1000*1000;
 
 static void *removalCallback (void *arg)
 {
+#ifdef HW_RVL
   while(devsleep > 0)
   {
-    if(!rThreadRun)
+    if(!rThreadRunning)
       LWP_SuspendThread(removalThread);
       usleep(THREAD_SLEEP);
       devsleep -= THREAD_SLEEP;
@@ -130,52 +127,35 @@ static void *removalCallback (void *arg)
   {
     switch(sdMounted) //some kind of SD is mounted
     {
-#ifdef HW_RVL
       case FRONTSD:   //check which one, if removed, set as unmounted
         if(!frontsd->isInserted()) {
           sdNeedsUnmount=sdMounted;
           sdMounted=0;
         }
         break;
-#endif
-/*    //Polling EXI is bad with locks, so lets not do it.
-      case CARD_A:   //check which one, if removed, set as unmounted
-        if(!carda->isInserted()) {
-          sdNeedsUnmount=sdMounted;
-          sdMounted=0;
-        }
-        break;
-      case CARD_B:   //check which one, if removed, set as unmounted
-        if(!cardb->isInserted()) {
-          sdNeedsUnmount=sdMounted;
-          sdMounted=0;
-        }
-        break;
-*/
     }
-#ifdef HW_RVL
     if(usbMounted) // check if the device was removed
       if(!usb->isInserted()) {
         usbMounted = 0;
         usbNeedsUnmount=1;
-      }
-#endif      
+      }  
       
     devsleep = 1000*1000; // 1 sec
     while(devsleep > 0)
     {
-      if(!rThreadRun)
+      if(!rThreadRunning)
         LWP_SuspendThread(removalThread);
       usleep(THREAD_SLEEP);
       devsleep -= THREAD_SLEEP;
     }
   }
+#endif
   return NULL;
 }
 
 void InitRemovalThread()
 {
-#ifdef DEVICE_REMOVAL_THREAD 
+#ifdef HW_RVL 
   LWP_CreateThread (&removalThread, removalCallback, NULL, NULL, 0, 40);
   rThreadCreated = 1;
 #endif
@@ -256,91 +236,75 @@ int fileBrowser_libfat_writeFile(fileBrowser_file* file, void* buffer, unsigned 
     - returns 1 on ok
 */
 int fileBrowser_libfat_init(fileBrowser_file* f){
- 	
-  int res = 0;
- 	
- 	if(!rThreadCreated) InitRemovalThread();
-#ifdef HW_RVL
-  if(f->name[0] == 's') {      //SD
-    if(!sdMounted) {           //if there's nothing currently mounted
-      pauseRemovalThread();
-      if(sdNeedsUnmount) {
-        fatUnmount("sd");
-        if(sdNeedsUnmount==FRONTSD)
-          frontsd->shutdown();
-        else if(sdNeedsUnmount==CARD_A)
-          carda->shutdown();
-        else if(sdNeedsUnmount==CARD_B)
-          cardb->shutdown();
-        sdNeedsUnmount = 0;
-      }
-    	if(fatMountSimple ("sd", frontsd)) {
-       	sdMounted = FRONTSD;
-       	res = 1;
-     	}
-     	else if(fatMountSimple ("sd", carda)) {
-     	  sdMounted = CARD_A;
-     	  res = 1;
-   	  }
-   	  else if(fatMountSimple ("sd", cardb)) {
-     	  sdMounted = CARD_B;
-     	  res = 1;
-   	  }
-   	  continueRemovalThread();
-   	  return res;
- 	  }
- 	  else
- 	    return 1;
+
+	int res = 0;
+
+ 	if(!rThreadCreated) {
+	 	InitRemovalThread();
  	}
- 	else if(f->name[0] == 'u') {
-   	if(!usbMounted) {
-     	pauseRemovalThread();
-     	if(usbNeedsUnmount) {
-     	  fatUnmount("usb");
-     	  usb->shutdown();
-     	  usbNeedsUnmount=0;
-      }
-     	if(fatMountSimple ("usb", usb))
-        usbMounted = 1;
-      continueRemovalThread();
-      return usbMounted;
-    }
-    else
-      return 1;
-  }
-  return res;
+#ifdef HW_RVL
+	pauseRemovalThread();
+  	if(f->name[0] == 's') {      //SD
+    	if(!sdMounted) {
+			if(sdNeedsUnmount) {
+				fatUnmount("sd");
+				if(sdNeedsUnmount==FRONTSD)
+					frontsd->shutdown();
+				sdNeedsUnmount = 0;
+			}
+			if(fatMountSimple ("sd", frontsd)) {
+				sdMounted = FRONTSD;
+				res = 1;
+			}
+			else if(!res && fatMountSimple ("sd", carda)) {
+				sdMounted = CARD_A;
+				res = 1;
+			}
+			else if(!res && fatMountSimple ("sd", cardb)) {
+				sdMounted = CARD_B;
+				res = 1;
+			}
+		}
+		else
+ 	    	res = 1;		// Already mounted
+ 	}
+	else if(f->name[0] == 'u') {	// USB
+		if(!usbMounted) {
+			pauseRemovalThread();
+			if(usbNeedsUnmount) {
+				fatUnmount("usb");
+				usb->shutdown();
+				usbNeedsUnmount=0;
+			}
+			if(fatMountSimple ("usb", usb)) {
+				usbMounted = 1;
+				res = 1;
+			}
+		}
+		else
+			res = 1;		// Already mounted
+	}
+	continueRemovalThread();
+	return res;
 #else
-  if(!sdMounted) {           //GC has only SD
-
-    if(sdNeedsUnmount) fatUnmount("sd");
-    switch(sdNeedsUnmount){  //unmount previous devices
-      case CARD_A:
-        carda->shutdown();
-        break;
-      case CARD_B:
-        cardb->shutdown();
-        break;
-    }
-   	if(carda->startup()) {
-     	res |= fatMountSimple ("sd", carda);
-     	if(res)
-        sdMounted = CARD_A;
-   	}
-   	else if(cardb->startup() && !res) {
-     	res |= fatMountSimple ("sd", cardb);
-     	if(res)
-       sdMounted = CARD_B;
-   	}
-
-  	return res;
-  }
-  return 1; //we're always ok
+	if(!sdMounted) {           //GC has only SD
+		if(carda->startup()) {
+			res = fatMountSimple ("sd", carda);
+			if(res)
+				sdMounted = CARD_A;
+		}
+		if(!res && cardb->startup()) {
+			res = fatMountSimple ("sd", cardb);
+			if(res)
+				sdMounted = CARD_B;
+		}
+		return res;
+	}
+	return 1; 				// Already mounted
 #endif
 }
 
 int fileBrowser_libfat_deinit(fileBrowser_file* f){
-  //we can't support multiple device re-insertion
-  //because there's no device removed callbacks
 	return 0;
 }
 
