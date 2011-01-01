@@ -25,8 +25,10 @@ COGLTexture::COGLTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     // Fix me, if usage is AS_RENDER_TARGET, we need to create pbuffer instead of regular texture
 
     m_dwTextureFmt = TEXTURE_FMT_A8R8G8B8;  // Always use 32bit to load texture
-#ifndef __GX__
+
+#ifndef __GX__ //TODO: Implement naming for GX textures
     glGenTextures( 1, &m_dwTextureName );
+#endif //!__GX_
 
     // Make the width and height be the power of 2
     uint32 w;
@@ -42,6 +44,7 @@ COGLTexture::COGLTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     m_fYScale = (float)m_dwCreatedTextureHeight/(float)m_dwHeight;
     m_fXScale = (float)m_dwCreatedTextureWidth/(float)m_dwWidth;
 
+#ifndef __GX__ //GX texture buffer is allocated during StartUpdate()
     m_pTexture = malloc(m_dwCreatedTextureWidth * m_dwCreatedTextureHeight * GetPixelSize());
 
     switch( options.textureQuality )

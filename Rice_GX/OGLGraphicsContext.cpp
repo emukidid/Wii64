@@ -152,10 +152,14 @@ bool COGLGraphicsContext::Initialize(HWND hWnd, HWND hWndStatus, uint32 dwWidth,
 
     Unlock();
 
+#ifndef __GX__
     Clear(CLEAR_COLOR_AND_DEPTH_BUFFER);    // Clear buffers
     UpdateFrame();
     Clear(CLEAR_COLOR_AND_DEPTH_BUFFER);
     UpdateFrame();
+#else //!__GX__
+//	TODO: Make sure that EFB/xfb are cleared before rendering first screen
+#endif //__GX__
     
     m_bReady = true;
     status.isVertexShaderEnabled = false;
@@ -288,6 +292,7 @@ void COGLGraphicsContext::CleanUp()
 
 void COGLGraphicsContext::Clear(ClearFlag dwFlags, uint32 color, float depth)
 {
+#ifndef __GX__
     uint32 flag=0;
     if( dwFlags&CLEAR_COLOR_BUFFER )    flag |= GL_COLOR_BUFFER_BIT;
     if( dwFlags&CLEAR_DEPTH_BUFFER )    flag |= GL_DEPTH_BUFFER_BIT;
@@ -296,12 +301,23 @@ void COGLGraphicsContext::Clear(ClearFlag dwFlags, uint32 color, float depth)
     float g = ((color>> 8)&0xFF)/255.0f;
     float b = ((color    )&0xFF)/255.0f;
     float a = ((color>>24)&0xFF)/255.0f;
-#ifndef __GX__
-	//TODO: Implement in GX
-    glClearColor(r, g, b, a);
+
+	glClearColor(r, g, b, a);
     glClearDepth(depth);
     glClear(flag);  //Clear color buffer and depth buffer
-#endif //!__GX__
+#else //!__GX__
+    if( dwFlags&CLEAR_COLOR_BUFFER )    gGX.GXclearColorBuffer = true;
+    if( dwFlags&CLEAR_DEPTH_BUFFER )    gGX.GXclearDepthBuffer = true;
+
+	gGX.GXclearColor.r = (u8) ((color>>16)&0xFF);
+	gGX.GXclearColor.g = (u8) ((color>> 8)&0xFF);
+	gGX.GXclearColor.b = (u8) ((color    )&0xFF);
+	gGX.GXclearColor.a = (u8) ((color>>24)&0xFF);
+
+	gGX.GXclearDepth = depth;
+	if (gGX.GXclearColorBuffer || gGX.GXclearDepthBuffer)
+		CRender::GetRender()->GXclearEFB();
+#endif //__GX__
 }
 
 #ifdef __GX__
@@ -399,6 +415,7 @@ void VI_GX_showDEBUG()
 	menu::IplFont::getInstance().drawInit(fontColor);
 	if(printToScreen)
 		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
+//			menu::IplFont::getInstance().drawString(10,(15*i+0),text[i], 0.8, false); 
 			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
 #endif
 

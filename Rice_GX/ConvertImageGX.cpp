@@ -31,6 +31,7 @@ ConvertFunction     gConvertFunctions_GX_FullTMEM[ 8 ][ 4 ] =
     {  NULL,            NULL,           NULL,               NULL },                 // ?
     {  NULL,            NULL,           NULL,               NULL }                  // ?
 };
+
 ConvertFunction     gConvertFunctions_GX[ 8 ][ 4 ] = 
 {
     // 4bpp             8bpp            16bpp               32bpp
@@ -353,7 +354,7 @@ void ConvertIA4_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 						continue;
 					}
 					// For odd lines, swap words too
-					if ((y%2) == 0)
+					if ((ty%2) == 0)
 						nFiddle = S8;
 					else
 						nFiddle = 0x4|S8;
@@ -453,13 +454,13 @@ void ConvertIA8_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 						continue;
 					}
 					// For odd lines, swap words too
-					if ((y%2) == 0)
+					if ((ty%2) == 0)
 						nFiddle = S8;
 					else
 						nFiddle = 0x4|S8;
 
 					// Points to current byte
-					uint32 dwByteOffset = (ty+tinfo.TopToLoad) * tinfo.Pitch + (tinfo.LeftToLoad/2) + x;
+					uint32 dwByteOffset = (ty+tinfo.TopToLoad) * tinfo.Pitch + tinfo.LeftToLoad + x;
 
 					for (uint32 l = 0; l < 8; l++)
 					{
@@ -494,7 +495,7 @@ void ConvertIA8_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 					}
 
 					// Points to current byte
-					uint32 dwByteOffset = (ty+tinfo.TopToLoad) * tinfo.Pitch + (tinfo.LeftToLoad/2) + x;
+					uint32 dwByteOffset = (ty+tinfo.TopToLoad) * tinfo.Pitch + tinfo.LeftToLoad + x;
 
 					for (uint32 l = 0; l < 8; l++)
 					{
@@ -549,7 +550,7 @@ void ConvertIA16_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 						pDst += 4;
 						continue;
 					}
-					if ((y%2) == 0)
+					if ((ty%2) == 0)
 						nFiddle = (S16<<1);
 					else
 						nFiddle = 0x4 | (S16<<1);
@@ -655,16 +656,16 @@ void ConvertI4_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 					uint32 dwByteOffset = ((ty+tinfo.TopToLoad) * tinfo.Pitch) + (tinfo.LeftToLoad/2) + (x/2);
 
 					// For odd lines, swap words too
-					if( !conkerSwapHack || (y&4) == 0 )
+					if( !conkerSwapHack || (ty&4) == 0 )
 					{
-						if ((y%2) == 0)
+						if ((ty%2) == 0)
 							nFiddle = S8;
 						else
 							nFiddle = 0x4|S8;
 					}
 					else
 					{
-						if ((y%2) == 1)
+						if ((ty%2) == 1)
 							nFiddle = S8;
 						else
 							nFiddle = 0x4|S8;
@@ -716,7 +717,7 @@ void ConvertI4_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 						}
 						uint8 b = pSrc[(dwByteOffset+(l>>1)) ^ S8];
 						b = (l & 1) ? (b & 0x0F) : (b >> 4);
-						*pDst++ = ((OneToFour[(b & 0x01)] << 4) | ThreeToFour[(b >> 1)]);
+						*pDst++ = (b << 4) | b;
 					}
 				}
 			}
@@ -745,26 +746,26 @@ void ConvertI8_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 	{
 		for (uint32 y = 0; y < tinfo.HeightToLoad; y+=4)
 		{
-			uint8 *pDst = (uint8 *)dInfo.lpSurface + y * dInfo.lPitch;
+			uint16 * pDst = (uint16 *)((uint8 *)dInfo.lpSurface + y*dInfo.lPitch);
 
-			for (uint32 x = 0; x < tinfo.WidthToLoad; x+=8)
+			for (uint32 x = 0; x < tinfo.WidthToLoad; x+=4)
 			{
 				for (uint32 k = 0; k < 4; k++)
 				{
 					uint32 ty = y+k;
 					if (ty >= tinfo.HeightToLoad)
 					{
-						pDst += 8;
+						pDst += 4;
 						continue;
 					}
-					if ((y%2) == 0)
+					if ((ty%2) == 0)
 						nFiddle = S8;
 					else
 						nFiddle = 0x4|S8;
 
 					uint32 dwByteOffset = ((ty+tinfo.TopToLoad) * tinfo.Pitch) + tinfo.LeftToLoad + x;
 
-					for (uint32 l = 0; l < 8; l++)
+					for (uint32 l = 0; l < 4; l++)
 					{
 						uint32 tx = x+l;
 						if (tx >= tinfo.WidthToLoad)
@@ -806,10 +807,8 @@ void ConvertI8_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 							pDst++;
 							continue;
 						}
-						uint8 b = *(uint8*)((pSrc+dwByteOffset)^S8);
+						uint8 b = *(uint8*)((pSrc+dwByteOffset+l)^S8);
 						*pDst++ = ((uint16)b << 8) | b;
-
-						dwByteOffset++;
 					}
 				}
 			}

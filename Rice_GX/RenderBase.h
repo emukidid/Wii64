@@ -230,6 +230,8 @@ extern RDP_Options gRDP;
 #define GXpolyOffsetFactor	 5.0e-4 //Tweaked for co-planar polygons. Interestingly, Z resolution should be 5.96e-8.
 
 typedef struct {
+	int		GXorigX, GXorigY;
+	int		GXwidth, GXheight;
 	float	GXzPrimeScale, GXzPrimeTranslate;//set, but don't know if needed...
 	Mtx44	GXcombW;//
 	//Mtx44	GXprojWnear;

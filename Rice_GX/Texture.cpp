@@ -275,7 +275,7 @@ void CTexture::ClampImageToSurfaceT()
 #endif //!__GX__
 }
 
-void CTexture::RestoreAlphaChannel(void)
+void CTexture::RestoreAlphaChannel(void) //This is never called..
 {
     DrawInfo di;
 
@@ -335,8 +335,18 @@ void CTexture::GXallocateTexture(void)
 		GXbpp = 4;
 	}
 
-	GXwidth = m_dwCreatedTextureWidth + GXtileX - (m_dwCreatedTextureWidth%GXtileX);
-	GXheight = m_dwCreatedTextureHeight + GXtileY - (m_dwCreatedTextureHeight%GXtileY);
+//	GXwidth = m_dwCreatedTextureWidth + GXtileX - (m_dwCreatedTextureWidth%GXtileX);
+//	GXheight = m_dwCreatedTextureHeight + GXtileY - (m_dwCreatedTextureHeight%GXtileY);
+
+	if(m_dwCreatedTextureWidth % GXtileX)
+		GXwidth = m_dwCreatedTextureWidth + GXtileX - (m_dwCreatedTextureWidth%GXtileX);
+	else
+		GXwidth = m_dwCreatedTextureWidth;
+
+	if(m_dwCreatedTextureHeight % GXtileY)
+		GXheight = m_dwCreatedTextureHeight + GXtileY - (m_dwCreatedTextureHeight%GXtileY);
+	else
+		GXheight = m_dwCreatedTextureHeight;
 
 	GXtextureBytes = GXwidth*GXheight*GXbpp;
 
@@ -348,5 +358,6 @@ void CTexture::GXallocateTexture(void)
 		m_pTexture = (u32*) __lwp_heap_allocate(GXtexCache,GXtextureBytes);
 	}
 
+	memset (m_pTexture, 0, GXtextureBytes);
 }
 

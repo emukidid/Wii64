@@ -172,18 +172,24 @@ protected:
 
     void ClampS32(uint32 *array, uint32 width, uint32 towidth, uint32 arrayWidth, uint32 rows);
     void ClampS16(uint16 *array, uint32 width, uint32 towidth, uint32 arrayWidth, uint32 rows);
+    void ClampS8(uint8 *array, uint32 width, uint32 towidth, uint32 arrayWidth, uint32 rows);
     void ClampT32(uint32 *array, uint32 height, uint32 toheight, uint32 arrayWidth, uint32 cols);
     void ClampT16(uint16 *array, uint32 height, uint32 toheight, uint32 arrayWidth, uint32 cols);
+    void ClampT8(uint8 *array, uint32 height, uint32 toheight, uint32 arrayWidth, uint32 cols);
 
     void MirrorS32(uint32 *array, uint32 width, uint32 mask, uint32 towidth, uint32 arrayWidth, uint32 rows);
     void MirrorS16(uint16 *array, uint32 width, uint32 mask, uint32 towidth, uint32 arrayWidth, uint32 rows);
+    void MirrorS8(uint8 *array, uint32 width, uint32 mask, uint32 towidth, uint32 arrayWidth, uint32 rows);
     void MirrorT32(uint32 *array, uint32 height, uint32 mask, uint32 toheight, uint32 arrayWidth, uint32 cols);
     void MirrorT16(uint16 *array, uint32 height, uint32 mask, uint32 toheight, uint32 arrayWidth, uint32 cols);
+    void MirrorT8(uint8 *array, uint32 height, uint32 mask, uint32 toheight, uint32 arrayWidth, uint32 cols);
 
     void WrapS32(uint32 *array, uint32 width, uint32 mask, uint32 towidth, uint32 arrayWidth, uint32 rows);
     void WrapS16(uint16 *array, uint32 width, uint32 mask, uint32 towidth, uint32 arrayWidth, uint32 rows);
+    void WrapS8(uint8 *array, uint32 width, uint32 mask, uint32 towidth, uint32 arrayWidth, uint32 rows);
     void WrapT32(uint32 *array, uint32 height, uint32 mask, uint32 toheight, uint32 arrayWidth, uint32 cols);
     void WrapT16(uint16 *array, uint32 height, uint32 mask, uint32 toheight, uint32 arrayWidth, uint32 cols);
+    void WrapT8(uint8 *array, uint32 height, uint32 mask, uint32 toheight, uint32 arrayWidth, uint32 cols);
 
     void ExpandTextureS(TxtrCacheEntry * pEntry);
     void ExpandTextureT(TxtrCacheEntry * pEntry);

@@ -215,6 +215,10 @@ public:
     void DrawFrameBuffer(bool useVIreg=false, uint32 left=0, uint32 top=0, uint32 width=0, uint32 height=0);
     void DrawObjBG1CYC(uObjScaleBg &bg, bool scaled=true);
 
+#ifdef __GX__
+	virtual void GXclearEFB()=0;
+#endif //__GX__
+
     static CRender * g_pRender;
     static int gRenderReferenceCount;
     static CRender * GetRender(void);
