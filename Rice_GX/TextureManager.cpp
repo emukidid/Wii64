@@ -1294,11 +1294,11 @@ void CTextureManager::ClampS32(uint32 *array, uint32 width, uint32 towidth, uint
 
 	for( uint32 y = 0; y<rows; y++ )
 	{
-		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
-		uint32 offset = 32 * (width/GXtileX) + (width%GXtileX) - 1; //offset to right-most pixel at width
+		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
+		uint32 offset = 32 * ((width-1)/GXtileX) + ((width-1)%GXtileX); //offset to right-most pixel at width
 		uint16 val1 = pDst[offset];
 		uint16 val2 = pDst[offset+16];
-		offset++;
+		offset = 32 * (width/GXtileX) + (width%GXtileX); //offset to first pixel to clamp
 		for( uint32 x = width - (width%GXtileX); x<towidth; x+=GXtileX )
 		{
 			for (uint32 l = 0; l<GXtileX; l++)
@@ -1341,18 +1341,16 @@ void CTextureManager::ClampS16(uint16 *array, uint32 width, uint32 towidth, uint
 
 	for( uint32 y = 0; y<rows; y++ )
 	{
-		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
-		uint32 offset = 16 * (width/GXtileX) + (width%GXtileX) - 1; //offset to right-most pixel at width
+		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
+		uint32 offset = 16 * ((width-1)/GXtileX) + ((width-1)%GXtileX); //offset to right-most pixel at width
 		uint16 val1 = pDst[offset];
-//		uint16 val2 = pDst[offset+16];
-		offset++;
+		offset = 16 * (width/GXtileX) + (width%GXtileX); //offset to first pixel to clamp
 		for( uint32 x = width - (width%GXtileX); x<towidth; x+=GXtileX )
 		{
 			for (uint32 l = 0; l<GXtileX; l++)
 			{
 				if ( x+l < width ) continue;
 				pDst[offset] = val1;
-//				pDst[offset+16] = val2;
 				offset++;
 			}
 			offset+=(16-4);//Increment 1 tile, decrement 1 row
@@ -1388,18 +1386,16 @@ void CTextureManager::ClampS8(uint8 *array, uint32 width, uint32 towidth, uint32
 
 	for( uint32 y = 0; y<rows; y++ )
 	{
-		uint8* pDst = (uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8;
-		uint32 offset = 32 * (width/GXtileX) + (width%GXtileX) - 1; //offset to right-most pixel at width
+		uint8* pDst = (uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8;
+		uint32 offset = 32 * ((width-1)/GXtileX) + ((width-1)%GXtileX); //offset to right-most pixel at width
 		uint8 val1 = pDst[offset];
-//		uint16 val2 = pDst[offset+16];
-		offset++;
+		offset = 32 * (width/GXtileX) + (width%GXtileX); //offset to first pixel to clamp
 		for( uint32 x = width - (width%GXtileX); x<towidth; x+=GXtileX )
 		{
 			for (uint32 l = 0; l<GXtileX; l++)
 			{
 				if ( x+l < width ) continue;
 				pDst[offset] = val1;
-//				pDst[offset+16] = val2;
 				offset++;
 			}
 			offset+=(32-8);//Increment 1 tile, decrement 1 row
@@ -1434,14 +1430,14 @@ void CTextureManager::ClampT32(uint32 *array, uint32 height, uint32 toheight, ui
 	else
 		rowpitch = arrayWidth * bpp;
 
-	u64* pSrc = (u64*)((uint8*)array + ((height-1)/GXtileY)*rowpitch + ((height-1)%GXtileY)*8);
+	u64* pSrc = (u64*)((uint8*)array + ((height-1)/GXtileY)*rowpitch*GXtileY + ((height-1)%GXtileY)*8);
 	for( uint32 y = height; y<toheight; y++ )
 	{
-		u64* pDst = (u64*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		u64* pDst = (u64*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		for( uint32 x = 0; x<arrayWidth; x+=4 )
 		{
 			pDst[x*2] = pSrc[x*2];
-			pDst[x*2+4] = pSrc[x*2+4];
+			pDst[x*2+1] = pSrc[x*2+1];
 		}
 	}
 #endif //__GX__
@@ -1473,10 +1469,10 @@ void CTextureManager::ClampT16(uint16 *array, uint32 height, uint32 toheight, ui
 	else
 		rowpitch = arrayWidth * bpp;
 
-	u64* pSrc = (u64*)((uint8*)array + ((height-1)/GXtileY)*rowpitch + ((height-1)%GXtileY)*8);
+	u64* pSrc = (u64*)((uint8*)array + ((height-1)/GXtileY)*rowpitch*GXtileY + ((height-1)%GXtileY)*8);
 	for( uint32 y = height; y<toheight; y++ )
 	{
-		u64* pDst = (u64*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		u64* pDst = (u64*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		for( uint32 x = 0; x<arrayWidth; x+=4 )
 		{
 			pDst[x] = pSrc[x];
@@ -1511,11 +1507,11 @@ void CTextureManager::ClampT8(uint8 *array, uint32 height, uint32 toheight, uint
 	else
 		rowpitch = arrayWidth * bpp;
 
-	u64* pSrc = (u64*)((uint8*)array + ((height-1)/GXtileY)*rowpitch + ((height-1)%GXtileY)*8);
+	u64* pSrc = (u64*)((uint8*)array + ((height-1)/GXtileY)*rowpitch*GXtileY + ((height-1)%GXtileY)*8);
 	for( uint32 y = height; y<toheight; y++ )
 	{
-		u64* pDst = (u64*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
-		for( uint32 x = 0; x<arrayWidth; x+=4 )
+		u64* pDst = (u64*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
+		for( uint32 x = 0; x<arrayWidth/2; x+=4 )
 		{
 			pDst[x] = pSrc[x];
 		}
@@ -1688,8 +1684,8 @@ void CTextureManager::MirrorT32(uint32 *array, uint32 height, uint32 mask, uint3
     for( uint32 y = height; y<toheight; y++ )
 	{
 		uint32 srcy = (y&maskval2)<=maskval1 ? y&maskval1 : maskval2-(y&maskval2);
-		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch + (srcy%GXtileY)*8);
-		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch*GXtileY + (srcy%GXtileY)*8);
+		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		uint32 offset = 0;
 		for( uint32 x=0; x<arrayWidth; x+=GXtileX )
 		{
@@ -1734,8 +1730,8 @@ void CTextureManager::MirrorT16(uint16 *array, uint32 height, uint32 mask, uint3
     for( uint32 y = height; y<toheight; y++ )
 	{
 		uint32 srcy = (y&maskval2)<=maskval1 ? y&maskval1 : maskval2-(y&maskval2);
-		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch + (srcy%GXtileY)*8);
-		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch*GXtileY + (srcy%GXtileY)*8);
+		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		uint32 offset = 0;
 		for( uint32 x=0; x<arrayWidth; x+=GXtileX )
 		{
@@ -1779,8 +1775,8 @@ void CTextureManager::MirrorT8(uint8 *array, uint32 height, uint32 mask, uint32 
     for( uint32 y = height; y<toheight; y++ )
 	{
 		uint32 srcy = (y&maskval2)<=maskval1 ? y&maskval1 : maskval2-(y&maskval2);
-		uint8* pSrc = (uint8*)((uint8*)array + (srcy/GXtileY)*rowpitch + (srcy%GXtileY)*8);
-		uint8* pDst = (uint8*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		uint8* pSrc = (uint8*)((uint8*)array + (srcy/GXtileY)*rowpitch*GXtileY + (srcy%GXtileY)*8);
+		uint8* pDst = (uint8*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		uint32 offset = 0;
 		for( uint32 x=0; x<arrayWidth; x+=GXtileX )
 		{
@@ -1954,8 +1950,8 @@ void CTextureManager::WrapT32(uint32 *array, uint32 height, uint32 mask, uint32 
     for( uint32 y = height; y<toheight; y++ )
 	{
 		uint32 srcy = y>maskval ? y&maskval : y-height;
-		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch + (srcy%GXtileY)*8);
-		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch*GXtileY + (srcy%GXtileY)*8);
+		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		uint32 offset = 0;
 		for( uint32 x=0; x<arrayWidth; x+=GXtileX )
 		{
@@ -1997,8 +1993,8 @@ void CTextureManager::WrapT16(uint16 *array, uint32 height, uint32 mask, uint32 
     for( uint32 y = height; y<toheight; y++ )
 	{
 		uint32 srcy = y>maskval ? y&maskval : y-height;
-		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch + (srcy%GXtileY)*8);
-		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		uint16* pSrc = (uint16*)((uint8*)array + (srcy/GXtileY)*rowpitch*GXtileY + (srcy%GXtileY)*8);
+		uint16* pDst = (uint16*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		uint32 offset = 0;
 		for( uint32 x=0; x<arrayWidth; x+=GXtileX )
 		{
@@ -2039,8 +2035,8 @@ void CTextureManager::WrapT8(uint8 *array, uint32 height, uint32 mask, uint32 to
     for( uint32 y = height; y<toheight; y++ )
 	{
 		uint32 srcy = y>maskval ? y&maskval : y-height;
-		uint8* pSrc = (uint8*)((uint8*)array + (srcy/GXtileY)*rowpitch + (srcy%GXtileY)*8);
-		uint8* pDst = (uint8*)((uint8*)array + (y/GXtileY)*rowpitch + (y%GXtileY)*8);
+		uint8* pSrc = (uint8*)((uint8*)array + (srcy/GXtileY)*rowpitch*GXtileY + (srcy%GXtileY)*8);
+		uint8* pDst = (uint8*)((uint8*)array + (y/GXtileY)*rowpitch*GXtileY + (y%GXtileY)*8);
 		uint32 offset = 0;
 		for( uint32 x=0; x<arrayWidth; x+=GXtileX )
 		{
@@ -2090,6 +2086,8 @@ void CTextureManager::Clamp(void *array, uint32 width, uint32 towidth, uint32 ar
         else if (size == 2 )	// 16 bits
         {
             ClampS16((uint16*)array, width, towidth, arrayWidth, rows);
+//			sprintf(txtbuffer,"ClampS16: width %d, towidth %d, arrayWidth %d, rows %d", width, towidth, arrayWidth, rows);
+//			DEBUG_print(txtbuffer,DBG_RICE+3); 
         }
         else					// 8 bits
         {
@@ -2105,12 +2103,33 @@ void CTextureManager::Clamp(void *array, uint32 width, uint32 towidth, uint32 ar
         else if (size == 2 )	// 16 bits
         {
             ClampT16((uint16*)array, width, towidth, arrayWidth, rows);
+//			sprintf(txtbuffer,"ClampT16: width %d, towidth %d, arrayWidth %d, rows %d", width, towidth, arrayWidth, rows);
+//			DEBUG_print(txtbuffer,DBG_RICE+4); 
         }
         else					// 8 bits
         {
             ClampT8((uint8*)array, width, towidth, arrayWidth, rows);
         }
     }
+#if 0
+	static int callcount1 = 0;
+	static int callcount2 = 0;
+	static int callcount3 = 0;
+	switch (size)
+	{
+	case 4:
+		callcount1++;
+		break;
+	case 2:
+		callcount2++;
+		break;
+	default:
+		callcount3++;
+		break;
+	}
+	sprintf(txtbuffer,"TextureManager::Clamp32 %d, Clamp16 %d, Clamp8 %d", callcount1, callcount2, callcount3);
+	DEBUG_print(txtbuffer,DBG_RICE); 
+#endif
 #endif //__GX__
 }
 
@@ -2149,6 +2168,8 @@ void CTextureManager::Wrap(void *array, uint32 width, uint32 mask, uint32 towidt
         else if ( size == 2 )	// 16 bits
         {
             WrapS16((uint16*)array, width, mask, towidth, arrayWidth, rows);
+//			sprintf(txtbuffer,"WrapS16: width %d, mask %d, towidth %d, arrayWidth %d, rows %d", width, mask, towidth, arrayWidth, rows);
+//			DEBUG_print(txtbuffer,DBG_RICE+3); 
         }
         else					// 8 bits
         {
@@ -2164,12 +2185,33 @@ void CTextureManager::Wrap(void *array, uint32 width, uint32 mask, uint32 towidt
         else if ( size == 2 )	// 16 bits
         {
             WrapT16((uint16*)array, width, mask, towidth, arrayWidth, rows);
+//			sprintf(txtbuffer,"WrapT16: width %d, mask %d, towidth %d, arrayWidth %d, rows %d", width, mask, towidth, arrayWidth, rows);
+//			DEBUG_print(txtbuffer,DBG_RICE+4); 
         }
         else					// 8 bits
         {
             WrapT8((uint8*)array, width, mask, towidth, arrayWidth, rows);
         }
     }
+#if 0
+	static int callcount1 = 0;
+	static int callcount2 = 0;
+	static int callcount3 = 0;
+	switch (size)
+	{
+	case 4:
+		callcount1++;
+		break;
+	case 2:
+		callcount2++;
+		break;
+	default:
+		callcount3++;
+		break;
+	}
+	sprintf(txtbuffer,"TextureManager::Wrap32 %d, Wrap16 %d, Wrap8 %d", callcount1, callcount2, callcount3);
+	DEBUG_print(txtbuffer,DBG_RICE+1); 
+#endif
 #endif //__GX__
 }
 
@@ -2208,6 +2250,8 @@ void CTextureManager::Mirror(void *array, uint32 width, uint32 mask, uint32 towi
         else if ( size == 2 )	// 16 bits
         {
             MirrorS16((uint16*)array, width, mask, towidth, arrayWidth, rows);
+//			sprintf(txtbuffer,"MirrorS16: width %d, mask %d, towidth %d, arrayWidth %d, rows %d", width, mask, towidth, arrayWidth, rows);
+//			DEBUG_print(txtbuffer,DBG_RICE+3); 
         }
         else					// 8 bits
         {
@@ -2223,12 +2267,33 @@ void CTextureManager::Mirror(void *array, uint32 width, uint32 mask, uint32 towi
         else if ( size == 2 )	// 16 bits
         {
             MirrorT16((uint16*)array, width, mask, towidth, arrayWidth, rows);
+//			sprintf(txtbuffer,"MirrorT16: width %d, mask %d, towidth %d, arrayWidth %d, rows %d", width, mask, towidth, arrayWidth, rows);
+//			DEBUG_print(txtbuffer,DBG_RICE+4); 
         }
         else					// 8 bits
         {
             MirrorT8((uint8*)array, width, mask, towidth, arrayWidth, rows);
         }
     }
+#if 0
+	static int callcount1 = 0;
+	static int callcount2 = 0;
+	static int callcount3 = 0;
+	switch (size)
+	{
+	case 4:
+		callcount1++;
+		break;
+	case 2:
+		callcount2++;
+		break;
+	default:
+		callcount3++;
+		break;
+	}
+	sprintf(txtbuffer,"TextureManager::Mirror32 %d, Mirror16 %d, Mirror8 %d", callcount1, callcount2, callcount3);
+	DEBUG_print(txtbuffer,DBG_RICE+2); 
+#endif
 #endif //__GX__
 }
 
