@@ -1437,7 +1437,7 @@ void CTextureManager::ClampT32(uint32 *array, uint32 height, uint32 toheight, ui
 		for( uint32 x = 0; x<arrayWidth; x+=4 )
 		{
 			pDst[x*2] = pSrc[x*2];
-			pDst[x*2+1] = pSrc[x*2+1];
+			pDst[x*2+4] = pSrc[x*2+4];
 		}
 	}
 #endif //__GX__
