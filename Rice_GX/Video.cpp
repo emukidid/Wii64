@@ -108,6 +108,10 @@ void gfx_set_window(int x, int y, int width, int height){
 	gGX.GXorigY = y;
 	gGX.GXwidth = width;
 	gGX.GXheight = height;
+	//Note: windowSetting.uDisplay* settings currently never change, but are initialized later...
+	// windowSetting.uDisplayWidth = 640, windowSetting.uDisplayHeight = 480
+	gGX.GXscaleX = (float)gGX.GXwidth / 640.0f;
+	gGX.GXscaleY = (float)gGX.GXheight / 480.0f;
 }
 
 #endif // __GX__

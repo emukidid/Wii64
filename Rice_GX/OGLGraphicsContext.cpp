@@ -529,6 +529,9 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
 
 //	VI_GX_cleanUp();
 //	VI_GX_showStats();
+   //TODO: Move the following and others to a "clean up" function
+	GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
+	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth+1,(u32) windowSetting.uDisplayHeight+1);	//Disable Scissor
 	VI_GX_showFPS();
 	VI_GX_showDEBUG();
 //	if(VI.updateOSD)

@@ -1360,24 +1360,16 @@ void OGLRender::UpdateScissor()
         uint32 width = *g_GraphicsInfo.VI_WIDTH_REG & 0xFFF;
         uint32 height = (gRDP.scissor.right*gRDP.scissor.bottom)/width;
 #ifndef __GX__
-		//TODO: Replace with GX
         glEnable(GL_SCISSOR_TEST);
         glScissor(0, int(height*windowSetting.fMultY+windowSetting.statusBarHeightToUse),
             int(width*windowSetting.fMultX), int(height*windowSetting.fMultY) );
 #else //!__GX__
-		//from glN64:
-		//glScissor( (int)(gDP.scissor.ulx * OGL.scaleX), (int)((VI.height - gDP.scissor.lry) * OGL.scaleY + OGL.heightOffset),
-		//	(int)((gDP.scissor.lrx - gDP.scissor.ulx) * OGL.scaleX), (int)((gDP.scissor.lry - gDP.scissor.uly) * OGL.scaleY) );
-		//float ulx = max(OGL.GXorigX + max(gDP.scissor.ulx,gSP.viewport.x) * OGL.GXscaleX, 0);
-		//float uly = max(OGL.GXorigY + max(gDP.scissor.uly,gSP.viewport.y) * OGL.GXscaleY, 0);
-		//float lrx = max(OGL.GXorigX + min(min(gDP.scissor.lrx,gSP.viewport.x + gSP.viewport.width) * OGL.GXscaleX,OGL.GXwidth), 0);
-		//float lry = max(OGL.GXorigY + min(min(gDP.scissor.lry,gSP.viewport.y + gSP.viewport.height) * OGL.GXscaleY,OGL.GXheight), 0);
-		//GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
-
-		//x = 0
-		//y = int(height*windowSetting.fMultY+windowSetting.statusBarHeightToUse)
-		//width = int(width*windowSetting.fMultX)
-		//height = int(height*windowSetting.fMultY)
+		//Notes: windowSetting.statusBarHeightToUse = 0 for fullscreen mode; uly may be incorrect
+		float ulx = gGX.GXorigX;
+		float uly = gGX.GXorigY;
+		float lrx = max(gGX.GXorigX + min((width*windowSetting.fMultX) * gGX.GXscaleX,gGX.GXwidth), 0);
+		float lry = max(gGX.GXorigY + min((height*windowSetting.fMultY) * gGX.GXscaleY,gGX.GXheight), 0);
+		GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
 #endif //__GX__
     }
     else
@@ -1396,19 +1388,31 @@ void OGLRender::ApplyRDPScissor(bool force)
         uint32 width = *g_GraphicsInfo.VI_WIDTH_REG & 0xFFF;
         uint32 height = (gRDP.scissor.right*gRDP.scissor.bottom)/width;
 #ifndef __GX__
-		//TODO: Replace with GX
         glEnable(GL_SCISSOR_TEST);
         glScissor(0, int(height*windowSetting.fMultY+windowSetting.statusBarHeightToUse),
             int(width*windowSetting.fMultX), int(height*windowSetting.fMultY) );
-#endif //!__GX__
+#else //!__GX__
+		//Notes: windowSetting.statusBarHeightToUse = 0 for fullscreen mode; uly may be incorrect
+		float ulx = gGX.GXorigX;
+		float uly = gGX.GXorigY;
+		float lrx = max(gGX.GXorigX + min((width*windowSetting.fMultX) * gGX.GXscaleX,gGX.GXwidth), 0);
+		float lry = max(gGX.GXorigY + min((height*windowSetting.fMultY) * gGX.GXscaleY,gGX.GXheight), 0);
+		GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
+#endif //__GX__
     }
     else
     {
 #ifndef __GX__
-		//TODO: Replace with GX
         glScissor(int(gRDP.scissor.left*windowSetting.fMultX), int((windowSetting.uViHeight-gRDP.scissor.bottom)*windowSetting.fMultY+windowSetting.statusBarHeightToUse),
             int((gRDP.scissor.right-gRDP.scissor.left)*windowSetting.fMultX), int((gRDP.scissor.bottom-gRDP.scissor.top)*windowSetting.fMultY ));
-#endif //!__GX__
+#else //!__GX__
+		//Notes: windowSetting.statusBarHeightToUse = 0 for fullscreen mode
+		float ulx = max(gGX.GXorigX + (gRDP.scissor.left*windowSetting.fMultX) * gGX.GXscaleX, 0);
+		float uly = max(gGX.GXorigY + (gRDP.scissor.top*windowSetting.fMultY) * gGX.GXscaleY, 0);
+		float lrx = max(gGX.GXorigX + min((gRDP.scissor.right*windowSetting.fMultX) * gGX.GXscaleX,gGX.GXwidth), 0);
+		float lry = max(gGX.GXorigY + min((gRDP.scissor.bottom*windowSetting.fMultY) * gGX.GXscaleY,gGX.GXheight), 0);
+		GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
+#endif //__GX__
     }
 
     status.curScissor = RDP_SCISSOR;
@@ -1419,21 +1423,16 @@ void OGLRender::ApplyScissorWithClipRatio(bool force)
     if( !force && status.curScissor == RSP_SCISSOR )    return;
 
 #ifndef __GX__
-	//TODO: Replace with GX
     glEnable(GL_SCISSOR_TEST);
     glScissor(windowSetting.clipping.left, int((windowSetting.uViHeight-gRSP.real_clip_scissor_bottom)*windowSetting.fMultY)+windowSetting.statusBarHeightToUse,
         windowSetting.clipping.width, windowSetting.clipping.height);
 #else //!__GX__
-	//from glN64:
-	//glScissor( GLint x, GLint y, GLsizei width, GLsizei height);
-	//glScissor( (int)(gDP.scissor.ulx * OGL.scaleX), (int)((VI.height - gDP.scissor.lry) * OGL.scaleY + OGL.heightOffset),
-	//	(int)((gDP.scissor.lrx - gDP.scissor.ulx) * OGL.scaleX), (int)((gDP.scissor.lry - gDP.scissor.uly) * OGL.scaleY) );
-	//float ulx = max(OGL.GXorigX + max(gDP.scissor.ulx,gSP.viewport.x) * OGL.GXscaleX, 0);
-	//float uly = max(OGL.GXorigY + max(gDP.scissor.uly,gSP.viewport.y) * OGL.GXscaleY, 0);
-	//float lrx = max(OGL.GXorigX + min(min(gDP.scissor.lrx,gSP.viewport.x + gSP.viewport.width) * OGL.GXscaleX,OGL.GXwidth), 0);
-	//float lry = max(OGL.GXorigY + min(min(gDP.scissor.lry,gSP.viewport.y + gSP.viewport.height) * OGL.GXscaleY,OGL.GXheight), 0);
-	//GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
-
+	//Notes: windowSetting.statusBarHeightToUse = 0 for fullscreen mode
+	float ulx = max(gGX.GXorigX + windowSetting.clipping.left * gGX.GXscaleX, 0);
+	float uly = max(gGX.GXorigY + ((gRSP.real_clip_scissor_top)*windowSetting.fMultY) * gGX.GXscaleY, 0);
+	float lrx = max(gGX.GXorigX + min((windowSetting.clipping.left+windowSetting.clipping.width) * gGX.GXscaleX,gGX.GXwidth), 0);
+	float lry = max(gGX.GXorigY + min(((gRSP.real_clip_scissor_top*windowSetting.fMultY) + windowSetting.clipping.height) * gGX.GXscaleY,gGX.GXheight), 0);
+	GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
 #endif //__GX__
 
     status.curScissor = RSP_SCISSOR;
@@ -1618,8 +1617,9 @@ void OGLRender::glViewportWrapper(GLint x, GLint y, GLsizei width, GLsizei heigh
 				gGX.GXupdateMtx = false;
 			}
 		}
-		//Possibly move this to Initialize to improve speed?
-		GX_SetViewport((f32) x,(f32) y,(f32) width,(f32) height, 0.0f, 1.0f);
+		//Possibly separate this from gGX.GXupdateMtx to improve speed?
+		GX_SetViewport((f32) (gGX.GXorigX + x),(f32) (gGX.GXorigY + (windowSetting.uDisplayHeight-(y+height))*gGX.GXscaleY),
+			(f32) (gGX.GXscaleX * width),(f32) (gGX.GXscaleY * height), 0.0f, 1.0f);
 #endif //__GX__
     }
 }
@@ -1645,6 +1645,8 @@ void OGLRender::GXloadTextures()
 {
 	if (GXreloadTex[0] && m_curBoundTex[0])	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 	if (GXreloadTex[1] && m_curBoundTex[1])	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+//	if (m_curBoundTex[0])	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+//	if (m_curBoundTex[1])	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 }
 
 extern GXRModeObj *vmode, *rmode;
@@ -1672,10 +1674,8 @@ void OGLRender::GXclearEFB()
 	GX_SetZCompLoc(GX_TRUE);	// Do Z-compare before texturing.
 	GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
 	GX_SetFog(GX_FOG_NONE,0.1,1.0,0.0,1.0,(GXColor){0,0,0,255});
-	//TODO: add this when implement pillar_box
-//	GX_SetViewport((f32) OGL.GXorigX,(f32) OGL.GXorigY,(f32) OGL.GXwidth,(f32) OGL.GXheight, 0.0f, 1.0f);
-//	GX_SetScissor((u32) 0,(u32) 0,(u32) OGL.width+1,(u32) OGL.height+1);	//Disable Scissor
-////	GX_SetScissor(0,0,rmode->fbWidth,rmode->efbHeight);
+	GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
+	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth+1,(u32) windowSetting.uDisplayHeight+1);	//Disable Scissor
 	GX_SetCullMode (GX_CULL_NONE);
 	Mtx44 GXprojection;
 	guMtxIdentity(GXprojection);
