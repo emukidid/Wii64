@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/dir.h>
+#include <dirent.h>
 #include "fileBrowser.h"
 #include <sdcard/gcsd.h>
 
@@ -164,32 +165,33 @@ void InitRemovalThread()
 
 int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir){
   
-  pauseRemovalThread();
+	pauseRemovalThread();
 	
-  DIR_ITER* dp = diropen( file->name );
+	DIR* dp = opendir( file->name );
 	if(!dp) return FILE_BROWSER_ERROR;
+	struct dirent *entry;
 	struct stat fstat;
 	
 	// Set everything up to read
-	char filename[MAXPATHLEN];
 	int num_entries = 2, i = 0;
 	*dir = malloc( num_entries * sizeof(fileBrowser_file) );
 	// Read each entry of the directory
-	while( dirnext(dp, filename, &fstat) == 0 ){
+	while( (entry = readdir(dp)) != NULL ){
 		// Make sure we have room for this one
 		if(i == num_entries){
 			++num_entries;
 			*dir = realloc( *dir, num_entries * sizeof(fileBrowser_file) ); 
 		}
-		sprintf((*dir)[i].name, "%s/%s", file->name, filename);
+		sprintf((*dir)[i].name, "%s/%s", file->name, entry->d_name);
+		stat((*dir)[i].name,&fstat);
 		(*dir)[i].offset = 0;
 		(*dir)[i].size   = fstat.st_size;
-		(*dir)[i].attr   = (fstat.st_mode & S_IFDIR) ?
+		(*dir)[i].attr   = (fstat.st_mode & _IFDIR) ?
 		                     FILE_BROWSER_ATTR_DIR : 0;
 		++i;
 	}
 	
-	dirclose(dp);
+	closedir(dp);
 	continueRemovalThread();
 
 	return num_entries;

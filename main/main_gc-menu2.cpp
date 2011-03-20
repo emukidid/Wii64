@@ -71,6 +71,7 @@ unsigned int MALLOC_MEM2 = 0;
 #include <ogc/conf.h>
 #include <wiiuse/wpad.h>
 extern "C" {
+extern u32 __di_check_ahbprot(void);
 #include <di/di.h>
 }
 #include "../gc_memory/MEM2.h"
@@ -185,7 +186,14 @@ int main(int argc, char* argv[]){
 	/* INITIALIZE */
 #ifdef HW_RVL
   DI_UseCache(false);
-  DI_Init();    // first
+	if (!__di_check_ahbprot()) {
+		s32 preferred = IOS_GetPreferredVersion();
+		if (preferred == 58 || preferred == 61)
+			IOS_ReloadIOS(preferred);
+		else DI_LoadDVDX(true);
+	}
+	
+	DI_Init();    // first
 #endif
 
 #ifdef DEBUGON
