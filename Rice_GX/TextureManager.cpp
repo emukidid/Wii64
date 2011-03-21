@@ -31,9 +31,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 CTextureManager gTextureManager;
 
+#ifdef __GX__
+//Note: Rice's tex mem usage isn't calculated correctly because it assumes 32bit textures.
+//TODO: Revisit cache handling once Enhanced & Framebuffer textures are implemented.
+DWORD g_maxTextureMemUsage = 2*GX_TEXTURE_CACHE_SIZE;
+DWORD g_amountToFree = (512*1024);
+bool g_bUseSetTextureMem = true;
+#else //__GX__
 DWORD g_maxTextureMemUsage = (5*1024*1024);
 DWORD g_amountToFree = (512*1024);
 bool g_bUseSetTextureMem = false;
+#endif //!__GX__
 
 // Returns the first prime greater than or equal to nFirst
 inline LONG GetNextPrime(LONG nFirst)
@@ -118,6 +126,7 @@ CTextureManager::CTextureManager() :
 #else //HW_RVL
 		__lwp_heap_init(GXtexCache, memalign(32,GX_TEXTURE_CACHE_SIZE),GX_TEXTURE_CACHE_SIZE, 32);
 #endif //!HW_RVL
+		gGX.GXnumTex = gGX.GXnumTexBytes = 0;
 	}
 #endif //__GX__
 
@@ -242,12 +251,25 @@ void CTextureManager::PurgeOldTextures()
 
 #ifdef __GX__
 // Purge LRU texture to make room in texture cache
-void CTextureManager::PurgeOldestTexture()
+int CTextureManager::PurgeOldestTexture(CTexture* current)
 {
+	if (m_pOldestTexture == NULL) 
+		return -1;
+	if ( (m_pOldestTexture->pTexture == current)||(m_pOldestTexture->pEnhancedTexture == current) )
+	{
+		if (m_pOldestTexture->pNextYoungest)
+		{
+			RemoveTexture(m_pOldestTexture->pNextYoungest);
+			return 0;
+		}
+		else
+			return -1;
+	}
+
 	TxtrCacheEntry *nextYoungest = m_pOldestTexture->pNextYoungest;
 	RemoveTexture(m_pOldestTexture);
-//	delete m_pOldestTexture;
 	m_pOldestTexture = nextYoungest;
+	return 0;
 }
 #endif //__GX__
 
@@ -575,6 +597,10 @@ TxtrCacheEntry * CTextureManager::CreateNewCacheEntry(uint32 dwAddr, uint32 dwWi
     pEntry->lastEntry = NULL;
     pEntry->bExternalTxtrChecked = false;
     pEntry->maxCI = -1;
+
+#ifdef __GX__
+	pEntry->pTexture->GXcacheType = TEX_CACHE; //Indicate texture belongs in tex cache
+#endif //__GX__
 
     // Add to the hash table
     AddTexture(pEntry);

@@ -263,6 +263,10 @@ typedef struct {
 	GXColor	GXfogColor;
 	u8		GXfogType;
 	bool	GXupdateFog;
+
+	//Tex Cache info
+	int		GXnumTex;
+	int		GXnumTexBytes;
 } GX_Options;
 
 extern GX_Options gGX;

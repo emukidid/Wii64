@@ -44,6 +44,8 @@ CTexture::CTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
         m_dwTextureFmt(TEXTURE_FMT_A8R8G8B8)
 #else //!__GX__
         m_dwTextureFmt(TEXTURE_FMT_A8R8G8B8),
+		GXinited(false),
+		GXcacheType(UNKNOWN_CACHE),
 		GXtexfmt(GX_TF_RGBA8),
 		GXwrapS(GX_REPEAT),
 		GXwrapT(GX_REPEAT)
@@ -52,18 +54,14 @@ CTexture::CTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     // fix me, do something here
 }
 
-#ifdef __GX__
-extern COGLTexture** g_curBoundTex; //Needed to clear m_curBoundTex when deleting textures
-#endif //__GX__
-
 CTexture::~CTexture(void)
 {
 #ifdef __GX__
 	if (m_pTexture)	
 	{
-		if (g_curBoundTex[0] == m_pTexture) g_curBoundTex[0] = NULL;
-		if (g_curBoundTex[1] == m_pTexture) g_curBoundTex[1] = NULL;
 		__lwp_heap_free(GXtexCache, m_pTexture);
+		gGX.GXnumTex--;
+		gGX.GXnumTexBytes -= GXtextureBytes;
 	}
 	m_pTexture = NULL;
 #endif //__GX__
@@ -314,7 +312,7 @@ void CTexture::RestoreAlphaChannel(void) //This is never called..
     }
 }
 
-void CTexture::GXallocateTexture(void)
+int CTexture::GXallocateTexture(void)
 {
 	//Set texture size based on
 	uint32 GXtileX = 4;
@@ -350,14 +348,36 @@ void CTexture::GXallocateTexture(void)
 
 	GXtextureBytes = GXwidth*GXheight*GXbpp;
 
-	m_pTexture = (u32*) __lwp_heap_allocate(GXtexCache,GXtextureBytes);
-	while(!m_pTexture)
+	if (GXcacheType == TEX_CACHE)
 	{
-		gTextureManager.PurgeOldestTexture();
-//		RemoveTexture(m_pOldestTexture);
 		m_pTexture = (u32*) __lwp_heap_allocate(GXtexCache,GXtextureBytes);
+		while(!m_pTexture)
+		{
+			//TODO: g_pFrameBufferManager->CloseUp() needed?
+			if (gTextureManager.PurgeOldestTexture(this)) break;
+			m_pTexture = (u32*) __lwp_heap_allocate(GXtexCache,GXtextureBytes);
+		}
 	}
 
-	memset (m_pTexture, 0, GXtextureBytes);
+	if (m_pTexture) 
+	{
+		gGX.GXnumTex++;
+		gGX.GXnumTexBytes += GXtextureBytes;
+		memset (m_pTexture, 0, GXtextureBytes);
+#if 0
+		sprintf(txtbuffer,"TexAlloc: NumTex %d; NumTexBytes %d", gGX.GXnumTex, gGX.GXnumTexBytes);
+		DEBUG_print(txtbuffer,DBG_CACHEINFO); 
+#endif
+		return 0;
+	}
+	else
+	{
+#if 0
+		static int callcount = 0;
+		sprintf(txtbuffer,"GXalcTx %d fail, Ht %d, Wd %d, Byts %d; nTex %d, nByts %d", callcount++, GXheight, GXwidth, GXtextureBytes, gGX.GXnumTex, gGX.GXnumTexBytes);
+		DEBUG_print(txtbuffer,DBG_CACHEINFO+1); 
+#endif
+		return -1;
+	}
 }
 

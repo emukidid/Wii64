@@ -48,6 +48,13 @@ enum TextureUsage {
     AS_BACK_BUFFER_SAVE,
 };
 
+#ifdef __GX__
+enum CacheType {
+    UNKNOWN_CACHE,
+    TEX_CACHE,
+};
+#endif //__GX__
+
 class CTexture
 {
 public:
@@ -73,11 +80,13 @@ public:
     TextureUsage    m_Usage;
 
 #ifdef __GX__
+	bool	GXinited;
+	CacheType	GXcacheType;
 	uint8	GXtexfmt, GXwrapS, GXwrapT;
 	uint32	GXtextureBytes, GXwidth, GXheight;
 	GXTexObj	GXtex;
 
-	void	GXallocateTexture(void);
+	int	GXallocateTexture(void);
 #endif //__GX__
 
     virtual void ScaleImageToSurface(bool scaleS=true, bool scaleT=true);

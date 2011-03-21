@@ -115,7 +115,9 @@ public:
     
 } ;
 
-
+#ifdef __GX__
+extern COGLTexture** g_curBoundTex; //Needed to clear m_curBoundTex when deleting textures
+#endif //__GX__
 
 typedef struct TxtrCacheEntry
 {
@@ -124,6 +126,10 @@ typedef struct TxtrCacheEntry
 
     ~TxtrCacheEntry()
     {
+#ifdef __GX__
+		if (((CTexture*)g_curBoundTex[0] == pTexture)||((CTexture*)g_curBoundTex[0] == pEnhancedTexture)) g_curBoundTex[0] = NULL;
+		if (((CTexture*)g_curBoundTex[1] == pTexture)||((CTexture*)g_curBoundTex[1] == pEnhancedTexture)) g_curBoundTex[1] = NULL;
+#endif //!__GX__
         SAFE_DELETE(pTexture);
         SAFE_DELETE(pEnhancedTexture);
     }
@@ -236,7 +242,7 @@ public:
     
 	void PurgeOldTextures();
 #ifdef __GX__
-	void PurgeOldestTexture();
+	int PurgeOldestTexture(CTexture* current);
 #endif //__GX__
     void RecycleAllTextures();
     void RecheckHiresForAllTextures();

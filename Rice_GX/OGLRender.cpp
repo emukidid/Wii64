@@ -1643,8 +1643,8 @@ void OGLRender::CaptureScreen(char *filename)
 
 void OGLRender::GXloadTextures()
 {
-	if (GXreloadTex[0] && m_curBoundTex[0])	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
-	if (GXreloadTex[1] && m_curBoundTex[1])	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+	if (GXreloadTex[0] && m_curBoundTex[0] && m_curBoundTex[0]->GXinited)	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
+	if (GXreloadTex[1] && m_curBoundTex[1] && m_curBoundTex[1]->GXinited)	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 //	if (m_curBoundTex[0])	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 //	if (m_curBoundTex[1])	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 }

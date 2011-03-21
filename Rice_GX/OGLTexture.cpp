@@ -88,7 +88,8 @@ bool COGLTexture::StartUpdate(DrawInfo *di)
 #ifndef __GX__
         return false;
 #else //!__GX__
-		GXallocateTexture();
+		if (GXallocateTexture())
+			return false;
 #endif //__GX__
 
     di->dwHeight = (uint16)m_dwHeight;
@@ -121,9 +122,11 @@ void COGLTexture::EndUpdate(DrawInfo *di)
 	//GX_LoadTexObj(&texture->GXtex, t); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 
 	if(m_pTexture != NULL)
+	{
 		DCFlushRange(m_pTexture, GXtextureBytes);
-
-	GX_InitTexObj(&GXtex, m_pTexture, (u16) m_dwCreatedTextureWidth, (u16) m_dwCreatedTextureHeight, GXtexfmt, GXwrapS, GXwrapT, GX_FALSE);
+		GX_InitTexObj(&GXtex, m_pTexture, (u16) m_dwCreatedTextureWidth, (u16) m_dwCreatedTextureHeight, GXtexfmt, GXwrapS, GXwrapT, GX_FALSE);
+		GXinited = true;
+	}
 #endif //__GX__
 }
 
