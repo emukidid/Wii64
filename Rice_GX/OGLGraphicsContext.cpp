@@ -69,7 +69,9 @@ COGLGraphicsContext::~COGLGraphicsContext()
 
 bool COGLGraphicsContext::Initialize(HWND hWnd, HWND hWndStatus, uint32 dwWidth, uint32 dwHeight, BOOL bWindowed )
 {
+#ifndef __GX__
     printf("Initializing OpenGL Device Context\n");
+#endif //!__GX__
     Lock();
 
     CGraphicsContext::Get()->m_supportTextureMirror = false;
@@ -148,7 +150,9 @@ bool COGLGraphicsContext::Initialize(HWND hWnd, HWND hWndStatus, uint32 dwWidth,
     InitOGLExtension();
     sprintf(m_strDeviceStats, "%s - %s : %s", m_pVendorStr, m_pRenderStr, m_pVersionStr);
     TRACE0(m_strDeviceStats);
+#ifndef __GX__
     printf("%s\n", m_strDeviceStats);
+#endif //!__GX__
 
     Unlock();
 
@@ -158,7 +162,8 @@ bool COGLGraphicsContext::Initialize(HWND hWnd, HWND hWndStatus, uint32 dwWidth,
     Clear(CLEAR_COLOR_AND_DEPTH_BUFFER);
     UpdateFrame();
 #else //!__GX__
-//	TODO: Make sure that EFB/xfb are cleared before rendering first screen
+	//Don't clear the screen immediately after ROM load
+	//TODO: Make sure that EFB/xfb are cleared before rendering first screen
 #endif //__GX__
     
     m_bReady = true;
@@ -458,6 +463,16 @@ void VI_GX_showStats()
 	}*/
 }
 
+void VI_GX_PreRetraceCallback(u32 retraceCnt)
+{
+	if(VI.copy_fb)
+	{
+		VIDEO_SetNextFramebuffer(VI.xfb[VI.which_fb]);
+		VIDEO_Flush();
+		VI.which_fb ^= 1;
+		VI.copy_fb = false;
+	}
+}
 
 #endif //__GX__
 
@@ -539,19 +554,13 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
 //		if(VI.copy_fb)
 //			VIDEO_WaitVSync();
 		GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
-		GX_CopyDisp (VI.xfb[VI.which_fb], GX_TRUE);	//clear the EFB before executing new Dlist
+//		GX_CopyDisp (VI.xfb[VI.which_fb], GX_TRUE);	//clear the EFB before executing new Dlist
+		GX_CopyDisp (VI.xfb[VI.which_fb], GX_FALSE);	//clear the EFB before executing new Dlist
 		GX_DrawDone(); //Wait until EFB->XFB copy is complete
 //		doCaptureScreen();
 		VI.updateOSD = false;
 		VI.copy_fb = true;
 //	}
-
-	//Following is from retrace callback
-	VIDEO_SetNextFramebuffer(VI.xfb[VI.which_fb]);
-	VIDEO_Flush();
-	VI.which_fb ^= 1;
-//	VI.copy_fb = false;
-
 
 #endif //!__GX__
    
@@ -572,18 +581,20 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
      }*/
 
 #ifndef __GX__
-	//TODO: Implement in GX
     glDepthMask(GL_TRUE);
     glClearDepth(1.0);
-#endif //!__GX__
     if( !g_curRomInfo.bForceScreenClear ) 
-#ifndef __GX__
-		//TODO: Implement in GX
     {
         glClear(GL_DEPTH_BUFFER_BIT);
     }
 #else //!__GX__
-		{}
+	//TODO: Integrate this with above GX_CopyDisp
+    if( !g_curRomInfo.bForceScreenClear ) 
+    {
+		gGX.GXclearDepthBuffer = true;
+		gGX.GXclearDepth = 1.0;
+		CRender::GetRender()->GXclearEFB();
+    }
 #endif //__GX__
     else
         needCleanScene = true;

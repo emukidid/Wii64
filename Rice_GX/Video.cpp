@@ -448,6 +448,10 @@ EXPORT void CALL RomClosed(void)
     TRACE0("Video is stopped");
 }
 
+#ifdef __GX__
+void VI_GX_PreRetraceCallback(u32 retraceCnt);
+#endif // __GX__
+
 EXPORT void CALL RomOpen(void)
 {
 #ifdef DEBUGON
@@ -503,6 +507,10 @@ EXPORT void CALL RomOpen(void)
 #else
     StartVideo();
 #endif
+
+#ifdef __GX__
+	VIDEO_SetPreRetraceCallback(VI_GX_PreRetraceCallback);
+#endif // __GX__
 }
 
 

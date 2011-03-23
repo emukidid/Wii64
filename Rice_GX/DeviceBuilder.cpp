@@ -168,7 +168,9 @@ CGraphicsContext * OGLDeviceBuilder::CreateGraphicsContext(void)
 {
     if( g_GraphicsInfo.hStatusBar )
     {
+#ifndef __GX__
         printf("[RiceVideo] Creating OpenGL Device Context\n");
+#endif //!__GX__
     }
     if( m_pGraphicsContext == NULL )
     {
@@ -339,7 +341,7 @@ CColorCombiner * OGLDeviceBuilder::CreateColorCombiner(CRender *pRender)
             GLint maxUnit = 8;
             COGLGraphicsContext *pcontext = (COGLGraphicsContext *)(CGraphicsContext::g_pGraphicsContext);
 			m_pColorCombiner = new CTEVColorCombiner(pRender);
-			printf("[RiceVideo] TEV Combiner");
+//			printf("[RiceVideo] TEV Combiner");
 #endif //__GX__
         }
 
