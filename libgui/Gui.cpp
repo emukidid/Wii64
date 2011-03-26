@@ -125,11 +125,13 @@ void Gui::draw()
 				u32 *ptr = (u32*)0x80001800;
 				int i = 0;
 				for(i = 0; i < 0x1800/4; i++) {
-					if(((ptr[i] >>16) & 0xFFFF)==0x7C73) {	// NOP: 7C73FBA6  mtspr       1011, r3
+					if(((ptr[i] >> 16) & 0xFFFF) == 0x7C73) {	// NOP: 7C73FBA6  mtspr       1011, r3
 						ptr[i] = 0x60000000;
+						DCFlushRange((void*)0x80001800,0x1800);
+						ICInvalidateRange((void*)0x80001800,0x1800);
 						break;
 					}
-				}
+				}				
 #endif
 				void (*rld)() = (void (*)()) 0x80001800;
 				rld();
