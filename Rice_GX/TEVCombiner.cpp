@@ -74,6 +74,9 @@ CTEVColorCombiner::CTEVColorCombiner(CRender *pRender) :
 	m_pDecodedMux->m_maxConstants = 2; //Only used for setting const textures
 //    m_pDecodedMux->m_maxConstants = 0; //Only used for setting const textures
 //    m_pDecodedMux->m_maxTextures = 1;  //Only used for setting const textures
+#ifdef __GX__
+	gGX.GXmultiTex = false;
+#endif //__GX__
 }
 
 CTEVColorCombiner::~CTEVColorCombiner()
@@ -118,16 +121,18 @@ void CTEVColorCombiner::DisableCombiner(void)
 //			GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 #endif //__GX__
         }
+	    else
+		{
+			m_pOGLRender->BindTexture((COGLTexture*)gTextureManager.GetBlackTexture()->pTexture, 0);
 #ifdef _DEBUG
-        else
-        {
-            DebuggerAppendMsg("Check me, texture is NULL but it is enabled");
-        }
+			DebuggerAppendMsg("Check me, texture is NULL");
 #endif
+		}
 		//Set Modulate TEV mode
 		GX_SetNumTevStages(1);
 		GX_SetNumChans (1);
 		GX_SetNumTexGens (1);
+		gGX.GXmultiTex = false;
 		GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 		GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
     }
@@ -139,6 +144,7 @@ void CTEVColorCombiner::DisableCombiner(void)
 		GX_SetNumTevStages(1);
 		GX_SetNumChans (1);
 		GX_SetNumTexGens (0);
+		gGX.GXmultiTex = false;
 		GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
 		GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
     }
@@ -154,20 +160,21 @@ void CTEVColorCombiner::InitCombinerCycleCopy(void)
         //m_pOGLRender->BindTexture(pTexture->m_dwTextureName, 0);
         m_pOGLRender->BindTexture(pTexture, 0);
         m_pOGLRender->SetTexelRepeatFlags(gRSP.curTile);
-//		GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
     }
-#ifdef _DEBUG
     else
     {
-        DebuggerAppendMsg("Check me, texture is NULL");
-    }
+		m_pOGLRender->BindTexture((COGLTexture*)gTextureManager.GetBlackTexture()->pTexture, 0);
+#ifdef _DEBUG
+		DebuggerAppendMsg("Check me, texture is NULL");
 #endif
+    }
 
 	//glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	//Set Replace TEV mode
 	GX_SetNumTevStages(1);
 	GX_SetNumChans (0);
 	GX_SetNumTexGens (1);
+	gGX.GXmultiTex = false;
 	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORZERO);
 	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
 }
@@ -188,6 +195,7 @@ void CTEVColorCombiner::InitCombinerCycleFill(void)
 	GX_SetNumTevStages(1);
 	GX_SetNumChans (1);
 	GX_SetNumTexGens (0);
+	gGX.GXmultiTex = false;
 	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
 	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
 }
@@ -355,7 +363,6 @@ void CTEVColorCombiner::InitCombinerCycle12(void)
 
 #else //Cycle12 combiner from COGLColorCombinerNvidia::InitCombinerCycle12(void)
 
-	m_pOGLRender->EnableMultiTexture();
 	bool combinerIsChanged = false;
 
 	if( m_pDecodedMux->m_dwMux0 != m_dwLastMux0 || m_pDecodedMux->m_dwMux1 != m_dwLastMux1  || m_lastIndex < 0 )
@@ -687,27 +694,26 @@ void CTEVColorCombiner::GenerateCombinerSetting(int index)
 		{
 			pTexture = g_textures[gRSP.curTile].m_pCOGLTexture;
 			if( pTexture )  
-			{
 				m_pOGLRender->BindTexture(pTexture, 0);
-//				GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
-			}
-			numTex++;
+			else
+				m_pOGLRender->BindTexture((COGLTexture*)gTextureManager.GetBlackTexture()->pTexture, 0);
+			numTex = 1;
 		}
 		if( m_bTex1Enabled )
 		{
 			pTexture1 = g_textures[(gRSP.curTile+1)&7].m_pCOGLTexture;
 			if( pTexture1 ) 
-			{
 				m_pOGLRender->BindTexture(pTexture1, 1);
-//				GX_LoadTexObj(&pTexture1->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
-			}
-			numTex++;
+			else
+				m_pOGLRender->BindTexture((COGLTexture*)gTextureManager.GetBlackTexture()->pTexture, 1);
+			numTex = 2;
 		}
 	}
 
 	GX_SetNumTevStages(res.numOfUnits);
 	GX_SetNumChans (1);
 	GX_SetNumTexGens (numTex);
+	gGX.GXmultiTex = (numTex == 2) ? true : false;
 
 	for( int i=0; i<res.numOfUnits; i++ )
 	{
@@ -869,7 +875,8 @@ void CTEVColorCombiner::DisplayTEVMuxString(int index)
 				m_pOGLRender->BindTexture(pTexture, 0);
 //				GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 			}
-			numTex++;
+//			numTex++;
+			numTex = 1;
 		}
 		if( m_bTex1Enabled )
 		{
@@ -879,7 +886,8 @@ void CTEVColorCombiner::DisplayTEVMuxString(int index)
 				m_pOGLRender->BindTexture(pTexture1, 1);
 //				GX_LoadTexObj(&pTexture1->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 			}
-			numTex++;
+//			numTex++;
+			numTex = 2;
 		}
 	}
 

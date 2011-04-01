@@ -58,7 +58,11 @@ OGLRender::OGLRender()
         m_curBoundTex[i]=0;
         m_texUnitEnabled[i]=FALSE;
     }
+#ifndef __GX__
     m_bEnableMultiTexture = false;
+#else //!__GX__
+    m_bEnableMultiTexture = true;
+#endif //__GX__
 
 #ifdef __GX__ //Maybe this can be moved to Initialize()
 	gGX.GXenableZmode = GX_DISABLE;
@@ -709,18 +713,18 @@ bool OGLRender::RenderTexRect()
 	GX_ClearVtxDesc();
 	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
 	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
-	if (m_bEnableMultiTexture) GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
+	if (gGX.GXmultiTex) GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
 //	GX_SetVtxDesc(GX_VA_TEX2MTXIDX, GX_TEXMTX0);
 	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
 	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
 	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
-	if (m_bEnableMultiTexture) GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
+	if (gGX.GXmultiTex) GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
 //	GX_SetVtxDesc(GX_VA_TEX2, GX_DIRECT);
 	//set vertex attribute formats here
 	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
 	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
 	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
-	if (m_bEnableMultiTexture) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
+	if (gGX.GXmultiTex) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
 //	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX2, GX_TEX_ST, GX_F32, 0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
 	for (int i = 3; i>=0; i--)
@@ -735,7 +739,7 @@ bool OGLRender::RenderTexRect()
 		//TexCoord(g_texRectTVtx[3]);
 		//glTexCoord2f(vtxInfo.tcord[0].u, vtxInfo.tcord[0].v);
 		GX_TexCoord2f32( g_texRectTVtx[i].tcord[0].u, g_texRectTVtx[i].tcord[0].v );
-		if (m_bEnableMultiTexture) GX_TexCoord2f32( g_texRectTVtx[i].tcord[1].u, g_texRectTVtx[i].tcord[1].v );
+		if (gGX.GXmultiTex) GX_TexCoord2f32( g_texRectTVtx[i].tcord[1].u, g_texRectTVtx[i].tcord[1].v );
 	}
 	GX_End();
 
@@ -917,7 +921,7 @@ bool OGLRender::RenderFlushTris()
 	GX_ClearVtxDesc();
 	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
 	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
-	if (m_bEnableMultiTexture) GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
+	if (gGX.GXmultiTex) GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
 //	if (combiner.usesT0) GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
 //	if (combiner.usesT1) GX_SetVtxDesc(GX_VA_TEX1MTXIDX, GX_TEXMTX0);
 //	GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
@@ -927,7 +931,7 @@ bool OGLRender::RenderFlushTris()
 //	if (lighting) GX_SetVtxDesc(GX_VA_NRM, GX_DIRECT);
 	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
 	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
-	if (m_bEnableMultiTexture) GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
+	if (gGX.GXmultiTex) GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
 //	if (combiner.usesT0) GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
 //	if (combiner.usesT1) GX_SetVtxDesc(GX_VA_TEX1, GX_DIRECT);
 //	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
@@ -942,7 +946,7 @@ bool OGLRender::RenderFlushTris()
 //	if (combiner.usesT0) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
 //	if (combiner.usesT1) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
 	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
-	if (m_bEnableMultiTexture) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
+	if (gGX.GXmultiTex) GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX1, GX_TEX_ST, GX_F32, 0);
 //	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX2, GX_TEX_ST, GX_F32, 0);
 
     //glVertexPointer( 4, GL_FLOAT, sizeof(float)*5, &(g_vtxProjected5[0][0]) );
@@ -978,7 +982,7 @@ bool OGLRender::RenderFlushTris()
 //		GX_Color4u8(g_oglVtxColors[g_vtxIndex[i]][0], g_oglVtxColors[g_vtxIndex[i]][1], g_oglVtxColors[g_vtxIndex[i]][2], g_oglVtxColors[g_vtxIndex[i]][3]); 
 		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
 		GX_TexCoord2f32(g_vtxBuffer[i].tcord[0].u,g_vtxBuffer[i].tcord[0].v);
-		if (m_bEnableMultiTexture) GX_TexCoord2f32(g_vtxBuffer[i].tcord[1].u,g_vtxBuffer[i].tcord[1].v);
+		if (gGX.GXmultiTex) GX_TexCoord2f32(g_vtxBuffer[i].tcord[1].u,g_vtxBuffer[i].tcord[1].v);
 //		if (combiner.usesT0) GX_TexCoord2f32(OGL.vertices[i].s0,OGL.vertices[i].t0);
 //		if (combiner.usesT1) GX_TexCoord2f32(OGL.vertices[i].s1,OGL.vertices[i].t1);
 //		if (combiner.usesT0) GX_TexCoord2f32(OGL.vertices[i].s0,OGL.vertices[i].t0);
@@ -1305,13 +1309,13 @@ void OGLRender::BindTexture(COGLTexture *texture, int unitno)
 
 #ifndef __GX__
 void OGLRender::DisBindTexture(GLuint texture, int unitno)
-#else //!__GX__
-void OGLRender::DisBindTexture(COGLTexture *texture, int unitno)
-#endif //__GX__
 {
     //EnableTexUnit(0,FALSE);
     //glBindTexture(GL_TEXTURE_2D, 0);  //Not to bind any texture
 }
+#else //!__GX__ //This Function is never called by TEVCombiner
+void OGLRender::DisBindTexture(COGLTexture *texture, int unitno) { }
+#endif //__GX__
 
 void OGLRender::EnableTexUnit(int unitno, BOOL flag)
 {
@@ -1645,8 +1649,6 @@ void OGLRender::GXloadTextures()
 {
 	if (GXreloadTex[0] && m_curBoundTex[0] && m_curBoundTex[0]->GXinited)	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 	if (GXreloadTex[1] && m_curBoundTex[1] && m_curBoundTex[1]->GXinited)	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
-//	if (m_curBoundTex[0])	GX_LoadTexObj(&m_curBoundTex[0]->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
-//	if (m_curBoundTex[1])	GX_LoadTexObj(&m_curBoundTex[1]->GXtex, 1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 }
 
 extern GXRModeObj *vmode, *rmode;

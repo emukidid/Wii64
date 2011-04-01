@@ -74,21 +74,18 @@ void COGLExtRender::BindTexture(COGLTexture *texture, int unitno)
 
 #ifndef __GX__
 void COGLExtRender::DisBindTexture(GLuint texture, int unitno)
-#else //!__GX__
-void COGLExtRender::DisBindTexture(COGLTexture *texture, int unitno)
-#endif //__GX__
 {
     if( m_bEnableMultiTexture )
     {
-#ifndef __GX__
-		//TODO: Implement in GX or clear m_curBountTex[unitno]?
         glActiveTexture(GL_TEXTURE0_ARB+unitno);
         glBindTexture(GL_TEXTURE_2D, 0);    //Not to bind any texture
-#endif //!__GX__
     }
     else
         OGLRender::DisBindTexture(texture, unitno);
 }
+#else //!__GX__ //This Function is never called by TEVCombiner
+void COGLExtRender::DisBindTexture(COGLTexture *texture, int unitno) { }
+#endif //__GX__
 
 void COGLExtRender::TexCoord2f(float u, float v) //This function is never called
 {

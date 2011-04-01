@@ -126,6 +126,7 @@ void COGLTexture::EndUpdate(DrawInfo *di)
 		DCFlushRange(m_pTexture, GXtextureBytes);
 		GX_InitTexObj(&GXtex, m_pTexture, (u16) m_dwCreatedTextureWidth, (u16) m_dwCreatedTextureHeight, GXtexfmt, GXwrapS, GXwrapT, GX_FALSE);
 		GXinited = true;
+//		GX_InvalidateTexAll();
 	}
 #endif //__GX__
 }

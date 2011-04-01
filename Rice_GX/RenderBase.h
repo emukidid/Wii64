@@ -267,6 +267,7 @@ typedef struct {
 	//Tex Cache info
 	int		GXnumTex;
 	int		GXnumTexBytes;
+	BOOL	GXmultiTex;
 } GX_Options;
 
 extern GX_Options gGX;
