@@ -614,13 +614,14 @@ uint32 CalculateRDRAMCRC(void *pPhysicalAddress, uint32 left, uint32 top, uint32
 
 #ifdef NO_ASM
             uint32* line = (uint32*)pAsmStart;
+            dwAsmPitch /= sizeof(uint32);
             
             for(int y = dwAsmHeight; y >= 0; --y) {
             	uint32 v = 0;
             	
             	for(int x = dwAsmdwBytesPerLine - 4; x >= 0; x -= 4) {
-            		v = line[x] ^ x;
-            		dwAsmCRC = (dwAsmCRC << 4 | dwAsmCRC >> 28) + v + 4;
+            		v = line[x / sizeof(uint32)] ^ x;
+            		dwAsmCRC = (dwAsmCRC << 4 | dwAsmCRC >> 28) + v;
             	}
             	
             	dwAsmCRC += v ^ y;
