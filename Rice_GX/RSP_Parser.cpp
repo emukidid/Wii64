@@ -1101,8 +1101,11 @@ void DLParser_RDPSetOtherMode(Gfx *gfx)
             CRender::g_pRender->SetAlphaTestEnable( FALSE );
     }
 
-    uint16 blender = gRDP.otherMode.blender;
-    RDP_BlenderSetting &bl = *(RDP_BlenderSetting*)(&(blender));
+//    uint16 blender = gRDP.otherMode.blender;
+//    RDP_BlenderSetting &bl = *(RDP_BlenderSetting*)(&(blender));
+    RDP_BlenderSetting bl;
+	bl.blender = (uint16)( gRDP.otherMode.blender & 0xffff );
+
     if( bl.c1_m1a==3 || bl.c1_m2a == 3 || bl.c2_m1a == 3 || bl.c2_m2a == 3 )
     {
         gRDP.bFogEnableInBlender = true;

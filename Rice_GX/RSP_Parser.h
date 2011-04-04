@@ -485,26 +485,33 @@ typedef struct{
 
 typedef struct
 {
+    union
+    {
+        struct
+        {
 #ifndef _BIG_ENDIAN
-    unsigned int    c2_m2b:2;
-    unsigned int    c1_m2b:2;
-    unsigned int    c2_m2a:2;
-    unsigned int    c1_m2a:2;
-    unsigned int    c2_m1b:2;
-    unsigned int    c1_m1b:2;
-    unsigned int    c2_m1a:2;
-    unsigned int    c1_m1a:2;
+			unsigned int    c2_m2b:2;
+			unsigned int    c1_m2b:2;
+			unsigned int    c2_m2a:2;
+			unsigned int    c1_m2a:2;
+			unsigned int    c2_m1b:2;
+			unsigned int    c1_m1b:2;
+			unsigned int    c2_m1a:2;
+			unsigned int    c1_m1a:2;
 #else // !_BIG_ENDIAN - Big Endian fix.
-    unsigned int    c1_m1a:2;
-    unsigned int    c2_m1a:2;
-    unsigned int    c1_m1b:2;
-    unsigned int    c2_m1b:2;
-    unsigned int    c1_m2a:2;
-    unsigned int    c2_m2a:2;
-    unsigned int    c1_m2b:2;
-    unsigned int    c2_m2b:2;
+			unsigned int    c1_m1a:2;
+			unsigned int    c2_m1a:2;
+			unsigned int    c1_m1b:2;
+			unsigned int    c2_m1b:2;
+			unsigned int    c1_m2a:2;
+			unsigned int    c2_m2a:2;
+			unsigned int    c1_m2b:2;
+			unsigned int    c2_m2b:2;
 #endif // _BIG_ENDIAN
-} RDP_BlenderSetting;
+        };
+        uint16          blender;
+    };
+} __attribute__((packed)) RDP_BlenderSetting;
 
 typedef struct
 {

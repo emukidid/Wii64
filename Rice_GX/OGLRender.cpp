@@ -877,8 +877,7 @@ bool OGLRender::RenderFlushTris()
     {
         if( !gRDP.bFogEnableInBlender && gRSP.bFogEnabled )
         {
-#ifndef __GX__
-			//TODO: Implement in GX
+#ifndef __GX__  //This is redundant with CRender::DrawTriangles()
             glDisable(GL_FOG);
 #endif //!__GX__
         }
@@ -1033,8 +1032,7 @@ bool OGLRender::RenderFlushTris()
     {
         if( !gRDP.bFogEnableInBlender && gRSP.bFogEnabled )
         {
-#ifndef __GX__
-			//TODO: Implement in GX
+#ifndef __GX__  //This is redundant with CRender::DrawTriangles()
             glEnable(GL_FOG);
 #endif //!__GX__
         }
@@ -1253,6 +1251,16 @@ void OGLRender::RenderReset()
 	guOrtho(GXprojection, 0, windowSetting.uDisplayHeight, 0, windowSetting.uDisplayWidth, -1.0f, 1.0f);
 	GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
 	GX_LoadPosMtxImm(gGX.GXmodelViewIdent,GX_PNMTX0);
+
+	//This is called at the beginning of every DList, so initialize GX stuff here:
+	// init fog
+	gGX.GXfogStartZ = -1.0f;
+	gGX.GXfogEndZ = 1.0f;
+	gGX.GXfogColor = (GXColor){0,0,0,255};
+	gGX.GXfogType = GX_FOG_NONE;
+	GX_SetFog(gGX.GXfogType,gGX.GXfogStartZ,gGX.GXfogEndZ,-1.0,1.0,gGX.GXfogColor);
+	gGX.GXupdateFog = false;
+
 #endif //__GX__
 }
 
@@ -1448,18 +1456,30 @@ void OGLRender::SetFogMinMax(float fMin, float fMax)
 	//TODO: Replace with GX
     glFogf(GL_FOG_START, gRSPfFogMin); // Fog Start Depth
     glFogf(GL_FOG_END, gRSPfFogMax); // Fog End Depth
-#endif //!__GX__
+#else //!__GX__
+	gGX.GXfogStartZ = gRSPfFogMin;
+	gGX.GXfogEndZ = gRSPfFogMax;
+
+	GX_SetFog(gGX.GXfogType,gGX.GXfogStartZ,gGX.GXfogEndZ,-1.0,1.0,gGX.GXfogColor);
+#endif //__GX__
 }
 
 void OGLRender::TurnFogOnOff(bool flag)
 {
 #ifndef __GX__
-	//TODO: Replace with GX
     if( flag )
         glEnable(GL_FOG);
     else
         glDisable(GL_FOG);
-#endif //!__GX__
+#else //!__GX__
+    if( flag )
+		gGX.GXfogType = GX_FOG_ORTHO_LIN;
+    else
+		gGX.GXfogType = GX_FOG_NONE;
+//		gGX.GXfogType = GX_FOG_ORTHO_LIN;
+
+	GX_SetFog(gGX.GXfogType,gGX.GXfogStartZ,gGX.GXfogEndZ,-1.0,1.0,gGX.GXfogColor);
+#endif //__GX__
 }
 
 void OGLRender::SetFogEnable(bool bEnable)
@@ -1469,7 +1489,6 @@ void OGLRender::SetFogEnable(bool bEnable)
     gRSP.bFogEnabled = bEnable&&options.bEnableFog;
 
 #ifndef __GX__
-	//TODO: Replace with GX
     if( gRSP.bFogEnabled )
     {
         //TRACE2("Enable fog, min=%f, max=%f",gRSPfFogMin,gRSPfFogMax );
@@ -1482,7 +1501,20 @@ void OGLRender::SetFogEnable(bool bEnable)
     {
         glDisable(GL_FOG);
     }
-#endif //!__GX__
+#else //!__GX__
+	if( gRSP.bFogEnabled )
+	{
+		gGX.GXfogType = GX_FOG_ORTHO_LIN;
+#if 0 //def SHOW_DEBUG
+		sprintf(txtbuffer,"SetFog: StartZ %f, EndZ %f, color (%d,%d,%d,%d), fo %f, fm %f", gGX.GXfogStartZ, gGX.GXfogEndZ, gGX.GXfogColor.r, gGX.GXfogColor.g, gGX.GXfogColor.b, gGX.GXfogColor.a, gRSPfFogMin, gRSPfFogMax);
+		DEBUG_print(txtbuffer,DBG_RSPINFO1);
+#endif
+	}
+	else
+		gGX.GXfogType = GX_FOG_NONE;
+
+	GX_SetFog(gGX.GXfogType,gGX.GXfogStartZ,gGX.GXfogEndZ,-1.0,1.0,gGX.GXfogColor);
+#endif //__GX__
 }
 
 void OGLRender::SetFogColor(uint32 r, uint32 g, uint32 b, uint32 a)
@@ -1493,9 +1525,16 @@ void OGLRender::SetFogColor(uint32 r, uint32 g, uint32 b, uint32 a)
     gRDP.fvFogColor[2] = b/255.0f;          //b
     gRDP.fvFogColor[3] = a/255.0f;      //a
 #ifndef __GX__
-	//TODO: Replace with GX
     glFogfv(GL_FOG_COLOR, gRDP.fvFogColor); // Set Fog Color
-#endif //!__GX__
+#else //!__GX__
+	gGX.GXfogColor.r = (u8) (r & 0xff);
+	gGX.GXfogColor.g = (u8) (g & 0xff);
+	gGX.GXfogColor.b = (u8) (b & 0xff);
+	gGX.GXfogColor.a = (u8) (a & 0xff);
+	//gGX.GXupdateFog = true;
+
+	GX_SetFog(gGX.GXfogType,gGX.GXfogStartZ,gGX.GXfogEndZ,-1.0,1.0,gGX.GXfogColor);
+#endif //__GX__
 }
 
 void OGLRender::DisableMultiTexture()
