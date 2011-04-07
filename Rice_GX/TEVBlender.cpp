@@ -74,9 +74,9 @@ void CTEVBlender::BlendFunc(uint32 srcFunc, uint32 desFunc)
 	GX_SetBlendMode(GX_BM_BLEND,(u8) GX_BlendFuncMaps[srcFunc],
 		(u8) GX_BlendFuncMaps[desFunc], GX_LO_CLEAR); 
 
-	u8 GXblenddstfactor, GXblendsrcfactor, GXblendmode;
+/*	u8 GXblenddstfactor, GXblendsrcfactor, GXblendmode;
 
-/*	GXblendmode = GX_BM_BLEND;
+	GXblendmode = GX_BM_BLEND;
 			GXblendmode = GX_BM_NONE;
 					GXblendsrcfactor = GX_BL_ONE;
 					GXblenddstfactor = GX_BL_ONE;

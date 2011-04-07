@@ -1391,8 +1391,11 @@ for (uint32 i=0; i<dwCount && i<0x100; i++)
 
 if( options.bUseFullTMEM )
     {
-    for (uint32 i=0; i<dwCount && i+tile.dwTMem<0x200; i++)
-        *(uint16*)(&g_Tmem.g_Tmem64bit[tile.dwTMem+i]) = srcPal[i^S16];
+//    for (uint32 i=0; i<dwCount && i+tile.dwTMem<0x200; i++)
+//        *(uint16*)(&g_Tmem.g_Tmem64bit[tile.dwTMem+i]) = srcPal[i^S16];
+		uint16* dstTmem = (uint16*)(&g_Tmem.g_Tmem64bit[tile.dwTMem]);
+		for (uint32 i=0; i<dwCount && i+tile.dwTMem<0x200; i++)
+			dstTmem[i*4] = srcPal[i^S16];
     }
 
 LOG_TEXTURE(

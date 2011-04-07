@@ -39,17 +39,15 @@ CTexture::CTexture(uint32 dwWidth, uint32 dwHeight, TextureUsage usage) :
     m_bClampedT(false),
     m_bIsEnhancedTexture(false),
     m_Usage(usage),
-        m_pTexture(NULL),
-#ifndef __GX__
-        m_dwTextureFmt(TEXTURE_FMT_A8R8G8B8)
-#else //!__GX__
-        m_dwTextureFmt(TEXTURE_FMT_A8R8G8B8),
+#ifdef __GX__
 		GXinited(false),
 		GXcacheType(UNKNOWN_CACHE),
 		GXtexfmt(GX_TF_RGBA8),
 		GXwrapS(GX_REPEAT),
-		GXwrapT(GX_REPEAT)
+		GXwrapT(GX_REPEAT),
 #endif //__GX__
+        m_pTexture(NULL),
+        m_dwTextureFmt(TEXTURE_FMT_A8R8G8B8)
 {
     // fix me, do something here
 }

@@ -293,10 +293,13 @@ void CTextureManager::RecycleAllTextures()
             
             dwTotalUses += pTVictim->dwUses;
             dwCount++;
-            if (g_bUseSetTextureMem)
-                delete pTVictim;
-            else
-            RecycleTexture(pTVictim);
+			if (g_bUseSetTextureMem)
+			{
+				m_currentTextureMemUsage -= (pTVictim->pTexture->m_dwWidth * pTVictim->pTexture->m_dwHeight * 4);
+				delete pTVictim;
+			}
+			else
+				RecycleTexture(pTVictim);
         }
     }
 }

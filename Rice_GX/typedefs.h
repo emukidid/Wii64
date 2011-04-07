@@ -492,7 +492,7 @@ typedef struct {
 typedef union {
     uint8   g_Tmem8bit[0x1000];
     short   g_Tmem16bit[0x800];
-    uint32  g_Tmem32bit[0x300];
+    uint32  g_Tmem32bit[0x400];
     uint64  g_Tmem64bit[0x200];
 } TmemType;
 
