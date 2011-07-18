@@ -41,9 +41,6 @@ OBJ		=main/rom_gc.o \
 		gui/TEXT.o \
 		gui/font.o \
 		r4300/r4300.o \
-		r4300/cop0.o \
-		r4300/special.o \
-		r4300/regimm.o \
 		r4300/exception.o \
 		r4300/Invalid_Code.o \
 		gc_memory/ARAM.o \
@@ -52,15 +49,8 @@ OBJ		=main/rom_gc.o \
 		gc_memory/memory.o \
 		gc_memory/dma.o \
 		r4300/interupt.o \
-		r4300/cop1.o \
-		r4300/tlb.o \
-		r4300/cop1_w.o \
-		r4300/cop1_s.o \
-		r4300/cop1_d.o \
 		r4300/recomp.o \
 		gc_memory/pif.o \
-		r4300/bc.o \
-		r4300/cop1_l.o \
 		r4300/pure_interp.o \
 		r4300/compare_core.o \
 		gc_memory/flashram.o \
@@ -123,7 +113,6 @@ OBJ_GX_GFX	=GX_gfx/main.o \
 
 HEADER		=main/rom.h \
 		r4300/r4300.h \
-		r4300/ops.h \
 		r4300/macros.h \
 		r4300/exception.h \
 		gc_memory/memory.h \

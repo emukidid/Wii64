@@ -45,8 +45,6 @@
 #include "../r4300/r4300.h"
 #include "../r4300/macros.h"
 #include "../r4300/interupt.h"
-#include "../r4300/recomph.h"
-#include "../r4300/ops.h"
 #include "../r4300/Invalid_Code.h"
 #include "pif.h"
 #include "flashram.h"
@@ -638,7 +636,6 @@ int init_memory()
    init_flashram();
    
    frameBufferInfos[0].addr = 0;
-   fast_memory = 1;
    firstFrameBufferSetting = 1;
    
    //printf("memory initialized\n");
@@ -862,7 +859,7 @@ void update_SP()
 			    if(firstFrameBufferSetting)
 			      {
 				 firstFrameBufferSetting = 0;
-				 fast_memory = 0;
+				 // TODO: fast_memory = 0?
 				 for(j=0; j<0x100000; j++)
 				   invalid_code_set(j, 1);
 			      }
@@ -1876,7 +1873,7 @@ void write_mi()
 	
 	check_interupt();
 	update_count();
-	if (next_interupt <= Count) gen_interupt();
+	if (r4300.next_interrupt <= Count) gen_interupt();
 	break;
      }
 }
@@ -1903,7 +1900,7 @@ void write_mib()
 	
 	check_interupt();
 	update_count();
-	if (next_interupt <= Count) gen_interupt();
+	if (r4300.next_interrupt <= Count) gen_interupt();
 	break;
      }
 }
@@ -1926,7 +1923,7 @@ void write_mih()
 	
 	check_interupt();
 	update_count();
-	if (next_interupt <= Count) gen_interupt();
+	if (r4300.next_interrupt <= Count) gen_interupt();
 	break;
      }
 }
@@ -1945,7 +1942,7 @@ void write_mid()
 	
 	check_interupt();
 	update_count();
-	if (next_interupt <= Count) gen_interupt();
+	if (r4300.next_interrupt <= Count) gen_interupt();
 	break;
      }
 }

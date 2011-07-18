@@ -46,7 +46,6 @@
 #include "../r4300/macros.h"
 #include "../r4300/ARAM-blocks.h"
 #include "../r4300/Invalid_Code.h"
-#include "../r4300/ops.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "pif.h"
 #include "flashram.h"
@@ -252,7 +251,7 @@ void dma_pi_write()
 
    if ((debug_count+Count) < 0x100000)
      {
-	switch(CIC_Chip)
+	switch(r4300.cic_chip)
 	  {
 	   case 1:
 	   case 2:
@@ -323,7 +322,7 @@ void dma_si_write()
    if (si_register.si_pif_addr_wr64b != 0x1FC007C0)
      {
 //	printf("unknown SI use\n");
-	stop=1;
+	r4300.stop=1;
      }
    for (i=0; i<(64/4); i++)
      PIF_RAM[i] = sl(rdram[si_register.si_dram_addr/4+i]);
@@ -338,7 +337,7 @@ void dma_si_read()
    if (si_register.si_pif_addr_rd64b != 0x1FC007C0)
      {
 //	printf("unknown SI use\n");
-	stop=1;
+	r4300.stop=1;
      }
    update_pif_read();
    for (i=0; i<(64/4); i++)

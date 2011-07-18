@@ -134,8 +134,8 @@ void update_regHiLo()
 
 	gtk_clist_freeze( GTK_CLIST(clRegHiLo) );
 	
-	if( gui_fantom_hi != hi ) {
-		gui_fantom_hi = hi;
+	if( gui_fantom_hi != r4300.hi ) {
+		gui_fantom_hi = r4300.hi;
 		sprintf( txt, "%.16llX", gui_fantom_hi );
 		gtk_clist_set_text( GTK_CLIST(clRegHiLo), 0, 0, txt );
 		gtk_clist_set_background( GTK_CLIST(clRegHiLo), 0, &color_modif);
@@ -143,8 +143,8 @@ void update_regHiLo()
 	else
 		gtk_clist_set_background( GTK_CLIST(clRegHiLo), 0, &color_ident);
 
-	if(gui_fantom_lo!=lo) {
-		gui_fantom_lo=lo;
+	if(gui_fantom_lo!=r4300.lo) {
+		gui_fantom_lo=r4300.lo;
 		sprintf(txt, "%.16llX", gui_fantom_lo );
 		gtk_clist_set_text( GTK_CLIST(clRegHiLo), 1, 0, txt );
 		gtk_clist_set_background( GTK_CLIST(clRegHiLo), 0, &color_modif);
@@ -179,10 +179,10 @@ void update_nextint()
 {
 	char txt[24];
 
-	if( gui_fantom_nextint != next_interupt )
+	if( gui_fantom_nextint != r4300.next_interrupt )
 	{
-		gui_fantom_nextint = next_interupt;
-		sprintf( txt, "0%.16X", next_interupt );
+		gui_fantom_nextint = r4300.next_interrupt;
+		sprintf( txt, "0%.16X", r4300.next_interrupt );
 		gtk_entry_set_text( GTK_ENTRY(enNextInt), txt );
 	}
 }

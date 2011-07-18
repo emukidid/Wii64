@@ -42,7 +42,7 @@
 #include "../../gui/DEBUG.h"
 
 static MIPS_instr*    src;
-static PowerPC_instr* dst;
+static PowerPC_instr* ppc_dst;
 static MIPS_instr*    src_last;
 static MIPS_instr*    src_first;
 static unsigned int   code_length;
@@ -75,18 +75,18 @@ int has_next_src(void){ return (src_last-src) > 0; }
  // Undoes a get_next_src
  void unget_last_src(void){ --src; }
  // Used for finding how many instructions were generated
- PowerPC_instr* get_curr_dst(void){ return dst; }
+ PowerPC_instr* get_curr_dst(void){ return ppc_dst; }
  // Makes sure a branch to a NOP in the delay slot won't crash
  // This should be called ONLY after get_next_src returns a
  //   NOP in a delay slot
- void nop_ignored(void){ if(src<src_last) code_addr[src-1-src_first] = dst; }
+ void nop_ignored(void){ if(src<src_last) code_addr[src-1-src_first] = ppc_dst; }
  // Returns whether the current src instruction is branched to
  int is_j_dst(void){ return isJmpDst[(get_src_pc()&0xfff)>>2]; }
 // Returns the MIPS PC
 unsigned int get_src_pc(void){ return addr_first + ((src-1-src_first)<<2); }
-void set_next_dst(PowerPC_instr i){ *(dst++) = i; ++code_length; }
+void set_next_dst(PowerPC_instr i){ *(ppc_dst++) = i; ++code_length; }
 // Adjusts the code_addr for the current instruction to account for flushes
-void reset_code_addr(void){ if(src<=src_last) code_addr[src-1-src_first] = dst; }
+void reset_code_addr(void){ if(src<=src_last) code_addr[src-1-src_first] = ppc_dst; }
 
 int add_jump(int old_jump, int is_j, int is_call){
 	int id = current_jump;
@@ -94,7 +94,7 @@ int add_jump(int old_jump, int is_j, int is_call){
 	jump->old_jump  = old_jump;
 	jump->new_jump  = 0;     // This should be filled in when known
 	jump->src_instr = src-1; // src points to the next
-	jump->dst_instr = dst;   // set_next hasn't happened
+	jump->dst_instr = ppc_dst;   // set_next hasn't happened
 	jump->type      = (is_j    ? JUMP_TYPE_J    : 0)
 	                | (is_call ? JUMP_TYPE_CALL : 0);
 	return id;
@@ -104,7 +104,7 @@ int add_jump_special(int is_j){
 	int id = current_jump;
 	jump_node* jump = &jump_table[current_jump++];
 	jump->new_jump  = 0;     // This should be filled in when known
-	jump->dst_instr = dst;   // set_next hasn't happened
+	jump->dst_instr = ppc_dst;   // set_next hasn't happened
 	jump->type      = JUMP_TYPE_SPEC | (is_j ? JUMP_TYPE_J : 0);
 	return id;
 }
@@ -210,7 +210,7 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 	}
 
 	src = src_first;
-	dst = code_buffer; // Use buffer to avoid guessing length
+	ppc_dst = code_buffer; // Use buffer to avoid guessing length
 	current_jump = 0;
 	code_addr = code_addr_buffer;
 	memset(code_addr, 0, addr_last - addr_first);
@@ -255,7 +255,7 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 
 	// Readjusting pointers to the func buffers
 	code_addr = func->code_addr;
-	dst = func->code + (dst - code_buffer);
+	ppc_dst = func->code + (ppc_dst - code_buffer);
 	int i;
 	for(i=0; i<src-src_first; ++i)
 		if(code_addr[i])
@@ -540,15 +540,11 @@ static int pass0(PowerPC_block* ppc_block){
 	}
 }
 
-extern int stop;
 inline unsigned long update_invalid_addr(unsigned long addr);
 void jump_to(unsigned int address){
-	stop = 1;
+	r4300.stop = 1;
 }
-extern unsigned long jump_to_address;
-void dyna_jump(){ jump_to(jump_to_address); }
-void dyna_stop(){ }
-void jump_to_func(){ jump_to(jump_to_address); }
+unsigned long jump_target;
 
 static void genJumpPad(void){
 	PowerPC_instr ppc = NEW_PPC_INSTR();

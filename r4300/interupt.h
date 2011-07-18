@@ -27,9 +27,8 @@
  *
 **/
 
-extern unsigned int next_interupt;
-extern unsigned long reg_cop0[32];
-#define Count reg_cop0[9]
+#include "r4300.h"
+#define Count r4300.reg_cop0[9]
 
 void compare_interupt();
 void gen_dp();

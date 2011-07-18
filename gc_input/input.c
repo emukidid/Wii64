@@ -184,7 +184,6 @@ EXPORT void CALL GetDllInfo ( PLUGIN_INFO * PluginInfo )
 			the controller state.
   output:   none
 *******************************************************************/
-extern int stop;
 EXPORT void CALL GetKeys(int Control, BUTTONS * Keys )
 {
 #if defined(WII) && !defined(NO_BT)
@@ -202,7 +201,7 @@ EXPORT void CALL GetKeys(int Control, BUTTONS * Keys )
 	}
 #endif
 	if(DO_CONTROL(Control, GetKeys, Keys, virtualControllers[Control].config))
-		stop = 1;
+		stop_it();
 }
 
 /******************************************************************

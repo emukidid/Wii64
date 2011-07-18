@@ -59,7 +59,6 @@ void tlb_mem2_init()
 }
 #endif
 
-extern unsigned long interp_addr;
 unsigned long virtual_to_physical_address(unsigned long addresse, int w)
 {
    if (addresse >= 0x7f000000 && addresse < 0x80000000) // golden eye hack
@@ -91,7 +90,7 @@ unsigned long virtual_to_physical_address(unsigned long addresse, int w)
 	  return (tlb_LUT_r[addresse>>12]&0xFFFFF000)|(addresse&0xFFF);
 #endif
      }
-   //printf("tlb exception !!! @ %x, %x, add:%x\n", addresse, w, interp_addr);
+   //printf("tlb exception !!! @ %x, %x, add:%x\n", addresse, w, r4300.pc);
    //getchar();
    TLB_refill_exception(addresse,w);
    //return 0x80000000;

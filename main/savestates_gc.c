@@ -48,7 +48,6 @@
 
 char* statespath = "/wii64/saves/";
 
-extern unsigned long interp_addr;
 extern int *autoinc_save_slot;
 void pauseAudio(void);
 void resumeAudio(void);
@@ -108,7 +107,7 @@ void savestates_save()
   if(!f) {
   	return;
 	}
-  if(stop) {
+  if(r4300.stop) {
 	  pauseRemovalThread();
   }
   else {
@@ -145,29 +144,29 @@ void savestates_save()
 	TLBCache_dump_w(f);
 #endif
 
-	gzwrite(f, &llbit, 4);
-	gzwrite(f, reg, 32*8);
-	for (i=0; i<32; i++) gzwrite(f, reg_cop0+i, 8); // *8 for compatibility with old versions purpose
-	gzwrite(f, &lo, 8);
-	gzwrite(f, &hi, 8);
+	gzwrite(f, &r4300.llbit, 4);
+	gzwrite(f, r4300.gpr, 32*8);
+	for (i=0; i<32; i++) gzwrite(f, r4300.reg_cop0+i, 8); // *8 for compatibility with old versions purpose
+	gzwrite(f, &r4300.lo, 8);
+	gzwrite(f, &r4300.hi, 8);
 	
 	if ((Status & 0x04000000) == 0)
 	{   // FR bit == 0 means 32-bit (MIPS I) FGR mode
 		shuffle_fpr_data(0, 0x04000000);  // shuffle data into 64-bit register format for storage
-		gzwrite(f, reg_cop1_fgr_64, 32*8);
+		gzwrite(f, r4300.fpr_data, 32*8);
 		shuffle_fpr_data(0x04000000, 0);  // put it back in 32-bit mode
 	}
 	else
 	{
-		gzwrite(f, reg_cop1_fgr_64, 32*8);
+		gzwrite(f, r4300.fpr_data, 32*8);
 	}
 	
-	gzwrite(f, &FCR0, 4);
-	gzwrite(f, &FCR31, 4);
+	gzwrite(f, &r4300.fcr0, 4);
+	gzwrite(f, &r4300.fcr31, 4);
 	gzwrite(f, tlb_e, 32*sizeof(tlb));
-	gzwrite(f, &interp_addr, 4);    //Dynarec should be ok with just this
+	gzwrite(f, &r4300.pc, 4);    //Dynarec should be ok with just this
 
-	gzwrite(f, &next_interupt, 4);
+	gzwrite(f, &r4300.next_interrupt, 4);
 	gzwrite(f, &next_vi, 4);
 	gzwrite(f, &vi_field, 4);
 	
@@ -175,7 +174,7 @@ void savestates_save()
 	gzwrite(f, buf, len);
 	
 	gzclose(f);
-	if(stop) {
+	if(r4300.stop) {
 	  continueRemovalThread();
   }
   else {
@@ -204,7 +203,7 @@ void savestates_load()
 	if (!f) {
 		return;
 	}
-	if(stop) {
+	if(r4300.stop) {
 	  pauseRemovalThread();
   }
   else {
@@ -256,24 +255,24 @@ void savestates_load()
 	}
 #endif
 
-	gzread(f, &llbit, 4);
-	gzread(f, reg, 32*8);
+	gzread(f, &r4300.llbit, 4);
+	gzread(f, r4300.gpr, 32*8);
 	for (i=0; i<32; i++) 
 	{
-		gzread(f, reg_cop0+i, 4);
+		gzread(f, r4300.reg_cop0+i, 4);
 		gzread(f, buf, 4); // for compatibility with old versions purpose
 	}
-	set_fpr_pointers(Status);  // Status is reg_cop0[12]
-	gzread(f, &lo, 8);
-	gzread(f, &hi, 8);
-	gzread(f, reg_cop1_fgr_64, 32*8);
+	set_fpr_pointers(Status);  // Status is r4300.reg_cop0[12]
+	gzread(f, &r4300.lo, 8);
+	gzread(f, &r4300.hi, 8);
+	gzread(f, r4300.fpr_data, 32*8);
 	if ((Status & 0x04000000) == 0)  // 32-bit FPR mode requires data shuffling because 64-bit layout is always stored in savestate file
 		shuffle_fpr_data(0x04000000, 0);
-	gzread(f, &FCR0, 4);
-	gzread(f, &FCR31, 4);
+	gzread(f, &r4300.fcr0, 4);
+	gzread(f, &r4300.fcr31, 4);
 	gzread(f, tlb_e, 32*sizeof(tlb));
-	gzread(f, &interp_addr, 4);       //dynarec should be ok with just this
-	gzread(f, &next_interupt, 4);
+	gzread(f, &r4300.pc, 4);       //dynarec should be ok with just this
+	gzread(f, &r4300.next_interrupt, 4);
 	gzread(f, &next_vi, 4);
 	gzread(f, &vi_field, 4);
 	
@@ -288,8 +287,8 @@ void savestates_load()
 	load_eventqueue_infos(buf);
 	
 	gzclose(f);
-	last_addr = interp_addr;
-	if(stop) {
+	r4300.last_pc = r4300.pc;
+	if(r4300.stop) {
 	  continueRemovalThread();
   }
   else {

@@ -188,7 +188,7 @@ void flashram_command(unsigned long command)
 	     break;
 	   default:
 	     printf("unknown flashram command with mode:%x\n", (int)mode);
-	     stop=1;
+	     r4300.stop=1;
 	  }
 	mode = NOPES_MODE;
 	break;
@@ -202,7 +202,7 @@ void flashram_command(unsigned long command)
 	break;
       default:
 	printf("unknown flashram command:%x\n", (int)command);
-	//stop=1;
+	//r4300.stop=1;
      }
 }
 
@@ -224,7 +224,7 @@ void dma_read_flashram()
 	break;
       default:
 	printf("unknown dma_read_flashram:%x\n", mode);
-	stop=1;
+	r4300.stop=1;
      }
 }
 
@@ -237,6 +237,6 @@ void dma_write_flashram()
 	break;
       default:
 	printf("unknown dma_read_flashram:%x\n", mode);
-	stop=1;
+	r4300.stop=1;
      }
 }

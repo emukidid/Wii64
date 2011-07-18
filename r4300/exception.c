@@ -31,12 +31,10 @@
 
 #include "r4300.h"
 #include "macros.h"
-#include "recomph.h"
 #include "exception.h"
 #include "../gui/DEBUG.h"
 #include "../gc_memory/memory.h"
 
-extern unsigned long interp_addr;
 
 #ifdef DEBUGON
 #define doBreak() _break();
@@ -47,27 +45,27 @@ extern unsigned long interp_addr;
 void address_error_exception()
 {
   printf("address_error_exception\n");
-  stop=1;
+  r4300.stop=1;
   doBreak();     
 }
 
 void TLB_invalid_exception()
 {
-  if (delay_slot) {
-    skip_jump = 1;
+  if (r4300.delay_slot) {
+    r4300.skip_jump = 1;
     printf("delay slot\nTLB refill exception\n");
-    stop=1;
+    r4300.stop=1;
     doBreak();
   }
   printf("TLB invalid exception\n");
-  stop=1;
+  r4300.stop=1;
   doBreak();
 }
 
 void XTLB_refill_exception(unsigned long long int addresse)
 {
   printf("XTLB refill exception\n");
-  stop=1;
+  r4300.stop=1;
   doBreak();   
 }
 
@@ -83,13 +81,8 @@ void TLB_refill_exception(unsigned long address, int w)
   Context = (Context & 0xFF80000F) | ((address >> 9) & 0x007FFFF0);
   EntryHi = address & 0xFFFFE000;
   if (Status & 0x2) { // Test de EXL
-    if(dynacore || interpcore) {  //wii64: used to be just interpcore here in mupen64 0.5 code
-      interp_addr = 0x80000180;
-    }
-    else {                        //wii64: path will never be taken (that's ok)
-      jump_to(0x80000180);
-    }
-    if(delay_slot==1 || delay_slot==3) {
+	r4300.pc = 0x80000180;
+    if(r4300.delay_slot==1 || r4300.delay_slot==3) {
       Cause |= 0x80000000;
     }
     else {
@@ -97,13 +90,10 @@ void TLB_refill_exception(unsigned long address, int w)
     }
   }
   else {
-    if (!interpcore && !dynacore) { //wii64: used to be just (!interpcore) here in mupen64 0.5 code
-      EPC = w!=2 ? PC->addr: address; //wii64: this path should NEVER be taken, but what is w!=2 ?
-    }
-	else if(dynacore && w==2) {
+	if(w==2) {
 		EPC = address;
 	} else {
-		EPC = interp_addr;
+		EPC = r4300.pc;
 	}
        
     Cause &= ~0x80000000;
@@ -121,24 +111,14 @@ void TLB_refill_exception(unsigned long address, int w)
       }
     }
     if (usual_handler) {
-      if(dynacore || interpcore) {  //wii64: used to be just interpcore in mupen64 0.5 code
-        interp_addr = 0x80000180;
-      }
-      else {                        //wii64: path never taken
-        jump_to(0x80000180);
-      }
+      r4300.pc = 0x80000180;
     }
     else {
-      if(dynacore || interpcore) {  //wii64: used to be just interpcore in mupen64 0.5 code
-        interp_addr = 0x80000000;
-      }
-      else {                        //wii64: path never taken
-        jump_to(0x80000000);
-      }
+      r4300.pc = 0x80000000;
     }
   }
   
-  if(delay_slot==1 || delay_slot==3) {
+  if(r4300.delay_slot==1 || r4300.delay_slot==3) {
     Cause |= 0x80000000;
     EPC-=4;
   }
@@ -150,55 +130,45 @@ void TLB_refill_exception(unsigned long address, int w)
     EPC-=4;  //wii64: wtf is w != 2 ?
   }
    
-  if(dynacore || interpcore) {    //wii64: used to be just interpcore in mupen64 0.5 code
-    last_addr = interp_addr;
-  }
-  else {                          //wii64: path never taken
-    last_addr = PC->addr;
-  }
+  r4300.last_pc = r4300.pc;
    
   /*
   // wii64: I'm not sure if this does any good, WTF is dyna_interp?
   if (dynacore) {
     dyna_jump();
     if (!dyna_interp) {
-      delay_slot = 0;
+      r4300.delay_slot = 0;
     }
   }  
    
   if (!dynacore || dyna_interp) {
     dyna_interp = 0;
     */
-    if (delay_slot) {
-      if (dynacore || interpcore) { //wii64: used to be (!dynacore || interpcore) in mupen64 0.5 code
-        skip_jump = interp_addr;
-      }
-      else {                        //wii64: path never taken
-        skip_jump = PC->addr;
-      }
-      next_interupt = 0;
-    }
+  if (r4300.delay_slot) {
+    r4300.skip_jump = r4300.pc;
+    r4300.next_interrupt = 0;
+  }
   /*}*/
 }
 
 void TLB_mod_exception()
 {
   printf("TLB mod exception\n");
-  stop=1;
+  r4300.stop=1;
   doBreak();
 }
 
 void integer_overflow_exception()
 {
   printf("integer overflow exception\n");
-  stop=1;
+  r4300.stop=1;
   doBreak();
 }
 
 void coprocessor_unusable_exception()
 {
   printf("coprocessor_unusable_exception\n");
-  stop=1;
+  r4300.stop=1;
   doBreak();
 }
 
@@ -207,48 +177,32 @@ void exception_general()
   update_count();
   Status |= 2;
    
-  if(!dynacore && !interpcore) {  // wii64: used to be !interpcore in mupen64 0.5 code
-    EPC = PC->addr;
-  }
-  else {
-    EPC = interp_addr;            // wii64: path never taken
-  }
+  EPC = r4300.pc;
 
-  if(delay_slot==1 || delay_slot==3) {
+  if(r4300.delay_slot==1 || r4300.delay_slot==3) {
     Cause |= 0x80000000;
     EPC-=4;
   }
   else {
     Cause &= 0x7FFFFFFF;
   }
-  if(dynacore || interpcore) {    // wii64: used to be interpcore in mupen64 0.5 code
-    interp_addr = 0x80000180;
-    last_addr = interp_addr;
-  }
-  else {                          // wii64: path never taken
-    jump_to(0x80000180);
-    last_addr = PC->addr;
-  }
+  r4300.pc = 0x80000180;
+  r4300.last_pc = r4300.pc;
   
   /*
   // wii64: Again, WTF?
   if (dynacore) {
     dyna_jump();
     if (!dyna_interp) {
-      delay_slot = 0;
+      r4300.delay_slot = 0;
     }
   }
   if (!dynacore || dyna_interp) {
     dyna_interp = 0;
     */
-    if (delay_slot) {
-      if (dynacore || interpcore) { //wii64: used to be (!dynacore || interpcore) in mupen64 0.5 code
-        skip_jump = interp_addr;
-      }
-      else {                        //wii64: path never taken
-        skip_jump = PC->addr;
-      }
-      next_interupt = 0;
+    if (r4300.delay_slot) {
+      r4300.skip_jump = r4300.pc;
+      r4300.next_interrupt = 0;
     }
   /*}*/
 }

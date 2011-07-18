@@ -116,10 +116,10 @@ void update_FGR()
 
 	gtk_clist_freeze( GTK_CLIST(clFGR) );
 	for(i=0; i<32; i++) {
-		if( gui_fantom_simple[i]!= *reg_cop1_simple[i] )
+		if( gui_fantom_simple[i]!= *r4300.fpr_single[i] )
 		{
-			gui_fantom_simple[i] = *reg_cop1_simple[i];
-			sprintf(txt, "%f", *reg_cop1_simple[i] );
+			gui_fantom_simple[i] = *r4300.fpr_single[i];
+			sprintf(txt, "%f", *r4300.fpr_single[i] );
 			gtk_clist_set_text( GTK_CLIST(clFGR), i, 0, txt );
 			gtk_clist_set_background( GTK_CLIST(clFGR), i, &color_modif);
 		} else {
@@ -130,10 +130,10 @@ void update_FGR()
 
 	gtk_clist_freeze( GTK_CLIST(clFGR2) );
 	for(i=0; i<32; i++) {
-		if( gui_fantom_double[i]!=  *reg_cop1_double[i] )
+		if( gui_fantom_double[i]!=  *r4300.fpr_double[i] )
 		{
-			gui_fantom_double[i] = *reg_cop1_double[i];
-			sprintf(txt, "%f", *reg_cop1_double[i] );
+			gui_fantom_double[i] = *r4300.fpr_double[i];
+			sprintf(txt, "%f", *r4300.fpr_double[i] );
 			gtk_clist_set_text( GTK_CLIST(clFGR2), i, 0, txt );
 			gtk_clist_set_background( GTK_CLIST(clFGR2), i, &color_modif);
 		} else {

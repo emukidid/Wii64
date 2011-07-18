@@ -117,7 +117,7 @@ void ROMCache_deinit(){
 }
 
 static void inline ROMCache_load_block(char* block, int rom_offset){
-  if((hasLoadedROM) && (!stop))
+  if((hasLoadedROM) && (!r4300.stop))
     pauseAudio();
 	showLoadProgress(1.0f);
 	romFile_seekFile(ROM_file, rom_offset, FILE_BROWSER_SEEK_SET);
@@ -140,7 +140,7 @@ static void inline ROMCache_load_block(char* block, int rom_offset){
 	} while(offset != BLOCK_SIZE && bytes_read == bytes_to_read);
 	free(buffer);
 //	showLoadProgress(1.0f);
-  if((hasLoadedROM) && (!stop))
+  if((hasLoadedROM) && (!r4300.stop))
     resumeAudio();
 }
 

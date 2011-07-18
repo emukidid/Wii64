@@ -132,10 +132,10 @@ void update_GPR()
 	{
 		// Les "registres fantomes" evitent de raffraichir l'affichage de chaque
 		// registre. Seules les modifications sont affichees a l'ecran.
-		if(gui_fantom_gpr[i]!=reg[i])
+		if(gui_fantom_gpr[i]!=r4300.gpr[i])
 		{
-			gui_fantom_gpr[i] = reg[i];
-			sprintf(txt, "%.16llX", reg[i]);
+			gui_fantom_gpr[i] = r4300.gpr[i];
+			sprintf(txt, "%.16llX", r4300.gpr[i]);
 			gtk_clist_set_text( GTK_CLIST(clGPR), i, 0, txt );
 			gtk_clist_set_background( GTK_CLIST(clGPR), i, &color_modif);
 		}

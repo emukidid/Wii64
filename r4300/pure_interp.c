@@ -66,7 +66,6 @@ static void invalidate_func(unsigned int addr){
 #define check_memory()
 #endif
 
-unsigned long interp_addr;
 unsigned long op;
 static long skip;
 
@@ -79,7 +78,7 @@ extern unsigned long next_vi;
 static void NI()
 {
    printf("NI:%x\n", (unsigned int)op);
-   stop=1; 
+   r4300.stop=1; 
 #ifdef DEBUGON
   _break();
 #endif     
@@ -89,77 +88,77 @@ static void SLL()
 {
    rrd32 = (unsigned long)(rrt32) << rsa;
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SRL()
 {
    rrd32 = (unsigned long)rrt32 >> rsa;
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SRA()
 {
    rrd32 = (signed long)rrt32 >> rsa;
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SLLV()
 {
    rrd32 = (unsigned long)(rrt32) << (rrs32&0x1F);
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SRLV()
 {
    rrd32 = (unsigned long)rrt32 >> (rrs32 & 0x1F);
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SRAV()
 {
    rrd32 = (signed long)rrt32 >> (rrs32 & 0x1F);
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void JR()
 {
    local_rs32 = irs32;
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
-   interp_addr = local_rs32;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.delay_slot=0;
+   r4300.pc = local_rs32;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void JALR()
 {
    unsigned long long int *dest = PC->f.r.rd;
    local_rs32 = rrs32;
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
-   if (!skip_jump)
+   r4300.delay_slot=0;
+   if (!r4300.skip_jump)
      {
-	*dest = interp_addr;
+	*dest = r4300.pc;
 	sign_extended(*dest);
 
-	interp_addr = local_rs32;
+	r4300.pc = local_rs32;
      }
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void SYSCALL()
@@ -170,7 +169,7 @@ static void SYSCALL()
 
 static void SYNC()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 #define DUMP_ON_BREAK
@@ -182,12 +181,12 @@ static void BREAK(){
 #ifdef DEBUGON
 	_break(); return;
 #endif
-	printf("-- BREAK @ %08x: DUMPING N64 REGISTERS --\n", interp_addr);
+	printf("-- BREAK @ %08x: DUMPING N64 REGISTERS --\n", r4300.pc);
 	int i;
 	for(i=0; i<32; i+=4)
 		printf("r%2d: %08x  r%2d: %08x  r%2d: %08x  r%2d: %08x\n",
-		       i, (unsigned int)reg[i], i+1, (unsigned int)reg[i+1],
-		       i+2, (unsigned int)reg[i+2], i+3, (unsigned int)reg[i+3]);
+		       i, (unsigned int)r4300.gpr[i], i+1, (unsigned int)r4300.gpr[i+1],
+		       i+2, (unsigned int)r4300.gpr[i+2], i+3, (unsigned int)r4300.gpr[i+3]);
 	printf("Press A to continue execution\n");
 	while(!(PAD_ButtonsHeld(0) & PAD_BUTTON_A));
 	while( (PAD_ButtonsHeld(0) & PAD_BUTTON_A));
@@ -196,90 +195,90 @@ static void BREAK(){
 
 static void MFHI()
 {
-   rrd = hi;
-   interp_addr+=4;
+   rrd = r4300.hi;
+   r4300.pc+=4;
 }
 
 static void MTHI()
 {
-   hi = rrs;
-   interp_addr+=4;
+   r4300.hi = rrs;
+   r4300.pc+=4;
 }
 
 static void MFLO()
 {
-   rrd = lo;
-   interp_addr+=4;
+   rrd = r4300.lo;
+   r4300.pc+=4;
 }
 
 static void MTLO()
 {
-   lo = rrs;
-   interp_addr+=4;
+   r4300.lo = rrs;
+   r4300.pc+=4;
 }
 
 static void DSLLV()
 {
    rrd = rrt << (rrs32&0x3F);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSRLV()
 {
    rrd = (unsigned long long)rrt >> (rrs32 & 0x3F);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSRAV()
 {
    rrd = (long long)rrt >> (rrs32 & 0x3F);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void MULT()
 {
    long long int temp;
    temp = rrs * rrt;
-   hi = temp >> 32;
-   lo = temp;
-   sign_extended(lo);
-   interp_addr+=4;
+   r4300.hi = temp >> 32;
+   r4300.lo = temp;
+   sign_extended(r4300.lo);
+   r4300.pc+=4;
 }
 
 static void MULTU()
 {
    unsigned long long int temp;
    temp = (unsigned long)rrs * (unsigned long long)((unsigned long)rrt);
-   hi = (long long)temp >> 32;
-   lo = temp;
-   sign_extended(lo);
-   interp_addr+=4;
+   r4300.hi = (long long)temp >> 32;
+   r4300.lo = temp;
+   sign_extended(r4300.lo);
+   r4300.pc+=4;
 }
 
 static void DIV()
 {
    if (rrt32)
      {
-	lo = rrs32 / rrt32;
-	hi = rrs32 % rrt32;
-	sign_extended(lo);
-	sign_extended(hi);
+	r4300.lo = rrs32 / rrt32;
+	r4300.hi = rrs32 % rrt32;
+	sign_extended(r4300.lo);
+	sign_extended(r4300.hi);
      }
    else printf("div\n");
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DIVU()
 {
    if (rrt32)
      {
-	lo = (unsigned long)rrs32 / (unsigned long)rrt32;
-	hi = (unsigned long)rrs32 % (unsigned long)rrt32;
-	sign_extended(lo);
-	sign_extended(hi);
+	r4300.lo = (unsigned long)rrs32 / (unsigned long)rrt32;
+	r4300.hi = (unsigned long)rrs32 % (unsigned long)rrt32;
+	sign_extended(r4300.lo);
+	sign_extended(r4300.hi);
      }
    else printf("divu\n");
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DMULT()
@@ -317,15 +316,15 @@ static void DMULT()
    result3 = (result2 >> 32) + temp4;
    result4 = (result3 >> 32);
 
-   lo = result1 | (result2 << 32);
-   hi = (result3 & 0xFFFFFFFF) | (result4 << 32);
+   r4300.lo = result1 | (result2 << 32);
+   r4300.hi = (result3 & 0xFFFFFFFF) | (result4 << 32);
    if (sign)
      {
-	hi = ~hi;
-	if (!lo) hi++;
-	else lo = ~lo + 1;
+	r4300.hi = ~r4300.hi;
+	if (!r4300.lo) r4300.hi++;
+	else r4300.lo = ~r4300.lo + 1;
      }
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DMULTU()
@@ -349,91 +348,91 @@ static void DMULTU()
    result3 = (result2 >> 32) + temp4;
    result4 = (result3 >> 32);
 
-   lo = result1 | (result2 << 32);
-   hi = (result3 & 0xFFFFFFFF) | (result4 << 32);
+   r4300.lo = result1 | (result2 << 32);
+   r4300.hi = (result3 & 0xFFFFFFFF) | (result4 << 32);
 
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DDIV()
 {
    if (rrt)
      {
-	lo = (long long int)rrs / (long long int)rrt;
-	hi = (long long int)rrs % (long long int)rrt;
+	r4300.lo = (long long int)rrs / (long long int)rrt;
+	r4300.hi = (long long int)rrs % (long long int)rrt;
      }
    else printf("ddiv\n");
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DDIVU()
 {
    if (rrt)
      {
-	lo = (unsigned long long int)rrs / (unsigned long long int)rrt;
-	hi = (unsigned long long int)rrs % (unsigned long long int)rrt;
+	r4300.lo = (unsigned long long int)rrs / (unsigned long long int)rrt;
+	r4300.hi = (unsigned long long int)rrs % (unsigned long long int)rrt;
      }
    else printf("ddivu\n");
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void ADD()
 {
    rrd32 = rrs32 + rrt32;
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void ADDU()
 {
    rrd32 = rrs32 + rrt32;
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SUB()
 {
    rrd32 = rrs32 - rrt32;
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SUBU()
 {
    rrd32 = rrs32 - rrt32;
    sign_extended(rrd);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void AND()
 {
    rrd = rrs & rrt;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void OR()
 {
    rrd = rrs | rrt;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void XOR()
 {
    rrd = rrs ^ rrt;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void NOR()
 {
    rrd = ~(rrs | rrt);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SLT()
 {
    if (rrs < rrt) rrd = 1;
    else rrd = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SLTU()
@@ -441,31 +440,31 @@ static void SLTU()
    if ((unsigned long long)rrs < (unsigned long long)rrt)
      rrd = 1;
    else rrd = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DADD()
 {
    rrd = rrs + rrt;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DADDU()
 {
    rrd = rrs + rrt;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSUB()
 {
    rrd = rrs - rrt;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSUBU()
 {
    rrd = rrs - rrt;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void TEQ()
@@ -473,48 +472,48 @@ static void TEQ()
    if (rrs == rrt)
      {
 	printf("trap exception in teq\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSLL()
 {
    rrd = rrt << rsa;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSRL()
 {
    rrd = (unsigned long long)rrt >> rsa;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSRA()
 {
    rrd = rrt >> rsa;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSLL32()
 {
    rrd = rrt << (32+rsa);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSRL32()
 {
    rrd = (unsigned long long int)rrt >> (32+rsa);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DSRA32()
 {
    rrd = (signed long long int)rrt >> (32+rsa);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void (*interp_special[64])(void) =
@@ -533,13 +532,13 @@ static void BLTZ()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (local_rs < 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -547,29 +546,29 @@ static void BLTZ()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
+   r4300.delay_slot=0;
    if (local_rs < 0)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BGEZ()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (local_rs >= 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -577,29 +576,29 @@ static void BGEZ()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
+   r4300.delay_slot=0;
    if (local_rs >= 0)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BLTZL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (irs < 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -609,30 +608,30 @@ static void BLTZL()
        }
    if (irs < 0)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
-   else interp_addr+=8;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   else r4300.pc+=8;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BGEZL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (irs >= 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -642,33 +641,33 @@ static void BGEZL()
        }
    if (irs >= 0)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
-   else interp_addr+=8;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   else r4300.pc+=8;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BLTZAL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   reg[31]=interp_addr+8;
-   if((&irs)!=(reg+31))
+   r4300.gpr[31]=r4300.pc+8;
+   if((&irs)!=(r4300.gpr+31))
      {
-	if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+	if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
 	  if (local_rs < 0)
 	    {
-	       if (probe_nop(interp_addr+4))
+	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = next_interupt - Count;
+		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
 			 Count += (skip & 0xFFFFFFFC);
@@ -676,34 +675,34 @@ static void BLTZAL()
 		      }
 		 }
 	    }
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
+	r4300.delay_slot=0;
 	if(local_rs < 0)
-	  interp_addr += (local_immediate-1)*4;
+	  r4300.pc += (local_immediate-1)*4;
      }
    else printf("erreur dans bltzal\n");
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BGEZAL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   reg[31]=interp_addr+8;
-   if((&irs)!=(reg+31))
+   r4300.gpr[31]=r4300.pc+8;
+   if((&irs)!=(r4300.gpr+31))
      {
-	if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+	if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
 	  if (local_rs >= 0)
 	    {
-	       if (probe_nop(interp_addr+4))
+	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = next_interupt - Count;
+		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
 			 Count += (skip & 0xFFFFFFFC);
@@ -711,34 +710,34 @@ static void BGEZAL()
 		      }
 		 }
 	    }
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
+	r4300.delay_slot=0;
 	if(local_rs >= 0)
-	  interp_addr += (local_immediate-1)*4;
+	  r4300.pc += (local_immediate-1)*4;
      }
    else printf("erreur dans bgezal\n");
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BLTZALL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   reg[31]=interp_addr+8;
-   if((&irs)!=(reg+31))
+   r4300.gpr[31]=r4300.pc+8;
+   if((&irs)!=(r4300.gpr+31))
      {
-	if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+	if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
 	  if (local_rs < 0)
 	    {
-	       if (probe_nop(interp_addr+4))
+	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = next_interupt - Count;
+		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
 			 Count += (skip & 0xFFFFFFFC);
@@ -748,35 +747,35 @@ static void BLTZALL()
 	    }
 	if (local_rs < 0)
 	  {
-	     interp_addr+=4;
-	     delay_slot=1;
+	     r4300.pc+=4;
+	     r4300.delay_slot=1;
 	     prefetch();
 	     interp_ops[((op >> 26) & 0x3F)]();
 	     update_count();
-	     delay_slot=0;
-	     interp_addr += (local_immediate-1)*4;
+	     r4300.delay_slot=0;
+	     r4300.pc += (local_immediate-1)*4;
 	  }
-	else interp_addr+=8;
+	else r4300.pc+=8;
      }
    else printf("erreur dans bltzall\n");
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BGEZALL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   reg[31]=interp_addr+8;
-   if((&irs)!=(reg+31))
+   r4300.gpr[31]=r4300.pc+8;
+   if((&irs)!=(r4300.gpr+31))
      {
-	if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+	if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
 	  if (local_rs >= 0)
 	    {
-	       if (probe_nop(interp_addr+4))
+	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = next_interupt - Count;
+		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
 			 Count += (skip & 0xFFFFFFFC);
@@ -786,19 +785,19 @@ static void BGEZALL()
 	    }
 	if (local_rs >= 0)
 	  {
-	     interp_addr+=4;
-	     delay_slot=1;
+	     r4300.pc+=4;
+	     r4300.delay_slot=1;
 	     prefetch();
 	     interp_ops[((op >> 26) & 0x3F)]();
 	     update_count();
-	     delay_slot=0;
-	     interp_addr += (local_immediate-1)*4;
+	     r4300.delay_slot=0;
+	     r4300.pc += (local_immediate-1)*4;
 	  }
-	else interp_addr+=8;
+	else r4300.pc+=8;
      }
    else printf("erreur dans bgezall\n");
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void (*interp_regimm[32])(void) =
@@ -821,7 +820,7 @@ static void TLBR()
    EntryLo1 = (tlb_e[index].pfn_odd << 6) | (tlb_e[index].c_odd << 3)
      | (tlb_e[index].d_odd << 2) | (tlb_e[index].v_odd << 1)
        | tlb_e[index].g;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void TLBWI()
@@ -937,7 +936,7 @@ static void TLBWI()
 #endif
 	  }
      }
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void TLBWR()
@@ -1049,7 +1048,7 @@ static void TLBWR()
 #endif
 		}
 	}
-	interp_addr+=4;
+	r4300.pc+=4;
 }
 
 static void TLBP()
@@ -1067,7 +1066,7 @@ static void TLBP()
 	     break;
 	  }
      }
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void ERET()
@@ -1077,7 +1076,7 @@ static void ERET()
    if (Status & 0x4)
      {
 	printf("erreur dans ERET\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
@@ -1085,12 +1084,12 @@ static void ERET()
    else
      {
 	Status &= 0xFFFFFFFD;
-	interp_addr = EPC;
+	r4300.pc = EPC;
      }
-   llbit = 0;
+   r4300.llbit = 0;
    check_interupt();
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void (*interp_tlb[64])(void) =
@@ -1111,15 +1110,15 @@ static void MFC0()
      {
       case 1:
 	printf("lecture de Random\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
       default:
-	rrt32 = reg_cop0[PC->f.r.nrd];
+	rrt32 = r4300.reg_cop0[PC->f.r.nrd];
 	sign_extended(rrt);
      }
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void MTC0()
@@ -1131,7 +1130,7 @@ static void MTC0()
 	if ((Index & 0x3F) > 31)
 	  {
 	     printf ("il y a plus de 32 TLB\n");
-	     stop=1;
+	     r4300.stop=1;
 #ifdef DEBUGON
        _break();
 #endif     
@@ -1159,7 +1158,7 @@ static void MTC0()
 	break;
       case 9:    // Count
 	update_count();
-	if (next_interupt <= Count) gen_interupt();
+	if (r4300.next_interrupt <= Count) gen_interupt();
 	debug_count += Count;
 	translate_event_queue(rrt & 0xFFFFFFFF);
 	Count = rrt & 0xFFFFFFFF;
@@ -1182,17 +1181,17 @@ static void MTC0()
 		set_fpr_pointers(rrt);
 	}
 	Status = rrt;
-	interp_addr+=4;
+	r4300.pc+=4;
 	check_interupt();
 	update_count();
-	if (next_interupt <= Count) gen_interupt();
-	interp_addr-=4;
+	if (r4300.next_interrupt <= Count) gen_interupt();
+	r4300.pc-=4;
 	break;
       case 13:   // Cause
 	if (rrt!=0)
 	  {
 	     printf("�criture dans Cause\n");
-	     stop = 1;
+	     r4300.stop = 1;
 #ifdef DEBUGON
        _break();
 #endif     
@@ -1223,12 +1222,12 @@ static void MTC0()
 	break;
       default:
 	printf("unknown mtc0 write : %d\n", PC->f.r.nrd);
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void TLB()
@@ -1249,13 +1248,13 @@ static void (*interp_cop0[32])(void) =
 static void BC1F()
 {
    short local_immediate = iimmediate;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
-     if ((FCR31 & 0x800000)==0)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
+     if ((r4300.fcr31 & 0x800000)==0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -1263,28 +1262,28 @@ static void BC1F()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
-   if ((FCR31 & 0x800000)==0)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.delay_slot=0;
+   if ((r4300.fcr31 & 0x800000)==0)
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BC1T()
 {
    short local_immediate = iimmediate;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
-     if ((FCR31 & 0x800000)!=0)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
+     if ((r4300.fcr31 & 0x800000)!=0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -1292,28 +1291,28 @@ static void BC1T()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
-   if ((FCR31 & 0x800000)!=0)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.delay_slot=0;
+   if ((r4300.fcr31 & 0x800000)!=0)
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BC1FL()
 {
    short local_immediate = iimmediate;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
-     if ((FCR31 & 0x800000)==0)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
+     if ((r4300.fcr31 & 0x800000)==0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -1321,32 +1320,32 @@ static void BC1FL()
 		 }
 	    }
        }
-   if ((FCR31 & 0x800000)==0)
+   if ((r4300.fcr31 & 0x800000)==0)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
    else
-     interp_addr+=8;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc+=8;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BC1TL()
 {
    short local_immediate = iimmediate;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
-     if ((FCR31 & 0x800000)!=0)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
+     if ((r4300.fcr31 & 0x800000)!=0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -1354,20 +1353,20 @@ static void BC1TL()
 		 }
 	    }
        }
-   if ((FCR31 & 0x800000)!=0)
+   if ((r4300.fcr31 & 0x800000)!=0)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
    else
-     interp_addr+=8;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc+=8;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void (*interp_cop1_bc[4])(void) =
@@ -1379,334 +1378,334 @@ static void (*interp_cop1_bc[4])(void) =
 static void ADD_S()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = *reg_cop1_simple[cffs] +
-     *reg_cop1_simple[cfft];
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *r4300.fpr_single[cffs] +
+     *r4300.fpr_single[cfft];
+   r4300.pc+=4;
 }
 
 static void SUB_S()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = *reg_cop1_simple[cffs] -
-     *reg_cop1_simple[cfft];
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *r4300.fpr_single[cffs] -
+     *r4300.fpr_single[cfft];
+   r4300.pc+=4;
 }
 
 static void MUL_S()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = *reg_cop1_simple[cffs] *
-     *reg_cop1_simple[cfft];
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *r4300.fpr_single[cffs] *
+     *r4300.fpr_single[cfft];
+   r4300.pc+=4;
 }
 
 static void DIV_S()
 {
-   if((FCR31 & 0x400) && *reg_cop1_simple[cfft] == 0)
+   if((r4300.fcr31 & 0x400) && *r4300.fpr_single[cfft] == 0)
      {
 	printf("div_s by 0\n");
      }
    set_rounding();
-   *reg_cop1_simple[cffd] = *reg_cop1_simple[cffs] /
-     *reg_cop1_simple[cfft];
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *r4300.fpr_single[cffs] /
+     *r4300.fpr_single[cfft];
+   r4300.pc+=4;
 }
 
 static void SQRT_S()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = sqrt(*reg_cop1_simple[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = sqrt(*r4300.fpr_single[cffs]);
+   r4300.pc+=4;
 }
 
 static void ABS_S()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = fabs(*reg_cop1_simple[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = fabs(*r4300.fpr_single[cffs]);
+   r4300.pc+=4;
 }
 
 static void MOV_S()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void NEG_S()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = -(*reg_cop1_simple[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = -(*r4300.fpr_single[cffs]);
+   r4300.pc+=4;
 }
 
 static void ROUND_L_S()
 {
    set_round();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void TRUNC_L_S()
 {
    set_trunc();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void CEIL_L_S()
 {
    set_ceil();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void FLOOR_L_S()
 {
    set_floor();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void ROUND_W_S()
 {
    set_round();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void TRUNC_W_S()
 {
    set_trunc();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void CEIL_W_S()
 {
    set_ceil();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void FLOOR_W_S()
 {
    set_floor();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void CVT_D_S()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void CVT_W_S()
 {
    set_rounding();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void CVT_L_S()
 {
    set_rounding();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_simple[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_single[cffs];
+   r4300.pc+=4;
 }
 
 static void C_F_S()
 {
-   FCR31 &= ~0x800000;
-   interp_addr+=4;
+   r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_UN_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_EQ_S()
 {
-   if (!isnan(*reg_cop1_simple[cffs]) && !isnan(*reg_cop1_simple[cfft]) &&
-       *reg_cop1_simple[cffs] == *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (!isnan(*r4300.fpr_single[cffs]) && !isnan(*r4300.fpr_single[cfft]) &&
+       *r4300.fpr_single[cffs] == *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_UEQ_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]) ||
-       *reg_cop1_simple[cffs] == *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]) ||
+       *r4300.fpr_single[cffs] == *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_OLT_S()
 {
-   if (!isnan(*reg_cop1_simple[cffs]) && !isnan(*reg_cop1_simple[cfft]) &&
-       *reg_cop1_simple[cffs] < *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (!isnan(*r4300.fpr_single[cffs]) && !isnan(*r4300.fpr_single[cfft]) &&
+       *r4300.fpr_single[cffs] < *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_ULT_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]) ||
-       *reg_cop1_simple[cffs] < *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]) ||
+       *r4300.fpr_single[cffs] < *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_OLE_S()
 {
-   if (!isnan(*reg_cop1_simple[cffs]) && !isnan(*reg_cop1_simple[cfft]) &&
-       *reg_cop1_simple[cffs] <= *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (!isnan(*r4300.fpr_single[cffs]) && !isnan(*r4300.fpr_single[cfft]) &&
+       *r4300.fpr_single[cffs] <= *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_ULE_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]) ||
-       *reg_cop1_simple[cffs] <= *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]) ||
+       *r4300.fpr_single[cffs] <= *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_SF_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   FCR31 &= ~0x800000;
-   interp_addr+=4;
+   r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGLE_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   FCR31 &= ~0x800000;
-   interp_addr+=4;
+   r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_SEQ_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_simple[cffs] == *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_single[cffs] == *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGL_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_simple[cffs] == *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_single[cffs] == *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_LT_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_simple[cffs] < *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_single[cffs] < *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGE_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_simple[cffs] < *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_single[cffs] < *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_LE_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_simple[cffs] <= *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_single[cffs] <= *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGT_S()
 {
-   if (isnan(*reg_cop1_simple[cffs]) || isnan(*reg_cop1_simple[cfft]))
+   if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_simple[cffs] <= *reg_cop1_simple[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_single[cffs] <= *r4300.fpr_single[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void (*interp_cop1_s[64])(void) =
@@ -1724,339 +1723,339 @@ C_SF_S   ,C_NGLE_S ,C_SEQ_S ,C_NGL_S  ,C_LT_S   ,C_NGE_S  ,C_LE_S  ,C_NGT_S
 static void ADD_D()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = *reg_cop1_double[cffs] +
-     *reg_cop1_double[cfft];
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *r4300.fpr_double[cffs] +
+     *r4300.fpr_double[cfft];
+   r4300.pc+=4;
 }
 
 static void SUB_D()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = *reg_cop1_double[cffs] -
-     *reg_cop1_double[cfft];
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *r4300.fpr_double[cffs] -
+     *r4300.fpr_double[cfft];
+   r4300.pc+=4;
 }
 
 static void MUL_D()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = *reg_cop1_double[cffs] *
-     *reg_cop1_double[cfft];
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *r4300.fpr_double[cffs] *
+     *r4300.fpr_double[cfft];
+   r4300.pc+=4;
 }
 
 static void DIV_D()
 {
-   if((FCR31 & 0x400) && *reg_cop1_double[cfft] == 0)
+   if((r4300.fcr31 & 0x400) && *r4300.fpr_double[cfft] == 0)
      {
-	//FCR31 |= 0x8020;
-	/*FCR31 |= 0x8000;
+	//r4300.fcr31 |= 0x8020;
+	/*r4300.fcr31 |= 0x8000;
 	Cause = 15 << 2;
 	exception_general();*/
 	printf("div_d by 0\n");
 	//return;
      }
    set_rounding();
-   *reg_cop1_double[cffd] = *reg_cop1_double[cffs] /
-     *reg_cop1_double[cfft];
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *r4300.fpr_double[cffs] /
+     *r4300.fpr_double[cfft];
+   r4300.pc+=4;
 }
 
 static void SQRT_D()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = sqrt(*reg_cop1_double[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = sqrt(*r4300.fpr_double[cffs]);
+   r4300.pc+=4;
 }
 
 static void ABS_D()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = fabs(*reg_cop1_double[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = fabs(*r4300.fpr_double[cffs]);
+   r4300.pc+=4;
 }
 
 static void MOV_D()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void NEG_D()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = -(*reg_cop1_double[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = -(*r4300.fpr_double[cffs]);
+   r4300.pc+=4;
 }
 
 static void ROUND_L_D()
 {
    set_round();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void TRUNC_L_D()
 {
    set_trunc();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void CEIL_L_D()
 {
    set_ceil();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void FLOOR_L_D()
 {
    set_floor();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void ROUND_W_D()
 {
    set_round();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void TRUNC_W_D()
 {
    set_trunc();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void CEIL_W_D()
 {
    set_ceil();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void FLOOR_W_D()
 {
    set_floor();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void CVT_S_D()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void CVT_W_D()
 {
    set_rounding();
-   *((long*)reg_cop1_simple[cffd]) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[cffd]) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void CVT_L_D()
 {
    set_rounding();
-   *((long long*)(reg_cop1_double[cffd])) = *reg_cop1_double[cffs];
-   interp_addr+=4;
+   *((long long*)(r4300.fpr_double[cffd])) = *r4300.fpr_double[cffs];
+   r4300.pc+=4;
 }
 
 static void C_F_D()
 {
-   FCR31 &= ~0x800000;
-   interp_addr+=4;
+   r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_UN_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_EQ_D()
 {
-   if (!isnan(*reg_cop1_double[cffs]) && !isnan(*reg_cop1_double[cfft]) &&
-       *reg_cop1_double[cffs] == *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (!isnan(*r4300.fpr_double[cffs]) && !isnan(*r4300.fpr_double[cfft]) &&
+       *r4300.fpr_double[cffs] == *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_UEQ_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]) ||
-       *reg_cop1_double[cffs] == *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]) ||
+       *r4300.fpr_double[cffs] == *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_OLT_D()
 {
-   if (!isnan(*reg_cop1_double[cffs]) && !isnan(*reg_cop1_double[cfft]) &&
-       *reg_cop1_double[cffs] < *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (!isnan(*r4300.fpr_double[cffs]) && !isnan(*r4300.fpr_double[cfft]) &&
+       *r4300.fpr_double[cffs] < *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_ULT_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]) ||
-       *reg_cop1_double[cffs] < *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]) ||
+       *r4300.fpr_double[cffs] < *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_OLE_D()
 {
-   if (!isnan(*reg_cop1_double[cffs]) && !isnan(*reg_cop1_double[cfft]) &&
-       *reg_cop1_double[cffs] <= *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (!isnan(*r4300.fpr_double[cffs]) && !isnan(*r4300.fpr_double[cfft]) &&
+       *r4300.fpr_double[cffs] <= *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_ULE_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]) ||
-       *reg_cop1_double[cffs] <= *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]) ||
+       *r4300.fpr_double[cffs] <= *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_SF_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   FCR31 &= ~0x800000;
-   interp_addr+=4;
+   r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGLE_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   FCR31 &= ~0x800000;
-   interp_addr+=4;
+   r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_SEQ_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_double[cffs] == *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_double[cffs] == *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGL_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_double[cffs] == *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_double[cffs] == *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_LT_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_double[cffs] < *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_double[cffs] < *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGE_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_double[cffs] < *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_double[cffs] < *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_LE_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_double[cffs] <= *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_double[cffs] <= *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void C_NGT_D()
 {
-   if (isnan(*reg_cop1_double[cffs]) || isnan(*reg_cop1_double[cfft]))
+   if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
 	printf("Invalid operation exception in C opcode\n");
-	stop=1;
+	r4300.stop=1;
 #ifdef DEBUGON
   _break();
 #endif     
      }
-   if (*reg_cop1_double[cffs] <= *reg_cop1_double[cfft])
-     FCR31 |= 0x800000;
-   else FCR31 &= ~0x800000;
-   interp_addr+=4;
+   if (*r4300.fpr_double[cffs] <= *r4300.fpr_double[cfft])
+     r4300.fcr31 |= 0x800000;
+   else r4300.fcr31 &= ~0x800000;
+   r4300.pc+=4;
 }
 
 static void (*interp_cop1_d[64])(void) =
@@ -2074,15 +2073,15 @@ C_SF_D   ,C_NGLE_D ,C_SEQ_D ,C_NGL_D  ,C_LT_D   ,C_NGE_D  ,C_LE_D  ,C_NGT_D
 static void CVT_S_W()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = *((long*)reg_cop1_simple[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *((long*)r4300.fpr_single[cffs]);
+   r4300.pc+=4;
 }
 
 static void CVT_D_W()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = *((long*)reg_cop1_simple[cffs]);
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *((long*)r4300.fpr_single[cffs]);
+   r4300.pc+=4;
 }
 
 static void (*interp_cop1_w[64])(void) =
@@ -2100,15 +2099,15 @@ static void (*interp_cop1_w[64])(void) =
 static void CVT_S_L()
 {
    set_rounding();
-   *reg_cop1_simple[cffd] = *((long long*)(reg_cop1_double[cffs]));
-   interp_addr+=4;
+   *r4300.fpr_single[cffd] = *((long long*)(r4300.fpr_double[cffs]));
+   r4300.pc+=4;
 }
 
 static void CVT_D_L()
 {
    set_rounding();
-   *reg_cop1_double[cffd] = *((long long*)(reg_cop1_double[cffs]));
-   interp_addr+=4;
+   *r4300.fpr_double[cffd] = *((long long*)(r4300.fpr_double[cffs]));
+   r4300.pc+=4;
 }
 
 static void (*interp_cop1_l[64])(void) =
@@ -2125,49 +2124,49 @@ static void (*interp_cop1_l[64])(void) =
 
 static void MFC1()
 {
-   rrt32 = *((long*)reg_cop1_simple[rfs]);
+   rrt32 = *((long*)r4300.fpr_single[rfs]);
    sign_extended(rrt);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DMFC1()
 {
-   rrt = *((long long*)(reg_cop1_double[rfs]));
-   interp_addr+=4;
+   rrt = *((long long*)(r4300.fpr_double[rfs]));
+   r4300.pc+=4;
 }
 
 static void CFC1()
 {
    if (rfs==31)
      {
-	rrt32 = FCR31;
+	rrt32 = r4300.fcr31;
 	sign_extended(rrt);
      }
    if (rfs==0)
      {
-	rrt32 = FCR0;
+	rrt32 = r4300.fcr0;
 	sign_extended(rrt);
      }
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void MTC1()
 {
-   *((long*)reg_cop1_simple[rfs]) = rrt32;
-   interp_addr+=4;
+   *((long*)r4300.fpr_single[rfs]) = rrt32;
+   r4300.pc+=4;
 }
 
 static void DMTC1()
 {
-   *((long long*)reg_cop1_double[rfs]) = rrt;
-   interp_addr+=4;
+   *((long long*)r4300.fpr_double[rfs]) = rrt;
+   r4300.pc+=4;
 }
 
 static void CTC1()
 {
    if (rfs==31)
-     FCR31 = rrt32;
-   switch((FCR31 & 3))
+     r4300.fcr31 = rrt32;
+   switch((r4300.fcr31 & 3))
      {
       case 0:
 	rounding_mode = 0x33F;
@@ -2182,9 +2181,9 @@ static void CTC1()
 	rounding_mode = 0x73F;
 	break;
      }
-   //if ((FCR31 >> 7) & 0x1F) printf("FPU Exception enabled : %x\n",
-//				   (int)((FCR31 >> 7) & 0x1F));
-   interp_addr+=4;
+   //if ((r4300.fcr31 >> 7) & 0x1F) printf("FPU Exception enabled : %x\n",
+//				   (int)((r4300.fcr31 >> 7) & 0x1F));
+   r4300.pc+=4;
 }
 
 static void BC()
@@ -2232,13 +2231,13 @@ static void REGIMM()
 
 static void J()
 {
-   unsigned long naddr = (PC->f.j.inst_index<<2) | (interp_addr & 0xF0000000);
-   if (naddr == interp_addr)
+   unsigned long naddr = (PC->f.j.inst_index<<2) | (r4300.pc & 0xF0000000);
+   if (naddr == r4300.pc)
      {
-	if (probe_nop(interp_addr+4))
+	if (probe_nop(r4300.pc+4))
 	  {
 	     update_count();
-	     skip = next_interupt - Count;
+	     skip = r4300.next_interrupt - Count;
 	     if (skip > 3)
 	       {
 		  Count += (skip & 0xFFFFFFFC);
@@ -2246,26 +2245,26 @@ static void J()
 	       }
 	  }
      }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
-   interp_addr = naddr;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.delay_slot=0;
+   r4300.pc = naddr;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void JAL()
 {
-   unsigned long naddr = (PC->f.j.inst_index<<2) | (interp_addr & 0xF0000000);
-   if (naddr == interp_addr)
+   unsigned long naddr = (PC->f.j.inst_index<<2) | (r4300.pc & 0xF0000000);
+   if (naddr == r4300.pc)
      {
-	if (probe_nop(interp_addr+4))
+	if (probe_nop(r4300.pc+4))
 	  {
 	     update_count();
-	     skip = next_interupt - Count;
+	     skip = r4300.next_interrupt - Count;
 	     if (skip > 3)
 	       {
 		  Count += (skip & 0xFFFFFFFC);
@@ -2273,21 +2272,21 @@ static void JAL()
 	       }
 	  }
      }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
-   if (!skip_jump)
+   r4300.delay_slot=0;
+   if (!r4300.skip_jump)
      {
-	reg[31]=interp_addr;
-	sign_extended(reg[31]);
+	r4300.gpr[31]=r4300.pc;
+	sign_extended(r4300.gpr[31]);
 
-	interp_addr = naddr;
+	r4300.pc = naddr;
      }
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BEQ()
@@ -2295,13 +2294,13 @@ static void BEQ()
    short local_immediate = iimmediate;
    local_rs = irs;
    local_rt = irt;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (local_rs == local_rt)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2309,16 +2308,16 @@ static void BEQ()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
+   r4300.delay_slot=0;
    if (local_rs == local_rt)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BNE()
@@ -2326,13 +2325,13 @@ static void BNE()
    short local_immediate = iimmediate;
    local_rs = irs;
    local_rt = irt;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (local_rs != local_rt)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2340,29 +2339,29 @@ static void BNE()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
+   r4300.delay_slot=0;
    if (local_rs != local_rt)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BLEZ()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (local_rs <= 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2370,29 +2369,29 @@ static void BLEZ()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
+   r4300.delay_slot=0;
    if (local_rs <= 0)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BGTZ()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (local_rs > 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2400,37 +2399,37 @@ static void BGTZ()
 		 }
 	    }
        }
-   interp_addr+=4;
-   delay_slot=1;
+   r4300.pc+=4;
+   r4300.delay_slot=1;
    prefetch();
    interp_ops[((op >> 26) & 0x3F)]();
    update_count();
-   delay_slot=0;
+   r4300.delay_slot=0;
    if (local_rs > 0)
-     interp_addr += (local_immediate-1)*4;
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+     r4300.pc += (local_immediate-1)*4;
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void ADDI()
 {
    irt32 = irs32 + iimmediate;
    sign_extended(irt);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void ADDIU()
 {
    irt32 = irs32 + iimmediate;
    sign_extended(irt);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SLTI()
 {
    if (irs < iimmediate) irt = 1;
    else irt = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void SLTIU()
@@ -2438,32 +2437,32 @@ static void SLTIU()
    if ((unsigned long long)irs < (unsigned long long)((long long)iimmediate))
      irt = 1;
    else irt = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void ANDI()
 {
    irt = irs & (unsigned short)iimmediate;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void ORI()
 {
    irt = irs | (unsigned short)iimmediate;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void XORI()
 {
    irt = irs ^ (unsigned short)iimmediate;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void LUI()
 {
    irt32 = iimmediate << 16;
    sign_extended(irt);
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void COP0()
@@ -2484,13 +2483,13 @@ static void BEQL()
    short local_immediate = iimmediate;
    local_rs = irs;
    local_rt = irt;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (irs == irt)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2500,21 +2499,21 @@ static void BEQL()
        }
    if (local_rs == local_rt)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
    else
      {
-	interp_addr+=8;
+	r4300.pc+=8;
 	update_count();
      }
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BNEL()
@@ -2522,13 +2521,13 @@ static void BNEL()
    short local_immediate = iimmediate;
    local_rs = irs;
    local_rt = irt;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (irs != irt)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2538,34 +2537,34 @@ static void BNEL()
        }
    if (local_rs != local_rt)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
    else
      {
-	interp_addr+=8;
+	r4300.pc+=8;
 	update_count();
      }
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BLEZL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (irs <= 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2575,34 +2574,34 @@ static void BLEZL()
        }
    if (local_rs <= 0)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
    else
      {
-	interp_addr+=8;
+	r4300.pc+=8;
 	update_count();
      }
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void BGTZL()
 {
    short local_immediate = iimmediate;
    local_rs = irs;
-   if ((interp_addr + (local_immediate+1)*4) == interp_addr)
+   if ((r4300.pc + (local_immediate+1)*4) == r4300.pc)
      if (irs > 0)
        {
-	  if (probe_nop(interp_addr+4))
+	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = next_interupt - Count;
+	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
 		    Count += (skip & 0xFFFFFFFC);
@@ -2612,39 +2611,39 @@ static void BGTZL()
        }
    if (local_rs > 0)
      {
-	interp_addr+=4;
-	delay_slot=1;
+	r4300.pc+=4;
+	r4300.delay_slot=1;
 	prefetch();
 	interp_ops[((op >> 26) & 0x3F)]();
 	update_count();
-	delay_slot=0;
-	interp_addr += (local_immediate-1)*4;
+	r4300.delay_slot=0;
+	r4300.pc += (local_immediate-1)*4;
      }
    else
      {
-	interp_addr+=8;
+	r4300.pc+=8;
 	update_count();
      }
-   last_addr = interp_addr;
-   if (next_interupt <= Count) gen_interupt();
+   r4300.last_pc = r4300.pc;
+   if (r4300.next_interrupt <= Count) gen_interupt();
 }
 
 static void DADDI()
 {
    irt = irs + iimmediate;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void DADDIU()
 {
    irt = irs + iimmediate;
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void LDL()
 {
    unsigned long long int word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
@@ -2700,7 +2699,7 @@ static void LDL()
 static void LDR()
 {
    unsigned long long int word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
@@ -2755,7 +2754,7 @@ static void LDR()
 
 static void LB()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    rdword = &irt;
    read_byte_in_memory();
@@ -2765,7 +2764,7 @@ static void LB()
 
 static void LH()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    rdword = &irt;
    read_hword_in_memory();
@@ -2775,7 +2774,7 @@ static void LH()
 static void LWL()
 {
    unsigned long long int word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
@@ -2809,14 +2808,14 @@ static void LW()
 {
    address = iimmediate + irs32;
    rdword = &irt;
-   interp_addr+=4;
+   r4300.pc+=4;
    read_word_in_memory();
    sign_extended(irt);
 }
 
 static void LBU()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    rdword = &irt;
    read_byte_in_memory();
@@ -2824,7 +2823,7 @@ static void LBU()
 
 static void LHU()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    rdword = &irt;
    read_hword_in_memory();
@@ -2833,7 +2832,7 @@ static void LHU()
 static void LWR()
 {
    unsigned long long int word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
@@ -2866,13 +2865,13 @@ static void LWU()
 {
    address = iimmediate + irs32;
    rdword = &irt;
-   interp_addr+=4;
+   r4300.pc+=4;
    read_word_in_memory();
 }
 
 static void SB()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    byte = (unsigned char)(irt & 0xFF);
    write_byte_in_memory();
@@ -2881,7 +2880,7 @@ static void SB()
 
 static void SH()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    hword = (unsigned short)(irt & 0xFFFF);
    write_hword_in_memory();
@@ -2890,7 +2889,7 @@ static void SH()
 static void SWL()
 {
    unsigned long long int old_word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
@@ -2926,7 +2925,7 @@ static void SWL()
 
 static void SW()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    word = (unsigned long)(irt & 0xFFFFFFFF);
    write_word_in_memory();
@@ -2936,7 +2935,7 @@ static void SW()
 static void SDL()
 {
    unsigned long long int old_word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
@@ -3007,7 +3006,7 @@ static void SDL()
 static void SDR()
 {
    unsigned long long int old_word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
@@ -3078,7 +3077,7 @@ static void SDR()
 static void SWR()
 {
    unsigned long long int old_word = 0;
-   interp_addr+=4;
+   r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
@@ -3116,42 +3115,42 @@ static void SWR()
 
 static void CACHE()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
 }
 
 static void LL()
 {
    address = iimmediate + irs32;
    rdword = &irt;
-   interp_addr+=4;
+   r4300.pc+=4;
    read_word_in_memory();
    sign_extended(irt);
-   llbit = 1;
+   r4300.llbit = 1;
 }
 
 static void LWC1()
 {
    unsigned long long int temp;
    if (check_cop1_unusable()) return;
-   interp_addr+=4;
-   address = lfoffset+reg[lfbase];
+   r4300.pc+=4;
+   address = lfoffset+r4300.gpr[lfbase];
    rdword = &temp;
    read_word_in_memory();
-   *((long*)reg_cop1_simple[lfft]) = *rdword;
+   *((long*)r4300.fpr_single[lfft]) = *rdword;
 }
 
 static void LDC1()
 {
    if (check_cop1_unusable()) return;
-   interp_addr+=4;
-   address = lfoffset+reg[lfbase];
-   rdword = (long long*)reg_cop1_double[lfft];
+   r4300.pc+=4;
+   address = lfoffset+r4300.gpr[lfbase];
+   rdword = (long long*)r4300.fpr_double[lfft];
    read_dword_in_memory();
 }
 
 static void LD()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    rdword = &irt;
    read_dword_in_memory();
@@ -3159,14 +3158,14 @@ static void LD()
 
 static void SC()
 {
-   interp_addr+=4;
-   if(llbit)
+   r4300.pc+=4;
+   if(r4300.llbit)
      {
 	address = iimmediate + irs32;
 	word = (unsigned long)(irt & 0xFFFFFFFF);
 	write_word_in_memory();
 	check_memory();
-	llbit = 0;
+	r4300.llbit = 0;
 	irt = 1;
      }
    else
@@ -3178,9 +3177,9 @@ static void SC()
 static void SWC1()
 {
    if (check_cop1_unusable()) return;
-   interp_addr+=4;
-   address = lfoffset+reg[lfbase];
-   word = *((long*)reg_cop1_simple[lfft]);
+   r4300.pc+=4;
+   address = lfoffset+r4300.gpr[lfbase];
+   word = *((long*)r4300.fpr_single[lfft]);
    write_word_in_memory();
    check_memory();
 }
@@ -3188,16 +3187,16 @@ static void SWC1()
 static void SDC1()
 {
    if (check_cop1_unusable()) return;
-   interp_addr+=4;
-   address = lfoffset+reg[lfbase];
-   dword = *((unsigned long long*)reg_cop1_double[lfft]);
+   r4300.pc+=4;
+   address = lfoffset+r4300.gpr[lfbase];
+   dword = *((unsigned long long*)r4300.fpr_double[lfft]);
    write_dword_in_memory();
    check_memory();
 }
 
 static void SD()
 {
-   interp_addr+=4;
+   r4300.pc+=4;
    address = iimmediate + irs32;
    dword = irt;
    write_dword_in_memory();
@@ -3226,69 +3225,69 @@ void prefetch()
      //{
 	/*if (f==NULL) f = fopen("/mnt/windows/pcdeb.txt", "rb");
 	fscanf(f, "%x", &comp);
-	if (comp != interp_addr)
+	if (comp != r4300.pc)
 	  {
-	     printf("diff@%x, line:%d\n", interp_addr, line);
-	     stop=1;
+	     printf("diff@%x, line:%d\n", r4300.pc, line);
+	     r4300.stop=1;
 	  }*/
 	//line++;
 	//if ((debug_count+Count) > 0x50fe000) printf("line:%d\n", line);
 	/*if ((debug_count+Count) > 0xb70000)
 	  printf("count:%x, add:%x, op:%x, l%d\n", (int)(Count+debug_count),
-		 interp_addr, op, line);*/
+		 r4300.pc, op, line);*/
      //}
-   //printf("addr:%x\n", interp_addr);
+   //printf("addr:%x\n", r4300.pc);
 
    // --- Trying to track down a bug ---
    /*static disturbed = 0;
    if(reg[31] == 0x100000 && !disturbed){
    	disturbed = 1;
-   	printf("LR disturbed at last address %08x\n", (int)last_addr);
+   	printf("LR disturbed at last address %08x\n", (int)r4300.last_pc);
 	int i;
 	for(i=-8; i<4; ++i)
 		printf(" %08x%s",
-	   	       rdram[(last_addr&0xFFFFFF)/4+i],
+	   	       rdram[(r4300.last_pc&0xFFFFFF)/4+i],
 	   	       ((i+8)%4 == 3) ? "\n" : "");
    }
    static pi_reg_value;
    if(pi_register.pi_dram_addr_reg != pi_reg_value){
    	pi_reg_value = pi_register.pi_dram_addr_reg;
-   	printf("PI DRAM addr reg changed to %08x\n at last_addr %08x, op: %08x, count: %u\n",
-   	       pi_reg_value, (int)last_addr, rdram[(last_addr&0xFFFFFF)/4], (unsigned int)debug_count+Count);
+   	printf("PI DRAM addr reg changed to %08x\n at r4300.last_pc %08x, op: %08x, count: %u\n",
+   	       pi_reg_value, (int)r4300.last_pc, rdram[(r4300.last_pc&0xFFFFFF)/4], (unsigned int)debug_count+Count);
    }
 
    if(!((debug_count + Count) % 100000)) printf("%u instructions executed\n",
                                              (unsigned int)(debug_count + Count));*/
    // --- OK ---
 
-if ((interp_addr >= 0x80000000) && (interp_addr < 0xc0000000))
+if ((r4300.pc >= 0x80000000) && (r4300.pc < 0xc0000000))
      {
-	if ((interp_addr >= 0x80000000) && (interp_addr < 0x80800000))
+	if ((r4300.pc >= 0x80000000) && (r4300.pc < 0x80800000))
 	  {
-	     op = rdram[(interp_addr&0xFFFFFF)/4];
+	     op = rdram[(r4300.pc&0xFFFFFF)/4];
 	     /*if ((debug_count+Count) > 234588)
 	       printf("count:%x, addr:%x, op:%x\n", (int)(Count+debug_count),
-		      interp_addr, op);*/
+		      r4300.pc, op);*/
 	     prefetch_opcode(op);
 	  }
-	else if ((interp_addr >= 0xa4000000) && (interp_addr < 0xa4001000))
+	else if ((r4300.pc >= 0xa4000000) && (r4300.pc < 0xa4001000))
 	  {
-	     op = SP_DMEM[(interp_addr&0xFFF)/4];
+	     op = SP_DMEM[(r4300.pc&0xFFF)/4];
 	     prefetch_opcode(op);
 	  }
-	else if ((interp_addr > 0xb0000000))
+	else if ((r4300.pc > 0xb0000000))
 	  {
 #ifdef __PPC__
-		ROMCache_read(&op, (interp_addr & 0xFFFFFFF), 4);
+		ROMCache_read(&op, (r4300.pc & 0xFFFFFFF), 4);
 #else
-	     op = ((unsigned long*)rom)[(interp_addr & 0xFFFFFFF)/4];
+	     op = ((unsigned long*)rom)[(r4300.pc & 0xFFFFFFF)/4];
 #endif
 	     prefetch_opcode(op);
 	  }
 	else
 	  {
-	     printf("execution &#65533; l'addresse :%x\n", (int)interp_addr);
-	     stop=1;
+	     printf("execution &#65533; l'addresse :%x\n", (int)r4300.pc);
+	     r4300.stop=1;
 #ifdef DEBUGON
        _break();
 #endif     
@@ -3296,9 +3295,9 @@ if ((interp_addr >= 0x80000000) && (interp_addr < 0xc0000000))
      }
    else
      {
-	unsigned long addr = interp_addr, phys;
-	phys = virtual_to_physical_address(interp_addr, 2);
-	if (phys != 0x00000000) interp_addr = phys;
+	unsigned long addr = r4300.pc, phys;
+	phys = virtual_to_physical_address(r4300.pc, 2);
+	if (phys != 0x00000000) r4300.pc = phys;
 	else
 	  {
 	     prefetch();
@@ -3308,55 +3307,30 @@ if ((interp_addr >= 0x80000000) && (interp_addr < 0xc0000000))
 	//tlb_used = 1;
 	prefetch();
 	//tlb_used = 0;
-	interp_addr = addr;
+	r4300.pc = addr;
      }
 }
 
 void pure_interpreter()
 {
-   //interp_addr = 0xa4000040;
-   stop=0;
-   // FIXME: Do I have to adjust this now?
-   //PC = malloc(sizeof(precomp_instr));
-   last_addr = interp_addr;
-   while (!stop)
+   //r4300.pc = 0xa4000040;
+   r4300.stop=0;
+   r4300.last_pc = r4300.pc;
+   while (!r4300.stop)
      {
 	prefetch();
 #ifdef COMPARE_CORE
 	compare_core();
 #endif
-	//if(interp_addr == 0x80000194) _break();
-	//if (Count > 0x2000000) printf("inter:%x,%x\n", interp_addr,op);
-	//if ((Count+debug_count) > 0xabaa2c) stop=1;
+	//if(r4300.pc == 0x80000194) _break();
+	//if (Count > 0x2000000) printf("inter:%x,%x\n", r4300.pc,op);
+	//if ((Count+debug_count) > 0xabaa2c) r4300.stop=1;
 	interp_ops[((op >> 26) & 0x3F)]();
 
 	//Count = (unsigned long)Count + 2;
-	//if (interp_addr == 0x80000180) last_addr = interp_addr;
+	//if (r4300.pc == 0x80000180) r4300.last_pc = r4300.pc;
 #ifdef DBG
-	PC->addr = interp_addr;
 	if (debugger_mode) update_debugger();
 #endif
      }
-   PC->addr = interp_addr;
-}
-
-void interprete_section(unsigned long addr)
-{
-   interp_addr = addr;
-   PC = malloc(sizeof(precomp_instr));
-   last_addr = interp_addr;
-   while (!stop && (addr >> 12) == (interp_addr >> 12))
-     {
-	prefetch();
-#ifdef COMPARE_CORE
-	compare_core();
-#endif
-	PC->addr = interp_addr;
-	interp_ops[((op >> 26) & 0x3F)]();
-#ifdef DBG
-	PC->addr = interp_addr;
-	if (debugger_mode) update_debugger();
-#endif
-     }
-   PC->addr = interp_addr;
 }

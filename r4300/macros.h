@@ -31,10 +31,7 @@
 #define MACROS_H
 
 #define sign_extended(a) a = (long long)((long)a)
-//#define sign_extended(a) a |= (a&0x80000000) ? 0xFFFFFFFF00000000 : 0
-//#define sign_extendedb(a) a = (long long)((char)a) // tehpola: tracking down bugs
 #define sign_extendedb(a) a |= (a&0x80) ? 0xFFFFFFFFFFFFFF00ULL : 0
-//#define sign_extendedh(a) a = (long long)((short)a)
 #define sign_extendedh(a) a |= (a&0x8000) ? 0xFFFFFFFFFFFF0000ULL : 0
 
 #define rrt *PC->f.r.rt
@@ -53,26 +50,18 @@
 #define lfbase PC->f.lf.base
 #define lfft PC->f.lf.ft
 #define lfoffset PC->f.lf.offset
-#define lslfaddr (PC-1)->f.lf.offset+reg[(PC-1)->f.lf.base]
+#define lslfaddr (PC-1)->f.lf.offset+r4300.gpr[(PC-1)->f.lf.base]
 #define lslfft (PC-1)->f.lf.ft
 #define cfft PC->f.cf.ft
 #define cffs PC->f.cf.fs
 #define cffd PC->f.cf.fd
 
 // 32 bits macros
-#ifndef _BIG_ENDIAN
-#define rrt32 *((long*)PC->f.r.rt)
-#define rrd32 *((long*)PC->f.r.rd)
-#define rrs32 *((long*)PC->f.r.rs)
-#define irs32 *((long*)PC->f.i.rs)
-#define irt32 *((long*)PC->f.i.rt)
-#else
-#define rrt32 *((long*)PC->f.r.rt+1)
-#define rrd32 *((long*)PC->f.r.rd+1)
-#define rrs32 *((long*)PC->f.r.rs+1)
-#define irs32 *((long*)PC->f.i.rs+1)
-#define irt32 *((long*)PC->f.i.rt+1)
-#endif
+#define rrt32 LOW_WORD(*PC->f.r.rt)
+#define rrd32 LOW_WORD(*PC->f.r.rd)
+#define rrs32 LOW_WORD(*PC->f.r.rs)
+#define irs32 LOW_WORD(*PC->f.i.rs)
+#define irt32 LOW_WORD(*PC->f.i.rt)
 
 #define check_PC \
 if (PC->addr == actual->fin) \
@@ -83,31 +72,31 @@ stop=1; \
 
 
 //cop0 macros
-#define Index reg_cop0[0]
-#define Random reg_cop0[1]
-#define EntryLo0 reg_cop0[2]
-#define EntryLo1 reg_cop0[3]
-#define Context reg_cop0[4]
-#define PageMask reg_cop0[5]
-#define Wired reg_cop0[6]
-#define BadVAddr reg_cop0[8]
-#define Count reg_cop0[9]
-#define EntryHi reg_cop0[10]
-#define Compare reg_cop0[11]
-#define Status reg_cop0[12]
-#define Cause reg_cop0[13]
-#define EPC reg_cop0[14]
-#define PRevID reg_cop0[15]
-#define Config reg_cop0[16]
-#define LLAddr reg_cop0[17]
-#define WatchLo reg_cop0[18]
-#define WatchHi reg_cop0[19]
-#define XContext reg_cop0[20]
-#define PErr reg_cop0[26]
-#define CacheErr reg_cop0[27]
-#define TagLo reg_cop0[28]
-#define TagHi reg_cop0[29]
-#define ErrorEPC reg_cop0[30]
+#define Index r4300.reg_cop0[0]
+#define Random r4300.reg_cop0[1]
+#define EntryLo0 r4300.reg_cop0[2]
+#define EntryLo1 r4300.reg_cop0[3]
+#define Context r4300.reg_cop0[4]
+#define PageMask r4300.reg_cop0[5]
+#define Wired r4300.reg_cop0[6]
+#define BadVAddr r4300.reg_cop0[8]
+#define Count r4300.reg_cop0[9]
+#define EntryHi r4300.reg_cop0[10]
+#define Compare r4300.reg_cop0[11]
+#define Status r4300.reg_cop0[12]
+#define Cause r4300.reg_cop0[13]
+#define EPC r4300.reg_cop0[14]
+#define PRevID r4300.reg_cop0[15]
+#define Config r4300.reg_cop0[16]
+#define LLAddr r4300.reg_cop0[17]
+#define WatchLo r4300.reg_cop0[18]
+#define WatchHi r4300.reg_cop0[19]
+#define XContext r4300.reg_cop0[20]
+#define PErr r4300.reg_cop0[26]
+#define CacheErr r4300.reg_cop0[27]
+#define TagLo r4300.reg_cop0[28]
+#define TagHi r4300.reg_cop0[29]
+#define ErrorEPC r4300.reg_cop0[30]
 
 #ifdef X86
 #define set_rounding() __asm__ __volatile__("fldcw %0" : : "m" (rounding_mode))

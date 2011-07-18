@@ -584,16 +584,18 @@ static void rsp_info_init(void){
 	initiateRSP(rsp_info,(DWORD*)&cycle_count);
 }
 
+void stop_it() { r4300.stop = 1; }
+
 void ScanPADSandReset(u32 dummy) {
 	padNeedScan = wpadNeedScan = 1;
 	if(!((*(u32*)0xCC003000)>>16))
-		stop = 1;
+		stop_it();
 }
 
 #ifdef HW_RVL
 void ShutdownWii() {
   shutdown = 1;
-  stop = 1;
+  stop_it();
 }
 #endif
 

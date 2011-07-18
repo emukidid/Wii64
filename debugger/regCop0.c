@@ -147,10 +147,10 @@ void update_regCop0()
 
 	for(i=0; i<32; i++)
 	{
-		if( gui_fantom_reg_cop0[i] != reg_cop0[i] )
+		if( gui_fantom_reg_cop0[i] != r4300.reg_cop0[i] )
 		{
-			gui_fantom_reg_cop0[i] = reg_cop0[i];
-			sprintf( txt, "%.16llX", (long long)reg_cop0[i] );
+			gui_fantom_reg_cop0[i] = r4300.reg_cop0[i];
+			sprintf( txt, "%.16llX", (long long)r4300.reg_cop0[i] );
 			gtk_clist_set_text( GTK_CLIST(clRegCop0), i, 0, txt );
 			gtk_clist_set_background( GTK_CLIST(clRegCop0), i, &color_modif);
 		}

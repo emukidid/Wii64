@@ -119,7 +119,7 @@ void add_interupt_event(int type, unsigned long delay)
     q->next = NULL;
     q->count = count;
     q->type = type;
-    next_interupt = q->count;
+	r4300.next_interrupt = q->count;
     return;
   }
    
@@ -128,7 +128,7 @@ void add_interupt_event(int type, unsigned long delay)
     q->next = aux;
     q->count = count;
     q->type = type;
-    next_interupt = q->count;
+	r4300.next_interrupt = q->count;
     return;
   }
 
@@ -173,10 +173,10 @@ void remove_interupt_event()
   free(q);
   q = aux;
   if (q != NULL && (q->count > Count || (Count - q->count) < 0x80000000)) {
-    next_interupt = q->count;
+    r4300.next_interrupt = q->count;
   }
   else {
-    next_interupt = 0;
+    r4300.next_interrupt = 0;
   }
 }
 
@@ -267,7 +267,7 @@ void load_eventqueue_infos(char *buf)
 void init_interupt()
 {
   SPECIAL_done = 1;
-  next_vi = next_interupt = 5000;
+  next_vi = r4300.next_interrupt = 5000;
   vi_register.vi_delay = next_vi;
   vi_field = 0;
   clear_queue();
@@ -300,7 +300,7 @@ void check_interupt()
       aux->type = CHECK_INT;
       q = aux;
     }
-    next_interupt = Count;
+    r4300.next_interrupt = Count;
   }
 }
 
@@ -325,33 +325,21 @@ int chk_status(int chk) {
 
 void gen_interupt()
 {
-  if (stop == 1) {
-    dyna_stop();
-  }
-
   if (savestates_job & LOADSTATE) {
     savestates_load();
     savestates_job &= ~LOADSTATE;
     return;
   }
-  if (skip_jump) {
+  if (r4300.skip_jump) {
     if (q->count > Count || (Count - q->count) < 0x80000000) {
-      next_interupt = q->count;
+      r4300.next_interrupt = q->count;
     }
     else {
-      next_interupt = 0;
+      r4300.next_interrupt = 0;
     }
-    if(dynacore || interpcore) { // wii64: originally this was for interpcore in mupen 0.5 (wii64 changed it)
-      interp_addr = skip_jump;
-      last_addr = interp_addr;
-    }
-    else {  // wii64: This path will never never hit?
-      unsigned long dest = skip_jump;
-      skip_jump=0;
-      jump_to(dest);
-      last_addr = PC->addr;
-    }
-    skip_jump=0;
+    r4300.pc = r4300.skip_jump;
+    r4300.last_pc = r4300.pc;
+    r4300.skip_jump=0;
     return;
   } 
 

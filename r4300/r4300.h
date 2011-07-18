@@ -36,6 +36,34 @@
 #include "../gc_memory/tlb.h"
 #include "recomp.h"
 
+#ifndef _BIG_ENDIAN
+#define LOW_WORD(reg) (*(long*)&(reg))
+#else
+#define LOW_WORD(reg) (*((long*)&(reg)+1))
+#endif
+
+typedef struct {
+	unsigned long pc, last_pc;
+	long long int gpr[32];
+	long long int hi, lo;
+	long long int local_gpr[2];
+	unsigned long reg_cop0[32];
+	long long int fpr_data[32];
+	double*       fpr_double[32];
+	float*        fpr_single[32];
+	long          fcr0, fcr31;
+	unsigned int  next_interrupt, cic_chip;
+	unsigned long delay_slot, skip_jump;
+	int           stop, llbit;
+	tlb*          tlb_e; // [32]
+} R4300;
+extern R4300 r4300;
+
+#define local_rs (r4300.local_gpr[0])
+#define local_rt (r4300.local_gpr[1])
+#define local_rs32 LOW_WORD(local_rs)
+#define local_rt32 LOW_WORD(local_rt)
+
 extern precomp_instr *PC;
 #ifdef PPC_DYNAREC
 #include "ppc/Recompile.h"
@@ -48,27 +76,14 @@ extern PowerPC_block *actual;
 #else
 extern precomp_block *blocks[0x100000], *actual;
 #endif
-extern int stop, llbit;
-extern long long int reg[36]; // r0-32, hi, lo, branch destination
-#define hi (reg[32])
-#define lo (reg[33])
-#define local_rs (reg[34])
-#define local_rt (reg[35])
-extern unsigned long reg_cop0[32];
-extern long local_rs32, local_rt32;
+
 extern unsigned long jump_target;
-extern double *reg_cop1_double[32];
-extern float *reg_cop1_simple[32];
-extern long long int reg_cop1_fgr_64[32];
-extern long FCR0, FCR31;
 extern tlb tlb_e[32];
-extern unsigned long delay_slot, skip_jump, dyna_interp;
+extern unsigned long dyna_interp;
 extern unsigned long long int debug_count;
 extern unsigned long dynacore;
 extern unsigned long interpcore;
-extern unsigned int next_interupt, CIC_Chip;
 extern int rounding_mode, trunc_mode, round_mode, ceil_mode, floor_mode;
-extern unsigned long last_addr, interp_addr;
 //extern char invalid_code[0x100000];
 extern unsigned long jump_to_address;
 extern int no_audio_delay;
@@ -89,12 +104,6 @@ void set_fpr_pointers(int newStatus);
 #define jump_to(a) { jump_to_address = a; jump_to_func(); }
 #else
 void jump_to(unsigned int);
-#endif
-
-#ifdef __PPC__
-#define dyna_start(x)
-#define dyna_jump()
-#define dyna_stop()
 #endif
 
 // profiling

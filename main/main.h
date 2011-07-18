@@ -25,4 +25,6 @@
 #  define PATH_MAX 1024
 #endif
 
+void stop_it(); // Stop execution
+
 #endif // __MAIN_H__

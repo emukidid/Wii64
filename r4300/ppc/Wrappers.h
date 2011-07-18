@@ -24,6 +24,7 @@
 #define WRAPPERS_H
 
 #include "Recompile.h"
+#include "../r4300.h"
 
 #define DYNAREG_REG    14
 #define DYNAREG_COP0   15
@@ -40,9 +41,6 @@
 
 #define REG_LOCALRS    34
 
-extern long long int reg[36]; // game's registers
-extern float*  reg_cop1_simple[32]; // 32-bit fprs
-extern double* reg_cop1_double[32]; // 64-bit fprs
 
 extern int noCheckInterrupt;
 
@@ -63,31 +61,31 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
                       memType type, unsigned int pc, int isDelaySlot);
 
 //cop0 macros
-#define Index reg_cop0[0]
-#define Random reg_cop0[1]
-#define EntryLo0 reg_cop0[2]
-#define EntryLo1 reg_cop0[3]
-#define Context reg_cop0[4]
-#define PageMask reg_cop0[5]
-#define Wired reg_cop0[6]
-#define BadVAddr reg_cop0[8]
-#define Count reg_cop0[9]
-#define EntryHi reg_cop0[10]
-#define Compare reg_cop0[11]
-#define Status reg_cop0[12]
-#define Cause reg_cop0[13]
-#define EPC reg_cop0[14]
-#define PRevID reg_cop0[15]
-#define Config reg_cop0[16]
-#define LLAddr reg_cop0[17]
-#define WatchLo reg_cop0[18]
-#define WatchHi reg_cop0[19]
-#define XContext reg_cop0[20]
-#define PErr reg_cop0[26]
-#define CacheErr reg_cop0[27]
-#define TagLo reg_cop0[28]
-#define TagHi reg_cop0[29]
-#define ErrorEPC reg_cop0[30]
+#define Index r4300.reg_cop0[0]
+#define Random r4300.reg_cop0[1]
+#define EntryLo0 r4300.reg_cop0[2]
+#define EntryLo1 r4300.reg_cop0[3]
+#define Context r4300.reg_cop0[4]
+#define PageMask r4300.reg_cop0[5]
+#define Wired r4300.reg_cop0[6]
+#define BadVAddr r4300.reg_cop0[8]
+#define Count r4300.reg_cop0[9]
+#define EntryHi r4300.reg_cop0[10]
+#define Compare r4300.reg_cop0[11]
+#define Status r4300.reg_cop0[12]
+#define Cause r4300.reg_cop0[13]
+#define EPC r4300.reg_cop0[14]
+#define PRevID r4300.reg_cop0[15]
+#define Config r4300.reg_cop0[16]
+#define LLAddr r4300.reg_cop0[17]
+#define WatchLo r4300.reg_cop0[18]
+#define WatchHi r4300.reg_cop0[19]
+#define XContext r4300.reg_cop0[20]
+#define PErr r4300.reg_cop0[26]
+#define CacheErr r4300.reg_cop0[27]
+#define TagLo r4300.reg_cop0[28]
+#define TagHi r4300.reg_cop0[29]
+#define ErrorEPC r4300.reg_cop0[30]
 
 #endif
 
