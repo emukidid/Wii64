@@ -121,17 +121,8 @@ void Gui::draw()
         if(dvd_hard_init) {
 				  DI_Close();
 			  }
-				// Our L2 changes break the HBC stub mtspr HID4 instruction, so NOP it.
-				u32 *ptr = (u32*)0x80001800;
-				int i = 0;
-				for(i = 0; i < 0x1800/4; i++) {
-					if(((ptr[i] >> 16) & 0xFFFF) == 0x7C73) {	// NOP: 7C73FBA6  mtspr       1011, r3
-						ptr[i] = 0x60000000;
-						DCFlushRange((void*)0x80001800,0x1800);
-						ICInvalidateRange((void*)0x80001800,0x1800);
-						break;
-					}
-				}				
+				exit(0);
+
 #endif
 				void (*rld)() = (void (*)()) 0x80001800;
 				rld();

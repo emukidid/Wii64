@@ -185,7 +185,8 @@ u16 readWPAD(void);
 int main(int argc, char* argv[]){
 	/* INITIALIZE */
 #ifdef HW_RVL
-  DI_UseCache(false);
+	L2Enhance();
+	DI_UseCache(false);
 	if (!__di_check_ahbprot()) {
 		s32 preferred = IOS_GetPreferredVersion();
 		if (preferred == 58 || preferred == 61)
