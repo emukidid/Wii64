@@ -73,6 +73,7 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 		   "r" (r4300.fpr_single), "r" (r4300.fpr_double),
 		   "r" (&r4300.fcr31), "r" (rdram),
 		   "r" (&r4300.last_pc), "r" (&r4300.next_interrupt),
+		   "r" (func)
 		: "14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
 
 	end_section(TRAMP_SECTION);
