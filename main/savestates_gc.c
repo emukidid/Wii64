@@ -47,6 +47,9 @@
 #include "wii64config.h"
 
 char* statespath = "/wii64/saves/";
+void LoadingBar_showBar(float percent, const char* string);
+#define SAVE_STATE_MSG "Saving State .."
+#define LOAD_STATE_MSG "Loading State .."
 
 extern int *autoinc_save_slot;
 void pauseAudio(void);
@@ -55,65 +58,58 @@ void resumeAudio(void);
 int savestates_job = 0;
 extern BOOL hasLoadedROM;
 static unsigned int savestates_slot = 0;
-
 void savestates_select_slot(unsigned int s)
 {
-   if (s > 9) return;
-   savestates_slot = s;
+	if (s > 9) return;
+	savestates_slot = s;
 }
 	
 //returns 0 on file not existing
 int savestates_exists(int mode)
 {
-  gzFile f;
+	gzFile f;
 	char *filename;
-  filename = malloc(1024);
+	filename = malloc(1024);
 #ifdef HW_RVL
-  sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
-                           statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
+			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #else
-  sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #endif
 
 	f = gzopen(filename, (mode == SAVESTATE) ? "wb" : "rb");
-  free(filename);
+	free(filename);
    	
-  if(!f) {
-    return 0;
-  }
-  gzclose(f);
-  return 1;
+	if(!f) {
+		return 0;
+	}
+	gzclose(f);
+	return 1;
 }
 
 void savestates_save()
 { 
-  gzFile f;
+	gzFile f;
 	char *filename, buf[1024];
-  int len, i;
+	int len, i;
 	
-  /* fix the filename to %s.st%d format */
-  filename = malloc(1024);
+	/* fix the filename to %s.st%d format */
+	filename = malloc(1024);
 #ifdef HW_RVL
-  sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
-                           statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
+			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #else
-  sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #endif
 
-
 	f = gzopen(filename, "wb");
-  free(filename);
+	free(filename);
    	
-  if(!f) {
-  	return;
+	if(!f) {
+		return;
 	}
-  if(r4300.stop) {
-	  pauseRemovalThread();
-  }
-  else {
-    pauseAudio();
-  }  
-  gzwrite(f, &rdram_register, sizeof(RDRAM_register));
+	LoadingBar_showBar(0.0f, SAVE_STATE_MSG);
+	gzwrite(f, &rdram_register, sizeof(RDRAM_register));
 	gzwrite(f, &MI_register, sizeof(mips_register));
 	gzwrite(f, &pi_register, sizeof(PI_register));
 	gzwrite(f, &sp_register, sizeof(SP_register));
@@ -124,11 +120,13 @@ void savestates_save()
 	gzwrite(f, &ai_register, sizeof(AI_register));
 	gzwrite(f, &dpc_register, sizeof(DPC_register));
 	gzwrite(f, &dps_register, sizeof(DPS_register));
+	LoadingBar_showBar(0.10f, SAVE_STATE_MSG);
 #ifdef USE_EXPANSION
 	gzwrite(f, rdram, 0x800000);
 #else
-  gzwrite(f, rdram, 0x400000);
+	gzwrite(f, rdram, 0x400000);
 #endif
+	LoadingBar_showBar(0.50f, SAVE_STATE_MSG);
 	gzwrite(f, SP_DMEM, 0x1000);
 	gzwrite(f, SP_IMEM, 0x1000);
 	gzwrite(f, PIF_RAM, 0x40);
@@ -140,9 +138,10 @@ void savestates_save()
 	gzwrite(f, tlb_LUT_w, 0x100000);
 #else
 	//Traverse the TLB cache hash	and dump it
-  TLBCache_dump_r(f);
+	TLBCache_dump_r(f);
 	TLBCache_dump_w(f);
 #endif
+	LoadingBar_showBar(0.85f, SAVE_STATE_MSG);
 
 	gzwrite(f, &r4300.llbit, 4);
 	gzwrite(f, r4300.gpr, 32*8);
@@ -172,14 +171,8 @@ void savestates_save()
 	
 	len = save_eventqueue_infos(buf);
 	gzwrite(f, buf, len);
-	
 	gzclose(f);
-	if(r4300.stop) {
-	  continueRemovalThread();
-  }
-  else {
-    resumeAudio();
-  }
+	LoadingBar_showBar(1.0f, SAVE_STATE_MSG);
 }
 
 void savestates_load()
@@ -189,12 +182,12 @@ void savestates_load()
 	int len, i;
 		
 	/* fix the filename to %s.st%d format */
-  filename = malloc(1024);
+	filename = malloc(1024);
 #ifdef HW_RVL
-  sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
-                           statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
+			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #else
-  sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #endif
 	
 	f = gzopen(filename, "rb");
@@ -203,13 +196,8 @@ void savestates_load()
 	if (!f) {
 		return;
 	}
-	if(r4300.stop) {
-	  pauseRemovalThread();
-  }
-  else {
-    pauseAudio();
-  }
-  gzread(f, &rdram_register, sizeof(RDRAM_register));
+	LoadingBar_showBar(0.0f, LOAD_STATE_MSG);
+	gzread(f, &rdram_register, sizeof(RDRAM_register));
 	gzread(f, &MI_register, sizeof(mips_register));
 	gzread(f, &pi_register, sizeof(PI_register));
 	gzread(f, &sp_register, sizeof(SP_register));
@@ -220,10 +208,11 @@ void savestates_load()
 	gzread(f, &ai_register, sizeof(AI_register));
 	gzread(f, &dpc_register, sizeof(DPC_register));
 	gzread(f, &dps_register, sizeof(DPS_register));
+	LoadingBar_showBar(0.10f, LOAD_STATE_MSG);
 #ifdef USE_EXPANSION
 	gzread(f, rdram, 0x800000);
 #else
-  gzread(f, rdram, 0x400000);
+	gzread(f, rdram, 0x400000);
 #endif
 	gzread(f, SP_DMEM, 0x1000);
 	gzread(f, SP_IMEM, 0x1000);
@@ -235,6 +224,7 @@ void savestates_load()
 	gzread(f, tlb_LUT_r, 0x100000);
 	gzread(f, tlb_LUT_w, 0x100000);
 #else
+	LoadingBar_showBar(0.5f, LOAD_STATE_MSG);
 	int numNodesWritten_r=0,numNodesWritten_w=0,cntr,tlbpage,tlbvalue;	
 	TLBCache_deinit();
 	TLBCache_init();
@@ -254,7 +244,7 @@ void savestates_load()
 		TLBCache_set_w(tlbpage,tlbvalue);
 	}
 #endif
-
+	LoadingBar_showBar(0.85f, LOAD_STATE_MSG);
 	gzread(f, &r4300.llbit, 4);
 	gzread(f, r4300.gpr, 32*8);
 	for (i=0; i<32; i++) 
@@ -285,13 +275,6 @@ void savestates_load()
 		len += 8;
 	}
 	load_eventqueue_infos(buf);
-	
 	gzclose(f);
-	r4300.last_pc = r4300.pc;
-	if(r4300.stop) {
-	  continueRemovalThread();
-  }
-  else {
-    resumeAudio();
-  }
+	LoadingBar_showBar(1.0f, LOAD_STATE_MSG);
 }

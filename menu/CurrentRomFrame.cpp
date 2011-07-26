@@ -25,11 +25,12 @@
 #include "../libgui/FocusManager.h"
 #include "../libgui/CursorManager.h"
 #include "../libgui/MessageBox.h"
-#include "../main/wii64config.h"
 
 extern "C" {
 #include "../gc_memory/memory.h"
 #include "../gc_memory/Saves.h"
+#include "../r4300/interupt.h"
+#include "../main/wii64config.h"
 #include "../main/rom.h"
 #include "../main/plugin.h"
 #include "../main/savestates.h"
@@ -311,7 +312,7 @@ void Func_LoadState()
   }
   else {
     savestates_job = LOADSTATE;
-    menu::MessageBox::getInstance().setMessage("Gameplay will resume from the savestate");
+    gen_interupt();
   }
 }
 
@@ -322,7 +323,7 @@ void Func_SaveState()
   }
   else {
     savestates_job = SAVESTATE;
-	  menu::MessageBox::getInstance().setMessage("Gameplay will be saved once resumed");
+	gen_interupt();
   }
 }
 
