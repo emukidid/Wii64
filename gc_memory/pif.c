@@ -48,7 +48,7 @@
 
 #include "memory.h"
 #include "pif.h"
-#include "pif2.h"
+#include "n64_cic_nus_6105.h"
 #include "../r4300/r4300.h"
 #include "../r4300/interupt.h"
 #include "../main/plugin.h"
@@ -131,37 +131,72 @@ void print_pif()
 
 void EepromCommand(BYTE *Command)
 {
-   switch (Command[2])
-     {
-      case 0: // check
-	if (Command[1] != 3)
-	  {
-	     Command[1] |= 0x40;
-	     if ((Command[1] & 3) > 0)
-	       Command[3] = 0;
-	     if ((Command[1] & 3) > 1)
-	       Command[4] = ROM_SETTINGS.eeprom_16kb == 0 ? 0x80 : 0xc0;
-	     if ((Command[1] & 3) > 2)
-	       Command[5] = 0;
-	  }
-	else
-	  {
-	     Command[3] = 0;
-	     Command[4] = ROM_SETTINGS.eeprom_16kb == 0 ? 0x80 : 0xc0;
-	     Command[5] = 0;
-	  }
-	break;
-      case 4: // read
-	  {
-	     memcpy(&Command[4], eeprom + Command[3]*8, 8);
-	  }
-	break;
-      case 5: // write
-	  {
-	     eepromWritten = TRUE;
-	     memcpy(eeprom + Command[3]*8, &Command[4], 8);
-	  }
-	break;
+	//time_t curtime_time;
+    //struct tm curtime;
+
+	switch (Command[2])
+	{
+		case 0: // check
+			if (Command[1] != 3)
+			{
+				Command[1] |= 0x40;
+				if ((Command[1] & 3) > 0)
+					Command[3] = 0;
+				if ((Command[1] & 3) > 1)
+					Command[4] = ROM_SETTINGS.eeprom_16kb == 0 ? 0x80 : 0xc0;
+				if ((Command[1] & 3) > 2)
+					Command[5] = 0;
+			}
+			else
+			{
+				Command[3] = 0;
+				Command[4] = ROM_SETTINGS.eeprom_16kb == 0 ? 0x80 : 0xc0;
+				Command[5] = 0;
+			}
+		break;
+		case 4: // read
+			memcpy(&Command[4], eeprom + Command[3]*8, 8);
+		break;
+		case 5: // write
+			eepromWritten = TRUE;
+			memcpy(eeprom + Command[3]*8, &Command[4], 8);
+		break;
+		case 6:
+			// RTCstatus query
+			Command[3] = 0x00;
+			Command[4] = 0x10;
+			Command[5] = 0x00;
+		break;
+		case 7:
+			// read RTC block
+			switch (Command[3]) {     // block number
+				case 0:
+					Command[4] = 0x00;
+					Command[5] = 0x02;
+					Command[12] = 0x00;
+				break;
+				case 1:
+					//RTC command in EepromCommand(): read block %d", Command[2]
+				break;
+				case 2:
+					// time(&curtime_time);
+					// localtime_r(&curtime_time, &curtime);
+					// Command[4] = byte2bcd(curtime.tm_sec);
+					// Command[5] = byte2bcd(curtime.tm_min);
+					// Command[6] = 0x80 + byte2bcd(curtime.tm_hour);
+					// Command[7] = byte2bcd(curtime.tm_mday);
+					// Command[8] = byte2bcd(curtime.tm_wday);
+					// Command[9] = byte2bcd(curtime.tm_mon + 1);
+					// Command[10] = byte2bcd(curtime.tm_year);
+					// Command[11] = byte2bcd(curtime.tm_year / 100);
+					// Command[12] = 0x00;       // status
+				break;
+			}
+		break;
+		case 8:
+			// write RTC block
+			//RTC write in EepromCommand(): %d not yet implemented", Command[2]
+			break;
 /*      default:
     break;
 *///	printf("unknown command in EepromCommand : %x\n", Command[2]);
@@ -281,14 +316,14 @@ void internal_ReadController(int Control, BYTE *Command)
 	if (Controls[Control].Present)
 	  {
 	     if (Controls[Control].Plugin == PLUGIN_RAW)
-	       if (controllerCommand != NULL) readController(Control, Command);
+	       readController(Control, Command);
 	  }
 	break;
       case 3: // write controller pack
 	if (Controls[Control].Present)
 	  {
 	     if (Controls[Control].Plugin == PLUGIN_RAW)
-	       if (controllerCommand != NULL) readController(Control, Command);
+	       readController(Control, Command);
 	  }
 	break;
      }
@@ -355,7 +390,7 @@ void internal_ControllerCommand(int Control, BYTE *Command)
 		    }
 		  break;
 		case PLUGIN_RAW:
-		  if (controllerCommand != NULL) controllerCommand(Control, Command);
+		  controllerCommand(Control, Command);
 		  break;
 		default:
 		  memset(&Command[5], 0, 0x20);
@@ -387,7 +422,7 @@ void internal_ControllerCommand(int Control, BYTE *Command)
 		    }
 		  break;
 		case PLUGIN_RAW:
-		  if (controllerCommand != NULL) controllerCommand(Control, Command);
+		  controllerCommand(Control, Command);
 		  break;
 		default:
 		  Command[0x25] = mempack_crc(&Command[5]);
@@ -403,8 +438,8 @@ void internal_ControllerCommand(int Control, BYTE *Command)
 void update_pif_write()
 {
    int i=0, channel=0;
+   char challenge[30], response[30];
 #ifdef DEBUG_PIF
-//   printf("write\n");
    print_pif();
 #endif
    if (PIF_RAMb[0x3F] > 1)
@@ -412,20 +447,20 @@ void update_pif_write()
 	switch (PIF_RAMb[0x3F])
 	  {
 	   case 0x02:
-	     for (i=0; i<sizeof(pif2_lut)/32; i++)
-	       {
-		  if (!memcmp(PIF_RAMb + 64-2*8, pif2_lut[i][0], 16))
-		    {
-		       memcpy(PIF_RAMb + 64-2*8, pif2_lut[i][1], 16);
-		       return;
-		    }
-	       }
-/*	     printf("unknown pif2 code:\n");
-	     for (i=(64-2*8)/8; i<(64/8); i++)
-	       printf("%x %x %x %x | %x %x %x %x\n",
-		      PIF_RAMb[i*8+0], PIF_RAMb[i*8+1],PIF_RAMb[i*8+2], PIF_RAMb[i*8+3],
-		      PIF_RAMb[i*8+4], PIF_RAMb[i*8+5],PIF_RAMb[i*8+6], PIF_RAMb[i*8+7]);
-*/	     break;
+	    // format the 'challenge' message into 30 nibbles for X-Scale's CIC code
+		for (i = 0; i < 15; i++) {
+			challenge[i*2] = (PIF_RAMb[48+i] >> 4) & 0x0f;
+			challenge[i*2+1] = PIF_RAMb[48+i] & 0x0f;
+		}
+		// calculate the proper response for the given challenge (X-Scale's algorithm)
+		n64_cic_nus_6105(challenge, response, CHL_LEN - 2);
+		// re-format the 'response' into a byte stream
+		for (i = 0; i < 15; i++) {
+			PIF_RAMb[48+i] = (response[i*2] << 4) + response[i*2+1];
+		}
+		// the last byte (2 nibbles) is always 0
+		PIF_RAMb[0x3F] = 0;
+	    break;
 	   case 0x08:
 	     PIF_RAMb[0x3F] = 0;
 	     break;
@@ -458,8 +493,6 @@ void update_pif_write()
 		    }
 		  else if (channel == 4)
 		    EepromCommand(&PIF_RAMb[i]);
-	//	  else
-	//	    printf("channel >= 4 in update_pif_write\n");
 		  i += PIF_RAMb[i] + (PIF_RAMb[(i+1)] & 0x3F) + 1;
 		  channel++;
 	       }

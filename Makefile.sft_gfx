@@ -45,6 +45,7 @@ OBJ		=main/rom_gc.o \
 		gc_memory/dma.o \
 		r4300/interupt.o \
 		r4300/recomp.o \
+		gc_memory/n64_cic_nus_6105.o \
 		gc_memory/pif.o \
 		r4300/pure_interp.o \
 		r4300/compare_core.o \
