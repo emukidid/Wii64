@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #else //!__GX__
 #include <sys/syslimits.h> // PATH_MAX
 #include <stdlib.h>
+#include "../TextureArchive/ArchiveReader.h"
 #endif //__GX__
 
 /************************************************************************/
@@ -878,6 +879,9 @@ void MirrorTexture(uint32 dwTile, TxtrCacheEntry *pEntry)
     }
 }
 
+#ifndef __GX__
+//Start of Texture Pack Code:
+
 enum TextureType
 {
     NO_TEXTURE,
@@ -1292,7 +1296,11 @@ void FindAllHiResTextures(void)
     strcat(foldername,(const char*)g_curRomInfo.szGameName);
     strcat(foldername,"/");
     gHiresTxtrInfos.clear();
+#ifndef __GX__
     if( !PathFileExists(foldername) )
+#else //!__GX__
+    if( PathIsDirectory(foldername) == FALSE )
+#endif //__GX__
     {
         return;
     }
@@ -1969,4 +1977,482 @@ void LoadHiresTexture( TxtrCacheEntry &entry )
         delete [] buf_a;
     }
 }
+#else //!__GX__
+//Start of Texture Pack Code for GX:
+
+ArchiveReader* reader = NULL;
+
+void CloseExternalTextures(void)
+{
+	if (reader)	
+	{
+		delete reader;
+		reader = NULL;
+	}
+}
+
+void InitExternalTextures(void)
+{
+	//printf("InitExternalTextures\n");
+	CloseExternalTextures();
+	if( options.bLoadHiResTextures )
+	{
+		//TODO: Select texture pack file elsewhere?
+		reader  = new ArchiveReader("sd:/wii64/texture.pak");
+#ifdef SHOW_DEBUG
+		printf("loading texture.pak, reader = %x\n",reader);
+		sprintf(txtbuffer,"InitExternalTextures: Loading texture.pak, reader = %x\r\n", reader);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
+	}
+}
+
+void DumpCachedTexture( TxtrCacheEntry &entry ) {}
+
+/*
+ExtTxtrInfo.height ExtTxtrInfo.width are ints.
+TxtrInfo.HeightToLoad TxtrInfo.WidthToLoad (ti of TxtrCacheEntry 
+is of type TxtrInfo) are uint32.
+*/
+int FindScaleFactor(uint32 width, uint32 height, TxtrCacheEntry &entry)
+{
+    int scaleShift = -1;
+    if( height == entry.ti.HeightToLoad && width == entry.ti.WidthToLoad )
+    {
+        scaleShift = 0;
+    }
+    else if ( height == entry.ti.HeightToLoad*2 && width == entry.ti.WidthToLoad*2 )
+    {
+        scaleShift = 1;
+    }
+    else if ( height == entry.ti.HeightToLoad*4 && width == entry.ti.WidthToLoad*4 )
+    {
+        scaleShift = 2;
+    }
+    else if ( height == entry.ti.HeightToLoad*8 && width == entry.ti.WidthToLoad*8 )
+    {
+        scaleShift = 3;
+    }
+    else if ( height == entry.ti.HeightToLoad*16 && width == entry.ti.WidthToLoad*16 )
+    {
+        scaleShift = 4;
+    }
+
+    return scaleShift;
+}
+
+//int CheckTextureInfos( CSortedList<uint64,ExtTxtrInfo> &infos, TxtrCacheEntry &entry, int &indexa, bool bForDump = false )
+bool CheckArchive(TxtrCacheEntry &entry, ArchiveEntry &archiveEntry, ArchiveEntryInfo &archiveEntryInfo)
+{
+	ArchiveEntry entryA, entryB;
+	bool foundEntryA = false;
+	bool foundEntryB = false;
+
+    if(entry.ti.WidthToCreate/entry.ti.WidthToLoad > 2 || entry.ti.HeightToCreate/entry.ti.HeightToLoad > 2 )
+    {
+        //TRACE0("Hires texture does not support extreme texture replication");
+        return false;
+    }
+
+    bool bCI = (gRDP.otherMode.text_tlut>=2 || entry.ti.Format == TXT_FMT_CI || entry.ti.Format == TXT_FMT_RGBA) && entry.ti.Size <= TXT_SIZE_8b;
+
+    uint64 crc64a = entry.dwCRC;
+    crc64a <<= 32;
+    uint64 crc64b = crc64a;
+    crc64a |= (0xFFFFFF00|(entry.ti.Format<<4)|entry.ti.Size);
+    crc64b |= ((entry.dwPalCRC&0xFFFFFF00)|(entry.ti.Format<<4)|entry.ti.Size);
+
+	entryA = ArchiveEntry(TextureCRC64(crc64a));	// For CI without pal CRC, and for RGBA_PNG_FOR_ALL_CI
+	entryB = ArchiveEntry(TextureCRC64(crc64b));	// For CI or PNG with pal CRC
+	foundEntryA = reader->find(entryA);
+	if ( bCI )
+		foundEntryB = reader->find(entryB);
+
+#ifdef SHOW_DEBUG
+	sprintf(txtbuffer,"CheckArchive: crc64a = %08x %08x; found = %d\r\n", (u32)(crc64a>>32), (u32)(crc64a&0xFFFFFFFF), foundEntryA);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+	sprintf(txtbuffer,"CheckArchive: crc64b = %08x %08x; found = %d\r\n", (u32)(crc64b>>32), (u32)(crc64b&0xFFFFFFFF), foundEntryB);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
+
+/*    int infosize = infos.size();
+    int indexb=-1;
+    indexa = infos.find(crc64a);        // For CI without pal CRC, and for RGBA_PNG_FOR_ALL_CI
+    if( bCI )   
+        indexb = infos.find(crc64b);    // For CI or PNG with pal CRC
+
+    if( indexa >= infosize )    indexa = -1;
+    if( indexb >= infosize )    indexb = -1;*/
+
+    int scaleShift = -1;
+
+/*    if( indexb >= 0 )
+    {
+        scaleShift = FindScaleFactor(infos[indexb], entry);
+        if( scaleShift >= 0 )
+            return indexb;
+    }*/
+	if (foundEntryB)
+	{
+		archiveEntryInfo = reader->readInfo(entryB);
+		scaleShift = FindScaleFactor((uint32) archiveEntryInfo.width, (uint32) archiveEntryInfo.height, entry);
+		if ( scaleShift >= 0 )
+		{
+			archiveEntry = entryB;
+			return true;
+		}
+	}
+
+/*    if( bForDump && bCI && indexb < 0) //never bForDump
+        return -1;
+
+    if( indexa >= 0 )   scaleShift = FindScaleFactor(infos[indexa], entry);
+    if( scaleShift >= 0 )
+        return indexa;
+    else
+        return -1;*/
+
+	if (foundEntryA)
+	{
+		archiveEntryInfo = reader->readInfo(entryA);
+		scaleShift = FindScaleFactor((uint32) archiveEntryInfo.width, (uint32) archiveEntryInfo.height, entry);
+		if ( scaleShift >= 0 )
+		{
+			archiveEntry = entryA;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void LoadHiresTexture( TxtrCacheEntry &entry )
+{
+    if( entry.bExternalTxtrChecked )
+        return;
+
+    if( entry.pEnhancedTexture )
+    {
+        SAFE_DELETE(entry.pEnhancedTexture);
+    }
+
+#ifndef __GX__
+	int ciidx;
+    int idx = CheckTextureInfos(gHiresTxtrInfos,entry,ciidx,false);
+    if( idx < 0 )
+#else //!__GX__
+	ArchiveEntry archiveEntry;
+	ArchiveEntryInfo archiveEntryInfo;
+	bool entryFound = CheckArchive(entry, archiveEntry, archiveEntryInfo);
+	if( !entryFound )
+#endif //__GX__
+    {
+        entry.bExternalTxtrChecked = true;
+        return;
+    }
+
+#ifdef SHOW_DEBUG
+	sprintf(txtbuffer,"EntryFound: crc64 = %08x %08x; offset = %8x\r\n", (u32)(archiveEntry.crc.crc64>>32), (u32)(archiveEntry.crc.crc64&0xFFFFFFFF), archiveEntry.offset);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+	sprintf(txtbuffer,"EntryInfo: width = %d; height = %d; format = %d\r\n", archiveEntryInfo.width, archiveEntryInfo.height, archiveEntryInfo.format);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
+
+#ifndef __GX__
+    // Load the bitmap file
+    char filename_rgb[PATH_MAX];
+    char filename_a[PATH_MAX];
+
+    strcpy(filename_rgb, gHiresTxtrInfos[idx].foldername);
+
+    sprintf(filename_rgb+strlen(filename_rgb), "%s#%08X#%d#%d", g_curRomInfo.szGameName, entry.dwCRC, entry.ti.Format, entry.ti.Size);
+    strcpy(filename_a,filename_rgb);
+    strcat(filename_rgb,gHiresTxtrInfos[idx].RGBNameTail);
+    strcat(filename_a,gHiresTxtrInfos[idx].AlphaNameTail);
+
+    // Load BMP image to buffer_rbg
+    unsigned char *buf_rgba = NULL;
+    unsigned char *buf_a = NULL;
+#endif //!__GX__
+    int width, height;
+
+    bool bResRGBA=false, bResA=false;
+    bool bCI = ((gRDP.otherMode.text_tlut>=2 || entry.ti.Format == TXT_FMT_CI || entry.ti.Format == TXT_FMT_RGBA) && entry.ti.Size <= TXT_SIZE_8b );
+
+#ifndef __GX__
+    switch( gHiresTxtrInfos[idx].type )
+    {
+        case RGB_PNG:
+            if( bCI )   
+                return;
+            else
+            {
+                bResRGBA = LoadRGBBufferFromPNGFile(filename_rgb, &buf_rgba, width, height);
+                if( bResRGBA && gHiresTxtrInfos[idx].bSeparatedAlpha )
+                    bResA = LoadRGBBufferFromPNGFile(filename_a, &buf_a, width, height);
+            }
+            break;
+        case COLOR_INDEXED_BMP:
+            if( bCI )   
+                bResRGBA = LoadRGBABufferFromColorIndexedFile(filename_rgb, entry, &buf_rgba, width, height);
+            else
+                return;
+            break;
+        case RGBA_PNG_FOR_CI:
+        case RGBA_PNG_FOR_ALL_CI:
+            if( bCI )   
+                bResRGBA = LoadRGBBufferFromPNGFile(filename_rgb, &buf_rgba, width, height, 32);
+            else
+                return;
+            break;
+        case RGB_WITH_ALPHA_TOGETHER_PNG:
+            if( bCI )   
+                return;
+            else
+                bResRGBA = LoadRGBBufferFromPNGFile(filename_rgb, &buf_rgba, width, height, 32);
+            break;
+        default:
+            return;
+    }
+
+    if( !bResRGBA )
+    {
+        printf("Error: RGBBuffer creation failed for file '%s'.\n", filename_rgb);
+        TRACE1("Cannot open %s", filename_rgb);
+        return;
+    }
+    else if( gHiresTxtrInfos[idx].bSeparatedAlpha && !bResA )
+    {
+        printf("Error: Alpha buffer creation failed for file '%s'.\n", filename_a);
+        TRACE1("Cannot open %s", filename_a);
+        delete [] buf_rgba;
+        return;
+    }
+#else //!__GX__
+//	ArchiveEntryInfo archiveEntryInfo = reader->readInfo(archiveEntry);
+	width = archiveEntryInfo.width;
+	height = archiveEntryInfo.height;
+
+	//This function just returns if the image format doesn't agree with bCI
+	//We need to add an extra format parameter to ArchiveEntryInfo to support this..
+/*	switch( archiveEntryInfo.format )
+    {
+        case RGB_PNG:
+            if( bCI )   
+                return;
+            else
+            {
+				// if "_a.png" exists, it will be combined with "_rgb.png" using tex conversion tool
+//                bResRGBA = LoadRGBBufferFromPNGFile(filename_rgb, &buf_rgba, width, height);
+//                if( bResRGBA && gHiresTxtrInfos[idx].bSeparatedAlpha )
+//                    bResA = LoadRGBBufferFromPNGFile(filename_a, &buf_a, width, height);
+            }
+            break;
+        case COLOR_INDEXED_BMP:
+            if( bCI )   
+//                bResRGBA = LoadRGBABufferFromColorIndexedFile(filename_rgb, entry, &buf_rgba, width, height);
+            else
+                return;
+            break;
+        case RGBA_PNG_FOR_CI:
+        case RGBA_PNG_FOR_ALL_CI:
+            if( bCI )   
+//                bResRGBA = LoadRGBBufferFromPNGFile(filename_rgb, &buf_rgba, width, height, 32);
+            else
+                return;
+            break;
+        case RGB_WITH_ALPHA_TOGETHER_PNG:
+            if( bCI )   
+                return;
+            else
+//                bResRGBA = LoadRGBBufferFromPNGFile(filename_rgb, &buf_rgba, width, height, 32);
+            break;
+        default:
+            return;
+    }*/
+#endif //__GX__
+
+    // calculate the texture size magnification by comparing the N64 texture size and the hi-res texture size
+    int scale = 0;
+    if (width == 1 * (int)entry.ti.WidthToCreate && height == 1 * (int)entry.ti.HeightToCreate)
+        scale = 1;
+    else if (width == 2 * (int)entry.ti.WidthToCreate && height == 2 * (int)entry.ti.HeightToCreate)
+        scale = 2;
+    else if (width == 4 * (int)entry.ti.WidthToCreate && height == 4 * (int)entry.ti.HeightToCreate)
+        scale = 4;
+    else if (width == 8 * (int)entry.ti.WidthToCreate && height == 8 * (int)entry.ti.HeightToCreate)
+        scale = 8;
+    else if (width == 16 * (int)entry.ti.WidthToCreate && height == 16 * (int)entry.ti.HeightToCreate)
+        scale =16;
+    else
+    {
+        int scalex = width / (int)entry.ti.WidthToCreate;
+        int scaley = height / (int)entry.ti.HeightToCreate;
+        scale = scalex > scaley ? scalex : scaley; // set scale to maximum(scalex,scaley)
+        printf("Warning: Non-integral hi-res texture scale.  Orig = (%i,%i)  Hi-res = (%i,%i)\nTextures may look incorrect\n", 
+               entry.ti.WidthToCreate, entry.ti.HeightToCreate, width, height);
+    }
+
+    // Create new texture
+    entry.pEnhancedTexture = CDeviceBuilder::GetBuilder()->CreateTexture(entry.ti.WidthToCreate*scale, entry.ti.HeightToCreate*scale);
+    DrawInfo info;
+
+#ifdef __GX__
+//	entry.pEnhancedTexture->GXtexfmt = archiveEntryInfo.format; //GX_TF_RGBA8;
+	entry.pEnhancedTexture->GXtexfmt = GX_TF_RGBA8;
+
+	entry.pEnhancedTexture->GXcacheType = TEX_CACHE; //Indicate texture belongs in tex cache
+
+#ifdef SHOW_DEBUG
+	sprintf(txtbuffer,"width = %d; height = %d; scale = %d; GXfmt = %d; pEnhTex = %08x\r\n", width, height, scale, archiveEntryInfo.format, entry.pEnhancedTexture);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
+
+#endif //__GX__
+
+    if( entry.pEnhancedTexture && entry.pEnhancedTexture->StartUpdate(&info) )
+    {
+
+#ifndef __GX__
+        if( gHiresTxtrInfos[idx].type == RGB_PNG )
+        {
+            unsigned char *pRGB = buf_rgba;
+            unsigned char *pA = buf_a;
+
+            if (info.lPitch < width * 4)
+                printf("*** Error: texture pitch %i less than width %i times 4\n", info.lPitch, width);
+            if (height > info.dwHeight)
+                printf("*** Error: texture source height %i greater than destination height %i\n", height, info.dwHeight);
+
+            // Update the texture by using the buffer
+            for( int i=height-1; i>=0; i--)
+            {
+                BYTE* pdst = (BYTE*)info.lpSurface + i*info.lPitch;
+                for( int j=0; j<width; j++)
+                {
+                    *pdst++ = *pRGB++;      // R
+                    *pdst++ = *pRGB++;      // G
+                    *pdst++ = *pRGB++;      // B
+
+                    if( gHiresTxtrInfos[idx].bSeparatedAlpha )
+                    {
+                        *pdst++ = *pA;
+                        pA += 3;
+                    }
+                    else if( entry.ti.Format == TXT_FMT_I )
+                    {
+                        *pdst++ = pRGB[-1];
+                    }
+                    else
+                    {
+                        *pdst++ = 0xFF;
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Update the texture by using the buffer
+            uint32 *pRGB = (uint32*)buf_rgba;
+            for( int i=height-1; i>=0; i--)
+            {
+                uint32 *pdst = (uint32*)((BYTE*)info.lpSurface + i*info.lPitch);
+                for( int j=0; j<width; j++)
+                {
+                    *pdst++ = *pRGB++;      // RGBA
+                }
+            }
+        }
+
+        if( entry.ti.WidthToCreate/entry.ti.WidthToLoad == 2 )
+        {
+            gTextureManager.Mirror(info.lpSurface, width, entry.ti.maskS+gHiresTxtrInfos[idx].scaleShift, width*2, width*2, height, S_FLAG, 4 );
+        }
+
+        if( entry.ti.HeightToCreate/entry.ti.HeightToLoad == 2 )
+        {
+            gTextureManager.Mirror(info.lpSurface, height, entry.ti.maskT+gHiresTxtrInfos[idx].scaleShift, height*2, entry.pEnhancedTexture->m_dwCreatedTextureWidth, height, T_FLAG, 4 );
+        }
+
+        if( entry.ti.WidthToCreate*scale < entry.pEnhancedTexture->m_dwCreatedTextureWidth )
+        {
+            // Clamp
+            gTextureManager.Clamp(info.lpSurface, width, entry.pEnhancedTexture->m_dwCreatedTextureWidth, entry.pEnhancedTexture->m_dwCreatedTextureWidth, height, S_FLAG, 4 );
+        }
+        if( entry.ti.HeightToCreate*scale < entry.pEnhancedTexture->m_dwCreatedTextureHeight )
+        {
+            // Clamp
+            gTextureManager.Clamp(info.lpSurface, height, entry.pEnhancedTexture->m_dwCreatedTextureHeight, entry.pEnhancedTexture->m_dwCreatedTextureWidth, height, T_FLAG, 4 );
+        }
+#else //!__GX__
+		//bool readTexture(void* textureData, const ArchiveEntry&);
+		//bool readOK = reader->readTexture( info.lpSurface, archiveEntry );
+		unsigned int stride = info.lPitch * 4; // 4 lines in GX tile
+		bool readOK = reader->readTexture( info.lpSurface, archiveEntry, archiveEntryInfo, stride);
+		if (readOK)
+			sprintf(txtbuffer,"readTexture success\r\n");
+		else
+			sprintf(txtbuffer,"readTexture FAIL\r\n");
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+
+		// Are the following calls needed?
+		// gHiresTxtrInfos[idx].scaleShift is never filled in, so I don't understand why it is used below..
+		// The size is hard-coded to 4, but if we add more GX formats, the size needs to be adjusted accordingly
+		if( entry.ti.WidthToCreate/entry.ti.WidthToLoad == 2 )
+		{
+			//gTextureManager.Mirror(info.lpSurface, width, entry.ti.maskS+gHiresTxtrInfos[idx].scaleShift, width*2, width*2, height, S_FLAG, 4 );
+			gTextureManager.Mirror(info.lpSurface, width, entry.ti.maskS, width*2, width*2, height, S_FLAG, 4 );
+		}
+
+		if( entry.ti.HeightToCreate/entry.ti.HeightToLoad == 2 )
+		{
+			//gTextureManager.Mirror(info.lpSurface, height, entry.ti.maskT+gHiresTxtrInfos[idx].scaleShift, height*2, entry.pEnhancedTexture->m_dwCreatedTextureWidth, height, T_FLAG, 4 );
+			gTextureManager.Mirror(info.lpSurface, height, entry.ti.maskT, height*2, entry.pEnhancedTexture->m_dwCreatedTextureWidth, height, T_FLAG, 4 );
+		}
+
+		if( entry.ti.WidthToCreate*scale < entry.pEnhancedTexture->m_dwCreatedTextureWidth )
+		{
+			// Clamp
+			gTextureManager.Clamp(info.lpSurface, width, entry.pEnhancedTexture->m_dwCreatedTextureWidth, entry.pEnhancedTexture->m_dwCreatedTextureWidth, height, S_FLAG, 4 );
+		}
+		if( entry.ti.HeightToCreate*scale < entry.pEnhancedTexture->m_dwCreatedTextureHeight )
+		{
+			// Clamp
+			gTextureManager.Clamp(info.lpSurface, height, entry.pEnhancedTexture->m_dwCreatedTextureHeight, entry.pEnhancedTexture->m_dwCreatedTextureWidth, height, T_FLAG, 4 );
+		}
+#endif //__GX__
+
+		entry.pEnhancedTexture->EndUpdate(&info);
+		entry.pEnhancedTexture->SetOthersVariables();
+		entry.pEnhancedTexture->m_bIsEnhancedTexture = true;
+		entry.dwEnhancementFlag = TEXTURE_EXTERNAL;
+
+#ifdef SHOW_DEBUG
+		sprintf(txtbuffer,"Created New Texture!!!\r\n");
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
+
+#ifndef __GX__
+        printf("Loaded hi-res texture: %s\n", filename_rgb);
+#endif //!__GX__
+    }
+    else
+    {
+        printf("Error: New texture creation failed.\n");
+        TRACE0("Cannot create a new texture");
+    }
+
+#ifndef __GX__
+    if( buf_rgba )
+    {
+        delete [] buf_rgba;
+    }
+
+    if( buf_a )
+    {
+        delete [] buf_a;
+    }
+#endif //!__GX__
+}
+#endif //__GX__
 

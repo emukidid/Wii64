@@ -744,6 +744,11 @@ void ReadConfiguration(void)
 #endif //__GX__
     }
 
+#ifdef __GX__
+//Uncomment the following line to load sd:\wii64\texture.pak on ROM load
+//	options.bLoadHiResTextures = TRUE;
+#endif //__GX__
+
     status.isVertexShaderEnabled = status.isVertexShaderSupported && options.bEnableVertexShader;
     status.bUseHW_T_L = false;
 }

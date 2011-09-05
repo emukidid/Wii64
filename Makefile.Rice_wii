@@ -11,15 +11,15 @@ CFLAGS  = -g -O3 -Wall $(MACHDEP) $(INCLUDE) \
 	  -DUSE_GUI -DWII -DHW_RVL -DAIDUMP -DUSE_EXPANSION \
 	  -DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DRELEASE -DMENU_V2 \
 	  -D__GX__ -DNO_ASM \
-	  -DSHOW_DEBUG  #-DDEBUGON #-DGLN64_GX #-fno-exceptions #-DUSE_TLB_CACHE \
+	  -DSHOW_DEBUG #-DPRINTGECKO #-DDEBUGON #-DGLN64_GX #-fno-exceptions #-DUSE_TLB_CACHE \
 	  #-DPPC_DYNAREC -DNO_BT -DPROFILE #-DSHOW_DEBUG #-DPRINTGECKO 
 #	  -DDEBUGON -DUSE_ROM_CACHE_L1 -DPRINTGECKO -DGLN64_SDLOG -DEMBEDDED_FONTS -DUSE_EXPANSION -DPPC_DYNAREC -DSHOW_STATS
 
 MACHDEP	= -DGEKKO -mcpu=750 -meabi -mhard-float 
 LDFLAGS	=	$(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -Wl,--cref
 
-INCLUDE = -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include
-LIBPATHS = -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
+INCLUDE = -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include
+LIBPATHS = -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii -L$(DEVKITPRO)/portlibs/ppc/lib
 
 CXXFLAGS	=$(CFLAGS)
 
@@ -161,9 +161,6 @@ OBJ_RICE_GX = Rice_GX/OGLGraphicsContext.o \
 	Rice_GX/TextureFilters_2xsai.o \
 	Rice_GX/TextureFilters_hq2x.o \
 	Rice_GX/TextureFilters_hq4x.o \
-	Rice_GX/liblinux/bmp.o \
-	Rice_GX/liblinux/BMGImage.o \
-	Rice_GX/liblinux/pngrw.o \
 	Rice_GX/OGLRender.o \
 	Rice_GX/OGLTexture.o \
 	Rice_GX/TEVBlender.o \
@@ -177,23 +174,31 @@ OBJ_RICE_GX = Rice_GX/OGLGraphicsContext.o \
 	Rice_GX/ConvertImageGX.o \
 	Rice_GX/DecodedMux.o \
 	Rice_GX/RenderTexture.o \
-	Rice_GX/liblinux/BMGUtils.o \
-	Rice_GX/liblinux/pngread.o \
-	Rice_GX/liblinux/png.o \
-	Rice_GX/liblinux/pngget.o \
-	Rice_GX/liblinux/pngrtran.o \
-	Rice_GX/liblinux/pngtrans.o \
-	Rice_GX/liblinux/pngwrite.o \
-	Rice_GX/liblinux/pngset.o \
-	Rice_GX/liblinux/pngmem.o \
 	Rice_GX/OGLDecodedMux.o \
-	Rice_GX/liblinux/pngerror.o \
-	Rice_GX/liblinux/pngrio.o \
-	Rice_GX/liblinux/pngrutil.o \
-	Rice_GX/liblinux/pngwutil.o \
-	Rice_GX/liblinux/pngwio.o \
-	Rice_GX/liblinux/pngwtran.o \
-	Rice_GX/OGLRenderExt.o
+	Rice_GX/OGLRenderExt.o \
+	TextureArchive/ArchiveReader.o
+
+#	Rice_GX/liblinux/bmp.o \
+#	Rice_GX/liblinux/BMGImage.o \
+#	Rice_GX/liblinux/pngrw.o \
+
+#	Rice_GX/liblinux/BMGUtils.o \
+#	Rice_GX/liblinux/pngread.o \
+#	Rice_GX/liblinux/png.o \
+#	Rice_GX/liblinux/pngget.o \
+#	Rice_GX/liblinux/pngrtran.o \
+#	Rice_GX/liblinux/pngtrans.o \
+#	Rice_GX/liblinux/pngwrite.o \
+#	Rice_GX/liblinux/pngset.o \
+#	Rice_GX/liblinux/pngmem.o \
+
+#	Rice_GX/liblinux/pngerror.o \
+#	Rice_GX/liblinux/pngrio.o \
+#	Rice_GX/liblinux/pngrutil.o \
+#	Rice_GX/liblinux/pngwutil.o \
+#	Rice_GX/liblinux/pngwio.o \
+#	Rice_GX/liblinux/pngwtran.o \
+
 
 HEADER		=main/rom.h \
 		r4300/r4300.h \
