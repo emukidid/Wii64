@@ -232,7 +232,7 @@ unsigned int dyna_check_cop1_unusable(unsigned int pc, int isDelaySlot){
 	return r4300.pc;
 }
 
-static void invalidate_func(unsigned int addr){
+void invalidate_func(unsigned int addr){
 	PowerPC_block* block = blocks_get(addr>>12);
 	PowerPC_func* func = find_func(&block->funcs, addr);
 	if(func)
