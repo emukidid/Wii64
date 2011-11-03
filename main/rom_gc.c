@@ -49,6 +49,16 @@ int ROM_byte_swap;
 rom_header* ROM_HEADER = NULL;
 rom_settings ROM_SETTINGS;
 
+void stripInvalidChars(char *str) {
+	int i = 0;
+	for(i = 0; i < strlen(str); i++) {
+		if(str[i] == '\\' || str[i] == '/' || str[i] == ':'|| str[i] == '*'
+		|| str[i] == '?'|| str[i] == '"'|| str[i] == '<'|| str[i] == '>'|| str[i] == '|') {
+			str[i] = '_';
+		}
+	}
+}
+
 int init_byte_swap(u32 magicWord){
 
 	switch(magicWord){
@@ -180,6 +190,8 @@ int rom_read(fileBrowser_file* file){
   		break;
     }
   }
+  // Replace any non file system complaint chars with underscores
+  stripInvalidChars(&ROM_SETTINGS.goodname);
   // Fix save type for certain special sized (16kbit) eeprom games
   if(isEEPROM16k())
     ROM_SETTINGS.eeprom_16kb = 1;
