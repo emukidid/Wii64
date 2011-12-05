@@ -89,8 +89,6 @@ void control_info_init(void);
 // -- End init functions --
 
 // -- Plugin data --
-//#define DEFAULT_FIFO_SIZE    (256*1024)//(64*1024) minimum
-
 CONTROL Controls[4];
 
 static GFX_INFO     gfx_info;
@@ -177,10 +175,60 @@ static void dummy_func(){ }
 void (*fBRead)(DWORD addr) = NULL;
 void (*fBWrite)(DWORD addr, DWORD size) = NULL;
 void (*fBGetFrameBufferInfo)(void *p) = NULL;
-//void new_frame(){ }
-//void new_vi(){ }
 // Read PAD format from Classic if available
 u16 readWPAD(void);
+
+void load_config(char *loaded_path) {
+	//config stuff
+	fileBrowser_file* configFile_file;
+	char prefix[16];
+	int (*configFile_init)(fileBrowser_file*) = fileBrowser_libfat_init;
+#ifdef HW_RVL
+	if(loaded_path[0] == 'u') {  
+		configFile_file = &saveDir_libfat_USB;
+		strcpy(prefix,"usb:/wii64/");
+	}
+	else	
+#endif
+	{
+		configFile_file = &saveDir_libfat_Default;
+		strcpy(prefix,"sd:/wii64/");
+	}
+	if(configFile_init(configFile_file)) {                	//only if device initialized ok
+		sprintf(configFile_file->name, "%s%s", prefix, "settings.cfg");
+		FILE* f = fopen( configFile_file->name, "r" );  //attempt to open file
+		if(f) {        //open ok, read it
+			readConfig(f);
+			fclose(f);
+		}
+		sprintf(configFile_file->name, "%s%s", prefix, "controlG.cfg");
+		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		if(f) {
+			load_configurations(f, &controller_GC);					//write out GC controller mappings
+			fclose(f);
+		}
+#ifdef HW_RVL
+		sprintf(configFile_file->name, "%s%s", prefix, "controlC.cfg");
+		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		if(f) {
+			load_configurations(f, &controller_Classic);			//write out Classic controller mappings
+			fclose(f);
+		}
+		sprintf(configFile_file->name, "%s%s", prefix, "controlN.cfg");
+		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		if(f) {
+			load_configurations(f, &controller_WiimoteNunchuk);	//write out WM+NC controller mappings
+			fclose(f);
+		}
+		sprintf(configFile_file->name, "%s%s", prefix, "controlW.cfg");
+		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		if(f) {
+			load_configurations(f, &controller_Wiimote);			//write out Wiimote controller mappings
+			fclose(f);
+		}
+#endif
+	}
+}
 
 int main(int argc, char* argv[]){
 	/* INITIALIZE */
@@ -193,7 +241,6 @@ int main(int argc, char* argv[]){
 			IOS_ReloadIOS(preferred);
 		else DI_LoadDVDX(true);
 	}
-	
 	DI_Init();    // first
 #endif
 
@@ -211,12 +258,6 @@ int main(int argc, char* argv[]){
 #endif
 	MenuContext *menu = new MenuContext(vmode);
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
-
-#ifdef DEBUGON
-	//DEBUG_Init(GDBSTUB_DEVICE_TCP,GDBSTUB_DEF_TCPPORT); //Default port is 2828
-//	DEBUG_Init(GDBSTUB_DEVICE_USB, 1);
-//	_break();
-#endif
 
 	// Default Settings
 	audioEnabled     = 1; // Audio
@@ -250,83 +291,14 @@ int main(int argc, char* argv[]){
 	pakMode[3]		 = PAKMODE_MEMPAK;
 	loadButtonSlot	 = LOADBUTTON_DEFAULT;
 #ifdef GLN64_GX
-// glN64 specific  settings
+	// glN64 specific  settings
  	glN64_useFrameBufferTextures = 0; // Disable FrameBuffer textures
 	glN64_use2xSaiTextures = 0;	// Disable 2xSai textures
 	renderCpuFramebuffer = 0; // Disable CPU Framebuffer Rendering
 #endif //GLN64_GX
 	menuActive = 1;
 
-	//config stuff
-	fileBrowser_file* configFile_file;
-	int (*configFile_init)(fileBrowser_file*) = fileBrowser_libfat_init;
-#ifdef HW_RVL
-	if(argv[0][0] == 'u') {  //assume USB
-		configFile_file = &saveDir_libfat_USB;
-		if(configFile_init(configFile_file)) {                //only if device initialized ok
-			FILE* f = fopen( "usb:/wii64/settings.cfg", "r" );  //attempt to open file
-			if(f) {        //open ok, read it
-				readConfig(f);
-				fclose(f);
-			}
-			f = fopen( "usb:/wii64/controlG.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_GC);					//write out GC controller mappings
-				fclose(f);
-			}
-#ifdef HW_RVL
-			f = fopen( "usb:/wii64/controlC.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_Classic);			//write out Classic controller mappings
-				fclose(f);
-			}
-			f = fopen( "usb:/wii64/controlN.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_WiimoteNunchuk);	//write out WM+NC controller mappings
-				fclose(f);
-			}
-			f = fopen( "usb:/wii64/controlW.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_Wiimote);			//write out Wiimote controller mappings
-				fclose(f);
-			}
-#endif //HW_RVL
-		}
-	}
-	else /*if((argv[0][0]=='s') || (argv[0][0]=='/'))*/
-#endif
-	{ //assume SD
-		configFile_file = &saveDir_libfat_Default;
-		if(configFile_init(configFile_file)) {                //only if device initialized ok
-			FILE* f = fopen( "sd:/wii64/settings.cfg", "r" );  //attempt to open file
-			if(f) {        //open ok, read it
-				readConfig(f);
-				fclose(f);
-			}
-			f = fopen( "sd:/wii64/controlG.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_GC);					//write out GC controller mappings
-				fclose(f);
-			}
-#ifdef HW_RVL
-			f = fopen( "sd:/wii64/controlC.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_Classic);			//write out Classic controller mappings
-				fclose(f);
-			}
-			f = fopen( "sd:/wii64/controlN.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_WiimoteNunchuk);	//write out WM+NC controller mappings
-				fclose(f);
-			}
-			f = fopen( "sd:/wii64/controlW.cfg", "r" );  //attempt to open file
-			if(f) {
-				load_configurations(f, &controller_Wiimote);			//write out Wiimote controller mappings
-				fclose(f);
-			}
-#endif //HW_RVL
-		}
-	}
+	load_config(&argv[0][0]);
 #ifdef HW_RVL
 	// Handle options passed in through arguments
 	int i;
@@ -401,12 +373,11 @@ int loadROM(fileBrowser_file* rom){
 	init_eeprom();
 	hasLoadedROM = TRUE;
 #ifndef HW_RVL
-  ARAM_manager_init();
+	ARAM_manager_init();
 	TLBCache_init();
 #else
 	tlb_mem2_init();
 #endif
-	//romFile_init(rom);
 	ret = rom_read(rom);
 	if(ret){	// Something failed while trying to read the ROM.
 		hasLoadedROM = FALSE;
@@ -424,11 +395,9 @@ int loadROM(fileBrowser_file* rom){
 
 	gfx_info_init();
 	audio_info_init();
-//	control_info_init();
 	rsp_info_init();
 
 	romOpen_gfx();
-//	gfx_set_fb(xfb[0], xfb[1]);
 	romOpen_audio();
 	romOpen_input();
 
@@ -468,20 +437,16 @@ int loadROM(fileBrowser_file* rom){
   	switch (nativeSaveDevice)
   	{
   		case NATIVESAVEDEVICE_SD:
-//			if (result) menu::MessageBox::getInstance().setMessage("Found & loaded save from SD card");
   			if (result) autoSaveLoaded = NATIVESAVEDEVICE_SD;
   			break;
   		case NATIVESAVEDEVICE_USB:
-//			if (result) menu::MessageBox::getInstance().setMessage("Found & loaded save from USB device");
   			if (result) autoSaveLoaded = NATIVESAVEDEVICE_USB;
   			break;
   		case NATIVESAVEDEVICE_CARDA:
-//			if (result) menu::MessageBox::getInstance().setMessage("Found & loaded save from memcard in slot A");
   			if (result) autoSaveLoaded = NATIVESAVEDEVICE_CARDA;
   			break;
   		case NATIVESAVEDEVICE_CARDB:
- //			if (result) menu::MessageBox::getInstance().setMessage("Found & loaded save from memcard in slot B");
-  			if (result) autoSaveLoaded = NATIVESAVEDEVICE_CARDB;
+   			if (result) autoSaveLoaded = NATIVESAVEDEVICE_CARDB;
   			break;
   	}
   }
@@ -603,84 +568,6 @@ static void Initialise (void){
 
 	//Initialize controls once before menu runs
 	control_info_init();
-
-/*  VIDEO_Init();
-  PAD_Init();
-  PAD_Reset(0xf0000000);
-#ifdef HW_RVL
-  CONF_Init();
-  WPAD_Init();
-  //WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownWii);
-  SYS_SetPowerCallback(ShutdownWii);
-#endif
-
-  vmode = VIDEO_GetPreferredMode(&vmode_phys);
-  rmode = &rmode_phys;
-  memcpy( rmode, vmode, sizeof(GXRModeObj));
-#ifdef HW_RVL
-  if(VIDEO_HaveComponentCable() && CONF_GetProgressiveScan())
-  {
-		memcpy( vmode, &TVNtsc480Prog, sizeof(GXRModeObj));
-		memcpy( rmode, vmode, sizeof(GXRModeObj));
-/ *		if(CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-		{
-			screenMode = 1;
-			vmode->fbWidth = VI_MAX_WIDTH_NTSC;
-			vmode->viWidth = VI_MAX_WIDTH_NTSC;
-//			vmode->viXOrigin = 80;
-			GX_xfb_offset = 24;
-		}* /
-  }
-#else
-  if(VIDEO_HaveComponentCable())
-  {
-		memcpy( vmode, &TVNtsc480Prog, sizeof(GXRModeObj));
-		memcpy( rmode, vmode, sizeof(GXRModeObj));
-  }
-#endif
-  VIDEO_Configure (vmode);
-#if 0 //def HW_RVL //Place xfb in MEM2.
-  xfb[0] = (u32 *) XFB0_LO;
-  xfb[1] = (u32 *) XFB1_LO;
-#else
-  xfb[0] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-  xfb[1] = (u32 *) MEM_K0_TO_K1 (SYS_AllocateFramebuffer (vmode));
-#endif
-  console_init (xfb[0], 20, 64, vmode->fbWidth, vmode->xfbHeight,
-        vmode->fbWidth * 2);
-  VIDEO_ClearFrameBuffer (vmode, xfb[0], COLOR_BLACK);
-  VIDEO_ClearFrameBuffer (vmode, xfb[1], COLOR_BLACK);
-  VIDEO_SetNextFramebuffer (xfb[0]);
-  VIDEO_SetPostRetraceCallback (ScanPADSandReset);
-  VIDEO_SetBlack (0);
-  VIDEO_Flush ();
-  VIDEO_WaitVSync ();        // *** Wait for VBL *** //
-  if (vmode->viTVMode & VI_NON_INTERLACE)
-    VIDEO_WaitVSync ();
-
-  // setup the fifo and then init GX
-  void *gp_fifo = NULL;
-  gp_fifo = MEM_K0_TO_K1 (memalign (32, DEFAULT_FIFO_SIZE));
-  memset (gp_fifo, 0, DEFAULT_FIFO_SIZE);
-
-  GX_Init (gp_fifo, DEFAULT_FIFO_SIZE);
-
-  // clears the bg to color and clears the z buffer
-//  GX_SetCopyClear ((GXColor){64,64,64,255}, 0x00000000);
-  GX_SetCopyClear ((GXColor){0,0,0,255}, 0x00000000);
-  // init viewport
-  GX_SetViewport (0, 0, rmode->fbWidth, rmode->efbHeight, 0, 1);
-  // Set the correct y scaling for efb->xfb copy operation
-  GX_SetDispCopyYScale ((f32) rmode->xfbHeight / (f32) rmode->efbHeight);
-  GX_SetDispCopyDst (vmode->fbWidth, vmode->xfbHeight);
-  GX_SetCullMode (GX_CULL_NONE); // default in rsp init
-  GX_CopyDisp (xfb[0]+GX_xfb_offset, GX_TRUE); // This clears the efb
-  GX_CopyDisp (xfb[0]+GX_xfb_offset, GX_TRUE); // This clears the xfb
-
-#ifdef USE_GUI
-  GUI_setFB(xfb[0], xfb[1]);
-  GUI_init();
-#endif*/
 
 	// Init PS GQRs so I can load signed/unsigned chars/shorts as PS values
 	__asm__ volatile(
