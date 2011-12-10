@@ -1,0 +1,345 @@
+# Makefile for Rice
+
+CC		= powerpc-eabi-gcc
+CXX		= powerpc-eabi-g++
+AS		= powerpc-eabi-as
+
+MACHDEP		:= $(MACHDEP) -mcpu=750 -meabi -mhard-float 
+LDFLAGS		:= $(LDFLAGS) $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
+
+INCLUDE 	:= $(INCLUDE) -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include
+LIBPATHS	:= $(LIBPATHS) -L$(DEVKITPRO)/portlibs/ppc/lib
+
+CFLAGS		:= $(CFLAGS) \
+		-g -O3 -Wall -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
+		-DGEKKO -D__GX__ -DUSE_GUI -DRELEASE -DMENU_V2 -DSHOW_DEBUG \
+		-DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DNO_ASM \
+		#-DPRINTGECKO #-DDEBUGON #-DGLN64_GX #-fno-exceptions #-DUSE_TLB_CACHE \
+		#-DPPC_DYNAREC -DNO_BT -DPROFILE #-DSHOW_DEBUG #-DPRINTGECKO \
+		#-DDEBUGON -DUSE_ROM_CACHE_L1 -DPRINTGECKO -DGLN64_SDLOG -DEMBEDDED_FONTS -DUSE_EXPANSION -DPPC_DYNAREC -DSHOW_STATS
+
+CXXFLAGS	:= $(CXXFLAGS) $(CFLAGS)
+
+OBJ		:= $(OBJ) \
+		main/rom_gc.o \
+		main/main_gc-menu2.o \
+		main/gc_dvd.o \
+		main/gczip.o \
+		main/timers.o \
+		menu/MenuContext.o \
+		menu/MainFrame.o \
+		menu/LoadRomFrame.o \
+		menu/FileBrowserFrame.o \
+		menu/ConfigureButtonsFrame.o\
+		menu/ConfigureInputFrame.o\
+		menu/ConfigurePaksFrame.o\
+		menu/CurrentRomFrame.o \
+		menu/LoadSaveFrame.o \
+		menu/SaveGameFrame.o \
+		menu/SettingsFrame.o\
+		menu/SelectCPUFrame.o\
+		menu/MenuResources.o \
+		libgui/Button.o \
+		libgui/Component.o \
+		libgui/CursorManager.o \
+		libgui/FocusManager.o \
+		libgui/Frame.o \
+		libgui/GraphicsGX.o \
+		libgui/Gui.o \
+		libgui/GuiResources.o \
+		libgui/Image.o \
+		libgui/InputManager.o \
+		libgui/InputStatusBar.o \
+		libgui/IPLFont.o \
+		libgui/LoadingBar.o \
+		libgui/Logo.o \
+		libgui/MessageBox.o \
+		libgui/resources.o \
+		libgui/TextBox.o \
+		fileBrowser/fileBrowser-DVD.o \
+		fileBrowser/fileBrowser-CARD.o \
+		fileBrowser/fileBrowser-libfat.o \
+		fileBrowser/fileBrowser.o \
+		gui/GUI.o \
+		gui/DEBUG.o \
+		gui/TEXT.o \
+		r4300/r4300.o \
+		r4300/exception.o \
+		r4300/Invalid_Code.o \
+		r4300/ARAM-blocks.o \
+		r4300/Recomp-Cache-Heap.o \
+		gc_memory/tlb.o \
+		gc_memory/memory.o \
+		gc_memory/dma.o \
+		r4300/interupt.o \
+		r4300/recomp.o \
+		gc_memory/n64_cic_nus_6105.o \
+		gc_memory/pif.o \
+		r4300/pure_interp.o \
+		r4300/compare_core.o \
+		gc_memory/flashram.o \
+		main/md5.o \
+		main/savestates_gc.o \
+		r4300/profile.o \
+		main/adler32.o
+		
+OBJ_PPC		:= $(OBJ_PPC) \
+		r4300/ppc/MIPS-to-PPC.o \
+		r4300/ppc/Recompile.o \
+		r4300/ppc/Wrappers.o \
+		r4300/ppc/FuncTree.o \
+		r4300/ppc/Register-Cache.o
+
+OBJ_INPUT	:= $(OBJ_INPUT) \
+		gc_input/main.o \
+		gc_input/controller-GC.o
+
+OBJ_RSPHLE	:= $(OBJ_RSPHLE) \
+		rsp_hle/main.o \
+		rsp_hle/jpeg.o \
+		rsp_hle/ucode3.o \
+		rsp_hle/ucode2.o \
+		rsp_hle/ucode1.o \
+		rsp_hle/ucode3mp3.o
+		
+OBJ_RSPHLEPPC	:= $(OBJ_RSPHLEPPC) \
+		rsp_hle-ppc/main.o \
+		rsp_hle-ppc/jpeg.o \
+		rsp_hle-ppc/ucode3.o \
+		rsp_hle-ppc/ucode2.o \
+		rsp_hle-ppc/ucode1.o
+
+OBJ_AUDIO	:= $(OBJ_AUDIO) \
+		gc_audio/main.o
+
+OBJ_GLN64_GX	:= $(OBJ_GLN64_GX) \
+		glN64_GX/glN64.o \
+		glN64_GX/Config_linux.o \
+		glN64_GX/OpenGL.o \
+		glN64_GX/N64.o \
+		glN64_GX/RSP.o \
+		glN64_GX/VI.o \
+		glN64_GX/Textures.o \
+		glN64_GX/FrameBuffer.o \
+		glN64_GX/Combiner.o \
+		glN64_GX/gDP.o \
+		glN64_GX/gSP.o \
+		glN64_GX/GBI.o \
+		glN64_GX/DepthBuffer.o \
+		glN64_GX/CRC.o \
+		glN64_GX/2xSAI.o \
+		glN64_GX/TEV_combiner.o \
+		glN64_GX/RDP.o \
+		glN64_GX/F3D.o \
+		glN64_GX/F3DEX.o \
+		glN64_GX/F3DEX2.o \
+		glN64_GX/L3D.o \
+		glN64_GX/L3DEX.o \
+		glN64_GX/L3DEX2.o \
+		glN64_GX/S2DEX.o \
+		glN64_GX/S2DEX2.o \
+		glN64_GX/F3DPD.o \
+		glN64_GX/F3DDKR.o \
+		glN64_GX/F3DWRUS.o
+
+
+OBJ_RICE_GX	:= $(OBJ_RICE_GX) \
+		Rice_GX/OGLGraphicsContext.o \
+		Rice_GX/Debugger.o \
+		Rice_GX/Video.o \
+		Rice_GX/Config.o \
+		Rice_GX/GraphicsContext.o \
+		Rice_GX/TextureFilters.o \
+		Rice_GX/DeviceBuilder.o \
+		Rice_GX/Render.o \
+		Rice_GX/RSP_Parser.o \
+		Rice_GX/TextureManager.o \
+		Rice_GX/RenderBase.o \
+		Rice_GX/FrameBuffer.o \
+		Rice_GX/Texture.o \
+		Rice_GX/TextureFilters_2xsai.o \
+		Rice_GX/TextureFilters_hq2x.o \
+		Rice_GX/TextureFilters_hq4x.o \
+		Rice_GX/OGLRender.o \
+		Rice_GX/OGLTexture.o \
+		Rice_GX/TEVBlender.o \
+		Rice_GX/TEVCombiner.o \
+		Rice_GX/OGLExtRender.o \
+		Rice_GX/blender.o \
+		Rice_GX/math.o \
+		Rice_GX/Combiner.o \
+		Rice_GX/RSP_S2DEX.o \
+		Rice_GX/RenderExt.o \
+		Rice_GX/ConvertImageGX.o \
+		Rice_GX/DecodedMux.o \
+		Rice_GX/RenderTexture.o \
+		Rice_GX/OGLDecodedMux.o \
+		Rice_GX/OGLRenderExt.o
+
+OBJ_RICE_GX_LIBLINUX	:= $(OBJ_RICE_GX_LIBLINUX) \
+		Rice_GX/liblinux/bmp.o \
+		Rice_GX/liblinux/BMGImage.o \
+		Rice_GX/liblinux/pngrw.o \
+		Rice_GX/liblinux/BMGUtils.o \
+		Rice_GX/liblinux/pngread.o \
+		Rice_GX/liblinux/png.o \
+		Rice_GX/liblinux/pngget.o \
+		Rice_GX/liblinux/pngrtran.o \
+		Rice_GX/liblinux/pngtrans.o \
+		Rice_GX/liblinux/pngwrite.o \
+		Rice_GX/liblinux/pngset.o \
+		Rice_GX/liblinux/pngmem.o \
+		Rice_GX/liblinux/pngerror.o \
+		Rice_GX/liblinux/pngrio.o \
+		Rice_GX/liblinux/pngrutil.o \
+		Rice_GX/liblinux/pngwutil.o \
+		Rice_GX/liblinux/pngwio.o \
+		Rice_GX/liblinux/pngwtran.o
+
+HEADER		:= $(HEADER) \
+		main/rom.h \
+		r4300/r4300.h \
+		r4300/macros.h \
+		r4300/exception.h \
+		gc_memory/memory.h \
+		gc_memory/tlb.h \
+		gc_memory/dma.h \
+		r4300/interupt.h \
+		r4300/recomp.h \
+		gc_memory/pif.h
+
+LIB		:= $(LIB) -logc -lm -lfat -ldb -lz
+
+ALL_OBJ		:= $(ALL_OBJ) $(OBJ) $(OBJ_INPUT) $(OBJ_RICE_GX) $(OBJ_AUDIO) $(OBJ_RSPHLE) $(OBJ_PPC)
+
+ifeq ($(strip mupen64_GX_gfx/main.cpp),)
+	export LD	:=	$(CC)
+else
+	export LD	:=	$(CXX)
+endif
+
+all:	$(DOL)
+
+$(ELF):	$(ALL_OBJ)
+	$(LD) $^ $(LDFLAGS) $(LIBPATHS) $(LIB) -Wl -o $@
+
+$(DOL): $(ELF)
+	elf2dol $(ELF) $(DOL)
+#	DolTool -d $(ELF)
+
+install:
+	cp mupen64 "$(PREFIX)bin"
+	cp mupen64_nogui "$(PREFIX)bin"
+	mkdir "$(SHARE)" | echo
+	cp -rv mupen64.ini "$(SHARE)"
+	cp -rv lang "$(SHARE)"
+	cp -rv plugins "$(SHARE)"
+	cp -rv doc "$(SHARE)"
+	
+clean:
+	find . -name '*.o' -print0 | xargs -0r rm -f
+
+menu/MenuResources.o:		menu/MenuResources.s
+		$(CC) -x assembler-with-cpp $(CFLAGS) -c -o $@ $<
+
+r4300/interupt.o:		r4300/interupt.c
+		$(CC) $(CFLAGS) -c -o $@ $<
+
+main/main.o:			main/main.c
+		$(CC) $(CFLAGS) -c -o $@ $<
+
+gui/background_tex.o:		gui/background_tex.s
+		$(CC) $(CFLAGS) -c -o $@ $<
+
+gc_input/main.o:		gc_input/input.c
+		$(CC) $(CFLAGS) -c -o $@ $<
+
+rsp_hle-ppc/main.o:		rsp_hle-ppc/main.c
+		$(CC) $(CFLAGS) -c -o $@ $<
+
+gc_audio/main.o:		gc_audio/audio.c
+		$(CC) $(CFLAGS) -c -o $@ $<
+
+glN64_GX/glN64.o:		glN64_GX/glN64.cpp
+		$(CXX) $(CFLAGS) -DMAINDEF -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/Config_linux.o:	glN64_GX/Config_linux.cpp
+		$(CXX) $(CFLAGS) $(GTK_FLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/OpenGL.o:		glN64_GX/OpenGL.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/N64.o:			glN64_GX/N64.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/RSP.o:			glN64_GX/RSP.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/VI.o:			glN64_GX/VI.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/Textures.o:		glN64_GX/Textures.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/FrameBuffer.o:		glN64_GX/FrameBuffer.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/Combiner.o:		glN64_GX/Combiner.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/gDP.o:			glN64_GX/gDP.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/gSP.o:			glN64_GX/gSP.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/GBI.o:			glN64_GX/GBI.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/DepthBuffer.o:			glN64_GX/DepthBuffer.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/CRC.o:			glN64_GX/CRC.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/2xSAI.o:			glN64_GX/2xSAI.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/TEV_combiner.o: 	glN64_GX/TEV_combiner.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/RDP.o:			glN64_GX/RDP.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/F3D.o:			glN64_GX/F3D.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/F3DEX.o:		glN64_GX/F3DEX.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/F3DEX2.o:		glN64_GX/F3DEX2.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/L3D.o:			glN64_GX/L3D.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/L3DEX.o:		glN64_GX/L3DEX.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/L3DEX2.o:		glN64_GX/L3DEX2.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/S2DEX.o:		glN64_GX/S2DEX.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/S2DEX2.o:		glN64_GX/S2DEX2.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/F3DPD.o:		glN64_GX/F3DPD.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/F3DDKR.o:		glN64_GX/F3DDKR.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+
+glN64_GX/F3DWRUS.o:		glN64_GX/F3DWRUS.cpp
+		$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
