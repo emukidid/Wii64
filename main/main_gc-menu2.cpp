@@ -51,7 +51,7 @@ extern "C" {
 #include "../gc_input/controller.h"
 
 #include "../r4300/r4300.h"
-#include "../gc_memory/aram.h"
+#include "../gc_memory/ARAM.h"
 #include "../gc_memory/memory.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "../gc_memory/tlb.h"
