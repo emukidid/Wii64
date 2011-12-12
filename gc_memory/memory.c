@@ -66,15 +66,17 @@ RI_register ri_register;
 AI_register ai_register;
 DPC_register dpc_register;
 DPS_register dps_register;
-// TODO: We only need 8MB when it's used, it'll save
-//         memory when we can alloc only 4MB
+
 #ifdef USE_EXPANSION
-	unsigned long rdram[0x800000/4];
+	#define MEM_SIZE 0x800000
+	#define MEM_TBL_SIZE 0x80
 	#define MEMMASK 0x7FFFFF
 #else
-	unsigned long rdram[0x800000/4/2];
+	#define MEM_SIZE 0x400000
+	#define MEM_TBL_SIZE 0x40
 	#define MEMMASK 0x3FFFFF
 #endif
+unsigned long rdram[MEM_SIZE/4];
 unsigned char *rdramb = (unsigned char *)(rdram);
 unsigned long SP_DMEM[0x1000/4*2];
 unsigned long *SP_IMEM = SP_DMEM+0x1000/4;
@@ -216,430 +218,294 @@ static int firstFrameBufferSetting;
 
 int init_memory()
 {
-   int i;
+	int i;
+      
+	//init hash tables
+	for (i=0; i<(0x10000); i++) rwmem[i] = rw_nomem;
    
-   //swap rom
-   //unsigned long *roml;
-   //roml = (void *)rom;
-   //for (i=0; i<(taille_rom/4); i++) roml[i] = sl(roml[i]);
+	//init RDRAM
+	for (i=0; i<(MEM_SIZE/4); i++) rdram[i]=0;
+
+	for (i=0; i<MEM_TBL_SIZE; i++)
+	{
+		rwmem[(0x8000+i)] = rw_rdram;
+		rwmem[(0xa000+i)] = rw_rdram;
+	}
+	for (i=MEM_TBL_SIZE; i<0x3F0; i++)
+    {
+		rwmem[0x8000+i] = rw_nothing;
+		rwmem[0xa000+i] = rw_nothing;
+	}
    
-   //TLBCache_init();
-   /*loadEeprom();
-   loadMempak();
-   loadSram();
-   loadFlashram();*/
+	//init RDRAM registers
+	rwmem[0x83f0] = rw_rdramreg;
+	rwmem[0xa3f0] = rw_rdramreg;
+	memset(&rdram_register, 0, sizeof(RDRAM_register));
+	readrdramreg[0x0] = &rdram_register.rdram_config;
+	readrdramreg[0x4] = &rdram_register.rdram_device_id;
+	readrdramreg[0x8] = &rdram_register.rdram_delay;
+	readrdramreg[0xc] = &rdram_register.rdram_mode;
+	readrdramreg[0x10] = &rdram_register.rdram_ref_interval;
+	readrdramreg[0x14] = &rdram_register.rdram_ref_row;
+	readrdramreg[0x18] = &rdram_register.rdram_ras_interval;
+	readrdramreg[0x1c] = &rdram_register.rdram_min_interval;
+	readrdramreg[0x20] = &rdram_register.rdram_addr_select;
+	readrdramreg[0x24] = &rdram_register.rdram_device_manuf;
    
-   //init hash tables
-   for (i=0; i<(0x10000); i++)
-     {
-	rwmem[i] = rw_nomem;
-     }
+	for (i=0x28; i<0xFFFF; i++) readrdramreg[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x83f0+i] = rw_nothing;
+		rwmem[0xa3f0+i] = rw_nothing;
+	}
    
-   //init RDRAM
-#ifdef USE_EXPANSION
-   for (i=0; i<(0x800000/4); i++) rdram[i]=0;
-   for (i=0; i<0x80; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size
-#else
-   for (i=0; i<(0x800000/4/2); i++) rdram[i]=0;
-   for (i=0; i<0x40/*0x80*/; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size
-#endif
-     {
-	rwmem[(0x8000+i)] = rw_rdram;
-	rwmem[(0xa000+i)] = rw_rdram;
-     }
-#ifdef USE_EXPANSION
-   for (i=0x80; i<0x3F0; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size
-#else   
-   for (i=0x40/*0x80*/; i<0x3F0; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size 
-#endif
-     {
-	rwmem[0x8000+i] = rw_nothing;
-	rwmem[0xa000+i] = rw_nothing;
-     }
+	//init RSP memory
+	rwmem[0x8400] = rw_rsp_mem;
+	rwmem[0xa400] = rw_rsp_mem;
+	for (i=0; i<(0x1000/4); i++) SP_DMEM[i]=0;
+	for (i=0; i<(0x1000/4); i++) SP_IMEM[i]=0;
    
-   //init RDRAM registers
-   rwmem[0x83f0] = rw_rdramreg;
-   rwmem[0xa3f0] = rw_rdramreg;
-   rdram_register.rdram_config=0;
-   rdram_register.rdram_device_id=0;
-   rdram_register.rdram_delay=0;
-   rdram_register.rdram_mode=0;
-   rdram_register.rdram_ref_interval=0;
-   rdram_register.rdram_ref_row=0;
-   rdram_register.rdram_ras_interval=0;
-   rdram_register.rdram_min_interval=0;
-   rdram_register.rdram_addr_select=0;
-   rdram_register.rdram_device_manuf=0;
-   readrdramreg[0x0] = &rdram_register.rdram_config;
-   readrdramreg[0x4] = &rdram_register.rdram_device_id;
-   readrdramreg[0x8] = &rdram_register.rdram_delay;
-   readrdramreg[0xc] = &rdram_register.rdram_mode;
-   readrdramreg[0x10] = &rdram_register.rdram_ref_interval;
-   readrdramreg[0x14] = &rdram_register.rdram_ref_row;
-   readrdramreg[0x18] = &rdram_register.rdram_ras_interval;
-   readrdramreg[0x1c] = &rdram_register.rdram_min_interval;
-   readrdramreg[0x20] = &rdram_register.rdram_addr_select;
-   readrdramreg[0x24] = &rdram_register.rdram_device_manuf;
+	for (i=1; i<0x4; i++)
+	{
+		rwmem[0x8400+i] = rw_nothing;
+		rwmem[0xa400+i] = rw_nothing;
+	}
    
-   for (i=0x28; i<0xFFFF; i++) readrdramreg[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x83f0+i] = rw_nothing;
-	rwmem[0xa3f0+i] = rw_nothing;
-     }
+	//init RSP registers
+	rwmem[0x8404] = rw_rsp_reg;
+	rwmem[0xa404] = rw_rsp_reg;
+	memset(&sp_register, 0, sizeof(SP_register));
+	readrspreg[0x0] = &sp_register.sp_mem_addr_reg;
+	readrspreg[0x4] = &sp_register.sp_dram_addr_reg;
+	readrspreg[0x8] = &sp_register.sp_rd_len_reg;
+	readrspreg[0xc] = &sp_register.sp_wr_len_reg;
+	readrspreg[0x10] = &sp_register.sp_status_reg;
+	readrspreg[0x14] = &sp_register.sp_dma_full_reg;
+	readrspreg[0x18] = &sp_register.sp_dma_busy_reg;
+	readrspreg[0x1c] = &sp_register.sp_semaphore_reg;
+
+	for (i=0x20; i<0x30; i++) readrspreg[i] = &trash;
+	for (i=5; i<8; i++)
+	{
+		rwmem[0x8400+i] = rw_nothing;
+		rwmem[0xa400+i] = rw_nothing;
+	}
    
-   //init RSP memory
-   rwmem[0x8400] = rw_rsp_mem;
-   rwmem[0xa400] = rw_rsp_mem;
-   for (i=0; i<(0x1000/4); i++) SP_DMEM[i]=0;
-   for (i=0; i<(0x1000/4); i++) SP_IMEM[i]=0;
+	rwmem[0x8408] = rw_rsp;
+	rwmem[0xa408] = rw_rsp;
+	memset(&rsp_register, 0, sizeof(RSP_register));
+	readrsp[0x0] = &rsp_register.rsp_pc;
+	readrsp[0x4] = &rsp_register.rsp_ibist;
+
+	for (i=0x8; i<0x10; i++) readrsp[i] = &trash;
+	for (i=9; i<0x10; i++)
+	{
+		rwmem[0x8400+i] = rw_nothing;
+		rwmem[0xa400+i] = rw_nothing;
+	}
    
-   for (i=1; i<0x4; i++)
-     {
-	rwmem[0x8400+i] = rw_nothing;
-	rwmem[0xa400+i] = rw_nothing;
-     }
+	//init rdp command registers
+	rwmem[0x8410] = rw_dp;
+	rwmem[0xa410] = rw_dp;
+	memset(&dpc_register, 0, sizeof(DPC_register));
+	readdp[0x0] = &dpc_register.dpc_start;
+	readdp[0x4] = &dpc_register.dpc_end;
+	readdp[0x8] = &dpc_register.dpc_current;
+	readdp[0xc] = &dpc_register.dpc_status;
+	readdp[0x10] = &dpc_register.dpc_clock;
+	readdp[0x14] = &dpc_register.dpc_bufbusy;
+	readdp[0x18] = &dpc_register.dpc_pipebusy;
+	readdp[0x1c] = &dpc_register.dpc_tmem;
+
+	for (i=0x20; i<0x30; i++) readdp[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x8410+i] = rw_nothing;
+		rwmem[0xa410+i] = rw_nothing;
+	}
    
-   //init RSP registers
-   rwmem[0x8404] = rw_rsp_reg;
-   rwmem[0xa404] = rw_rsp_reg;
-   sp_register.sp_mem_addr_reg=0;
-   sp_register.sp_dram_addr_reg=0;
-   sp_register.sp_rd_len_reg=0;
-   sp_register.sp_wr_len_reg=0;
-   sp_register.sp_status_reg=1;
-   sp_register.w_sp_status_reg=0;
-   sp_register.halt=1;
-   sp_register.broke=0;
-   sp_register.dma_busy=0;
-   sp_register.dma_full=0;
-   sp_register.io_full=0;
-   sp_register.single_step=0;
-   sp_register.intr_break=0;
-   sp_register.signal0=0;
-   sp_register.signal1=0;
-   sp_register.signal2=0;
-   sp_register.signal3=0;
-   sp_register.signal4=0;
-   sp_register.signal5=0;
-   sp_register.signal6=0;
-   sp_register.signal7=0;
-   sp_register.sp_dma_full_reg=0;
-   sp_register.sp_dma_busy_reg=0;
-   sp_register.sp_semaphore_reg=0;
-   readrspreg[0x0] = &sp_register.sp_mem_addr_reg;
-   readrspreg[0x4] = &sp_register.sp_dram_addr_reg;
-   readrspreg[0x8] = &sp_register.sp_rd_len_reg;
-   readrspreg[0xc] = &sp_register.sp_wr_len_reg;
-   readrspreg[0x10] = &sp_register.sp_status_reg;
-   readrspreg[0x14] = &sp_register.sp_dma_full_reg;
-   readrspreg[0x18] = &sp_register.sp_dma_busy_reg;
-   readrspreg[0x1c] = &sp_register.sp_semaphore_reg;
+	//init rsp span registers
+	rwmem[0x8420] = rw_dps;
+	rwmem[0xa420] = rw_dps;
+	memset(&dps_register, 0, sizeof(DPS_register));
+	readdps[0x0] = &dps_register.dps_tbist;
+	readdps[0x4] = &dps_register.dps_test_mode;
+	readdps[0x8] = &dps_register.dps_buftest_addr;
+	readdps[0xc] = &dps_register.dps_buftest_data;
    
-   for (i=0x20; i<0x30; i++) readrspreg[i] = &trash;
-   for (i=5; i<8; i++)
-     {
-	rwmem[0x8400+i] = rw_nothing;
-	rwmem[0xa400+i] = rw_nothing;
-     }
+	for (i=0x10; i<0x20; i++) readdps[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x8420+i] = rw_nothing;
+		rwmem[0xa420+i] = rw_nothing;
+	}
    
-   rwmem[0x8408] = rw_rsp;
-   rwmem[0xa408] = rw_rsp;
-   rsp_register.rsp_pc=0;
-   rsp_register.rsp_ibist=0;
-   readrsp[0x0] = &rsp_register.rsp_pc;
-   readrsp[0x4] = &rsp_register.rsp_ibist;
+	//init mips registers
+	rwmem[0xa830] = rw_mi;
+	rwmem[0xa430] = rw_mi;
+	memset(&MI_register, 0, sizeof(mips_register));
+	readmi[0x0] = &MI_register.mi_init_mode_reg;
+	readmi[0x4] = &MI_register.mi_version_reg;
+	readmi[0x8] = &MI_register.mi_intr_reg;
+	readmi[0xc] = &MI_register.mi_intr_mask_reg;
+
+	for (i=0x10; i<0x20; i++) readmi[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x8430+i] = rw_nothing;
+		rwmem[0xa430+i] = rw_nothing;
+	}
    
-   for (i=0x8; i<0x10; i++) readrsp[i] = &trash;
-   for (i=9; i<0x10; i++)
-     {
-	rwmem[0x8400+i] = rw_nothing;
-	rwmem[0xa400+i] = rw_nothing;
-     }
+	//init VI registers
+	rwmem[0x8440] = rw_vi;
+	rwmem[0xa440] = rw_vi;
+	memset(&vi_register, 0, sizeof(VI_register));
+	readvi[0x0] = &vi_register.vi_status;
+	readvi[0x4] = &vi_register.vi_origin;
+	readvi[0x8] = &vi_register.vi_width;
+	readvi[0xc] = &vi_register.vi_v_intr;
+	readvi[0x10] = &vi_register.vi_current;
+	readvi[0x14] = &vi_register.vi_burst;
+	readvi[0x18] = &vi_register.vi_v_sync;
+	readvi[0x1c] = &vi_register.vi_h_sync;
+	readvi[0x20] = &vi_register.vi_leap;
+	readvi[0x24] = &vi_register.vi_h_start;
+	readvi[0x28] = &vi_register.vi_v_start;
+	readvi[0x2c] = &vi_register.vi_v_burst;
+	readvi[0x30] = &vi_register.vi_x_scale;
+	readvi[0x34] = &vi_register.vi_y_scale;
+
+	for (i=0x38; i<0x40; i++) readvi[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x8440+i] = rw_nothing;
+		rwmem[0xa440+i] = rw_nothing;
+	}
    
-   //init rdp command registers
-   rwmem[0x8410] = rw_dp;
-   rwmem[0xa410] = rw_dp;
-   dpc_register.dpc_start=0;
-   dpc_register.dpc_end=0;
-   dpc_register.dpc_current=0;
-   dpc_register.w_dpc_status=0;
-   dpc_register.dpc_status=0;
-   dpc_register.xbus_dmem_dma=0;
-   dpc_register.freeze=0;
-   dpc_register.flush=0;
-   dpc_register.start_glck=0;
-   dpc_register.tmem_busy=0;
-   dpc_register.pipe_busy=0;
-   dpc_register.cmd_busy=0;
-   dpc_register.cbuf_busy=0;
-   dpc_register.dma_busy=0;
-   dpc_register.end_valid=0;
-   dpc_register.start_valid=0;
-   dpc_register.dpc_clock=0;
-   dpc_register.dpc_bufbusy=0;
-   dpc_register.dpc_pipebusy=0;
-   dpc_register.dpc_tmem=0;
-   readdp[0x0] = &dpc_register.dpc_start;
-   readdp[0x4] = &dpc_register.dpc_end;
-   readdp[0x8] = &dpc_register.dpc_current;
-   readdp[0xc] = &dpc_register.dpc_status;
-   readdp[0x10] = &dpc_register.dpc_clock;
-   readdp[0x14] = &dpc_register.dpc_bufbusy;
-   readdp[0x18] = &dpc_register.dpc_pipebusy;
-   readdp[0x1c] = &dpc_register.dpc_tmem;
+	//init AI registers
+	rwmem[0x8450] = rw_ai;
+	rwmem[0xa450] = rw_ai;
+	memset(&ai_register, 0, sizeof(AI_register));
+	readai[0x0] = &ai_register.ai_dram_addr;
+	readai[0x4] = &ai_register.ai_len;
+	readai[0x8] = &ai_register.ai_control;
+	readai[0xc] = &ai_register.ai_status;
+	readai[0x10] = &ai_register.ai_dacrate;
+	readai[0x14] = &ai_register.ai_bitrate;
+
+	for (i=0x18; i<0x20; i++) readai[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x8450+i] = rw_nothing;
+		rwmem[0xa450+i] = rw_nothing;
+	}
    
-   for (i=0x20; i<0x30; i++) readdp[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x8410+i] = rw_nothing;
-	rwmem[0xa410+i] = rw_nothing;
-     }
+	//init PI registers
+	rwmem[0x8460] = rw_pi;
+	rwmem[0xa460] = rw_pi;
+	memset(&pi_register, 0, sizeof(PI_register));
+	readpi[0x0] = &pi_register.pi_dram_addr_reg;
+	readpi[0x4] = &pi_register.pi_cart_addr_reg;
+	readpi[0x8] = &pi_register.pi_rd_len_reg;
+	readpi[0xc] = &pi_register.pi_wr_len_reg;
+	readpi[0x10] = &pi_register.read_pi_status_reg;
+	readpi[0x14] = &pi_register.pi_bsd_dom1_lat_reg;
+	readpi[0x18] = &pi_register.pi_bsd_dom1_pwd_reg;
+	readpi[0x1c] = &pi_register.pi_bsd_dom1_pgs_reg;
+	readpi[0x20] = &pi_register.pi_bsd_dom1_rls_reg;
+	readpi[0x24] = &pi_register.pi_bsd_dom2_lat_reg;
+	readpi[0x28] = &pi_register.pi_bsd_dom2_pwd_reg;
+	readpi[0x2c] = &pi_register.pi_bsd_dom2_pgs_reg;
+	readpi[0x30] = &pi_register.pi_bsd_dom2_rls_reg;
    
-   //init rsp span registers
-   rwmem[0x8420] = rw_dps;
-   rwmem[0xa420] = rw_dps;
-   dps_register.dps_tbist=0;
-   dps_register.dps_test_mode=0;
-   dps_register.dps_buftest_addr=0;
-   dps_register.dps_buftest_data=0;
-   readdps[0x0] = &dps_register.dps_tbist;
-   readdps[0x4] = &dps_register.dps_test_mode;
-   readdps[0x8] = &dps_register.dps_buftest_addr;
-   readdps[0xc] = &dps_register.dps_buftest_data;
+	for (i=0x34; i<0xFFFF; i++) readpi[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x8460+i] = rw_nothing;
+		rwmem[0xa460+i] = rw_nothing;
+	}
    
-   for (i=0x10; i<0x20; i++) readdps[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x8420+i] = rw_nothing;
-	rwmem[0xa420+i] = rw_nothing;
-     }
+	//init RI registers
+	rwmem[0x8470] = rw_ri;
+	rwmem[0xa470] = rw_ri;
+	memset(&ri_register, 0, sizeof(RI_register));
+	readri[0x0] = &ri_register.ri_mode;
+	readri[0x4] = &ri_register.ri_config;
+	readri[0x8] = &ri_register.ri_current_load;
+	readri[0xc] = &ri_register.ri_select;
+	readri[0x10] = &ri_register.ri_refresh;
+	readri[0x14] = &ri_register.ri_latency;
+	readri[0x18] = &ri_register.ri_error;
+	readri[0x1c] = &ri_register.ri_werror;
    
-   //init mips registers
-   rwmem[0xa830] = rw_mi;
-   rwmem[0xa430] = rw_mi;
-   MI_register.w_mi_init_mode_reg = 0;
-   MI_register.mi_init_mode_reg = 0;
-   MI_register.init_length = 0;
-   MI_register.init_mode = 0;
-   MI_register.ebus_test_mode = 0;
-   MI_register.RDRAM_reg_mode = 0;
-   MI_register.mi_version_reg = 0x02020102;
-   MI_register.mi_intr_reg = 0;
-   MI_register.w_mi_intr_mask_reg = 0;
-   MI_register.mi_intr_mask_reg = 0;
-   MI_register.SP_intr_mask = 0;
-   MI_register.SI_intr_mask = 0;
-   MI_register.AI_intr_mask = 0;
-   MI_register.VI_intr_mask = 0;
-   MI_register.PI_intr_mask = 0;
-   MI_register.DP_intr_mask = 0;
-   readmi[0x0] = &MI_register.mi_init_mode_reg;
-   readmi[0x4] = &MI_register.mi_version_reg;
-   readmi[0x8] = &MI_register.mi_intr_reg;
-   readmi[0xc] = &MI_register.mi_intr_mask_reg;
+	for (i=0x20; i<0x30; i++) readri[i] = &trash;
+	for (i=1; i<0x10; i++)
+	{
+		rwmem[0x8470+i] = rw_nothing;
+		rwmem[0xa470+i] = rw_nothing;
+	}
    
-   for (i=0x10; i<0x20; i++) readmi[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x8430+i] = rw_nothing;
-	rwmem[0xa430+i] = rw_nothing;
-     }
+	//init SI registers
+	rwmem[0x8480] = rw_si;
+	rwmem[0xa480] = rw_si;
+	memset(&si_register, 0, sizeof(SI_register));
+	readsi[0x0] = &si_register.si_dram_addr;
+	readsi[0x4] = &si_register.si_pif_addr_rd64b;
+	readsi[0x8] = &trash;
+	readsi[0x10] = &si_register.si_pif_addr_wr64b;
+	readsi[0x14] = &trash;
+	readsi[0x18] = &si_register.si_status;
+
+	for (i=0x1c; i<0x20; i++) readsi[i] = &trash;
+	for (i=0x481; i<0x800; i++)
+	{
+		rwmem[0x8000+i] = rw_nothing;
+		rwmem[0xa000+i] = rw_nothing;
+	}
    
-   //init VI registers
-   rwmem[0x8440] = rw_vi;
-   rwmem[0xa440] = rw_vi;
-   vi_register.vi_status = 0;
-   vi_register.vi_origin = 0;
-   vi_register.vi_width = 0;
-   vi_register.vi_v_intr = 0;
-   vi_register.vi_current = 0;
-   vi_register.vi_burst = 0;
-   vi_register.vi_v_sync = 0;
-   vi_register.vi_h_sync = 0;
-   vi_register.vi_leap = 0;
-   vi_register.vi_h_start = 0;
-   vi_register.vi_v_start = 0;
-   vi_register.vi_v_burst = 0;
-   vi_register.vi_x_scale = 0;
-   vi_register.vi_y_scale = 0;
-   readvi[0x0] = &vi_register.vi_status;
-   readvi[0x4] = &vi_register.vi_origin;
-   readvi[0x8] = &vi_register.vi_width;
-   readvi[0xc] = &vi_register.vi_v_intr;
-   readvi[0x10] = &vi_register.vi_current;
-   readvi[0x14] = &vi_register.vi_burst;
-   readvi[0x18] = &vi_register.vi_v_sync;
-   readvi[0x1c] = &vi_register.vi_h_sync;
-   readvi[0x20] = &vi_register.vi_leap;
-   readvi[0x24] = &vi_register.vi_h_start;
-   readvi[0x28] = &vi_register.vi_v_start;
-   readvi[0x2c] = &vi_register.vi_v_burst;
-   readvi[0x30] = &vi_register.vi_x_scale;
-   readvi[0x34] = &vi_register.vi_y_scale;
+	//init flashram / sram
+	rwmem[0x8800] = rw_flashram0;
+	rwmem[0xa800] = rw_flashram0;
+	rwmem[0x8801] = rw_flashram1;
+	rwmem[0xa801] = rw_flashram1;
+
+	for (i=0x802; i<0x1000; i++)
+	{
+		rwmem[0x8000+i] = rw_nothing;
+		rwmem[0xa000+i] = rw_nothing;
+	}
    
-   for (i=0x38; i<0x40; i++) readvi[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x8440+i] = rw_nothing;
-	rwmem[0xa440+i] = rw_nothing;
-     }
-   
-   //init AI registers
-   rwmem[0x8450] = rw_ai;
-   rwmem[0xa450] = rw_ai;
-   ai_register.ai_dram_addr = 0;
-   ai_register.ai_len = 0;
-   ai_register.ai_control = 0;
-   ai_register.ai_status = 0;
-   ai_register.ai_dacrate = 0;
-   ai_register.ai_bitrate = 0;
-   ai_register.next_delay = 0;
-   ai_register.next_len = 0;
-   ai_register.current_delay = 0;
-   ai_register.current_len = 0;
-   readai[0x0] = &ai_register.ai_dram_addr;
-   readai[0x4] = &ai_register.ai_len;
-   readai[0x8] = &ai_register.ai_control;
-   readai[0xc] = &ai_register.ai_status;
-   readai[0x10] = &ai_register.ai_dacrate;
-   readai[0x14] = &ai_register.ai_bitrate;
-   
-   for (i=0x18; i<0x20; i++) readai[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x8450+i] = rw_nothing;
-	rwmem[0xa450+i] = rw_nothing;
-     }
-   
-   //init PI registers
-   rwmem[0x8460] = rw_pi;
-   rwmem[0xa460] = rw_pi;
-   pi_register.pi_dram_addr_reg = 0;
-   pi_register.pi_cart_addr_reg = 0;
-   pi_register.pi_rd_len_reg = 0;
-   pi_register.pi_wr_len_reg = 0;
-   pi_register.read_pi_status_reg = 0;
-   pi_register.pi_bsd_dom1_lat_reg = 0;
-   pi_register.pi_bsd_dom1_pwd_reg = 0;
-   pi_register.pi_bsd_dom1_pgs_reg = 0;
-   pi_register.pi_bsd_dom1_rls_reg = 0;
-   pi_register.pi_bsd_dom2_lat_reg = 0;
-   pi_register.pi_bsd_dom2_pwd_reg = 0;
-   pi_register.pi_bsd_dom2_pgs_reg = 0;
-   pi_register.pi_bsd_dom2_rls_reg = 0;
-   readpi[0x0] = &pi_register.pi_dram_addr_reg;
-   readpi[0x4] = &pi_register.pi_cart_addr_reg;
-   readpi[0x8] = &pi_register.pi_rd_len_reg;
-   readpi[0xc] = &pi_register.pi_wr_len_reg;
-   readpi[0x10] = &pi_register.read_pi_status_reg;
-   readpi[0x14] = &pi_register.pi_bsd_dom1_lat_reg;
-   readpi[0x18] = &pi_register.pi_bsd_dom1_pwd_reg;
-   readpi[0x1c] = &pi_register.pi_bsd_dom1_pgs_reg;
-   readpi[0x20] = &pi_register.pi_bsd_dom1_rls_reg;
-   readpi[0x24] = &pi_register.pi_bsd_dom2_lat_reg;
-   readpi[0x28] = &pi_register.pi_bsd_dom2_pwd_reg;
-   readpi[0x2c] = &pi_register.pi_bsd_dom2_pgs_reg;
-   readpi[0x30] = &pi_register.pi_bsd_dom2_rls_reg;
-   
-   for (i=0x34; i<0xFFFF; i++) readpi[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x8460+i] = rw_nothing;
-	rwmem[0xa460+i] = rw_nothing;
-     }
-   
-   //init RI registers
-   rwmem[0x8470] = rw_ri;
-   rwmem[0xa470] = rw_ri;
-   ri_register.ri_mode = 0;
-   ri_register.ri_config = 0;
-   ri_register.ri_select = 0;
-   ri_register.ri_current_load = 0;
-   ri_register.ri_refresh = 0;
-   ri_register.ri_latency = 0;
-   ri_register.ri_error = 0;
-   ri_register.ri_werror = 0;
-   readri[0x0] = &ri_register.ri_mode;
-   readri[0x4] = &ri_register.ri_config;
-   readri[0x8] = &ri_register.ri_current_load;
-   readri[0xc] = &ri_register.ri_select;
-   readri[0x10] = &ri_register.ri_refresh;
-   readri[0x14] = &ri_register.ri_latency;
-   readri[0x18] = &ri_register.ri_error;
-   readri[0x1c] = &ri_register.ri_werror;
-   
-   for (i=0x20; i<0x30; i++) readri[i] = &trash;
-   for (i=1; i<0x10; i++)
-     {
-	rwmem[0x8470+i] = rw_nothing;
-	rwmem[0xa470+i] = rw_nothing;
-     }
-   
-   //init SI registers
-   rwmem[0x8480] = rw_si;
-   rwmem[0xa480] = rw_si;
-   si_register.si_dram_addr = 0;
-   si_register.si_pif_addr_rd64b = 0;
-   si_register.si_pif_addr_wr64b = 0;
-   si_register.si_status = 0;
-   readsi[0x0] = &si_register.si_dram_addr;
-   readsi[0x4] = &si_register.si_pif_addr_rd64b;
-   readsi[0x8] = &trash;
-   readsi[0x10] = &si_register.si_pif_addr_wr64b;
-   readsi[0x14] = &trash;
-   readsi[0x18] = &si_register.si_status;
-   
-   for (i=0x1c; i<0x20; i++) readsi[i] = &trash;
-   for (i=0x481; i<0x800; i++)
-     {
-	rwmem[0x8000+i] = rw_nothing;
-	rwmem[0xa000+i] = rw_nothing;
-     }
-   
-   //init flashram / sram
-   rwmem[0x8800] = rw_flashram0;
-   rwmem[0xa800] = rw_flashram0;
-   rwmem[0x8801] = rw_flashram1;
-   rwmem[0xa801] = rw_flashram1;
-   
-   for (i=0x802; i<0x1000; i++)
-     {
-	rwmem[0x8000+i] = rw_nothing;
-	rwmem[0xa000+i] = rw_nothing;
-     }
-   
-   //init rom area
-   for (i=0; i<(rom_length >> 16); i++) 
-     {
-	rwmem[0x9000+i] = rw_rom0;
-	rwmem[0xb000+i] = rw_rom1;
-     }
-   for (i=(rom_length >> 16); i<0xfc0; i++) 
-     {
-	rwmem[0x9000+i] = rw_nothing;
-	rwmem[0xb000+i] = rw_nothing;
-     }
-   
-   //init PIF_RAM
-   rwmem[0x9fc0] = rw_pif;
-   rwmem[0xbfc0] = rw_pif;
-   for (i=0; i<(0x40/4); i++) PIF_RAM[i]=0;
-   
-   for (i=0xfc1; i<0x1000; i++) 
-     {
-	rwmem[0x9000+i] = rw_nothing;
-	rwmem[0xb000+i] = rw_nothing;
-     }
-   
-   use_flashram = 0;
-   init_flashram();
-   
-   frameBufferInfos[0].addr = 0;
-   firstFrameBufferSetting = 1;
-   
-   //printf("memory initialized\n");
-   return 0;
+	//init rom area
+	for (i=0; i<(rom_length >> 16); i++) 
+	{
+		rwmem[0x9000+i] = rw_rom0;
+		rwmem[0xb000+i] = rw_rom1;
+	}
+	for (i=(rom_length >> 16); i<0xfc0; i++) 
+	{
+		rwmem[0x9000+i] = rw_nothing;
+		rwmem[0xb000+i] = rw_nothing;
+	}
+
+	//init PIF_RAM
+	rwmem[0x9fc0] = rw_pif;
+	rwmem[0xbfc0] = rw_pif;
+	for (i=0; i<(0x40/4); i++) PIF_RAM[i]=0;
+
+	for (i=0xfc1; i<0x1000; i++) 
+	{
+		rwmem[0x9000+i] = rw_nothing;
+		rwmem[0xb000+i] = rw_nothing;
+	}
+
+	use_flashram = 0;
+	init_flashram();
+
+	frameBufferInfos[0].addr = 0;
+	firstFrameBufferSetting = 1;
+
+	//printf("memory initialized\n");
+	return 0;
 }
 
 void free_memory()
