@@ -344,6 +344,7 @@ int init_memory()
 	rwmem[0xa830] = rw_mi;
 	rwmem[0xa430] = rw_mi;
 	memset(&MI_register, 0, sizeof(mips_register));
+	MI_register.mi_version_reg = 0x02020102;
 	readmi[0x0] = &MI_register.mi_init_mode_reg;
 	readmi[0x4] = &MI_register.mi_version_reg;
 	readmi[0x8] = &MI_register.mi_intr_reg;
