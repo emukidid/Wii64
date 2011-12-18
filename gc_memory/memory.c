@@ -1117,7 +1117,7 @@ void write_rdramFBd()
 
 void read_rdramreg()
 {
-	if(unlikely(*address_low > 0x24)) {
+	if(unlikely(*address_low >= sizeof(readrdramreg))) {
 		*rdword = trash;
 	}
 	else {
@@ -1127,7 +1127,7 @@ void read_rdramreg()
 
 void read_rdramregb()
 {
-	if(unlikely(*address_low & 0xfffc > 0x27)) {
+	if(unlikely((*address_low & 0xfffc) >= sizeof(readrdramreg))) {
 		*rdword = trash & 0xFF;
 	}
 	else {
@@ -1138,7 +1138,7 @@ void read_rdramregb()
 
 void read_rdramregh()
 {
-	if(unlikely(*address_low & 0xfffc > 0x26)) {
+	if(unlikely((*address_low & 0xfffc) >= sizeof(readrdramreg))) {
 		*rdword = trash & 0xFFFF;
 	}
 	else {
@@ -1149,7 +1149,7 @@ void read_rdramregh()
 
 void read_rdramregd()
 {
-	if(unlikely(*address_low > 0x20)) {
+	if(unlikely(*address_low > sizeof(readrdramreg) - sizeof(long long int))) {
 		*rdword = trash;
 	}
 	else {
@@ -1160,7 +1160,7 @@ void read_rdramregd()
 
 void write_rdramreg()
 {
-	if(unlikely(*address_low > 0x24)) {
+	if(unlikely(*address_low >= sizeof(readrdramreg))) {
 		trash = word;
 	}
 	else {
@@ -1170,7 +1170,7 @@ void write_rdramreg()
 
 void write_rdramregb()
 {
-	if(unlikely(*address_low & 0xfffc > 0x27)) {
+	if(unlikely((*address_low & 0xfffc) >= sizeof(readrdramreg))) {
 		trash = byte;
 	}
 	else {
@@ -1181,7 +1181,7 @@ void write_rdramregb()
 
 void write_rdramregh()
 {
-	if(unlikely(*address_low & 0xfffc > 0x26)) {
+	if(unlikely((*address_low & 0xfffc) >= sizeof(readrdramreg))) {
 		trash = hword;
 	}
 	else {
@@ -1192,7 +1192,7 @@ void write_rdramregh()
 
 void write_rdramregd()
 {
-	if(unlikely(*address_low > 0x20)) {
+	if(unlikely(*address_low > sizeof(readrdramreg) - sizeof(long long int))) {
 		trash = dword & 0xFFFFFFFF;
 	}
 	else {
@@ -2554,7 +2554,7 @@ void write_aid()
 
 void read_pi()
 {
-	if(unlikely(*address_low > 0x30)) {
+	if(unlikely(*address_low >= sizeof(readpi))) {
 		*rdword = trash;
 	}
 	else {
@@ -2564,7 +2564,7 @@ void read_pi()
 
 void read_pib()
 {
-	if(unlikely(*address_low & 0xfffc > 0x33)) {
+	if(unlikely((*address_low & 0xfffc) >= sizeof(readpi))) {
 		*rdword = trash & 0xFF;
 	}
 	else {
@@ -2575,7 +2575,7 @@ void read_pib()
 
 void read_pih()
 {
-	if(unlikely(*address_low & 0xfffc > 0x32)) {
+	if(unlikely((*address_low & 0xfffc) >= sizeof(readpi))) {
 		*rdword = trash & 0xFFFF;
 	}
 	else {
@@ -2586,7 +2586,7 @@ void read_pih()
 
 void read_pid()
 {
-	if(unlikely(*address_low > 0x2C)) {
+	if(unlikely(*address_low > sizeof(readpi) - sizeof(long long int))) {
 		*rdword = trash;
 	}
 	else {
@@ -2626,7 +2626,7 @@ void write_pi()
 			return;
 		break;
 	}
-	if(unlikely(*address_low > 0x30)) {
+	if(unlikely(*address_low >= sizeof(readpi))) {
 		trash = word;
 	}
 	else {
@@ -2691,7 +2691,7 @@ void write_pib()
 			return;
 		break;
 	}
-	if(unlikely(*address_low > 0x33)) {
+	if(unlikely(*address_low >= sizeof(readpi))) {
 		trash = byte;
 	}
 	else {
@@ -2747,7 +2747,7 @@ void write_pih()
 			return;
 		break;
 	}
-	if(unlikely(*address_low > 0x32)) {
+	if(unlikely(*address_low >= sizeof(readpi))) {
 		trash = hword;
 	}
 	else {
@@ -2782,7 +2782,7 @@ void write_pid()
 			return;
 		break;
 	}
-	if(unlikely(*address_low > 0x2C)) {
+	if(unlikely(*address_low > sizeof(readpi) - sizeof(long long int))) {
 		trash = dword & 0xFFFFFFFF;
 	}
 	else {
