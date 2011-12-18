@@ -120,7 +120,8 @@ void jump_to(unsigned int);
 #define LINK_SECTION 10
 #define UNLINK_SECTION 11
 #define DYNAMEM_SECTION 12
-#define NUM_SECTIONS 12
+#define ROMREAD_SECTION 13
+#define NUM_SECTIONS 13
 
 //#define PROFILE
 

@@ -78,7 +78,7 @@ DPS_register dps_register;
 	#define MEM_TBL_SIZE 0x40
 	#define MEMMASK 0x3FFFFF
 #endif
-unsigned long rdram[MEM_SIZE/4];
+unsigned long rdram[MEM_SIZE/4]  __attribute__((aligned(32)));
 unsigned char *rdramb = (unsigned char *)(rdram);
 unsigned long SP_DMEM[0x1000/4*2];
 unsigned long *SP_IMEM = SP_DMEM+0x1000/4;

@@ -91,6 +91,9 @@ void refresh_stat()
 	sprintf(txtbuffer, "dynamem=%f%% ", 100.0f * (float)time_in_section[DYNAMEM_SECTION] / (float)time_in_section[0]);
 	DEBUG_print(txtbuffer, DBG_PROFILE_DYNAMEM);
 	
+	sprintf(txtbuffer, "romread=%f%% ", 100.0f * (float)time_in_section[ROMREAD_SECTION] / (float)time_in_section[0]);
+	DEBUG_print(txtbuffer, DBG_PROFILE_ROMREAD);
+	
 #ifdef GECKO_PROFILE
 	DEBUG_print("\r", DBG_USBGECKO);
 #endif

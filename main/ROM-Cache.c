@@ -171,7 +171,7 @@ void ARAM_ReadFromBlock(char *block,int startOffset, int bytes, char *dest)
 }
 
 void ROMCache_read(u8* ram_dest, u32 rom_offset, u32 length){
-
+	start_section(ROMREAD_SECTION);
 	if(ROM_too_big){ // The whole ROM isn't in ARAM, we might have to move blocks in/out
 		u32 length2 = length;
 		u32 offset2 = rom_offset&BLOCK_MASK;
@@ -226,7 +226,7 @@ void ROMCache_read(u8* ram_dest, u32 rom_offset, u32 length){
   		ARAM_ReadFromBlock(ROM,rom_offset,length,(char*)ram_dest);
 		}
 	}
-
+	end_section(ROMREAD_SECTION);
 }
 
 int ROMCache_load(fileBrowser_file* file){
