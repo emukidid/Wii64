@@ -183,13 +183,12 @@ void load_config(char *loaded_path) {
 	fileBrowser_file* configFile_file;
 	char prefix[16];
 	int (*configFile_init)(fileBrowser_file*) = fileBrowser_libfat_init;
-#ifdef HW_RVL
+
 	if(loaded_path[0] == 'u') {  
 		configFile_file = &saveDir_libfat_USB;
 		strcpy(prefix,"usb:/wii64/");
 	}
-	else	
-#endif
+	else
 	{
 		configFile_file = &saveDir_libfat_Default;
 		strcpy(prefix,"sd:/wii64/");
@@ -298,13 +297,16 @@ int main(int argc, char* argv[]){
 #endif //GLN64_GX
 	menuActive = 1;
 
-	load_config(&argv[0][0]);
+
 #ifdef HW_RVL
+	load_config(&argv[0][0]);
 	// Handle options passed in through arguments
 	int i;
 	for(i=1; i<argc; ++i){
 		handleConfigPair(argv[i]);
 	}
+#else
+	load_config("sd");
 #endif
 	while (menu->isRunning()) {}
 
