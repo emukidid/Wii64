@@ -26,6 +26,8 @@
  * USA.
  *
 **/
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
 
 #include "../config.h"
 
@@ -199,13 +201,13 @@ void (*rw_pif[8])() =
 
 
 // memory sections
-static unsigned long *readrdramreg[0xFFFF];
+static unsigned long *readrdramreg[0x28];
 static unsigned long *readrspreg[0x30];
 static unsigned long *readrsp[0x10];
 static unsigned long *readmi[0x20];
 static unsigned long *readvi[0x40];
 static unsigned long *readai[0x20];
-static unsigned long *readpi[0xFFFF];
+static unsigned long *readpi[0x34];
 static unsigned long *readri[0x30];
 static unsigned long *readsi[0x20];
 static unsigned long *readdp[0x30];
@@ -252,7 +254,6 @@ int init_memory()
 	readrdramreg[0x20] = &rdram_register.rdram_addr_select;
 	readrdramreg[0x24] = &rdram_register.rdram_device_manuf;
    
-	for (i=0x28; i<0xFFFF; i++) readrdramreg[i] = &trash;
 	for (i=1; i<0x10; i++)
 	{
 		rwmem[0x83f0+i] = rw_nothing;
@@ -275,6 +276,8 @@ int init_memory()
 	rwmem[0x8404] = rw_rsp_reg;
 	rwmem[0xa404] = rw_rsp_reg;
 	memset(&sp_register, 0, sizeof(SP_register));
+	sp_register.sp_status_reg=1;
+	sp_register.halt=1;
 	readrspreg[0x0] = &sp_register.sp_mem_addr_reg;
 	readrspreg[0x4] = &sp_register.sp_dram_addr_reg;
 	readrspreg[0x8] = &sp_register.sp_rd_len_reg;
@@ -418,8 +421,7 @@ int init_memory()
 	readpi[0x28] = &pi_register.pi_bsd_dom2_pwd_reg;
 	readpi[0x2c] = &pi_register.pi_bsd_dom2_pgs_reg;
 	readpi[0x30] = &pi_register.pi_bsd_dom2_rls_reg;
-   
-	for (i=0x34; i<0xFFFF; i++) readpi[i] = &trash;
+
 	for (i=1; i<0x10; i++)
 	{
 		rwmem[0x8460+i] = rw_nothing;
@@ -511,10 +513,6 @@ int init_memory()
 
 void free_memory()
 {
-	/*saveEeprom();
-	saveMempak();
-	saveSram();
-	saveFlashram();*/
 #ifdef USE_TLB_CACHE
 	TLBCache_deinit();
 #endif
@@ -1119,48 +1117,88 @@ void write_rdramFBd()
 
 void read_rdramreg()
 {
-   *rdword = *(readrdramreg[*address_low]);
+	if(unlikely(*address_low > 0x24)) {
+		*rdword = trash;
+	}
+	else {
+		*rdword = *(readrdramreg[*address_low]);
+	}   
 }
 
 void read_rdramregb()
 {
-   *rdword = *((unsigned char*)readrdramreg[*address_low & 0xfffc]
+	if(unlikely(*address_low & 0xfffc > 0x27)) {
+		*rdword = trash & 0xFF;
+	}
+	else {
+		*rdword = *((unsigned char*)readrdramreg[*address_low & 0xfffc]
 	       + ((*address_low&3)^S8) );
+	}
 }
 
 void read_rdramregh()
 {
-   *rdword = *((unsigned short*)((unsigned char*)readrdramreg[*address_low & 0xfffc]
+	if(unlikely(*address_low & 0xfffc > 0x26)) {
+		*rdword = trash & 0xFFFF;
+	}
+	else {
+		*rdword = *((unsigned short*)((unsigned char*)readrdramreg[*address_low & 0xfffc]
 	       + ((*address_low&3)^S16) ));
+	}
 }
 
 void read_rdramregd()
 {
-   *rdword = ((unsigned long long int)(*readrdramreg[*address_low])<<32) |
-     *readrdramreg[*address_low+4];
+	if(unlikely(*address_low > 0x20)) {
+		*rdword = trash;
+	}
+	else {
+		*rdword = ((unsigned long long int)(*readrdramreg[*address_low])<<32) |
+			*readrdramreg[*address_low+4];
+	}
 }
 
 void write_rdramreg()
 {
-   *readrdramreg[*address_low] = word;
+	if(unlikely(*address_low > 0x24)) {
+		trash = word;
+	}
+	else {
+		*readrdramreg[*address_low] = word;
+	}
 }
 
 void write_rdramregb()
 {
-   *((unsigned char*)readrdramreg[*address_low & 0xfffc]
-     + ((*address_low&3)^S8) ) = byte;
+	if(unlikely(*address_low & 0xfffc > 0x27)) {
+		trash = byte;
+	}
+	else {
+		*((unsigned char*)readrdramreg[*address_low & 0xfffc]
+			+ ((*address_low&3)^S8) ) = byte;
+	}
 }
 
 void write_rdramregh()
 {
-   *((unsigned short*)((unsigned char*)readrdramreg[*address_low & 0xfffc]
-		       + ((*address_low&3)^S16) )) = hword;
+	if(unlikely(*address_low & 0xfffc > 0x26)) {
+		trash = hword;
+	}
+	else {
+		*((unsigned short*)((unsigned char*)readrdramreg[*address_low & 0xfffc]
+			+ ((*address_low&3)^S16) )) = hword;
+	}
 }
 
 void write_rdramregd()
 {
-   *readrdramreg[*address_low] = dword >> 32;
-   *readrdramreg[*address_low+4] = dword & 0xFFFFFFFF;
+	if(unlikely(*address_low > 0x20)) {
+		trash = dword & 0xFFFFFFFF;
+	}
+	else {
+		*readrdramreg[*address_low] = dword >> 32;
+		*readrdramreg[*address_low+4] = dword & 0xFFFFFFFF;
+	}
 }
 
 void read_rsp_mem()
@@ -2516,201 +2554,241 @@ void write_aid()
 
 void read_pi()
 {
-   *rdword = *(readpi[*address_low]);
+	if(unlikely(*address_low > 0x30)) {
+		*rdword = trash;
+	}
+	else {
+		*rdword = *(readpi[*address_low]);
+	}
 }
 
 void read_pib()
 {
-   *rdword = *((unsigned char*)readpi[*address_low & 0xfffc]
-	       + ((*address_low&3)^S8) );
+	if(unlikely(*address_low & 0xfffc > 0x33)) {
+		*rdword = trash & 0xFF;
+	}
+	else {
+		*rdword = *((unsigned char*)readpi[*address_low & 0xfffc]
+			+ ((*address_low&3)^S8) );
+	}
 }
 
 void read_pih()
 {
-   *rdword = *((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc]
-				 + ((*address_low&3)^S16) ));
+	if(unlikely(*address_low & 0xfffc > 0x32)) {
+		*rdword = trash & 0xFFFF;
+	}
+	else {
+		*rdword = *((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc]
+			+ ((*address_low&3)^S16) ));
+	}
 }
 
 void read_pid()
 {
-   *rdword = ((unsigned long long int)(*readpi[*address_low])<<32) |
-     *readpi[*address_low+4];
+	if(unlikely(*address_low > 0x2C)) {
+		*rdword = trash;
+	}
+	else {
+		*rdword = ((unsigned long long int)(*readpi[*address_low])<<32) |
+		*readpi[*address_low+4];
+	}
 }
 
 void write_pi()
 {
-   switch(*address_low)
-     {
-      case 0x8:
-	pi_register.pi_rd_len_reg = word;
-	dma_pi_read();
-	return;
-	break;
-      case 0xc:
-	pi_register.pi_wr_len_reg = word;
-	dma_pi_write();
-	return;
-	break;
-      case 0x10:
-	if (word & 2) MI_register.mi_intr_reg &= 0xFFFFFFEF;
-	check_interupt();
-	return;
-	break;
-      case 0x14:
-      case 0x18:
-      case 0x1c:
-      case 0x20:
-      case 0x24:
-      case 0x28:
-      case 0x2c:
-      case 0x30:
-	*readpi[*address_low] = word & 0xFF;
-	return;
-	break;
-     }
-   *readpi[*address_low] = word;
+	switch(*address_low)
+	{
+		case 0x8:
+			pi_register.pi_rd_len_reg = word;
+			dma_pi_read();
+			return;
+		break;
+		case 0xc:
+			pi_register.pi_wr_len_reg = word;
+			dma_pi_write();
+			return;
+		break;
+		case 0x10:
+			if (word & 2) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			check_interupt();
+			return;
+		break;
+		case 0x14:
+		case 0x18:
+		case 0x1c:
+		case 0x20:
+		case 0x24:
+		case 0x28:
+		case 0x2c:
+		case 0x30:
+			*readpi[*address_low] = word & 0xFF;
+			return;
+		break;
+	}
+	if(unlikely(*address_low > 0x30)) {
+		trash = word;
+	}
+	else {
+		*readpi[*address_low] = word;
+	}
 }
 
 void write_pib()
 {
-   switch(*address_low)
-     {
-      case 0x8:
-      case 0x9:
-      case 0xa:
-      case 0xb:
-	*((unsigned char*)&pi_register.pi_rd_len_reg
-	  + ((*address_low&3)^S8) ) = byte;
-	dma_pi_read();
-	return;
-	break;
-      case 0xc:
-      case 0xd:
-      case 0xe:
-      case 0xf:
-	*((unsigned char*)&pi_register.pi_wr_len_reg
-	  + ((*address_low&3)^S8) ) = byte;
-	dma_pi_write();
-	return;
-	break;
-      case 0x10:
-      case 0x11:
-      case 0x12:
-      case 0x13:
-	if (word) MI_register.mi_intr_reg &= 0xFFFFFFEF;
-	check_interupt();
-	return;
-	break;
-      case 0x14:
-      case 0x15:
-      case 0x16:
-      case 0x18:
-      case 0x19:
-      case 0x1a:
-      case 0x1c:
-      case 0x1d:
-      case 0x1e:
-      case 0x20:
-      case 0x21:
-      case 0x22:
-      case 0x24:
-      case 0x25:
-      case 0x26:
-      case 0x28:
-      case 0x29:
-      case 0x2a:
-      case 0x2c:
-      case 0x2d:
-      case 0x2e:
-      case 0x30:
-      case 0x31:
-      case 0x32:
-	return;
-	break;
-     }
-   *((unsigned char*)readpi[*address_low & 0xfffc]
-     + ((*address_low&3)^S8) ) = byte;
+	switch(*address_low)
+	{
+		case 0x8:
+		case 0x9:
+		case 0xa:
+		case 0xb:
+			*((unsigned char*)&pi_register.pi_rd_len_reg
+			+ ((*address_low&3)^S8) ) = byte;
+			dma_pi_read();
+			return;
+		break;
+		case 0xc:
+		case 0xd:
+		case 0xe:
+		case 0xf:
+			*((unsigned char*)&pi_register.pi_wr_len_reg
+			+ ((*address_low&3)^S8) ) = byte;
+			dma_pi_write();
+			return;
+		break;
+		case 0x10:
+		case 0x11:
+		case 0x12:
+		case 0x13:
+			if (word) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			check_interupt();
+			return;
+		break;
+		case 0x14:
+		case 0x15:
+		case 0x16:
+		case 0x18:
+		case 0x19:
+		case 0x1a:
+		case 0x1c:
+		case 0x1d:
+		case 0x1e:
+		case 0x20:
+		case 0x21:
+		case 0x22:
+		case 0x24:
+		case 0x25:
+		case 0x26:
+		case 0x28:
+		case 0x29:
+		case 0x2a:
+		case 0x2c:
+		case 0x2d:
+		case 0x2e:
+		case 0x30:
+		case 0x31:
+		case 0x32:
+			return;
+		break;
+	}
+	if(unlikely(*address_low > 0x33)) {
+		trash = byte;
+	}
+	else {
+		*((unsigned char*)readpi[*address_low & 0xfffc]
+			+ ((*address_low&3)^S8) ) = byte;
+	}
 }
 
 void write_pih()
 {
-   switch(*address_low)
-     {
-      case 0x8:
-      case 0xa:
-	*((unsigned short*)((unsigned char*)&pi_register.pi_rd_len_reg
-			    + ((*address_low&3)^S16) )) = hword;
-	dma_pi_read();
-	return;
-	break;
-      case 0xc:
-      case 0xe:
-	*((unsigned short*)((unsigned char*)&pi_register.pi_wr_len_reg
-			    + ((*address_low&3)^S16) )) = hword;
-	dma_pi_write();
-	return;
-	break;
-      case 0x10:
-      case 0x12:
-	if (word) MI_register.mi_intr_reg &= 0xFFFFFFEF;
-	check_interupt();
-	return;
-	break;
-      case 0x16:
-      case 0x1a:
-      case 0x1e:
-      case 0x22:
-      case 0x26:
-      case 0x2a:
-      case 0x2e:
-      case 0x32:
-	*((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc]
-		       + ((*address_low&3)^S16) )) = hword & 0xFF;
-	return;
-	break;
-      case 0x14:
-      case 0x18:
-      case 0x1c:
-      case 0x20:
-      case 0x24:
-      case 0x28:
-      case 0x2c:
-      case 0x30:
-	return;
-	break;
-     }
-   *((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc]
-		       + ((*address_low&3)^S16) )) = hword;
+	switch(*address_low)
+	{
+		case 0x8:
+		case 0xa:
+			*((unsigned short*)((unsigned char*)&pi_register.pi_rd_len_reg
+			+ ((*address_low&3)^S16) )) = hword;
+			dma_pi_read();
+			return;
+		break;
+		case 0xc:
+		case 0xe:
+			*((unsigned short*)((unsigned char*)&pi_register.pi_wr_len_reg
+			+ ((*address_low&3)^S16) )) = hword;
+			dma_pi_write();
+			return;
+		break;
+		case 0x10:
+		case 0x12:
+			if (word) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			check_interupt();
+			return;
+		break;
+		case 0x16:
+		case 0x1a:
+		case 0x1e:
+		case 0x22:
+		case 0x26:
+		case 0x2a:
+		case 0x2e:
+		case 0x32:
+			*((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc]
+			+ ((*address_low&3)^S16) )) = hword & 0xFF;
+			return;
+		break;
+		case 0x14:
+		case 0x18:
+		case 0x1c:
+		case 0x20:
+		case 0x24:
+		case 0x28:
+		case 0x2c:
+		case 0x30:
+			return;
+		break;
+	}
+	if(unlikely(*address_low > 0x32)) {
+		trash = hword;
+	}
+	else {
+		*((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc]
+			+ ((*address_low&3)^S16) )) = hword;
+	}
 }
 
 void write_pid()
 {
-   switch(*address_low)
-     {
-      case 0x8:
-	pi_register.pi_rd_len_reg = dword >> 32;
-	dma_pi_read();
-	pi_register.pi_wr_len_reg = dword & 0xFFFFFFFF;
-	dma_pi_write();
-	return;
-	break;
-      case 0x10:
-	if (word) MI_register.mi_intr_reg &= 0xFFFFFFEF;
-	check_interupt();
-	*readpi[*address_low+4] = dword & 0xFF;
-	return;
-	break;
-      case 0x18:
-      case 0x20:
-      case 0x28:
-      case 0x30:
-	*readpi[*address_low] = (dword >> 32) & 0xFF;
-	*readpi[*address_low+4] = dword & 0xFF;
-	return;
-	break;
-     }
-   *readpi[*address_low] = dword >> 32;
-   *readpi[*address_low+4] = dword & 0xFFFFFFFF;
+	switch(*address_low)
+	{
+		case 0x8:
+			pi_register.pi_rd_len_reg = dword >> 32;
+			dma_pi_read();
+			pi_register.pi_wr_len_reg = dword & 0xFFFFFFFF;
+			dma_pi_write();
+			return;
+		break;
+		case 0x10:
+			if (word) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			check_interupt();
+			*readpi[*address_low+4] = dword & 0xFF;
+			return;
+		break;
+		case 0x18:
+		case 0x20:
+		case 0x28:
+		case 0x30:
+			*readpi[*address_low] = (dword >> 32) & 0xFF;
+			*readpi[*address_low+4] = dword & 0xFF;
+			return;
+		break;
+	}
+	if(unlikely(*address_low > 0x2C)) {
+		trash = dword & 0xFFFFFFFF;
+	}
+	else {
+		*readpi[*address_low] = dword >> 32;
+		*readpi[*address_low+4] = dword & 0xFFFFFFFF;
+	}
 }
 
 void read_ri()
