@@ -232,7 +232,7 @@ void VI_GX_clearEFB(){
 extern timers Timers;
 
 void VI_GX_showFPS(){
-	static char caption[25];
+	static char caption[32];
 
 	TimerUpdate();
 

@@ -740,7 +740,9 @@ void ReadConfiguration(void)
 #ifndef __GX__
         printf("[RiceVideo] Disabled SSE processing.\n");
 #else //!__GX__
+#ifdef SHOW_DEBUG
         DEBUG_print("[RiceVideo] Disabled SSE processing.\n",DBG_RICE);
+#endif
 #endif //__GX__
     }
 
@@ -928,8 +930,10 @@ void GenerateCurrentRomOptions()
 #ifndef __GX__
         printf("[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
 #else //!__GX__
+#ifdef SHOW_DEBUG
         sprintf(txtbuffer,"[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
 		DEBUG_print(txtbuffer,DBG_RICE); 
+#endif
 #endif //__GX__
 
     if( currentRomOptions.N64FrameBufferEmuType == 0 )      currentRomOptions.N64FrameBufferEmuType = defaultRomOptions.N64FrameBufferEmuType;
@@ -1963,8 +1967,10 @@ int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* szName)
 #ifndef __GX__
             printf("[RiceVideo] Found ROM '%s', CRC %s\n", IniSections[i].name, szCRC);
 #else //!__GX__
+#ifdef SHOW_DEBUG
         sprintf(txtbuffer,"[RiceVideo] Found ROM '%s', CRC %s\n", IniSections[i].name, szCRC);
 		DEBUG_print(txtbuffer,DBG_RICE); 
+#endif		
 #endif //__GX__
             return i;
         }

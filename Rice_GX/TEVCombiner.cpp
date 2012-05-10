@@ -838,8 +838,9 @@ extern const char* muxTypeStrs[];
 extern const char *translatedCombTypes[];
 void CTEVColorCombiner::DisplayTEVMuxString(int index)
 {
-
+#ifdef SHOW_DEBUG
 	int debug_line = DBG_RICE;
+#endif
 
 //	sprintf(txtbuffer,"RGBA %d Cycle %d Type %s: %s, %s, %s, %s", rgbalpha, cycle, muxTypeStrs[type], 
 //		translatedCombTypes[m.a], translatedCombTypes[m.b], translatedCombTypes[m.c], translatedCombTypes[m.d]);
@@ -851,11 +852,12 @@ void CTEVColorCombiner::DisplayTEVMuxString(int index)
 		{
 			CombinerFormatType type = m_pDecodedMux->splitType[cycle*2+rgbalpha];
 			N64CombinerType &m = m_pDecodedMux->m_n64Combiners[cycle*2+rgbalpha];
-
+#ifdef SHOW_DEBUG
 			sprintf(txtbuffer,"RGBA %d Cycle %d Type %s:", rgbalpha, cycle, muxTypeStrs[type]); 
 			DEBUG_print(txtbuffer,debug_line++); 
 			sprintf(txtbuffer," abcd = %s, %s, %s, %s", translatedCombTypes[m.a], translatedCombTypes[m.b], translatedCombTypes[m.c], translatedCombTypes[m.d]);
 			DEBUG_print(txtbuffer,debug_line++); 
+#endif
 		}
 	}
 
@@ -890,7 +892,8 @@ void CTEVColorCombiner::DisplayTEVMuxString(int index)
 			numTex = 2;
 		}
 	}
-
+	
+#ifdef SHOW_DEBUG
 	sprintf(txtbuffer,"TEV Stages: %d, Texs: %d, prim %d, env %d, lod %d", res.numOfUnits, numTex, res.primIsUsed, res.envIsUsed, res.lodFracIsUsed);
 	DEBUG_print(txtbuffer,debug_line++); 
 
@@ -906,6 +909,7 @@ void CTEVColorCombiner::DisplayTEVMuxString(int index)
 			res.units[i].alphaOp.tevop, res.units[i].alphaOp.clamp, res.units[i].alphaOp.tevregid, res.units[i].Kcol, res.units[i].Kalpha);
 		DEBUG_print(txtbuffer,debug_line++); 
 	}
+#endif
 }
 
 #ifdef _DEBUG

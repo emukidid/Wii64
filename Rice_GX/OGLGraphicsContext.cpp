@@ -410,6 +410,8 @@ void VI_GX_showDEBUG()
 {
 	int i = 0;
 	GXColor fontColor = {150, 255, 150, 255};
+
+#ifdef SHOW_DEBUG
 	DEBUG_update();
 #ifndef MENU_V2
 	write_font_init_GX(fontColor);
@@ -422,6 +424,7 @@ void VI_GX_showDEBUG()
 		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
 //			menu::IplFont::getInstance().drawString(10,(15*i+0),text[i], 0.8, false); 
 			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
+#endif
 #endif
 
 	//Reset any stats in DEBUG_stats

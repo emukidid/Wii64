@@ -2389,12 +2389,13 @@ void LoadHiresTexture( TxtrCacheEntry &entry )
 		//bool readOK = reader->readTexture( info.lpSurface, archiveEntry );
 		unsigned int stride = info.lPitch * 4; // 4 lines in GX tile
 		bool readOK = reader->readTexture( info.lpSurface, archiveEntry, archiveEntryInfo, stride);
+#ifdef SHOW_DEBUG		
 		if (readOK)
 			sprintf(txtbuffer,"readTexture success\r\n");
 		else
 			sprintf(txtbuffer,"readTexture FAIL\r\n");
 		DEBUG_print(txtbuffer,DBG_USBGECKO);
-
+#endif
 		// Are the following calls needed?
 		// gHiresTxtrInfos[idx].scaleShift is never filled in, so I don't understand why it is used below..
 		// The size is hard-coded to 4, but if we add more GX formats, the size needs to be adjusted accordingly
