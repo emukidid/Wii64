@@ -29,9 +29,7 @@
 #include <gccore.h>
 #include <unistd.h>
 #include "gc_dvd.h"
-#ifdef WII
-#include <di/di.h>
-#endif
+#include <ogc/machine/processor.h>
 
 /* DVD Stuff */
 u32 dvd_hard_init = 0;
@@ -87,14 +85,32 @@ int init_dvd() {
   if(!have_hw_access()) {
     return NO_HW_ACCESS;
   }
-  if((dvd_get_error()>>24) == 1) {
-    return NO_DISC;
+  
+  STACK_ALIGN(u8,id,32,32);
+  // enable GPIO for spin-up on drive reset (active low)
+  mask32(0x0D8000E0, 0x10, 0);
+  // assert DI reset (active low)
+  mask32(0x0D800194, 0x400, 0);
+  usleep(1000);
+  // deassert DI reset
+  mask32(0x0D800194, 0, 0x400);
+
+  if ((dvd_get_error() >> 24) == 1) {
+  	return NO_DISC;
   }
   
   if((!dvd_hard_init) || (dvd_get_error())) {
-    DI_Mount();
-    while(DI_GetStatus() & DVD_INIT) usleep(20000);
-    dvd_hard_init=1;
+    // read id
+	dvd[0] = 0x54;
+	dvd[2] = 0xA8000040;
+	dvd[3] = 0;
+	dvd[4] = 0x20;
+	dvd[5] = (u32)id & 0x1FFFFFFF;
+	dvd[6] = 0x20;
+	dvd[7] = 3;
+	while (dvd[7] & 1)
+	usleep(20000);
+	dvd_hard_init = 1;
   }
 
   if((dvd_get_error()&0xFFFFFF)==0x053000) {
@@ -103,6 +119,7 @@ int init_dvd() {
   else {
     read_cmd = NORMAL;
   }
+  dvd_read_id();
   return 0;
 #endif
 }

@@ -34,9 +34,6 @@
 # include <debug.h>
 #endif
 extern "C" {
-#ifdef WII
-#include <di/di.h>
-#endif 
 #include "../gc_memory/memory.h"
 #include "../gc_memory/Saves.h"
 #include "../main/plugin.h"
@@ -191,11 +188,6 @@ void Func_ExitToLoader()
 {
 	if(menu::MessageBox::getInstance().askMessage("Are you sure you want to exit to loader?"))
 		shutdown = 2;
-//#ifdef WII
-//	DI_Close();
-//#endif
-//	void (*rld)() = (void (*)()) 0x80001800;
-//	rld();
 }
 
 extern "C" {

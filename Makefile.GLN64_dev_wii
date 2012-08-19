@@ -119,7 +119,7 @@ HEADER		=main/rom.h \
 		r4300/recomp.h \
 		gc_memory/pif.h
 
-LIB		=	-ldi -lm -lfat -ldb -lwiiuse -lbte -logc -lz
+LIB		=	-lm -lfat -ldb -lwiiuse -lbte -logc -lz
 
 ifeq ($(strip mupen64_GX_gfx/main.cpp),)
 	export LD	:=	$(CC)

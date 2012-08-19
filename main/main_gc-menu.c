@@ -49,7 +49,6 @@
 unsigned int MALLOC_MEM2 = 0;
 #include <ogc/conf.h>
 #include <wiiuse/wpad.h>
-#include <di/di.h>
 #include "../gc_memory/MEM2.h"
 #endif
 
@@ -120,11 +119,6 @@ u16 readWPAD(void);
 
 int main(){
 	/* INITIALIZE */
-#ifdef HW_RVL
-  DI_Close();
-  DI_Init();    // first
-#endif
-
 	Initialise(); // Stock OGC initialization
 #ifndef HW_RVL
   DVD_Init();

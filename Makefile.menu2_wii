@@ -17,7 +17,7 @@ OBJ_INPUT	= \
 		gc_input/controller-Classic.o \
 		gc_input/controller-WiimoteNunchuk.o
 
-LIB		= -ldi -lwiiuse -lbte
+LIB		= -lwiiuse -lbte
 
 ALL_OBJ		=
 

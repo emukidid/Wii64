@@ -28,9 +28,6 @@
 #include <ogc/machine/processor.h>
 #include "fileBrowser.h"
 #include "../main/gc_dvd.h"
-#ifdef HW_RVL
-#include <di/di.h>
-#endif
 
 /* DVD Globals */
 int dvd_init = 0;

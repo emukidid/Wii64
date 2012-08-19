@@ -20,7 +20,7 @@ OBJ_INPUT	= \
 OBJ_RICE_GX	= \
 		TextureArchive/ArchiveReader.o
 
-LIB		= -ldi -lwiiuse -lbte -lz
+LIB		= -lwiiuse -lbte -lz
 
 ALL_OBJ		=
 
