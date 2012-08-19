@@ -205,33 +205,11 @@ int fileBrowser_WiiFS_writeFile(fileBrowser_file* file, void* buffer, unsigned i
 }
 
 static void fillInTitleDir(fileBrowser_file* f){
-#if 0
-	// Convert the gameCode in memory to hex
-	// and concat the hex string to gameDir
-	
-	char* id = f->name + 16; // start after "/title/00010000/"
-	unsigned int gameCode = *((unsigned int*)0x80000000);
-	
-	int i;
-	for(i=7; i>=0; --i){
-		int nibble = gameCode & 0xF;
-		char ch;
-		
-		if(nibble > 9) ch = nibble - 10 + 97;
-		else ch = nibble + 48;
-		*(id+i) = ch;
-		
-		gameCode >>= 4;
-	}
-	f->name[16+7+1] = 0;
-	strcat(&f->name, "/data");
-#else
 	// We have ES functions to do this for us now!
 	char* dataDir = memalign(32, 64);
 	ES_GetDataDir(titleID, dataDir);
 	strncpy(&f->name, dataDir, 64);
 	free(dataDir);
-#endif
 }
 
 static int identify(void){
@@ -241,17 +219,7 @@ static int identify(void){
 	int ret;
 	
 	if(!customCert){ // If there's no certificate supplied
-#if 0
-		// Use the one from the DVD
-		ret = getTitle(&dvdCert,   &dvdCertSize,
-		               &dvdTMD,    &dvdTMDSize,
-		               &dvdTicket, &dvdTicketSize);
-		customCert = dvdCert;
-		customCertSize = dvdCertSize;
-		if(ret < 0) return ret;
-#else
 		return identified = 0;
-#endif
 	}
 	
 	ret = ES_Identify(customCert,   customCertSize,
@@ -286,24 +254,6 @@ static int identify(void){
 		free(path);
 		return identified = 1;
 	}
-#if 0
-	// If that still fails, try to identify from the discs certs
-	if(!dvdCert || !dvdTMD || !dvdTicket)
-		ret = getTitle(&dvdCert,   &dvdCertSize,
-			       &dvdTMD,    &dvdTMDSize,
-			       &dvdTicket, &dvdTicketSize);
-	else ret = 0;
-	
-	if(ret >= 0){
-		ret = ES_Identify(dvdCert,   dvdCertSize,
-		                  dvdTMD,    dvdTMDSize,
-		                  dvdTicket, dvdTicketSize,
-		                  &keyid);
-		ES_GetTitleID(&titleID);
-		ISFS_Initialize();
-		return identified = (ret >= 0);
-	}
-#endif
 	return identified = 0;
 }
 
