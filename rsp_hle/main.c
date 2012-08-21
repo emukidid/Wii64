@@ -136,29 +136,28 @@ extern void (*ABI1[0x20])();
 extern void (*ABI2[0x20])();
 extern void (*ABI3[0x20])();
 
-void (*ABI[0x20])();
-
+void (**ABI)();
 u32 inst1, inst2;
 
 static int audio_ucode(OSTask_t *task)
 {
 	unsigned long *p_alist = (unsigned long*)(rsp.RDRAM + task->data_ptr);
-	unsigned int i;
-
-	switch(audio_ucode_detect(task)) {
-	case 1: // mario ucode
-		memcpy( ABI, ABI1, sizeof(ABI[0])*0x20 );
-		break;
-	case 2: // banjo kazooie ucode
-		memcpy( ABI, ABI2, sizeof(ABI[0])*0x20 );
-		break;
-	case 3: // zelda ucode
-		memcpy( ABI, ABI3, sizeof(ABI[0])*0x20 );
-		break;
-	default: // unknown ucode
-		return -1;
+	unsigned int i, ucode_type = audio_ucode_detect(task);
+	
+	switch(ucode_type) {
+		case 1: // mario ucode
+			ABI = &ABI1[0];
+			break;
+		case 2: // banjo kazooie ucode
+			ABI = &ABI2[0];
+			break;
+		case 3: // zelda ucode
+			ABI = &ABI3[0];
+			break;
+		default: // unknown ucode
+			return -1;
 	}
-
+	
 	// Execute the task using the correct HLE funcs
 	for (i = 0; i < (task->data_size/4); i += 2) {
 		inst1 = p_alist[i];
