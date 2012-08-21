@@ -37,6 +37,9 @@
 #include "macros.h"
 #include "interupt.h"
 
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
+
 #ifdef __PPC__
 #include "../main/ROM-Cache.h"
 #endif
@@ -128,6 +131,7 @@ static void SRAV()
 
 static void JR()
 {
+   //DEBUG_stats(18, "JR", STAT_TYPE_ACCUM, 1);
    local_rs32 = irs32;
    r4300.pc+=4;
    r4300.delay_slot=1;
@@ -142,6 +146,7 @@ static void JR()
 
 static void JALR()
 {
+   //DEBUG_stats(19, "JALR", STAT_TYPE_ACCUM, 1);
    unsigned long long int *dest = PC->f.r.rd;
    local_rs32 = rrs32;
    r4300.pc+=4;
@@ -325,6 +330,7 @@ static void DMULT()
 	else r4300.lo = ~r4300.lo + 1;
      }
    r4300.pc+=4;
+   //DEBUG_stats(0, "DMULT", STAT_TYPE_ACCUM, 1);
 }
 
 static void DMULTU()
@@ -352,10 +358,12 @@ static void DMULTU()
    r4300.hi = (result3 & 0xFFFFFFFF) | (result4 << 32);
 
    r4300.pc+=4;
+   //DEBUG_stats(1, "DMULTU", STAT_TYPE_ACCUM, 1);
 }
 
 static void DDIV()
 {
+   //DEBUG_stats(2, "DDIV", STAT_TYPE_ACCUM, 1);
    if (rrt)
      {
 	r4300.lo = (long long int)rrs / (long long int)rrt;
@@ -367,6 +375,7 @@ static void DDIV()
 
 static void DDIVU()
 {
+   //DEBUG_stats(3, "DDIVU", STAT_TYPE_ACCUM, 1);
    if (rrt)
      {
 	r4300.lo = (unsigned long long int)rrs / (unsigned long long int)rrt;
@@ -810,6 +819,7 @@ static void (*interp_regimm[32])(void) =
 
 static void TLBR()
 {
+   //DEBUG_stats(14, "TLBR", STAT_TYPE_ACCUM, 1);
    int index;
    index = Index & 0x1F;
    PageMask = tlb_e[index].mask << 13;
@@ -825,6 +835,7 @@ static void TLBR()
 
 static void TLBWI()
 {
+   //DEBUG_stats(15, "TLBWI", STAT_TYPE_ACCUM, 1);
    unsigned int i;
 
    if (tlb_e[Index&0x3F].v_even)
@@ -941,6 +952,7 @@ static void TLBWI()
 
 static void TLBWR()
 {
+    //DEBUG_stats(16, "TLBWR", STAT_TYPE_ACCUM, 1);
 	unsigned int i;
 	update_count();
 	Random = (Count/2 % (32 - Wired)) + Wired;
@@ -1053,6 +1065,7 @@ static void TLBWR()
 
 static void TLBP()
 {
+   //DEBUG_stats(17, "TLBP", STAT_TYPE_ACCUM, 1);
    int i;
    Index |= 0x80000000;
    for (i=0; i<32; i++)
@@ -2642,6 +2655,7 @@ static void DADDIU()
 
 static void LDL()
 {
+   //DEBUG_stats(9, "LDL", STAT_TYPE_ACCUM, 1);
    unsigned long long int word = 0;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
@@ -2698,6 +2712,7 @@ static void LDL()
 
 static void LDR()
 {
+   //DEBUG_stats(10, "LDR", STAT_TYPE_ACCUM, 1);
    unsigned long long int word = 0;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
@@ -2773,34 +2788,21 @@ static void LH()
 
 static void LWL()
 {
+   //DEBUG_stats(4, "LWL", STAT_TYPE_ACCUM, 1);
    unsigned long long int word = 0;
    r4300.pc+=4;
-   switch ((iimmediate + irs32) & 3)
-     {
-      case 0:
-	address = iimmediate + irs32;
-	rdword = &irt;
-	read_word_in_memory();
-	break;
-      case 1:
-	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	rdword = &word;
-	read_word_in_memory();
-	irt = (irt & 0xFF) | (word << 8);
-	break;
-      case 2:
-	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	rdword = &word;
-	read_word_in_memory();
-	irt = (irt & 0xFFFF) | (word << 16);
-	break;
-      case 3:
-	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	rdword = &word;
-	read_word_in_memory();
-	irt = (irt & 0xFFFFFF) | (word << 24);
-	break;
-     }
+   u32 type = (iimmediate + irs32) & 3;
+   address = iimmediate + irs32;
+   if(likely(!type)) {
+	  rdword = &irt;
+	  read_word_in_memory();
+	}
+	else {
+	  address &= 0xFFFFFFFC;
+	  rdword = &word;
+	  read_word_in_memory();
+	  irt = (irt & ((256<<(type*8))-1)) | (word << (8*type));
+    }
    sign_extended(irt);
 }
 
@@ -2831,34 +2833,23 @@ static void LHU()
 
 static void LWR()
 {
-   unsigned long long int word = 0;
-   r4300.pc+=4;
-   switch ((iimmediate + irs32) & 3)
-     {
-      case 0:
+	//DEBUG_stats(5, "LWR", STAT_TYPE_ACCUM, 1);
+	unsigned long long int word = 0;
+	r4300.pc+=4;
+	u32 type = (iimmediate + irs32) & 3;
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	rdword = &word;
-	read_word_in_memory();
-	irt = (irt & 0xFFFFFFFFFFFFFF00LL) | ((word >> 24) & 0xFF);
-	break;
-      case 1:
-	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	rdword = &word;
-	read_word_in_memory();
-	irt = (irt & 0xFFFFFFFFFFFF0000LL) | ((word >> 16) & 0xFFFF);
-	break;
-      case 2:
-	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	rdword = &word;
-	read_word_in_memory();
-	irt = (irt & 0xFFFFFFFFFF000000LL) | ((word >> 8) & 0xFFFFFF);
-	break;
-      case 3:
-	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	rdword = &irt;
-	read_word_in_memory();
-	sign_extended(irt);
-     }
+	if(likely((type == 3))) {
+		rdword = &irt;
+		read_word_in_memory();
+		sign_extended(irt);
+	}
+	else {
+		rdword = &word;
+		read_word_in_memory();
+		type= ((type+1) * 8);
+		u32 mask = ((256LL<<type)-1);
+		irt = (irt & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask);
+	}
 }
 
 static void LWU()
@@ -2888,6 +2879,7 @@ static void SH()
 }
 static void SWL()
 {
+   //DEBUG_stats(6, "SWL", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
@@ -2934,6 +2926,7 @@ static void SW()
 
 static void SDL()
 {
+   //DEBUG_stats(8, "SDL", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
@@ -3005,6 +2998,7 @@ static void SDL()
 
 static void SDR()
 {
+   //DEBUG_stats(7, "SDR", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
@@ -3076,6 +3070,7 @@ static void SDR()
 
 static void SWR()
 {
+   //DEBUG_stats(11, "SWR", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
@@ -3120,6 +3115,7 @@ static void CACHE()
 
 static void LL()
 {
+   //DEBUG_stats(12, "LL", STAT_TYPE_ACCUM, 1);
    address = iimmediate + irs32;
    rdword = &irt;
    r4300.pc+=4;
@@ -3158,6 +3154,7 @@ static void LD()
 
 static void SC()
 {
+   //DEBUG_stats(13, "SC", STAT_TYPE_ACCUM, 1);
    r4300.pc+=4;
    if(r4300.llbit)
      {
