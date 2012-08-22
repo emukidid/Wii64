@@ -121,7 +121,8 @@ void jump_to(unsigned int);
 #define UNLINK_SECTION 11
 #define DYNAMEM_SECTION 12
 #define ROMREAD_SECTION 13
-#define NUM_SECTIONS 13
+#define BLOCKS_SECTION 14
+#define NUM_SECTIONS 14
 
 //#define PROFILE
 

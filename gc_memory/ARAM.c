@@ -44,14 +44,13 @@ static int initialized=0;
       bytes       type
   1. 40,960     DSP/AESND reserved
   2. 24,576     empty
-  3. 12,517,376 ROM cache (191*64kb blocks)
-  4. 4,194,304  blocks (dynarec)
+  3. 12,517,376 ROM cache (255*64kb blocks)
 */
 
 void ARAM_manager_init(void){
 	if(initialized) return;
 
-	max_blocks = (AR_GetSize() - (64*1024) - (4*1024*1024))/BLOCK_SIZE;
+	max_blocks = (AR_GetSize() - (64*1024))/BLOCK_SIZE;
 	ARAM_blocks = malloc(max_blocks * sizeof(ARAM_block));
 	int i, addr = 64*1024;
 	for(i=0; i<max_blocks; ++i){

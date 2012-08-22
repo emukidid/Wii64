@@ -33,6 +33,7 @@
 #define DBG_PROFILE_UNLINK 29
 #define DBG_PROFILE_DYNAMEM 30
 #define DBG_PROFILE_ROMREAD 31
+#define DBG_PROFILE_BLOCKS 32
 #define DBG_STATSBASE 12 // ALL stats print from this line onwards
 #define DBG_SDGECKOOPEN 0xFC
 #define DBG_SDGECKOCLOSE 0xFD

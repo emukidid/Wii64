@@ -42,67 +42,75 @@ static long long last_refresh;
 
 void start_section(int section_type)
 {
-   last_start[section_type] = gettime();
+	last_start[section_type] = gettime();
 }
 
 void end_section(int section_type)
 {
-   long long end = gettime();
-   time_in_section[section_type] += end - last_start[section_type];
+	long long end = gettime();
+	time_in_section[section_type] += end - last_start[section_type];
 }
 
 void refresh_stat()
 {
-   long long this_tick = gettime();
-   if(diff_sec(last_refresh, this_tick) >= 1)
-     {
-	time_in_section[0] = this_tick - last_start[0];
-	
-	sprintf(txtbuffer, "gfx=%f%%", 100.0f * (float)time_in_section[GFX_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_GFX);
-	
-	sprintf(txtbuffer, "audio=%f%%", 100.0f * (float)time_in_section[AUDIO_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_AUDIO);
-	
-	sprintf(txtbuffer, "tlb=%f%%", 100.0f * (float)time_in_section[TLB_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_TLB);
-	
-	sprintf(txtbuffer, "fp=%f%%", 100.0f * (float)time_in_section[FP_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_FP);
-	
-	sprintf(txtbuffer, "comp=%f%%", 100.0f * (float)time_in_section[COMPILER_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_COMP);
-	
-	sprintf(txtbuffer, "interp=%f%%", 100.0f * (float)time_in_section[INTERP_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_INTERP);
-	
-	sprintf(txtbuffer, "funcs=%f%% ", 100.0f * (float)time_in_section[FUNCS_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_FUNCS);
+	long long this_tick = gettime();
+	if(diff_sec(last_refresh, this_tick) >= 1) {
+		time_in_section[0] = this_tick - last_start[0];
 
-	sprintf(txtbuffer, "tramp=%f%%", 100.0f * (float)time_in_section[TRAMP_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_TRAMP);
-	
-	sprintf(txtbuffer, "link=%f%% ", 100.0f * (float)time_in_section[LINK_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_LINK);
-	
-	sprintf(txtbuffer, "unlink=%f%% ", 100.0f * (float)time_in_section[UNLINK_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_UNLINK);
-	
-	sprintf(txtbuffer, "dynamem=%f%% ", 100.0f * (float)time_in_section[DYNAMEM_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_DYNAMEM);
-	
-	sprintf(txtbuffer, "romread=%f%% ", 100.0f * (float)time_in_section[ROMREAD_SECTION] / (float)time_in_section[0]);
-	DEBUG_print(txtbuffer, DBG_PROFILE_ROMREAD);
+		sprintf(txtbuffer, "gfx=%f%%", 100.0f * (float)time_in_section[GFX_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_GFX);
+
+		sprintf(txtbuffer, "audio=%f%%", 100.0f * (float)time_in_section[AUDIO_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_AUDIO);
+
+		sprintf(txtbuffer, "tlb=%f%%", 100.0f * (float)time_in_section[TLB_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_TLB);
+
+		sprintf(txtbuffer, "fp=%f%%", 100.0f * (float)time_in_section[FP_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_FP);
+
+		sprintf(txtbuffer, "comp=%f%%", 100.0f * (float)time_in_section[COMPILER_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_COMP);
+
+		sprintf(txtbuffer, "interp=%f%%", 100.0f * (float)time_in_section[INTERP_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_INTERP);
+
+		sprintf(txtbuffer, "funcs=%f%% ", 100.0f * (float)time_in_section[FUNCS_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_FUNCS);
+
+		sprintf(txtbuffer, "tramp=%f%%", 100.0f * (float)time_in_section[TRAMP_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_TRAMP);
+
+		sprintf(txtbuffer, "link=%f%% ", 100.0f * (float)time_in_section[LINK_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_LINK);
+
+		sprintf(txtbuffer, "unlink=%f%% ", 100.0f * (float)time_in_section[UNLINK_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_UNLINK);
+
+		sprintf(txtbuffer, "dynamem=%f%% ", 100.0f * (float)time_in_section[DYNAMEM_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_DYNAMEM);
+
+		sprintf(txtbuffer, "romread=%f%% ", 100.0f * (float)time_in_section[ROMREAD_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_ROMREAD);
+		
+		sprintf(txtbuffer, "blocks=%f%% ", 100.0f * (float)time_in_section[BLOCKS_SECTION] / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, DBG_PROFILE_BLOCKS);
 	
 #ifdef GECKO_PROFILE
-	DEBUG_print("\r", DBG_USBGECKO);
+		DEBUG_print("\r", DBG_USBGECKO);
 #endif
-	
-	int i;
-	for(i=1; i<=NUM_SECTIONS; ++i) time_in_section[i] = 0;
-	last_start[0] = this_tick;
-	last_refresh = this_tick;
-     }
+
+		int i, all_sections = 0;
+		for(i=1; i<=NUM_SECTIONS; ++i) {
+			all_sections += time_in_section[i];
+			time_in_section[i] = 0;
+		}
+		sprintf(txtbuffer, "unknown=%f%% ", 100.0f * (float)(time_in_section[0]-all_sections) / (float)time_in_section[0]);
+		DEBUG_print(txtbuffer, NUM_SECTIONS+1);
+
+		last_start[0] = this_tick;
+		last_refresh = this_tick;
+	}
 }
 
 #endif
