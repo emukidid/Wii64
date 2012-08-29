@@ -31,6 +31,9 @@
 #include "Recompile.h"
 #include "Wrappers.h"
 
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
+
 extern unsigned long instructionCount;
 extern void (*interp_ops[64])(void);
 inline unsigned long update_invalid_addr(unsigned long addr);
@@ -247,13 +250,48 @@ void invalidate_func(unsigned int addr){
 unsigned int dyna_mem(unsigned int value, unsigned int addr,
                       memType type, unsigned int pc, int isDelaySlot){
 	static unsigned long long dyna_rdword;
-
+	//start_section(DYNAMEM_SECTION);
 	address = addr;
 	rdword = &dyna_rdword;
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
 
 	switch(type){
+		case MEM_LWR:
+		{
+			u32 type = address & 3;
+			address &= 0xFFFFFFFC;
+			if(likely((type == 3))) {
+				read_word_in_memory();
+				r4300.gpr[value] = (long long)((long)dyna_rdword);
+			}
+			else {
+				unsigned long long int word = 0;
+				rdword = &word;
+				read_word_in_memory();
+				type= ((type+1) * 8);
+				u32 mask = ((256LL<<type)-1);
+				dyna_rdword = (dyna_rdword & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask);
+				r4300.gpr[value] = (long)dyna_rdword;
+			}
+		}
+		break;
+		case MEM_LWL:
+		{
+			u32 type = (address) & 3;
+			if(likely(!type)) {
+				read_word_in_memory();
+			}
+			else {
+				unsigned long long int word = 0;
+				address &= 0xFFFFFFFC;
+				rdword = &word;
+				read_word_in_memory();
+				dyna_rdword = (dyna_rdword & ((256<<(type*8))-1)) | (word << (8*type));
+			}
+			r4300.gpr[value] = (long long)((long)dyna_rdword);
+		}
+			break;
 		case MEM_LW:
 			read_word_in_memory();
 			r4300.gpr[value] = (long long)((long)dyna_rdword);
@@ -327,7 +365,7 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 	r4300.delay_slot = 0;
 
 	if(r4300.pc != pc) noCheckInterrupt = 1;
-
+	//end_section(DYNAMEM_SECTION);
 	return r4300.pc != pc ? r4300.pc : 0;
 }
 

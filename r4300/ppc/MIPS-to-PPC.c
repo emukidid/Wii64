@@ -912,8 +912,75 @@ static int LWL(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LWL
-	// TODO: lwl
-	return CONVERT_ERROR;
+	flushRegisters();
+	reset_code_addr();
+
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+
+	invalidateRegisters();
+
+	GEN_ADDI(ppc, base, base, MIPS_GET_IMMED(mips));	// addr = rs + immed
+	set_next_dst(ppc);
+#ifdef FASTMEM
+	// If base in physical memory
+#ifdef USE_EXPANSION
+	GEN_LIS(ppc, 0, 0x8080);
+#else
+	GEN_LIS(ppc, 0, 0x8040);
+#endif
+	set_next_dst(ppc);
+	GEN_CMP(ppc, base, 0, 1);
+	set_next_dst(ppc);
+	GEN_BGE(ppc, 1, 11, 0, 0);
+	set_next_dst(ppc);
+	
+	// Fast case LWL when it's not actually mis-aligned, it's just a LW()
+	GEN_RLWINM(ppc, 0, base, 0, 30, 31);	// r0 = addr & 3
+	set_next_dst(ppc);
+	GEN_CMPI(ppc, 0, 0, 1);
+	set_next_dst(ppc);
+	GEN_BNE(ppc, 1, 8, 0, 0);
+	set_next_dst(ppc);
+	
+	// Use rdram
+#ifdef USE_EXPANSION
+	// Mask sp with 0x007FFFFF
+	GEN_RLWINM(ppc, base, base, 0, 9, 31);
+	set_next_dst(ppc);
+#else
+	// Mask sp with 0x003FFFFF
+	GEN_RLWINM(ppc, base, base, 0, 10, 31);
+	set_next_dst(ppc);
+#endif
+	// Add rdram pointer
+	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
+	set_next_dst(ppc);
+	// Perform the actual load
+	GEN_LWZ(ppc, 3, 0, base);
+	set_next_dst(ppc);
+	// Have the value in r3 stored to rt
+	mapRegisterNew( MIPS_GET_RT(mips) );
+	flushRegisters();
+	// Skip over else
+	int not_fastmem_id = add_jump_special(1);
+	GEN_B(ppc, not_fastmem_id, 0, 0);
+	set_next_dst(ppc);
+	PowerPC_instr* preCall = get_curr_dst();
+#endif // FASTMEM
+
+	// load into rt
+	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	set_next_dst(ppc);
+
+	genCallDynaMem(MEM_LWL, base, 0);
+
+#ifdef FASTMEM
+	int callSize = get_curr_dst() - preCall;
+	set_jump_special(not_fastmem_id, callSize+1);
+#endif
+
+	return CONVERT_SUCCESS;
 #endif
 }
 
@@ -1130,8 +1197,78 @@ static int LWR(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LWR
-	// TODO: lwr
-	return CONVERT_ERROR;
+	flushRegisters();
+	reset_code_addr();
+
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+
+	invalidateRegisters();
+
+	GEN_ADDI(ppc, base, base, MIPS_GET_IMMED(mips));	// addr = rs + immed
+	set_next_dst(ppc);
+#ifdef FASTMEM
+	// If base in physical memory
+#ifdef USE_EXPANSION
+	GEN_LIS(ppc, 0, 0x8080);
+#else
+	GEN_LIS(ppc, 0, 0x8040);
+#endif
+	set_next_dst(ppc);
+	GEN_CMP(ppc, base, 0, 1);
+	set_next_dst(ppc);
+	GEN_BGE(ppc, 1, 12, 0, 0);
+	set_next_dst(ppc);
+	
+	// Fast case LWR when it's not actually mis-aligned, it's just a LW()
+	GEN_RLWINM(ppc, 0, base, 0, 30, 31);	// r0 = addr & 3
+	set_next_dst(ppc);
+	GEN_CMPI(ppc, 0, 3, 1);
+	set_next_dst(ppc);
+	GEN_BNE(ppc, 1, 9, 0, 0);
+	set_next_dst(ppc);
+	
+	GEN_RLWINM(ppc, base, base, 0, 0, 29);	// addr &= 0xFFFFFFFC
+	set_next_dst(ppc);
+	
+	// Use rdram
+#ifdef USE_EXPANSION
+	// Mask sp with 0x007FFFFF
+	GEN_RLWINM(ppc, base, base, 0, 9, 31);
+	set_next_dst(ppc);
+#else
+	// Mask sp with 0x003FFFFF
+	GEN_RLWINM(ppc, base, base, 0, 10, 31);
+	set_next_dst(ppc);
+#endif
+	// Add rdram pointer
+	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
+	set_next_dst(ppc);
+	// Perform the actual load
+	GEN_LWZ(ppc, 3, 0, base);
+	set_next_dst(ppc);
+	// Have the value in r3 stored to rt
+	mapRegisterNew( MIPS_GET_RT(mips) );
+	flushRegisters();
+	// Skip over else
+	int not_fastmem_id = add_jump_special(1);
+	GEN_B(ppc, not_fastmem_id, 0, 0);
+	set_next_dst(ppc);
+	PowerPC_instr* preCall = get_curr_dst();
+#endif // FASTMEM
+
+	// load into rt
+	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	set_next_dst(ppc);
+
+	genCallDynaMem(MEM_LWR, base, 0);
+
+#ifdef FASTMEM
+	int callSize = get_curr_dst() - preCall;
+	set_jump_special(not_fastmem_id, callSize+1);
+#endif
+
+	return CONVERT_SUCCESS;
 #endif
 }
 

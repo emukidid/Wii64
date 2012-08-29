@@ -2791,8 +2791,8 @@ static void LWL()
    //DEBUG_stats(4, "LWL", STAT_TYPE_ACCUM, 1);
    unsigned long long int word = 0;
    r4300.pc+=4;
-   u32 type = (iimmediate + irs32) & 3;
    address = iimmediate + irs32;
+   u32 type = (address) & 3;
    if(likely(!type)) {
 	  rdword = &irt;
 	  read_word_in_memory();

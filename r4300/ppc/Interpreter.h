@@ -41,9 +41,9 @@ unsigned int decodeNInterpret();
 #define INTERPRET_LW
 #define INTERPRET_LWU
 #define INTERPRET_LD
-#endif
 #define INTERPRET_LWL
 #define INTERPRET_LWR
+#endif
 
 #if 0
 #define INTERPRET_SB
