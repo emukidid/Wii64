@@ -2655,51 +2655,19 @@ static void DADDIU()
 
 static void LDL()
 {
-   //DEBUG_stats(9, "LDL", STAT_TYPE_ACCUM, 1);
-   unsigned long long int word = 0;
-   r4300.pc+=4;
-   switch ((iimmediate + irs32) & 7)
-     {
-      case 0:
+	//DEBUG_stats(9, "LDL", STAT_TYPE_ACCUM, 1);
+	unsigned long long int word = 0;
+	r4300.pc+=4;
 	address = iimmediate + irs32;
-	irt = read_dword_in_memory();
-	break;
-      case 1:
-	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
-	irt = (irt & 0xFF) | (word << 8);
-	break;
-      case 2:
-	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
-	irt = (irt & 0xFFFF) | (word << 16);
-	break;
-      case 3:
-	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
-	irt = (irt & 0xFFFFFF) | (word << 24);
-	break;
-      case 4:
-	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
-	irt = (irt & 0xFFFFFFFF) | (word << 32);
-	break;
-      case 5:
-	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
-	irt = (irt & 0xFFFFFFFFFFLL) | (word << 40);
-	break;
-      case 6:
-	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
-	irt = (irt & 0xFFFFFFFFFFFFLL) | (word << 48);
-	break;
-      case 7:
-	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
-	irt = (irt & 0xFFFFFFFFFFFFFFLL) | (word << 56);
-	break;
-     }
+	unsigned int type = address & 7;
+	if(likely(!type)) {
+		irt = read_dword_in_memory();
+	}
+	else {
+		address &= 0xFFFFFFF8;
+		word = read_dword_in_memory();
+		irt = (irt & ((256<<((type-1)*8))-1)) | (word << (8*type));
+	}
 }
 
 static void LDR()
