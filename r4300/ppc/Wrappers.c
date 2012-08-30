@@ -249,10 +249,8 @@ void invalidate_func(unsigned int addr){
 
 unsigned int dyna_mem(unsigned int value, unsigned int addr,
                       memType type, unsigned int pc, int isDelaySlot){
-	static unsigned long long dyna_rdword;
 	//start_section(DYNAMEM_SECTION);
 	address = addr;
-	rdword = &dyna_rdword;
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
 
@@ -262,17 +260,13 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 			u32 type = address & 3;
 			address &= 0xFFFFFFFC;
 			if(likely((type == 3))) {
-				read_word_in_memory();
-				r4300.gpr[value] = (long long)((long)dyna_rdword);
+				r4300.gpr[value] = (long long)((long)read_word_in_memory());
 			}
 			else {
-				unsigned long long int word = 0;
-				rdword = &word;
-				read_word_in_memory();
+				unsigned long long int word = read_word_in_memory();
 				type= ((type+1) * 8);
 				u32 mask = ((256LL<<type)-1);
-				dyna_rdword = (dyna_rdword & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask);
-				r4300.gpr[value] = (long)dyna_rdword;
+				r4300.gpr[value] = (long)((r4300.gpr[value] & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask));
 			}
 		}
 		break;
@@ -280,53 +274,41 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 		{
 			u32 type = (address) & 3;
 			if(likely(!type)) {
-				read_word_in_memory();
+				r4300.gpr[value] = (long long)((long)read_word_in_memory());
 			}
 			else {
-				unsigned long long int word = 0;
 				address &= 0xFFFFFFFC;
-				rdword = &word;
-				read_word_in_memory();
-				dyna_rdword = (dyna_rdword & ((256<<(type*8))-1)) | (word << (8*type));
+				unsigned long long int word = read_word_in_memory();
+				r4300.gpr[value] = (long long)((long)((r4300.gpr[value] & ((256<<(type*8))-1)) | (word << (8*type))));
 			}
-			r4300.gpr[value] = (long long)((long)dyna_rdword);
 		}
 			break;
 		case MEM_LW:
-			read_word_in_memory();
-			r4300.gpr[value] = (long long)((long)dyna_rdword);
+			r4300.gpr[value] = (long long)((long)read_word_in_memory());
 			break;
 		case MEM_LWU:
-			read_word_in_memory();
-			r4300.gpr[value] = (unsigned long long)((long)dyna_rdword);
+			r4300.gpr[value] = (unsigned long long)((long)read_word_in_memory());
 			break;
 		case MEM_LH:
-			read_hword_in_memory();
-			r4300.gpr[value] = (long long)((short)dyna_rdword);
+			r4300.gpr[value] = (long long)((short)read_hword_in_memory());
 			break;
 		case MEM_LHU:
-			read_hword_in_memory();
-			r4300.gpr[value] = (unsigned long long)((unsigned short)dyna_rdword);
+			r4300.gpr[value] = (unsigned long long)((unsigned short)read_hword_in_memory());
 			break;
 		case MEM_LB:
-			read_byte_in_memory();
-			r4300.gpr[value] = (long long)((signed char)dyna_rdword);
+			r4300.gpr[value] = (long long)((signed char)read_byte_in_memory());
 			break;
 		case MEM_LBU:
-			read_byte_in_memory();
-			r4300.gpr[value] = (unsigned long long)((unsigned char)dyna_rdword);
+			r4300.gpr[value] = (unsigned long long)((unsigned char)read_byte_in_memory());
 			break;
 		case MEM_LD:
-			read_dword_in_memory();
-			r4300.gpr[value] = dyna_rdword;
+			r4300.gpr[value] = read_dword_in_memory();
 			break;
 		case MEM_LWC1:
-			read_word_in_memory();
-			*((long*)r4300.fpr_single[value]) = (long)dyna_rdword;
+			*((long*)r4300.fpr_single[value]) = (long)read_word_in_memory();
 			break;
 		case MEM_LDC1:
-			read_dword_in_memory();
-			*((long long*)r4300.fpr_double[value]) = dyna_rdword;
+			*((long long*)r4300.fpr_double[value]) = read_dword_in_memory();
 			break;
 		case MEM_SW:
 			word = value;
