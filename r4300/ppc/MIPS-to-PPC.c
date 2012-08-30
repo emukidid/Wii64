@@ -23,7 +23,7 @@
 /* TODO: Optimize idle branches (generate a call to gen_interrupt)
          Optimize instruction scheduling & reduce branch instructions
  */
-
+//#define USE_INLINE_STORES 1
 #include <string.h>
 #include "MIPS-to-PPC.h"
 #include "Register-Cache.h"
@@ -31,6 +31,7 @@
 #include "Wrappers.h"
 #include "../../gc_memory/memory.h"
 #include <math.h>
+#include "../Invalid_Code.h"
 
 #include <assert.h>
 
@@ -4919,24 +4920,28 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 	GEN_LWZ(ppc,3,extractLower16((unsigned int)&address),4);
 	set_next_dst(ppc);
-	GEN_LIS(ppc, 12, (unsigned int)invalid_code>>16);
+	GEN_LIS(ppc, 12, (unsigned int)&invalid_code_get>>16);
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 12, 12, (unsigned int)invalid_code&0xFFFF);
+	GEN_ORI(ppc, 12, 12, (unsigned int)&invalid_code_get&0xFFFF);
 	set_next_dst(ppc);
-	GEN_RLWINM(ppc, 5, 3, 20, 12, 31);
+	GEN_RLWINM(ppc, 3, 3, 20, 12, 31);
 	set_next_dst(ppc);
-	GEN_ADD(ppc, 12, 12, 5);
+	GEN_MTCTR(ppc, 12);
 	set_next_dst(ppc);
-	GEN_LBZ(ppc,12,0,12);
+	GEN_BCTRL(ppc);
 	set_next_dst(ppc);
-	GEN_CMPI(ppc,12,0,6);
+	GEN_CMPI(ppc,3,0,6);
 	set_next_dst(ppc);
-	GEN_BNE(ppc,6,5,0,0);
+	GEN_BNE(ppc,6,7,0,0);
 	set_next_dst(ppc);
 
+	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&address));
+	set_next_dst(ppc);
+	GEN_LWZ(ppc,3,extractLower16((unsigned int)&address),4);
+	set_next_dst(ppc);
 	GEN_LIS(ppc, 12, ((unsigned int)&invalidate_func)>>16);
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 12, 12, (unsigned int)&invalidate_func);
+	GEN_ORI(ppc, 12, 12, (unsigned int)&invalidate_func&0xFFFF);
 	set_next_dst(ppc);
 	GEN_MTCTR(ppc, 12);
 	set_next_dst(ppc);
