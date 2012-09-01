@@ -249,7 +249,9 @@ void dma_pi_write()
    /*for (i=0; i<=((longueur+0x800)>>12); i++)
      invalid_code[(((pi_register.pi_dram_addr_reg&0xFFFFFF)|0x80000000)>>12)+i] = 1;*/
 
-   if ((debug_count+Count) < 0x100000)
+    // Set the RDRAM memory size when copying main ROM code
+    // (This is just a convenient way to run this code once at the beginning)
+    if (pi_register.pi_cart_addr_reg == 0x10001000)
      {
 	switch(r4300.cic_chip)
 	  {

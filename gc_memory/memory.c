@@ -563,6 +563,129 @@ static void update_MI_intr_mask_reg()
 		);
 }
 
+static void do_SP_Task(void)
+{
+    int save_pc = rsp_register.rsp_pc & ~0xFFF;
+    if (SP_DMEM[0xFC0/4] == 1)
+    {
+		if (dpc_register.dpc_status & 0x2) // DP frozen (DK64, BC)
+        {
+            // don't do the task now
+            // the task will be done when DP is unfreezed (see update_DPC)
+            return;
+        }
+		// unprotecting old frame buffers
+		if(fBGetFrameBufferInfo && fBRead && fBWrite && 
+		frameBufferInfos[0].addr)
+		{
+			int i;
+			for(i=0; i<6; i++)
+			{
+				if(frameBufferInfos[i].addr)
+				{
+					int j;
+					int start = frameBufferInfos[i].addr & MEMMASK;
+					int end = start + frameBufferInfos[i].width*
+					frameBufferInfos[i].height*
+					frameBufferInfos[i].size - 1;
+					start = start >> 16;
+					end = end >> 16;
+					for(j=start; j<=end; j++)
+					{
+						rwmem[0x8000+j] = rw_rdram;
+						rwmem[0xa000+j] = rw_rdram;
+					}
+				}
+			}
+		}
+
+		//processDList();
+		rsp_register.rsp_pc &= 0xFFF;
+		start_section(GFX_SECTION);
+		doRspCycles(100);
+		end_section(GFX_SECTION);
+		rsp_register.rsp_pc |= save_pc;
+		new_frame();
+
+		update_count();
+		if (MI_register.mi_intr_reg & 0x1)
+			add_interupt_event(SP_INT, 1000);
+		if (MI_register.mi_intr_reg & 0x20)
+			add_interupt_event(DP_INT, 1000);
+		MI_register.mi_intr_reg &= ~0x21;
+		sp_register.sp_status_reg &= ~0x303;
+
+		// protecting new frame buffers
+		if(fBGetFrameBufferInfo && fBRead && fBWrite) fBGetFrameBufferInfo(frameBufferInfos);
+		if(fBGetFrameBufferInfo && fBRead && fBWrite &&
+		frameBufferInfos[0].addr)
+		{
+			int i;
+			for(i=0; i<6; i++)
+			{
+				if(frameBufferInfos[i].addr)
+				{
+					int j;
+					int start = frameBufferInfos[i].addr & MEMMASK;
+					int end = start + frameBufferInfos[i].width*
+					frameBufferInfos[i].height*
+					frameBufferInfos[i].size - 1;
+					int start1 = start;
+					int end1 = end;
+					start >>= 16;
+					end >>= 16;
+					for(j=start; j<=end; j++)
+					{
+						rwmem[0x8000+j] = rw_rdramFB;
+						rwmem[0xa000+j] = rw_rdramFB;
+					}
+					start <<= 4;
+					end <<= 4;
+					for(j=start; j<=end; j++)
+					{
+						if(j>=start1 && j<=end1) framebufferRead[j]=1;
+						else framebufferRead[j] = 0;
+					}
+					if(firstFrameBufferSetting)
+					{
+						firstFrameBufferSetting = 0;
+						// TODO: fast_memory = 0?
+						for(j=0; j<0x100000; j++)
+							invalid_code_set(j, 1);
+					}
+				}
+			}
+		}
+	}
+    else if (SP_DMEM[0xFC0/4] == 2)
+    {
+        //audio.processAList();
+        rsp_register.rsp_pc &= 0xFFF;
+        start_section(AUDIO_SECTION);
+        doRspCycles(100);
+        end_section(AUDIO_SECTION);
+        rsp_register.rsp_pc |= save_pc;
+
+        update_count();
+        if (MI_register.mi_intr_reg & 0x1)
+            add_interupt_event(SP_INT, 4000/*500*/);
+        MI_register.mi_intr_reg &= ~0x1;
+        sp_register.sp_status_reg &= ~0x303;
+        
+    }
+    else
+    {
+        rsp_register.rsp_pc &= 0xFFF;
+        doRspCycles(100);
+        rsp_register.rsp_pc |= save_pc;
+
+        update_count();
+        if (MI_register.mi_intr_reg & 0x1)
+            add_interupt_event(SP_INT, 0/*100*/);
+        MI_register.mi_intr_reg &= ~0x1;
+        sp_register.sp_status_reg &= ~0x203;
+    }
+}
 
 void update_SP()
 {
@@ -641,145 +764,31 @@ void update_SP()
 	//if (get_event(SP_INT)) return;
 	if (!(sp_register.w_sp_status_reg & 0x1) && !(sp_register.w_sp_status_reg & 0x4)) return;
 	if (!sp_register.halt && !sp_register.broke)
-	{
-		int save_pc = rsp_register.rsp_pc & ~0xFFF;
-		if (SP_DMEM[0xFC0/4] == 1)
-		{
-			// unprotecting old frame buffers
-			if(fBGetFrameBufferInfo && fBRead && fBWrite && 
-			frameBufferInfos[0].addr)
-			{
-				int i;
-				for(i=0; i<6; i++)
-				{
-					if(frameBufferInfos[i].addr)
-					{
-						int j;
-						int start = frameBufferInfos[i].addr & MEMMASK;
-						int end = start + frameBufferInfos[i].width*
-						frameBufferInfos[i].height*
-						frameBufferInfos[i].size - 1;
-						start = start >> 16;
-						end = end >> 16;
-						for(j=start; j<=end; j++)
-						{
-							rwmem[0x8000+j] = rw_rdram;
-							rwmem[0xa000+j] = rw_rdram;
-						}
-					}
-				}
-			}
-
-			//processDList();
-			rsp_register.rsp_pc &= 0xFFF;
-			start_section(GFX_SECTION);
-			doRspCycles(100);
-			end_section(GFX_SECTION);
-			rsp_register.rsp_pc |= save_pc;
-			new_frame();
-
-			MI_register.mi_intr_reg &= ~0x21;
-			sp_register.sp_status_reg &= ~0x303;
-			update_count();
-			add_interupt_event(SP_INT, 1000);
-			add_interupt_event(DP_INT, 1000);
-
-			// protecting new frame buffers
-			if(fBGetFrameBufferInfo && fBRead && fBWrite) fBGetFrameBufferInfo(frameBufferInfos);
-			if(fBGetFrameBufferInfo && fBRead && fBWrite &&
-			frameBufferInfos[0].addr)
-			{
-				int i;
-				for(i=0; i<6; i++)
-				{
-					if(frameBufferInfos[i].addr)
-					{
-						int j;
-						int start = frameBufferInfos[i].addr & MEMMASK;
-						int end = start + frameBufferInfos[i].width*
-						frameBufferInfos[i].height*
-						frameBufferInfos[i].size - 1;
-						int start1 = start;
-						int end1 = end;
-						start >>= 16;
-						end >>= 16;
-						for(j=start; j<=end; j++)
-						{
-							rwmem[0x8000+j] = rw_rdramFB;
-							rwmem[0xa000+j] = rw_rdramFB;
-						}
-						start <<= 4;
-						end <<= 4;
-						for(j=start; j<=end; j++)
-						{
-							if(j>=start1 && j<=end1) framebufferRead[j]=1;
-							else framebufferRead[j] = 0;
-						}
-						if(firstFrameBufferSetting)
-						{
-							firstFrameBufferSetting = 0;
-							// TODO: fast_memory = 0?
-							for(j=0; j<0x100000; j++)
-								invalid_code_set(j, 1);
-						}
-					}
-				}
-			}
-		}
-		else if (SP_DMEM[0xFC0/4] == 2)
-		{
-			//processAList();
-			rsp_register.rsp_pc &= 0xFFF;
-			start_section(AUDIO_SECTION);
-			doRspCycles(100);
-			end_section(AUDIO_SECTION);
-			rsp_register.rsp_pc |= save_pc;
-			MI_register.mi_intr_reg &= ~0x1;
-			sp_register.sp_status_reg &= ~0x303;
-			update_count();
-			//add_interupt_event(SP_INT, 500);
-			add_interupt_event(SP_INT, 4000);
-		}
-		else
-		{
-			//printf("other task\n");
-			rsp_register.rsp_pc &= 0xFFF;
-			doRspCycles(100);
-			rsp_register.rsp_pc |= save_pc;
-			MI_register.mi_intr_reg &= ~0x1;
-			sp_register.sp_status_reg &= ~0x203;
-			update_count();
-			add_interupt_event(SP_INT, 0/*100*/);
-		}
-	}
+		do_SP_Task();
 }
 
-void update_DPC()
+void update_DPC(void)
 {
-	if (dpc_register.w_dpc_status & 0x1)
-		dpc_register.xbus_dmem_dma = 0;
-	if (dpc_register.w_dpc_status & 0x2)
-		dpc_register.xbus_dmem_dma = 1;
-	if (dpc_register.w_dpc_status & 0x4)
-		dpc_register.freeze = 0;
-	if (dpc_register.w_dpc_status & 0x8)
-		dpc_register.freeze = 1;
-	if (dpc_register.w_dpc_status & 0x10)
-		dpc_register.flush = 0;
-	if (dpc_register.w_dpc_status & 0x20)
-		dpc_register.flush = 1;
-		dpc_register.dpc_status = ((dpc_register.xbus_dmem_dma) |
-			(dpc_register.freeze << 1) |
-			(dpc_register.flush << 2) |
-			(dpc_register.start_glck << 3) |
-			(dpc_register.tmem_busy << 4) |
-			(dpc_register.pipe_busy << 5) |
-			(dpc_register.cmd_busy << 6) |
-			(dpc_register.cbuf_busy << 7) |
-			(dpc_register.dma_busy << 8) |
-			(dpc_register.end_valid << 9) |
-			(dpc_register.start_valid << 10)
-		);
+    if (dpc_register.w_dpc_status & 0x1) // clear xbus_dmem_dma
+        dpc_register.dpc_status &= ~0x1;
+    if (dpc_register.w_dpc_status & 0x2) // set xbus_dmem_dma
+        dpc_register.dpc_status |= 0x1;
+
+    if (dpc_register.w_dpc_status & 0x4) // clear freeze
+    {
+        dpc_register.dpc_status &= ~0x2;
+
+        // see do_SP_task for more info
+        if (!(sp_register.sp_status_reg & 0x3)) // !halt && !broke
+            do_SP_Task();
+    }
+    if (dpc_register.w_dpc_status & 0x8) // set freeze
+        dpc_register.dpc_status |= 0x2;
+
+    if (dpc_register.w_dpc_status & 0x10) // clear flush
+        dpc_register.dpc_status &= ~0x4;
+    if (dpc_register.w_dpc_status & 0x20) // set flush
+        dpc_register.dpc_status |= 0x4;
 }
 
 unsigned long long int read_nothing(unsigned long address)
