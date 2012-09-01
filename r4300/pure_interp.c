@@ -61,12 +61,12 @@ static void invalidate_func(unsigned int addr){
 		RecompCache_Free(func->start_addr);
 }
 
-#define check_memory() \
+#define check_memory(address) \
 	if(dynacore && !invalid_code_get(address>>12)/* && \
 	   blocks[address>>12]->code_addr[(address&0xfff)>>2]*/) \
 		invalidate_func(address); //invalid_code_set(address>>12, 1);
 #else
-#define check_memory()
+#define check_memory(address)
 #endif
 
 unsigned long op;
@@ -2658,14 +2658,14 @@ static void LDL()
 	//DEBUG_stats(9, "LDL", STAT_TYPE_ACCUM, 1);
 	unsigned long long int word = 0;
 	r4300.pc+=4;
-	address = iimmediate + irs32;
+	unsigned long address = iimmediate + irs32;
 	unsigned int type = address & 7;
 	if(likely(!type)) {
-		irt = read_dword_in_memory();
+		irt = read_dword_in_memory(address);
 	}
 	else {
 		address &= 0xFFFFFFF8;
-		word = read_dword_in_memory();
+		word = read_dword_in_memory(address);
 		irt = (irt & ((256<<((type-1)*8))-1)) | (word << (8*type));
 	}
 }
@@ -2674,47 +2674,48 @@ static void LDR()
 {
    //DEBUG_stats(10, "LDR", STAT_TYPE_ACCUM, 1);
    unsigned long long int word = 0;
+   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
+	word = read_dword_in_memory(address);
 	irt = (irt & 0xFFFFFFFFFFFFFF00LL) | (word >> 56);
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
+	word = read_dword_in_memory(address);
 	irt = (irt & 0xFFFFFFFFFFFF0000LL) | (word >> 48);
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
+	word = read_dword_in_memory(address);
 	irt = (irt & 0xFFFFFFFFFF000000LL) | (word >> 40);
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
+	word = read_dword_in_memory(address);
 	irt = (irt & 0xFFFFFFFF00000000LL) | (word >> 32);
 	break;
       case 4:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
+	word = read_dword_in_memory(address);
 	irt = (irt & 0xFFFFFF0000000000LL) | (word >> 24);
 	break;
       case 5:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
+	word = read_dword_in_memory(address);
 	irt = (irt & 0xFFFF000000000000LL) | (word >> 16);
 	break;
       case 6:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory();
+	word = read_dword_in_memory(address);
 	irt = (irt & 0xFF00000000000000LL) | (word >> 8);
 	break;
       case 7:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	irt = read_dword_in_memory();
+	irt = read_dword_in_memory(address);
 	break;
      }
 }
@@ -2722,8 +2723,7 @@ static void LDR()
 static void LB()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
-   irt = read_byte_in_memory();
+   irt = read_byte_in_memory(iimmediate + irs32);
    sign_extendedb(irt);
 
 }
@@ -2731,8 +2731,7 @@ static void LB()
 static void LH()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
-   irt = read_hword_in_memory();
+   irt = read_hword_in_memory(iimmediate + irs32);
    sign_extendedh(irt);
 }
 
@@ -2741,14 +2740,14 @@ static void LWL()
    //DEBUG_stats(4, "LWL", STAT_TYPE_ACCUM, 1);
    unsigned long long int word = 0;
    r4300.pc+=4;
-   address = iimmediate + irs32;
+   unsigned long address = iimmediate + irs32;
    u32 type = (address) & 3;
    if(likely(!type)) {
-	  irt = read_word_in_memory();
+	  irt = read_word_in_memory(address);
 	}
 	else {
 	  address &= 0xFFFFFFFC;
-	  word = read_word_in_memory();
+	  word = read_word_in_memory(address);
 	  irt = (irt & ((256<<(type*8))-1)) | (word << (8*type));
     }
    sign_extended(irt);
@@ -2756,24 +2755,21 @@ static void LWL()
 
 static void LW()
 {
-   address = iimmediate + irs32;
    r4300.pc+=4;
-   irt = read_word_in_memory();
+   irt = read_word_in_memory(iimmediate + irs32);
    sign_extended(irt);
 }
 
 static void LBU()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
-   irt = read_byte_in_memory();
+   irt = read_byte_in_memory(iimmediate + irs32);
 }
 
 static void LHU()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
-   irt = read_hword_in_memory();
+   irt = read_hword_in_memory(iimmediate + irs32);
 }
 
 static void LWR()
@@ -2782,13 +2778,13 @@ static void LWR()
 	unsigned long long int word = 0;
 	r4300.pc+=4;
 	u32 type = (iimmediate + irs32) & 3;
-	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	unsigned long address = (iimmediate + irs32) & 0xFFFFFFFC;
 	if(likely((type == 3))) {
-		irt = read_word_in_memory();
+		irt = read_word_in_memory(address);
 		sign_extended(irt);
 	}
 	else {
-		word = read_word_in_memory();
+		word = read_word_in_memory(address);
 		type= ((type+1) * 8);
 		u32 mask = ((256LL<<type)-1);
 		irt = (irt & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask);
@@ -2797,60 +2793,60 @@ static void LWR()
 
 static void LWU()
 {
-   address = iimmediate + irs32;
    r4300.pc+=4;
-   irt = read_word_in_memory();
+   irt = read_word_in_memory(iimmediate + irs32);
 }
 
 static void SB()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
+   unsigned long address = iimmediate + irs32;
    byte = (unsigned char)(irt & 0xFF);
-   write_byte_in_memory();
-   check_memory();
+   write_byte_in_memory(address);
+   check_memory(address);
 }
 
 static void SH()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
+   unsigned long address = iimmediate + irs32;
    hword = (unsigned short)(irt & 0xFFFF);
-   write_hword_in_memory();
-   check_memory();
+   write_hword_in_memory(address);
+   check_memory(address);
 }
 static void SWL()
 {
    //DEBUG_stats(6, "SWL", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
+   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
 	word = (unsigned long)irt;
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory();
+	old_word = read_word_in_memory(address);
 	word = ((unsigned long)irt >> 8) | (old_word & 0xFF000000);
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory();
+	old_word = read_word_in_memory(address);
 	word = ((unsigned long)irt >> 16) | (old_word & 0xFFFF0000);
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	break;
       case 3:
 	address = iimmediate + irs32;
 	byte = (unsigned char)(irt >> 24);
-	write_byte_in_memory();
-	check_memory();
+	write_byte_in_memory(address);
+	check_memory(address);
 	break;
      }
 }
@@ -2858,73 +2854,74 @@ static void SWL()
 static void SW()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
+   unsigned long address = iimmediate + irs32;
    word = (unsigned long)(irt & 0xFFFFFFFF);
-   write_word_in_memory();
-   check_memory();
+   write_word_in_memory(address);
+   check_memory(address);
 }
 
 static void SDL()
 {
    //DEBUG_stats(8, "SDL", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
+   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
 	dword = irt;
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = ((unsigned long long)irt >> 8)|(old_word & 0xFF00000000000000LL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = ((unsigned long long)irt >> 16)|(old_word & 0xFFFF000000000000LL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = ((unsigned long long)irt >> 24)|(old_word & 0xFFFFFF0000000000LL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 4:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = ((unsigned long long)irt >> 32)|(old_word & 0xFFFFFFFF00000000LL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 5:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = ((unsigned long long)irt >> 40)|(old_word & 0xFFFFFFFFFF000000LL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 6:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = ((unsigned long long)irt >> 48)|(old_word & 0xFFFFFFFFFFFF0000LL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 7:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = ((unsigned long long)irt >> 56)|(old_word & 0xFFFFFFFFFFFFFF00LL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
      }
 }
@@ -2933,63 +2930,64 @@ static void SDR()
 {
    //DEBUG_stats(7, "SDR", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
+   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
 	address = iimmediate + irs32;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = (irt << 56) | (old_word & 0x00FFFFFFFFFFFFFFLL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = (irt << 48) | (old_word & 0x0000FFFFFFFFFFFFLL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = (irt << 40) | (old_word & 0x000000FFFFFFFFFFLL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = (irt << 32) | (old_word & 0x00000000FFFFFFFFLL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 4:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = (irt << 24) | (old_word & 0x0000000000FFFFFFLL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 5:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = (irt << 16) | (old_word & 0x000000000000FFFFLL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 6:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory();
+	old_word = read_dword_in_memory(address);
 	dword = (irt << 8) | (old_word & 0x00000000000000FFLL);
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
       case 7:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
 	dword = irt;
-	write_dword_in_memory();
-	check_memory();
+	write_dword_in_memory(address);
+	check_memory(address);
 	break;
      }
 }
@@ -2998,35 +2996,36 @@ static void SWR()
 {
    //DEBUG_stats(11, "SWR", STAT_TYPE_ACCUM, 1);
    unsigned long long int old_word = 0;
+   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
 	address = iimmediate + irs32;
-	old_word = read_word_in_memory();
+	old_word = read_word_in_memory(address);
 	word = ((unsigned long)irt << 24) | (old_word & 0x00FFFFFF);
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory();
+	old_word = read_word_in_memory(address);
 	word = ((unsigned long)irt << 16) | (old_word & 0x0000FFFF);
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory();
+	old_word = read_word_in_memory(address);
 	word = ((unsigned long)irt << 8) | (old_word & 0x000000FF);
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
 	word = (unsigned long)irt;
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	break;
      }
 }
@@ -3039,9 +3038,8 @@ static void CACHE()
 static void LL()
 {
    //DEBUG_stats(12, "LL", STAT_TYPE_ACCUM, 1);
-   address = iimmediate + irs32;
    r4300.pc+=4;
-   irt = read_word_in_memory();
+   irt = read_word_in_memory(iimmediate + irs32);
    sign_extended(irt);
    r4300.llbit = 1;
 }
@@ -3050,23 +3048,20 @@ static void LWC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   address = lfoffset+r4300.gpr[lfbase];
-   *((long*)r4300.fpr_single[lfft]) = read_word_in_memory();
+   *((long*)r4300.fpr_single[lfft]) = read_word_in_memory(lfoffset+r4300.gpr[lfbase]);
 }
 
 static void LDC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   address = lfoffset+r4300.gpr[lfbase];
-   *((long*)r4300.fpr_double[lfft]) = read_dword_in_memory();
+   *((long*)r4300.fpr_double[lfft]) = read_dword_in_memory(lfoffset+r4300.gpr[lfbase]);
 }
 
 static void LD()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
-   irt = read_dword_in_memory();
+   irt = read_dword_in_memory(iimmediate + irs32);
 }
 
 static void SC()
@@ -3075,10 +3070,10 @@ static void SC()
    r4300.pc+=4;
    if(r4300.llbit)
      {
-	address = iimmediate + irs32;
+	unsigned long address = iimmediate + irs32;
 	word = (unsigned long)(irt & 0xFFFFFFFF);
-	write_word_in_memory();
-	check_memory();
+	write_word_in_memory(address);
+	check_memory(address);
 	r4300.llbit = 0;
 	irt = 1;
      }
@@ -3092,29 +3087,29 @@ static void SWC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   address = lfoffset+r4300.gpr[lfbase];
+   unsigned long address = lfoffset+r4300.gpr[lfbase];
    word = *((long*)r4300.fpr_single[lfft]);
-   write_word_in_memory();
-   check_memory();
+   write_word_in_memory(address);
+   check_memory(address);
 }
 
 static void SDC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   address = lfoffset+r4300.gpr[lfbase];
+   unsigned long address = lfoffset+r4300.gpr[lfbase];
    dword = *((unsigned long long*)r4300.fpr_double[lfft]);
-   write_dword_in_memory();
-   check_memory();
+   write_dword_in_memory(address);
+   check_memory(address);
 }
 
 static void SD()
 {
    r4300.pc+=4;
-   address = iimmediate + irs32;
+   unsigned long address = iimmediate + irs32;
    dword = irt;
-   write_dword_in_memory();
-   check_memory();
+   write_dword_in_memory(address);
+   check_memory(address);
 }
 
 /*static*/ void (*interp_ops[64])(void) =

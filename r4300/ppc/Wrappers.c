@@ -242,7 +242,7 @@ void invalidate_func(unsigned int addr){
 		RecompCache_Free(func->start_addr);
 }
 
-#define check_memory() \
+#define check_memory(address) \
 	if(!invalid_code_get(address>>12)/* && \
 	   blocks[address>>12]->code_addr[(address&0xfff)>>2]*/) \
 		invalidate_func(address);
@@ -250,20 +250,19 @@ void invalidate_func(unsigned int addr){
 unsigned int dyna_mem(unsigned int value, unsigned int addr,
                       memType type, unsigned int pc, int isDelaySlot){
 	//start_section(DYNAMEM_SECTION);
-	address = addr;
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
 
 	switch(type){
 		case MEM_LWR:
 		{
-			u32 type = address & 3;
-			address &= 0xFFFFFFFC;
+			u32 type = addr & 3;
+			addr &= 0xFFFFFFFC;
 			if(likely((type == 3))) {
-				r4300.gpr[value] = (long long)((long)read_word_in_memory());
+				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
 			}
 			else {
-				unsigned long long int word = read_word_in_memory();
+				unsigned long long int word = read_word_in_memory(addr);
 				type= ((type+1) * 8);
 				u32 mask = ((256LL<<type)-1);
 				r4300.gpr[value] = (long)((r4300.gpr[value] & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask));
@@ -272,73 +271,73 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 		break;
 		case MEM_LWL:
 		{
-			u32 type = (address) & 3;
+			u32 type = (addr) & 3;
 			if(likely(!type)) {
-				r4300.gpr[value] = (long long)((long)read_word_in_memory());
+				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
 			}
 			else {
-				address &= 0xFFFFFFFC;
-				unsigned long long int word = read_word_in_memory();
+				addr &= 0xFFFFFFFC;
+				unsigned long long int word = read_word_in_memory(addr);
 				r4300.gpr[value] = (long long)((long)((r4300.gpr[value] & ((256<<(type*8))-1)) | (word << (8*type))));
 			}
 		}
 			break;
 		case MEM_LW:
-			r4300.gpr[value] = (long long)((long)read_word_in_memory());
+			r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
 			break;
 		case MEM_LWU:
-			r4300.gpr[value] = (unsigned long long)((long)read_word_in_memory());
+			r4300.gpr[value] = (unsigned long long)((long)read_word_in_memory(addr));
 			break;
 		case MEM_LH:
-			r4300.gpr[value] = (long long)((short)read_hword_in_memory());
+			r4300.gpr[value] = (long long)((short)read_hword_in_memory(addr));
 			break;
 		case MEM_LHU:
-			r4300.gpr[value] = (unsigned long long)((unsigned short)read_hword_in_memory());
+			r4300.gpr[value] = (unsigned long long)((unsigned short)read_hword_in_memory(addr));
 			break;
 		case MEM_LB:
-			r4300.gpr[value] = (long long)((signed char)read_byte_in_memory());
+			r4300.gpr[value] = (long long)((signed char)read_byte_in_memory(addr));
 			break;
 		case MEM_LBU:
-			r4300.gpr[value] = (unsigned long long)((unsigned char)read_byte_in_memory());
+			r4300.gpr[value] = (unsigned long long)((unsigned char)read_byte_in_memory(addr));
 			break;
 		case MEM_LD:
-			r4300.gpr[value] = read_dword_in_memory();
+			r4300.gpr[value] = read_dword_in_memory(addr);
 			break;
 		case MEM_LWC1:
-			*((long*)r4300.fpr_single[value]) = (long)read_word_in_memory();
+			*((long*)r4300.fpr_single[value]) = (long)read_word_in_memory(addr);
 			break;
 		case MEM_LDC1:
-			*((long long*)r4300.fpr_double[value]) = read_dword_in_memory();
+			*((long long*)r4300.fpr_double[value]) = read_dword_in_memory(addr);
 			break;
 		case MEM_SW:
 			word = value;
-			write_word_in_memory();
-			check_memory();
+			write_word_in_memory(addr);
+			check_memory(addr);
 			break;
 		case MEM_SH:
 			hword = value;
-			write_hword_in_memory();
-			check_memory();
+			write_hword_in_memory(addr);
+			check_memory(addr);
 			break;
 		case MEM_SB:
 			byte = value;
-			write_byte_in_memory();
-			check_memory();
+			write_byte_in_memory(addr);
+			check_memory(addr);
 			break;
 		case MEM_SD:
 			dword = r4300.gpr[value];
-			write_dword_in_memory();
-			check_memory();
+			write_dword_in_memory(addr);
+			check_memory(addr);
 			break;
 		case MEM_SWC1:
 			word = *((long*)r4300.fpr_single[value]);
-			write_word_in_memory();
-			check_memory();
+			write_word_in_memory(addr);
+			check_memory(addr);
 			break;
 		case MEM_SDC1:
 			dword = *((unsigned long long*)r4300.fpr_double[value]);
-			write_dword_in_memory();
-			check_memory();
+			write_dword_in_memory(addr);
+			check_memory(addr);
 			break;
 		default:
 			r4300.stop = 1;
