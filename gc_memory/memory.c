@@ -2958,7 +2958,7 @@ unsigned long long int read_rom(unsigned long address)
 	}
 	else {
 		unsigned long long int ret;
-		ROMCache_read((unsigned int*)&ret+1, (address & 0x03FFFFFF), 4);
+		ROMCache_read((u8*)&ret+4, (address & 0x03FFFFFF), 4);
 		sign_extended(ret);
 		return ret;
 	}
@@ -2967,7 +2967,7 @@ unsigned long long int read_rom(unsigned long address)
 unsigned long long int read_romb(unsigned long address)
 {
 	unsigned long long int ret;
-	ROMCache_read((unsigned int*)((char*)&ret+7), (address & 0x03FFFFFF), 1);
+	ROMCache_read((u8*)&ret+7, (address & 0x03FFFFFF), 1);
 	sign_extendedb(ret);
 	return ret;
 }
@@ -2975,7 +2975,7 @@ unsigned long long int read_romb(unsigned long address)
 unsigned long long int read_romh(unsigned long address)
 {
 	unsigned long long int ret;
-	ROMCache_read((unsigned int*)((short*)&ret+3), (address & 0x03FFFFFF), 2);
+	ROMCache_read((u8*)&ret+6, (address & 0x03FFFFFF), 2);
 	sign_extendedh(ret);
 	return ret;
 }
@@ -2983,7 +2983,7 @@ unsigned long long int read_romh(unsigned long address)
 unsigned long long int read_romd(unsigned long address)
 {
 	unsigned long long int ret;
-	ROMCache_read(&ret, (address & 0x03FFFFFF), 8);
+	ROMCache_read((u8*)&ret, (address & 0x03FFFFFF), 8);
 	return ret;
 }
 
