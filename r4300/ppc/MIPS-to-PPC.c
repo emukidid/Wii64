@@ -4853,12 +4853,8 @@ unsigned char **invalid_code;
 
 void genCallDynaMem2(int type, int base, short immed){
 	PowerPC_instr ppc;
-	// addr (must be first)
+	// address
 	GEN_ADDI(ppc, 6, base, immed);
-	set_next_dst(ppc);
-	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&address));
-	set_next_dst(ppc);
-	GEN_STW(ppc,6,extractLower16((unsigned int)&address),4);
 	set_next_dst(ppc);
 	// value
 	switch(type){
@@ -4897,60 +4893,25 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 	GEN_STW(ppc,5,extractLower16((unsigned int)&r4300.delay_slot),4);
 	set_next_dst(ppc);
-	// rwmem
-	GEN_LIS(ppc, 12, (unsigned int)&rwmem>>16);
+	// address
+	GEN_ADDI(ppc, 3, 6, 0);
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 12, 12, (unsigned int)&rwmem&0xFFFF);
+	// type
+	GEN_LI(ppc, 4, 0, type);
 	set_next_dst(ppc);
-	GEN_RLWINM(ppc, 5, 6, 18, 14, 29);
+	// dyna_mem_write
+	GEN_LIS(ppc, 12, (unsigned int)&dyna_mem_write>>16);
 	set_next_dst(ppc);
-	GEN_ADD(ppc, 12, 12, 5);
-	set_next_dst(ppc);
-	GEN_LWZ(ppc,12,0,12);
-	set_next_dst(ppc);
-	GEN_LWZ(ppc,12,type*4,12);
+	GEN_ORI(ppc, 12, 12, (unsigned int)&dyna_mem_write&0xFFFF);
 	set_next_dst(ppc);
 	GEN_MTCTR(ppc, 12);
 	set_next_dst(ppc);
 	GEN_BCTRL(ppc);
 	set_next_dst(ppc);
-
-	// test invalid code
-	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&address));
-	set_next_dst(ppc);
-	GEN_LWZ(ppc,3,extractLower16((unsigned int)&address),4);
-	set_next_dst(ppc);
-	GEN_LIS(ppc, 12, (unsigned int)&invalid_code_get>>16);
-	set_next_dst(ppc);
-	GEN_ORI(ppc, 12, 12, (unsigned int)&invalid_code_get&0xFFFF);
-	set_next_dst(ppc);
-	GEN_RLWINM(ppc, 3, 3, 20, 12, 31);
-	set_next_dst(ppc);
-	GEN_MTCTR(ppc, 12);
-	set_next_dst(ppc);
-	GEN_BCTRL(ppc);
-	set_next_dst(ppc);
-	GEN_CMPI(ppc,3,0,6);
-	set_next_dst(ppc);
-	GEN_BNE(ppc,6,7,0,0);
-	set_next_dst(ppc);
-
-	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&address));
-	set_next_dst(ppc);
-	GEN_LWZ(ppc,3,extractLower16((unsigned int)&address),4);
-	set_next_dst(ppc);
-	GEN_LIS(ppc, 12, ((unsigned int)&invalidate_func)>>16);
-	set_next_dst(ppc);
-	GEN_ORI(ppc, 12, 12, (unsigned int)&invalidate_func&0xFFFF);
-	set_next_dst(ppc);
-	GEN_MTCTR(ppc, 12);
-	set_next_dst(ppc);
-	GEN_BCTRL(ppc);
-	set_next_dst(ppc);
+	
+	// clear r4300.delay_slot
 	GEN_LI(ppc, 3, 0, 0);
 	set_next_dst(ppc);
-
-	// clear r4300.delay_slot
 	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&r4300.delay_slot));
 	set_next_dst(ppc);
 	GEN_STW(ppc,3,extractLower16((unsigned int)&r4300.delay_slot),4);

@@ -59,6 +59,7 @@ int dyna_update_count(unsigned int pc);
 unsigned int dyna_check_cop1_unusable(unsigned int pc, int isDelaySlot);
 unsigned int dyna_mem(unsigned int value, unsigned int addr,
                       memType type, unsigned int pc, int isDelaySlot);
+void dyna_mem_write(unsigned int addr, unsigned int type);
 void invalidate_func(unsigned int addr);
 
 //cop0 macros

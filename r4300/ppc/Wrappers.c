@@ -350,3 +350,8 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 	return r4300.pc != pc ? r4300.pc : 0;
 }
 
+void dyna_mem_write(unsigned int addr, unsigned int type){
+	rwmem[addr>>16][type](addr);
+	check_memory(addr);
+}
+
