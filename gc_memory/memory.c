@@ -1241,7 +1241,8 @@ unsigned long long int write_rsp_mem(unsigned long address)
 	else if (GET_LOW_ADDR(address) < 0x2000)
 		*((unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF))) = word;
 	else
-		return write_nomem(address);
+		write_nomem(address);
+	return 0;
 }
 
 unsigned long long int write_rsp_memb(unsigned long address)
@@ -1251,7 +1252,8 @@ unsigned long long int write_rsp_memb(unsigned long address)
 	else if (GET_LOW_ADDR(address) < 0x2000)
 		*(SP_IMEMb + ((GET_LOW_ADDR(address)&0xFFF)^S8)) = byte;
 	else
-		return write_nomemb(address);
+		write_nomemb(address);
+	return 0;
 }
 
 unsigned long long int write_rsp_memh(unsigned long address)
@@ -1261,7 +1263,8 @@ unsigned long long int write_rsp_memh(unsigned long address)
 	else if (GET_LOW_ADDR(address) < 0x2000)
 		*((unsigned short *)(SP_IMEMb + ((GET_LOW_ADDR(address)&0xFFF)^S16))) = hword;
 	else
-		return write_nomemh(address);
+		write_nomemh(address);
+	return 0;
 }
 
 unsigned long long int write_rsp_memd(unsigned long address)
@@ -1277,7 +1280,8 @@ unsigned long long int write_rsp_memd(unsigned long address)
 		*((unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF) + 4 )) = dword & 0xFFFFFFFF;
 	}
 	else
-		return write_nomemd(address);
+		write_nomemd(address);
+	return 0;
 }
 
 unsigned long long int read_rsp_reg(unsigned long address)
