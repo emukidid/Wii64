@@ -3126,57 +3126,12 @@ static void SD()
 
 void prefetch()
 {
-   //static FILE *f = NULL;
-   //static int line=1;
-   //static int tlb_used = 0;
-   //unsigned int comp;
-   //if (!tlb_used)
-     //{
-	/*if (f==NULL) f = fopen("/mnt/windows/pcdeb.txt", "rb");
-	fscanf(f, "%x", &comp);
-	if (comp != r4300.pc)
-	  {
-	     printf("diff@%x, line:%d\n", r4300.pc, line);
-	     r4300.stop=1;
-	  }*/
-	//line++;
-	//if ((debug_count+Count) > 0x50fe000) printf("line:%d\n", line);
-	/*if ((debug_count+Count) > 0xb70000)
-	  printf("count:%x, add:%x, op:%x, l%d\n", (int)(Count+debug_count),
-		 r4300.pc, op, line);*/
-     //}
-   //printf("addr:%x\n", r4300.pc);
-
-   // --- Trying to track down a bug ---
-   /*static disturbed = 0;
-   if(reg[31] == 0x100000 && !disturbed){
-   	disturbed = 1;
-   	printf("LR disturbed at last address %08x\n", (int)r4300.last_pc);
-	int i;
-	for(i=-8; i<4; ++i)
-		printf(" %08x%s",
-	   	       rdram[(r4300.last_pc&0xFFFFFF)/4+i],
-	   	       ((i+8)%4 == 3) ? "\n" : "");
-   }
-   static pi_reg_value;
-   if(pi_register.pi_dram_addr_reg != pi_reg_value){
-   	pi_reg_value = pi_register.pi_dram_addr_reg;
-   	printf("PI DRAM addr reg changed to %08x\n at r4300.last_pc %08x, op: %08x, count: %u\n",
-   	       pi_reg_value, (int)r4300.last_pc, rdram[(r4300.last_pc&0xFFFFFF)/4], (unsigned int)debug_count+Count);
-   }
-
-   if(!((debug_count + Count) % 100000)) printf("%u instructions executed\n",
-                                             (unsigned int)(debug_count + Count));*/
-   // --- OK ---
 
 if ((r4300.pc >= 0x80000000) && (r4300.pc < 0xc0000000))
      {
 	if ((r4300.pc >= 0x80000000) && (r4300.pc < 0x80800000))
 	  {
 	     op = rdram[(r4300.pc&0xFFFFFF)/4];
-	     /*if ((debug_count+Count) > 234588)
-	       printf("count:%x, addr:%x, op:%x\n", (int)(Count+debug_count),
-		      r4300.pc, op);*/
 	     prefetch_opcode(op);
 	  }
 	else if ((r4300.pc >= 0xa4000000) && (r4300.pc < 0xa4001000))
@@ -3210,19 +3165,15 @@ if ((r4300.pc >= 0x80000000) && (r4300.pc < 0xc0000000))
 	else
 	  {
 	     prefetch();
-	     //tlb_used = 0;
 	     return;
 	  }
-	//tlb_used = 1;
 	prefetch();
-	//tlb_used = 0;
 	r4300.pc = addr;
      }
 }
 
 void pure_interpreter()
 {
-   //r4300.pc = 0xa4000040;
    r4300.stop=0;
    r4300.last_pc = r4300.pc;
    while (!r4300.stop)
@@ -3231,13 +3182,7 @@ void pure_interpreter()
 #ifdef COMPARE_CORE
 	compare_core();
 #endif
-	//if(r4300.pc == 0x80000194) _break();
-	//if (Count > 0x2000000) printf("inter:%x,%x\n", r4300.pc,op);
-	//if ((Count+debug_count) > 0xabaa2c) r4300.stop=1;
 	interp_ops[((op >> 26) & 0x3F)]();
-
-	//Count = (unsigned long)Count + 2;
-	//if (r4300.pc == 0x80000180) r4300.last_pc = r4300.pc;
 #ifdef DBG
 	if (debugger_mode) update_debugger();
 #endif
