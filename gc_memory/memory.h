@@ -42,14 +42,14 @@ void free_memory();
 enum { MEM_READ_WORD,  MEM_READ_BYTE,  MEM_READ_HALF,  MEM_READ_LONG,
        MEM_WRITE_WORD, MEM_WRITE_BYTE, MEM_WRITE_HALF, MEM_WRITE_LONG };
 
-#define read_word_in_memory(address)   rwmem[address>>16][MEM_READ_WORD](address)
-#define read_byte_in_memory(address)   rwmem[address>>16][MEM_READ_BYTE](address)
-#define read_hword_in_memory(address)  rwmem[address>>16][MEM_READ_HALF](address)
-#define read_dword_in_memory(address)  rwmem[address>>16][MEM_READ_LONG](address)
-#define write_word_in_memory(address)  rwmem[address>>16][MEM_WRITE_WORD](address)
-#define write_byte_in_memory(address)  rwmem[address>>16][MEM_WRITE_BYTE](address)
-#define write_hword_in_memory(address) rwmem[address>>16][MEM_WRITE_HALF](address)
-#define write_dword_in_memory(address) rwmem[address>>16][MEM_WRITE_LONG](address)
+#define read_word_in_memory(address)   rwmem[(address)>>16][MEM_READ_WORD](address)
+#define read_byte_in_memory(address)   rwmem[(address)>>16][MEM_READ_BYTE](address)
+#define read_hword_in_memory(address)  rwmem[(address)>>16][MEM_READ_HALF](address)
+#define read_dword_in_memory(address)  rwmem[(address)>>16][MEM_READ_LONG](address)
+#define write_word_in_memory(address)  rwmem[(address)>>16][MEM_WRITE_WORD](address)
+#define write_byte_in_memory(address)  rwmem[(address)>>16][MEM_WRITE_BYTE](address)
+#define write_hword_in_memory(address) rwmem[(address)>>16][MEM_WRITE_HALF](address)
+#define write_dword_in_memory(address) rwmem[(address)>>16][MEM_WRITE_LONG](address)
 
 extern unsigned long SP_DMEM[0x1000/4*2];
 extern unsigned char *SP_DMEMb;

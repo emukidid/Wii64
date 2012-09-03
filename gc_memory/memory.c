@@ -80,9 +80,9 @@ DPS_register dps_register;
 #endif
 
 #ifdef _BIG_ENDIAN
-#define GET_LOW_ADDR(address) (unsigned short)(address & 0xFFFF)
+#define GET_LOW_ADDR(address) ((unsigned short)((address) & 0xFFFF))
 #else
-#define GET_LOW_ADDR(address) (unsigned short)((address >>16) & 0xFFFF)
+#define GET_LOW_ADDR(address) ((unsigned short)(((address) >>16) & 0xFFFF))
 #endif
 
 unsigned long rdram[MEM_SIZE/4]  __attribute__((aligned(32)));

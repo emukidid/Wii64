@@ -2723,7 +2723,7 @@ static void LDR()
 static void LB()
 {
    r4300.pc+=4;
-   irt = read_byte_in_memory(iimmediate + irs32);
+   irt = read_byte_in_memory((iimmediate + irs32));
    sign_extendedb(irt);
 
 }
@@ -2731,7 +2731,7 @@ static void LB()
 static void LH()
 {
    r4300.pc+=4;
-   irt = read_hword_in_memory(iimmediate + irs32);
+   irt = read_hword_in_memory((iimmediate + irs32));
    sign_extendedh(irt);
 }
 
@@ -2756,20 +2756,20 @@ static void LWL()
 static void LW()
 {
    r4300.pc+=4;
-   irt = read_word_in_memory(iimmediate + irs32);
+   irt = read_word_in_memory((iimmediate + irs32));
    sign_extended(irt);
 }
 
 static void LBU()
 {
    r4300.pc+=4;
-   irt = read_byte_in_memory(iimmediate + irs32);
+   irt = read_byte_in_memory((iimmediate + irs32));
 }
 
 static void LHU()
 {
    r4300.pc+=4;
-   irt = read_hword_in_memory(iimmediate + irs32);
+   irt = read_hword_in_memory((iimmediate + irs32));
 }
 
 static void LWR()
@@ -2794,7 +2794,7 @@ static void LWR()
 static void LWU()
 {
    r4300.pc+=4;
-   irt = read_word_in_memory(iimmediate + irs32);
+   irt = read_word_in_memory((iimmediate + irs32));
 }
 
 static void SB()
@@ -3039,7 +3039,7 @@ static void LL()
 {
    //DEBUG_stats(12, "LL", STAT_TYPE_ACCUM, 1);
    r4300.pc+=4;
-   irt = read_word_in_memory(iimmediate + irs32);
+   irt = read_word_in_memory((iimmediate + irs32));
    sign_extended(irt);
    r4300.llbit = 1;
 }
@@ -3048,20 +3048,20 @@ static void LWC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   *((long*)r4300.fpr_single[lfft]) = read_word_in_memory(lfoffset+r4300.gpr[lfbase]);
+   *((long*)r4300.fpr_single[lfft]) = read_word_in_memory((lfoffset+r4300.gpr[lfbase]));
 }
 
 static void LDC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   *((long*)r4300.fpr_double[lfft]) = read_dword_in_memory(lfoffset+r4300.gpr[lfbase]);
+   *((long*)r4300.fpr_double[lfft]) = read_dword_in_memory((lfoffset+r4300.gpr[lfbase]));
 }
 
 static void LD()
 {
    r4300.pc+=4;
-   irt = read_dword_in_memory(iimmediate + irs32);
+   irt = read_dword_in_memory((iimmediate + irs32));
 }
 
 static void SC()
@@ -3187,7 +3187,7 @@ if ((r4300.pc >= 0x80000000) && (r4300.pc < 0xc0000000))
 	else if ((r4300.pc > 0xb0000000))
 	  {
 #ifdef __PPC__
-		ROMCache_read(&op, (r4300.pc & 0xFFFFFFF), 4);
+		ROMCache_read((u8*)&op, (r4300.pc & 0xFFFFFFF), 4);
 #else
 	     op = ((unsigned long*)rom)[(r4300.pc & 0xFFFFFFF)/4];
 #endif
