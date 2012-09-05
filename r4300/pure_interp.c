@@ -2666,7 +2666,29 @@ static void LDL()
 	else {
 		address &= 0xFFFFFFF8;
 		word = read_dword_in_memory(address);
-		irt = (irt & ((256<<((type-1)*8))-1)) | (word << (8*type));
+		switch(type) {
+			case 1:
+				irt = (irt & 0xFF) | (word << 8);
+			break;
+			case 2:
+				irt = (irt & 0xFFFF) | (word << 16);
+			break;
+			case 3:
+				irt = (irt & 0xFFFFFF) | (word << 24);
+			break;
+			case 4:
+				irt = (irt & 0xFFFFFFFF) | (word << 32);
+			break;
+			case 5:
+				irt = (irt & 0xFFFFFFFFFFLL) | (word << 40);
+			break;
+			case 6:
+				irt = (irt & 0xFFFFFFFFFFFFLL) | (word << 48);
+			break;
+			case 7:
+				irt = (irt & 0xFFFFFFFFFFFFFFLL) | (word << 56);
+			break;
+		}
 	}
 }
 
@@ -2746,11 +2768,21 @@ static void LWL()
 	  irt = read_word_in_memory(address);
 	}
 	else {
-	  address &= 0xFFFFFFFC;
-	  word = read_word_in_memory(address);
-	  irt = (irt & ((256<<(type*8))-1)) | (word << (8*type));
+		address &= 0xFFFFFFFC;
+		word = read_word_in_memory(address);
+		switch(type) {
+			case 1:
+				irt = (irt & 0xFF) | (word << 8);
+			break;
+			case 2:
+				irt = (irt & 0xFFFF) | (word << 16);
+			break;
+			case 3:
+				irt = (irt & 0xFFFFFF) | (word << 24);
+			break;
+		}
     }
-   sign_extended(irt);
+	sign_extended(irt);
 }
 
 static void LW()
@@ -2785,9 +2817,17 @@ static void LWR()
 	}
 	else {
 		word = read_word_in_memory(address);
-		type= ((type+1) * 8);
-		u32 mask = ((256LL<<type)-1);
-		irt = (irt & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask);
+		switch(type) {
+			case 0:
+				irt = (irt & 0xFFFFFFFFFFFFFF00LL) | ((word >> 24) & 0xFF);
+				break;
+			case 1:
+				irt = (irt & 0xFFFFFFFFFFFF0000LL) | ((word >> 16) & 0xFFFF);
+				break;
+			case 2:
+				irt = (irt & 0xFFFFFFFFFF000000LL) | ((word >> 8) & 0xFFFFFF);
+				break;
+		}
 	}
 }
 

@@ -4909,6 +4909,14 @@ void genCallDynaMem2(int type, int base, short immed){
 	GEN_BCTRL(ppc);
 	set_next_dst(ppc);
 	
+	// Check whether we need to take an interrupt
+	GEN_CMPI(ppc, 3, 0, 6);
+	set_next_dst(ppc);
+	
+	// Load old LR
+	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
+	set_next_dst(ppc);
+
 	// clear r4300.delay_slot
 	GEN_LI(ppc, 3, 0, 0);
 	set_next_dst(ppc);
@@ -4916,12 +4924,13 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 	GEN_STW(ppc,3,extractLower16((unsigned int)&r4300.delay_slot),4);
 	set_next_dst(ppc);
-	// Load old LR
-	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
-	set_next_dst(ppc);
 
 	// Restore LR
 	GEN_MTLR(ppc, 0);
+	set_next_dst(ppc);
+
+	// If so, return to trampoline
+	GEN_BNELR(ppc, 6, 0);
 	set_next_dst(ppc);
 
 }

@@ -256,32 +256,50 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 	switch(type){
 		case MEM_LWR:
 		{
-			u32 type = addr & 3;
+			u32 rtype = addr & 3;
 			addr &= 0xFFFFFFFC;
-			if(likely((type == 3))) {
+			if(likely((rtype == 3))) {
 				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
 			}
 			else {
-				unsigned long long int word = read_word_in_memory(addr);
-				type= ((type+1) * 8);
-				u32 mask = ((256LL<<type)-1);
-				r4300.gpr[value] = (long)((r4300.gpr[value] & (0xFFFFFFFFFFFFFFFFLL&~mask)) | (((word >> (32-type))) & mask));
+				word = read_word_in_memory(addr);
+				switch(rtype) {
+					case 0:
+						r4300.gpr[value] = (long)(r4300.gpr[value] & 0xFFFFFFFFFFFFFF00LL) | ((word >> 24) & 0xFF);
+						break;
+					case 1:
+						r4300.gpr[value] = (long)(r4300.gpr[value] & 0xFFFFFFFFFFFF0000LL) | ((word >> 16) & 0xFFFF);
+						break;
+					case 2:
+						r4300.gpr[value] = (long)(r4300.gpr[value] & 0xFFFFFFFFFF000000LL) | ((word >> 8) & 0xFFFFFF);
+						break;
+				}
 			}
 		}
 		break;
 		case MEM_LWL:
 		{
-			u32 type = (addr) & 3;
-			if(likely(!type)) {
+			u32 ltype = (addr) & 3;
+			if(likely(!ltype)) {
 				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
 			}
 			else {
 				addr &= 0xFFFFFFFC;
 				unsigned long long int word = read_word_in_memory(addr);
-				r4300.gpr[value] = (long long)((long)((r4300.gpr[value] & ((256<<(type*8))-1)) | (word << (8*type))));
+				switch(ltype) {
+					case 1:
+						r4300.gpr[value] = (long long)((long)(r4300.gpr[value] & 0xFF) | (word << 8));
+					break;
+					case 2:
+						r4300.gpr[value] = (long long)((long)(r4300.gpr[value] & 0xFFFF) | (word << 16));
+					break;
+					case 3:
+						r4300.gpr[value] = (long long)((long)(r4300.gpr[value] & 0xFFFFFF) | (word << 24));
+					break;
+				}
 			}
 		}
-			break;
+		break;
 		case MEM_LW:
 			r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
 			break;
@@ -350,8 +368,11 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 	return r4300.pc != pc ? r4300.pc : 0;
 }
 
-void dyna_mem_write(unsigned int addr, unsigned int type){
+unsigned int dyna_mem_write(unsigned int addr, unsigned int type){
+	unsigned long oldpc = r4300.pc;
 	rwmem[addr>>16][type](addr);
 	check_memory(addr);
+	if(r4300.pc != oldpc) noCheckInterrupt = 1;
+	return r4300.pc != oldpc ? r4300.pc : 0;
 }
 
