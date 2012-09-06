@@ -609,9 +609,9 @@ static void do_SP_Task(void)
 
 		update_count();
 		if (MI_register.mi_intr_reg & 0x1)
-			add_interupt_event(SP_INT, 1000);
+			add_interupt_event(SP_INT, 100);
 		if (MI_register.mi_intr_reg & 0x20)
-			add_interupt_event(DP_INT, 1000);
+			add_interupt_event(DP_INT, 0);
 		MI_register.mi_intr_reg &= ~0x21;
 		sp_register.sp_status_reg &= ~0x303;
 
@@ -668,7 +668,7 @@ static void do_SP_Task(void)
 
         update_count();
         if (MI_register.mi_intr_reg & 0x1)
-            add_interupt_event(SP_INT, 4000/*500*/);
+            add_interupt_event(SP_INT, 100);
         MI_register.mi_intr_reg &= ~0x1;
         sp_register.sp_status_reg &= ~0x303;
         
@@ -681,7 +681,7 @@ static void do_SP_Task(void)
 
         update_count();
         if (MI_register.mi_intr_reg & 0x1)
-            add_interupt_event(SP_INT, 0/*100*/);
+            add_interupt_event(SP_INT, 0);
         MI_register.mi_intr_reg &= ~0x1;
         sp_register.sp_status_reg &= ~0x203;
     }
