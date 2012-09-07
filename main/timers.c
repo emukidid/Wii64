@@ -7,8 +7,10 @@
 #include "ogc/lwp_watchdog.h"
 #include "rom.h"
 #include "timers.h"
+#include "../gc_memory/memory.h"
 #include "../r4300/r4300.h"
 #include "../gui/DEBUG.h"
+#include "gamehacks.h"
 
 timers Timers = {0.0, 0.0, 0, 1, 0, 100};
 static float VILimit = 60.0;
@@ -58,6 +60,7 @@ void InitTimer(void) {
 }
 
 extern unsigned int usleep(unsigned int us);
+typedef void (*GameSpecificHack) (void);
 
 void new_frame(void) {
 	DWORD CurrentFPSTime;
@@ -83,6 +86,11 @@ void new_frame(void) {
 
 	LastFPSTime = CurrentFPSTime;
 	Timers.lastFrameTime = CurrentFPSTime;
+	// Apply game specific hacks until we resolve actual issues in the core!
+	if(GetGameSpecificHack()) {
+		GameSpecificHack hack = (GameSpecificHack)GetGameSpecificHack();
+		hack();
+	}
 }
 
 void new_vi(void) {

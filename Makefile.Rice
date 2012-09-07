@@ -21,6 +21,7 @@ CFLAGS		:= $(CFLAGS) \
 CXXFLAGS	:= $(CXXFLAGS) $(CFLAGS)
 
 OBJ		:= $(OBJ) \
+		main/gamehacks.o \
 		main/rom_gc.o \
 		main/main_gc-menu2.o \
 		main/gc_dvd.o \

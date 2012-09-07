@@ -39,6 +39,7 @@
 #include "wii64config.h"
 #include "../gc_memory/memory.h"
 #include "../fileBrowser/fileBrowser.h"
+#include "gamehacks.h"
 
 #define PRINT GUI_print
 
@@ -191,13 +192,14 @@ int rom_read(fileBrowser_file* file){
     }
   }
   // Replace any non file system complaint chars with underscores
-  stripInvalidChars(&ROM_SETTINGS.goodname);
+  stripInvalidChars((char*)&ROM_SETTINGS.goodname[0]);
   // Fix save type for certain special sized (16kbit) eeprom games
   if(isEEPROM16k())
     ROM_SETTINGS.eeprom_16kb = 1;
   else
     ROM_SETTINGS.eeprom_16kb = 0;
-
+  // Apply game specific hacks
+  GameSpecificHackSetup();
   //Set VI limit based on ROM header
   InitTimer();
 
