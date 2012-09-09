@@ -283,7 +283,7 @@ static int branch(int offset, condition cond, int link, int likely){
 		set_next_dst(ppc);
 		GEN_ORI(ppc, 3, 3, get_src_pc() + (offset<<2));
 		set_next_dst(ppc);
-		GEN_STW(ppc, 3, 0, DYNAREG_LADDR);
+		GEN_STW(ppc, 3, 0+R4300OFF_LADDR, DYNAREG_R4300);
 		set_next_dst(ppc);
 
 		// If taking the interrupt, return to the trampoline
@@ -386,7 +386,7 @@ static int J(MIPS_instr mips){
 		set_next_dst(ppc);
 		GEN_ORI(ppc, 3, 3, naddr);
 		set_next_dst(ppc);
-		GEN_STW(ppc, 3, 0, DYNAREG_LADDR);
+		GEN_STW(ppc, 3, 0+R4300OFF_LADDR, DYNAREG_R4300);
 		set_next_dst(ppc);
 
 		// if(r4300.next_interrupt <= Count) return;
@@ -458,7 +458,7 @@ static int JAL(MIPS_instr mips){
 		set_next_dst(ppc);
 		GEN_ORI(ppc, 3, 3, naddr);
 		set_next_dst(ppc);
-		GEN_STW(ppc, 3, 0, DYNAREG_LADDR);
+		GEN_STW(ppc, 3, 0+R4300OFF_LADDR, DYNAREG_R4300);
 		set_next_dst(ppc);
 
 		/// if(r4300.next_interrupt <= Count) return;
@@ -1623,7 +1623,7 @@ static int LWC1(MIPS_instr mips){
 	GEN_LWZ(ppc, 3, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_single[frt]
-	GEN_LWZ(ppc, addr, MIPS_GET_RT(mips)*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// *addr = frs
 	GEN_STW(ppc, 3, 0, addr);
@@ -1700,7 +1700,7 @@ static int LDC1(MIPS_instr mips){
 	GEN_LWZ(ppc, 6, MIPS_GET_IMMED(mips)+4, base);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_double[frt]
-	GEN_LWZ(ppc, addr, MIPS_GET_RT(mips)*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// *addr = frs
 	GEN_STW(ppc, 3, 0, addr);
@@ -1748,7 +1748,7 @@ static int SWC1(MIPS_instr mips){
 	invalidateRegisters();
 #ifdef USE_INLINE_STORES
 	// addr = reg_cop1_simple[frt]
-	GEN_LWZ(ppc, addr, MIPS_GET_RT(mips)*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// frs = *addr
 	GEN_LWZ(ppc, 3, 0, addr);
@@ -1908,7 +1908,7 @@ static int JR(MIPS_instr mips){
 	reset_code_addr();
 	
 	GEN_STW(ppc, mapRegister(MIPS_GET_RS(mips)),
-			REG_LOCALRS*8+4, DYNAREG_REG);
+			(REG_LOCALRS*8+4)+R4300OFF_GPR, DYNAREG_R4300);
 	set_next_dst(ppc);
 	invalidateRegisters();
 
@@ -1952,7 +1952,7 @@ static int JALR(MIPS_instr mips){
 	reset_code_addr();
 	
 	GEN_STW(ppc, mapRegister(MIPS_GET_RS(mips)),
-			REG_LOCALRS*8+4, DYNAREG_REG);
+			(REG_LOCALRS*8+4)+R4300OFF_GPR, DYNAREG_R4300);
 	set_next_dst(ppc);
 	invalidateRegisters();
 
@@ -2897,7 +2897,7 @@ static int ERET(MIPS_instr mips){
 
 	genUpdateCount(0);
 	// Load Status
-	GEN_LWZ(ppc, 3, 12*4, DYNAREG_COP0);
+	GEN_LWZ(ppc, 3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Load upper address of llbit
 	GEN_LIS(ppc, 4, extractUpper16(&r4300.llbit));
@@ -2909,7 +2909,7 @@ static int ERET(MIPS_instr mips){
 	GEN_STW(ppc, DYNAREG_ZERO, extractLower16(&r4300.llbit), 4);
 	set_next_dst(ppc);
 	// Store updated Status
-	GEN_STW(ppc, 3, 12*4, DYNAREG_COP0);
+	GEN_STW(ppc, 3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// check_interupt()
 	GEN_B(ppc, add_jump(&check_interupt, 1, 1), 0, 1);
@@ -2918,7 +2918,7 @@ static int ERET(MIPS_instr mips){
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
 	set_next_dst(ppc);
 	// r4300.pc = EPC
-	GEN_LWZ(ppc, 3, 14*4, DYNAREG_COP0);
+	GEN_LWZ(ppc, 3, (14*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Restore the LR
 	GEN_MTLR(ppc, 0);
@@ -2952,7 +2952,7 @@ static int MFC0(MIPS_instr mips){
 
 	int rt = mapRegisterNew(MIPS_GET_RT(mips));
 	// *rt = r4300.reg_cop0[rd]
-	GEN_LWZ(ppc, rt, MIPS_GET_RD(mips)*4, DYNAREG_COP0);
+	GEN_LWZ(ppc, rt, (MIPS_GET_RD(mips)*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -2977,7 +2977,7 @@ static int MTC0(MIPS_instr mips){
 		GEN_RLWINM(ppc, 0, rrt, 0, 26, 0);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(ppc, 0, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, 0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -2988,14 +2988,14 @@ static int MTC0(MIPS_instr mips){
 		GEN_RLWINM(ppc, 0, rrt, 0, 2, 31);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(ppc, 0, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, 0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
 	case 4: // Context
 		rrt = mapRegister(rt), tmp = mapRegisterTemp();
 		// tmp = r4300.reg_cop0[rd]
-		GEN_LWZ(ppc, tmp, rd*4, DYNAREG_COP0);
+		GEN_LWZ(ppc, tmp, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		// r0 = rt & 0xFF800000
 		GEN_RLWINM(ppc, 0, rrt, 0, 0, 8);
@@ -3007,7 +3007,7 @@ static int MTC0(MIPS_instr mips){
 		GEN_OR(ppc, tmp, tmp, 0);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[rd] = tmp
-		GEN_STW(ppc, tmp, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, tmp, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -3017,7 +3017,7 @@ static int MTC0(MIPS_instr mips){
 		GEN_RLWINM(ppc, 0, rrt, 0, 7, 18);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(ppc, 0, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, 0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -3027,10 +3027,10 @@ static int MTC0(MIPS_instr mips){
 		GEN_ADDI(ppc, 0, 0, 31);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[rd] = rt
-		GEN_STW(ppc, rrt, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, rrt, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[1] = r0
-		GEN_STW(ppc, 0, 1*4, DYNAREG_COP0);
+		GEN_STW(ppc, 0, (1*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -3040,7 +3040,7 @@ static int MTC0(MIPS_instr mips){
 		GEN_RLWINM(ppc, 0, rrt, 0, 24, 18);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(ppc, 0, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, 0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -3048,7 +3048,7 @@ static int MTC0(MIPS_instr mips){
 		rrt = mapRegister(rt);
 		// TODO: Ensure that rrt == 0?
 		// r4300.reg_cop0[rd] = rt
-		GEN_STW(ppc, rrt, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, rrt, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -3058,7 +3058,7 @@ static int MTC0(MIPS_instr mips){
 	case 19: // WatchHi
 		rrt = mapRegister(rt);
 		// r4300.reg_cop0[rd] = rt
-		GEN_STW(ppc, rrt, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, rrt, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -3068,13 +3068,13 @@ static int MTC0(MIPS_instr mips){
 		GEN_RLWINM(ppc, 0, rrt, 0, 4, 25);
 		set_next_dst(ppc);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(ppc, 0, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, 0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
 	case 29: // TagHi
 		// r4300.reg_cop0[rd] = 0
-		GEN_STW(ppc, DYNAREG_ZERO, rd*4, DYNAREG_COP0);
+		GEN_STW(ppc, DYNAREG_ZERO, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		return CONVERT_SUCCESS;
 	
@@ -3139,7 +3139,7 @@ static int MFC1(MIPS_instr mips){
 	flushFPR(fs);
 
 	// rt = r4300.fpr_single[fs]
-	GEN_LWZ(ppc, rt, fs*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, rt, (fs*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// rt = *rt
 	GEN_LWZ(ppc, rt, 0, rt);
@@ -3164,7 +3164,7 @@ static int DMFC1(MIPS_instr mips){
 	flushFPR(fs);
 
 	// addr = r4300.fpr_double[fs]
-	GEN_LWZ(ppc, addr, fs*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (fs*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// rt[r4300.hi] = *addr
 	GEN_LWZ(ppc, rt.hi, 0, addr);
@@ -3191,7 +3191,7 @@ static int CFC1(MIPS_instr mips){
 	if(MIPS_GET_FS(mips) == 31){
 		int rt = mapRegisterNew( MIPS_GET_RT(mips) );
 
-		GEN_LWZ(ppc, rt, 0, DYNAREG_FCR31);
+		GEN_LWZ(ppc, rt, 0+R4300OFF_FCR31, DYNAREG_R4300);
 		set_next_dst(ppc);
 	} else if(MIPS_GET_FS(mips) == 0){
 		int rt = mapRegisterNew( MIPS_GET_RT(mips) );
@@ -3219,7 +3219,7 @@ static int MTC1(MIPS_instr mips){
 	invalidateFPR(fs);
 
 	// addr = r4300.fpr_single[fs]
-	GEN_LWZ(ppc, addr, fs*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (fs*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// *addr = rt
 	GEN_STW(ppc, rt, 0, addr);
@@ -3245,7 +3245,7 @@ static int DMTC1(MIPS_instr mips){
 	int addr = mapRegisterTemp();
 	invalidateFPR(fs);
 
-	GEN_LWZ(ppc, addr, fs*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (fs*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	GEN_STW(ppc, rt.hi, 0, addr);
 	set_next_dst(ppc);
@@ -3270,7 +3270,7 @@ static int CTC1(MIPS_instr mips){
 	if(MIPS_GET_FS(mips) == 31){
 		int rt = mapRegister( MIPS_GET_RT(mips) );
 
-		GEN_STW(ppc, rt, 0, DYNAREG_FCR31);
+		GEN_STW(ppc, rt, 0+R4300OFF_FCR31, DYNAREG_R4300);
 		set_next_dst(ppc);
 	}
 
@@ -3295,7 +3295,7 @@ static int BC(MIPS_instr mips){
 	int cond   = mips & 0x00010000;
 	int likely = mips & 0x00020000;
 
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	GEN_RLWINM(ppc, 0, 0, 9, 31, 31);
 	set_next_dst(ppc);
@@ -3516,7 +3516,7 @@ static int ROUND_L_FP(MIPS_instr mips, int dbl){
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Load old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -3555,7 +3555,7 @@ static int TRUNC_L_FP(MIPS_instr mips, int dbl){
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Load old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -3597,7 +3597,7 @@ static int CEIL_L_FP(MIPS_instr mips, int dbl){
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Load old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -3639,7 +3639,7 @@ static int FLOOR_L_FP(MIPS_instr mips, int dbl){
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Load old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -3678,7 +3678,7 @@ static int ROUND_W_FP(MIPS_instr mips, int dbl){
 	GEN_FCTIW(ppc, 0, fs);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_single[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// stfiwx f0, 0, addr
 	GEN_STFIWX(ppc, 0, 0, addr);
@@ -3708,7 +3708,7 @@ static int TRUNC_W_FP(MIPS_instr mips, int dbl){
 	GEN_FCTIWZ(ppc, 0, fs);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_single[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// stfiwx f0, 0, addr
 	GEN_STFIWX(ppc, 0, 0, addr);
@@ -3740,7 +3740,7 @@ static int CEIL_W_FP(MIPS_instr mips, int dbl){
 	GEN_FCTIW(ppc, 0, fs);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_single[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// stfiwx f0, 0, addr
 	GEN_STFIWX(ppc, 0, 0, addr);
@@ -3774,7 +3774,7 @@ static int FLOOR_W_FP(MIPS_instr mips, int dbl){
 	GEN_FCTIW(ppc, 0, fs);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_single[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// stfiwx f0, 0, addr
 	GEN_STFIWX(ppc, 0, 0, addr);
@@ -3836,7 +3836,7 @@ static int CVT_W_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// Set rounding mode according to r4300.fcr31
-	GEN_LFD(ppc, 0, -4, DYNAREG_FCR31);
+	GEN_LFD(ppc, 0, -4+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	// FIXME: Here I have the potential to disable IEEE mode
@@ -3852,7 +3852,7 @@ static int CVT_W_FP(MIPS_instr mips, int dbl){
 	GEN_FCTIW(ppc, 0, fs);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_single[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// stfiwx f0, 0, addr
 	GEN_STFIWX(ppc, 0, 0, addr);
@@ -3887,7 +3887,7 @@ static int CVT_L_FP(MIPS_instr mips, int dbl){
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(ppc, addr, fd*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Load old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -3917,13 +3917,13 @@ static int C_F_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// and r0, r0, 0xff7fffff (clear cond)
 	GEN_RLWINM(ppc, 0, 0, 0, 9, 7);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -3943,7 +3943,7 @@ static int C_UN_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -3958,7 +3958,7 @@ static int C_UN_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -3978,7 +3978,7 @@ static int C_EQ_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -3993,7 +3993,7 @@ static int C_EQ_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4013,7 +4013,7 @@ static int C_UEQ_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4031,7 +4031,7 @@ static int C_UEQ_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4051,7 +4051,7 @@ static int C_OLT_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4066,7 +4066,7 @@ static int C_OLT_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4086,7 +4086,7 @@ static int C_ULT_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4104,7 +4104,7 @@ static int C_ULT_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4124,7 +4124,7 @@ static int C_OLE_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4142,7 +4142,7 @@ static int C_OLE_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4162,7 +4162,7 @@ static int C_ULE_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4177,7 +4177,7 @@ static int C_ULE_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4194,13 +4194,13 @@ static int C_SF_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// and r0, r0, 0xff7fffff (clear cond)
 	GEN_RLWINM(ppc, 0, 0, 0, 9, 7);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4217,13 +4217,13 @@ static int C_NGLE_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// and r0, r0, 0xff7fffff (clear cond)
 	GEN_RLWINM(ppc, 0, 0, 0, 9, 7);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4243,7 +4243,7 @@ static int C_SEQ_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4258,7 +4258,7 @@ static int C_SEQ_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4278,7 +4278,7 @@ static int C_NGL_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4293,7 +4293,7 @@ static int C_NGL_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4313,7 +4313,7 @@ static int C_LT_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4328,7 +4328,7 @@ static int C_LT_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4348,7 +4348,7 @@ static int C_NGE_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4363,7 +4363,7 @@ static int C_NGE_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4383,7 +4383,7 @@ static int C_LE_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4398,7 +4398,7 @@ static int C_LE_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4418,7 +4418,7 @@ static int C_NGT_FP(MIPS_instr mips, int dbl){
 	int ft = mapFPR( MIPS_GET_FT(mips), dbl );
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// fcmpu cr0, fs, ft
 	GEN_FCMPU(ppc, fs, ft, 0);
@@ -4433,7 +4433,7 @@ static int C_NGT_FP(MIPS_instr mips, int dbl){
 	GEN_ORIS(ppc, 0, 0, 0x0080);
 	set_next_dst(ppc);
 	// stw r0, 0(&fcr31)
-	GEN_STW(ppc, 0, 0, DYNAREG_FCR31);
+	GEN_STW(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	return CONVERT_SUCCESS;
@@ -4482,7 +4482,7 @@ static int CVT_FP_W(MIPS_instr mips, int dbl){
 
 	// Get the integer value into a GPR
 	// tmp = fpr32[fs]
-	GEN_LWZ(ppc, tmp, fs*4, DYNAREG_FPR_32);
+	GEN_LWZ(ppc, tmp, (fs*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// tmp = *tmp (src)
 	GEN_LWZ(ppc, tmp, 0, tmp);
@@ -4548,7 +4548,7 @@ static int CVT_FP_L(MIPS_instr mips, int dbl){
 
 	// Get the long value into GPRs
 	// lo = fpr64[fs]
-	GEN_LWZ(ppc, lo, fs*4, DYNAREG_FPR_64);
+	GEN_LWZ(ppc, lo, (fs*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// hi = *lo (hi word)
 	GEN_LWZ(ppc, hi, 0, lo);
@@ -4661,7 +4661,7 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 
 	if(type == JUMPTO_REG){
 		// Load the register as the return value
-		GEN_LWZ(ppc, 3, loc*8+4, DYNAREG_REG);
+		GEN_LWZ(ppc, 3, (loc*8+4)+R4300OFF_GPR, DYNAREG_R4300);
 		set_next_dst(ppc);
 	} else {
 		// Calculate the destination address
@@ -4692,7 +4692,7 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 		GEN_BLELR(ppc, 2, 0);
 		set_next_dst(ppc);
 		// Store r4300.last_pc for linking
-		GEN_STW(ppc, 3, 0, DYNAREG_LADDR);
+		GEN_STW(ppc, 3, 0+R4300OFF_LADDR, DYNAREG_R4300);
 		set_next_dst(ppc);
 	}
 
@@ -4710,19 +4710,19 @@ static void genUpdateCount(int checkCount){
 	GEN_LIS(ppc, tmp, (get_src_pc()+4)>>16);
 	set_next_dst(ppc);
 	// lwz    r0,  0(&r4300.last_pc)     // r0 = r4300.last_pc
-	GEN_LWZ(ppc, 0, 0, DYNAREG_LADDR);
+	GEN_LWZ(ppc, 0, 0+R4300OFF_LADDR, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// ori    tmp, tmp, pc & 0xffff  // tmp = pc
 	GEN_ORI(ppc, tmp, tmp, get_src_pc()+4);
 	set_next_dst(ppc);
 	// stw    tmp, 0(&r4300.last_pc)     // r4300.last_pc = pc
-	GEN_STW(ppc, tmp, 0, DYNAREG_LADDR);
+	GEN_STW(ppc, tmp, 0+R4300OFF_LADDR, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// subf   r0,  r0, tmp           // r0 = pc - r4300.last_pc
 	GEN_SUBF(ppc, 0, 0, tmp);
 	set_next_dst(ppc);
 	// lwz    tmp, 9*4(r4300.reg_cop0)     // tmp = Count
-	GEN_LWZ(ppc, tmp, 9*4, DYNAREG_COP0);
+	GEN_LWZ(ppc, tmp, (9*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// srwi r0, r0, 1                // r0 = (pc - r4300.last_pc)/2
 	GEN_SRWI(ppc, 0, 0, 1);
@@ -4732,11 +4732,11 @@ static void genUpdateCount(int checkCount){
 	set_next_dst(ppc);
 	if(checkCount){
 		// lwz    tmp, 0(&r4300.next_interrupt) // tmp = r4300.next_interrupt
-		GEN_LWZ(ppc, tmp, 0, DYNAREG_NINTR);
+		GEN_LWZ(ppc, tmp, 0+R4300OFF_NINTR, DYNAREG_R4300);
 		set_next_dst(ppc);
 	}
 	// stw    r0,  9*4(r4300.reg_cop0)    // Count = r0
-	GEN_STW(ppc, 0, 9*4, DYNAREG_COP0);
+	GEN_STW(ppc, 0, (9*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 	if(checkCount){
 		// cmpl   cr2,  tmp, r0  // cr2 = r4300.next_interrupt ? Count
@@ -4774,7 +4774,7 @@ static void genCheckFP(void){
 		flushRegisters();
 		reset_code_addr();
 		// lwz r0, 12*4(r4300.reg_cop0)
-		GEN_LWZ(ppc, 0, 12*4, DYNAREG_COP0);
+		GEN_LWZ(ppc, 0, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
 		// andis. r0, r0, 0x2000
 		GEN_ANDIS(ppc, 0, 0, 0x2000);
@@ -4853,53 +4853,47 @@ unsigned char **invalid_code;
 
 void genCallDynaMem2(int type, int base, short immed){
 	PowerPC_instr ppc;
-	// address
-	GEN_ADDI(ppc, 6, base, immed);
-	set_next_dst(ppc);
 	// value
 	switch(type){
 		case MEM_WRITE_BYTE:
-			GEN_LIS(ppc, 4, extractUpper16((unsigned int)&byte));
+			GEN_LIS(ppc, 5, extractUpper16((unsigned int)&byte));
 			set_next_dst(ppc);
-			GEN_STB(ppc,3,extractLower16((unsigned int)&byte),4);
+			GEN_STB(ppc,3,extractLower16((unsigned int)&byte),5);
 			set_next_dst(ppc);
 			break;
 		case MEM_WRITE_HALF:
-			GEN_LIS(ppc, 4, extractUpper16((unsigned int)&hword));
+			GEN_LIS(ppc, 5, extractUpper16((unsigned int)&hword));
 			set_next_dst(ppc);
-			GEN_STH(ppc,3,extractLower16((unsigned int)&hword),4);
+			GEN_STH(ppc,3,extractLower16((unsigned int)&hword),5);
 			set_next_dst(ppc);
 			break;
 		case MEM_WRITE_WORD:
-			GEN_LIS(ppc, 4, extractUpper16((unsigned int)&word));
+			GEN_LIS(ppc, 5, extractUpper16((unsigned int)&word));
 			set_next_dst(ppc);
-			GEN_STW(ppc,3,extractLower16((unsigned int)&word),4);
+			GEN_STW(ppc,3,extractLower16((unsigned int)&word),5);
 			set_next_dst(ppc);
 			break;
 	}
-	// pc
+	// r3 = address
+	GEN_ADDI(ppc, 3, base, immed);
+	set_next_dst(ppc);
+	// adjust delay_slot and pc
 	GEN_LIS(ppc, 5, (get_src_pc()+4) >> 16);
+	set_next_dst(ppc);
+	GEN_LI(ppc, 4, 0, isDelaySlot ? 1 : 0);
 	set_next_dst(ppc);
 	GEN_ORI(ppc, 5, 5, get_src_pc()+4);
 	set_next_dst(ppc);
-	GEN_LIS(ppc, 4,extractUpper16((unsigned int)&r4300.pc));
+	// store r4300.delay_slot
+	GEN_STW(ppc,4,R4300OFF_DELAYSLOT,DYNAREG_R4300);
 	set_next_dst(ppc);
-	GEN_STW(ppc,5,extractLower16((unsigned int)&r4300.pc),4);
+	// store pc
+	GEN_STW(ppc,5,R4300OFF_PC,DYNAREG_R4300);
 	set_next_dst(ppc);
-	// r4300.delay_slot
-	GEN_LI(ppc, 5, 0, isDelaySlot ? 1 : 0);
-	set_next_dst(ppc);
-	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&r4300.delay_slot));
-	set_next_dst(ppc);
-	GEN_STW(ppc,5,extractLower16((unsigned int)&r4300.delay_slot),4);
-	set_next_dst(ppc);
-	// address
-	GEN_ADDI(ppc, 3, 6, 0);
-	set_next_dst(ppc);
-	// type
+	// r4 = type
 	GEN_LI(ppc, 4, 0, type);
 	set_next_dst(ppc);
-	// dyna_mem_write
+	// call dyna_mem_write
 	GEN_LIS(ppc, 12, (unsigned int)&dyna_mem_write>>16);
 	set_next_dst(ppc);
 	GEN_ORI(ppc, 12, 12, (unsigned int)&dyna_mem_write&0xFFFF);
@@ -4918,11 +4912,7 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 
 	// clear r4300.delay_slot
-	GEN_LI(ppc, 3, 0, 0);
-	set_next_dst(ppc);
-	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&r4300.delay_slot));
-	set_next_dst(ppc);
-	GEN_STW(ppc,3,extractLower16((unsigned int)&r4300.delay_slot),4);
+	GEN_STW(ppc,DYNAREG_ZERO,R4300OFF_DELAYSLOT,DYNAREG_R4300);
 	set_next_dst(ppc);
 
 	// Restore LR

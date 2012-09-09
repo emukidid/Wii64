@@ -43,19 +43,19 @@
 #endif
 
 typedef struct {
-	unsigned long pc, last_pc;
-	long long int gpr[32];
-	long long int hi, lo;
-	long long int local_gpr[2];
-	unsigned long reg_cop0[32];
-	long long int fpr_data[32];
-	double*       fpr_double[32];
-	float*        fpr_single[32];
-	long          fcr0, fcr31;
-	unsigned int  next_interrupt, cic_chip;
-	unsigned long delay_slot, skip_jump;
-	int           stop, llbit;
-	tlb*          tlb_e; // [32]
+	unsigned long pc, last_pc;		//0 -> 8
+	long long int gpr[32];			//8->264
+	long long int hi, lo;			//264->280
+	long long int local_gpr[2];		//280->296
+	unsigned long reg_cop0[32];		//296->424
+	long long int fpr_data[32];		//424->680
+	double*       fpr_double[32];	//680->808
+	float*        fpr_single[32];	//808->936
+	long          fcr0, fcr31;		//936->944
+	unsigned int  next_interrupt, cic_chip;	//944->952
+	unsigned long delay_slot, skip_jump;	//952->960
+	int           stop, llbit;				//960->968
+	tlb*          tlb_e; // [32]			//968->972
 } R4300;
 extern R4300 r4300;
 

@@ -26,16 +26,20 @@
 #include "Recompile.h"
 #include "../r4300.h"
 
-#define DYNAREG_REG    14
-#define DYNAREG_COP0   15
-#define DYNAREG_FPR_32 16
-#define DYNAREG_FPR_64 17
-#define DYNAREG_FCR31  18
-#define DYNAREG_RDRAM  19
-#define DYNAREG_LADDR  20
-#define DYNAREG_NINTR  21
-#define DYNAREG_FUNC   22
-#define DYNAREG_ZERO   23
+#define DYNAREG_R4300  14
+#define DYNAREG_RDRAM  15
+#define DYNAREG_FUNC   16
+#define DYNAREG_ZERO   17
+
+#define R4300OFF_PC 		0
+#define R4300OFF_LADDR		4
+#define R4300OFF_GPR		8
+#define R4300OFF_COP0		296
+#define R4300OFF_FPR_64		680
+#define R4300OFF_FPR_32		808
+#define R4300OFF_FCR31		940
+#define R4300OFF_NINTR		944
+#define R4300OFF_DELAYSLOT 	952
 
 #define DYNAOFF_LR     20
 

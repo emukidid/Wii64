@@ -65,19 +65,11 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 		"mr	14, %0    \n"
 		"mr	15, %1    \n"
 		"mr	16, %2    \n"
-		"mr	17, %3    \n"
-		"mr	18, %4    \n"
-		"mr	19, %5    \n"
-		"mr	20, %6    \n"
-		"mr	21, %7    \n"
-		"mr	22, %8    \n"
-		"addi	23, 0, 0  \n"
-		:: "r" (r4300.gpr), "r" (r4300.reg_cop0),
-		   "r" (r4300.fpr_single), "r" (r4300.fpr_double),
-		   "r" (&r4300.fcr31), "r" (rdram),
-		   "r" (&r4300.last_pc), "r" (&r4300.next_interrupt),
+		"addi	17, 0, 0  \n"
+		:: "r" (&r4300),
+		   "r" (rdram),
 		   "r" (func)
-		: "14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
+		: "14", "15", "16", "17");
 
 	end_section(TRAMP_SECTION);
 
@@ -95,13 +87,13 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 		// Get return_addr, link_branch, and last_func
 		"lwz	%2, 20(1) \n"
 		"mflr	%1        \n"
-		"mr	%3, 22    \n"
+		"mr	%3, 16    \n"
 		// Pop the stack
 		"lwz	1, 0(1)   \n"
 		: "=r" (naddr), "=r" (link_branch), "=r" (return_addr),
 		  "=r" (last_func)
 		: "r" (code)
-		: "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "22");
+		: "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "16");
 
 	link_branch = link_branch == return_addr ? NULL : link_branch - 1;
 	
