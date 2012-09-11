@@ -32,18 +32,15 @@ void *game_specific_hack = 0;
 // Pokemon Snap (U)
 void hack_pkm_snap_u() {
 	// Pass 1st Level and Controller Fix
-	if(read_hword_in_memory(0x80382D1C) == 0x802C) {
-		byte = 0;
-		write_byte_in_memory(0x80382D0F);
+	if(read_hword_in_memory(0x80382D1C, 0) == 0x802C) {
+		write_byte_in_memory(0x80382D0F, 0);
 	}
 	//Make Picture selectable
-	if(read_hword_in_memory(0x801E3184) == 0x2881) {
-		hword = 0x2001;
-		write_hword_in_memory(0x801E3184);
+	if(read_hword_in_memory(0x801E3184, 0) == 0x2881) {
+		write_hword_in_memory(0x801E3184, 0x2001);
 	}
-	if(read_hword_in_memory(0x801E3186) == 0x0098) {
-		hword = 0x0001;
-		write_hword_in_memory(0x801E3186);
+	if(read_hword_in_memory(0x801E3186, 0) == 0x0098) {
+		write_hword_in_memory(0x801E3186, 0x0001);
 	}
 }
 
@@ -51,108 +48,93 @@ void hack_pkm_snap_u() {
 // Pokemon Snap (A)
 void hack_pkm_snap_a() {
 	// Pass 1st Level and Controller Fix
-	if(read_hword_in_memory(0x80382D1C) == 0x802C) {
-		byte = 0;
-		write_byte_in_memory(0x80382D0F);
+	if(read_hword_in_memory(0x80382D1C, 0) == 0x802C) {
+		write_byte_in_memory(0x80382D0F, 0);
 	}
 	//Make Picture selectable
-	if(read_hword_in_memory(0x801E3C44) == 0x2881) {
-		hword = 0x2001;
-		write_hword_in_memory(0x801E3C44);
+	if(read_hword_in_memory(0x801E3C44, 0) == 0x2881) {
+		write_hword_in_memory(0x801E3C44, 0x2001);
 	}
-	if(read_hword_in_memory(0x801E3C46) == 0x0098) {
-		hword = 0x0001;
-		write_hword_in_memory(0x801E3C46);
+	if(read_hword_in_memory(0x801E3C46, 0) == 0x0098) {
+		write_hword_in_memory(0x801E3C46, 0x0001);
 	}
 }
 
 // Pokemon Snap (E)
 void hack_pkm_snap_e() {
 	// Pass 1st Level and Controller Fix
-	if(read_hword_in_memory(0x80381BFC) == 0x802C) {
-		byte = 0;
-		write_byte_in_memory(0x80381BEF);
+	if(read_hword_in_memory(0x80381BFC, 0) == 0x802C) {
+		write_byte_in_memory(0x80381BEF, 0);
 	}
 	//Make Picture selectable
-	if(read_hword_in_memory(0x801E3824) == 0x2881) {
-		hword = 0x2001;
-		write_hword_in_memory(0x801E3824);
+	if(read_hword_in_memory(0x801E3824, 0) == 0x2881) {
+		write_hword_in_memory(0x801E3824, 0x2001);
 	}
-	if(read_hword_in_memory(0x801E3826) == 0x0098) {
-		hword = 0x0001;
-		write_hword_in_memory(0x801E3826);
+	if(read_hword_in_memory(0x801E3826, 0) == 0x0098) {
+		write_hword_in_memory(0x801E3826, 0x0001);
 	}
 }
 
 // Pocket Monsters Snap (J)
 void hack_pkm_snap_j() {
 	// Pass 1st Level and Controller Fix
-	if(read_hword_in_memory(0x8036D22C) == 0x802A) {
-		byte = 0;
-		write_byte_in_memory(0x8036D21F);
+	if(read_hword_in_memory(0x8036D22C, 0) == 0x802A) {
+		write_byte_in_memory(0x8036D21F, 0);
 	}
 	//Make Picture selectable
-	if(read_hword_in_memory(0x801E1EC4) == 0x2881) {
-		hword = 0x2001;
-		write_hword_in_memory(0x801E1EC4);
+	if(read_hword_in_memory(0x801E1EC4, 0) == 0x2881) {
+		write_hword_in_memory(0x801E1EC4, 0x2001);
 	}
-	if(read_hword_in_memory(0x801E1EC6) == 0x0098) {
-		hword = 0x0001;
-		write_hword_in_memory(0x801E1EC6);
+	if(read_hword_in_memory(0x801E1EC6, 0) == 0x0098) {
+		write_hword_in_memory(0x801E1EC6, 0x0001);
 	}
 }
 
 // Top Gear Hyper-Bike (E) 
 void hack_topgear_hb_e() {
 	//Game Playable Fix (Gent)
-	if(read_hword_in_memory(0x800021EE) == 0x0001) {
-		hword = 0;
-		write_byte_in_memory(0x800021EE);
+	if(read_hword_in_memory(0x800021EE, 0) == 0x0001) {
+		write_byte_in_memory(0x800021EE, 0);
 	}
 }
 
 // Top Gear Hyper-Bike (J) 
 void hack_topgear_hb_j() {
 	//Game Playable Fix (Gent)
-	if(read_hword_in_memory(0x8000225A) == 0x0001) {
-		hword = 0;
-		write_byte_in_memory(0x8000225A);
+	if(read_hword_in_memory(0x8000225A, 0) == 0x0001) {
+		write_byte_in_memory(0x8000225A, 0);
 	}
 }
 
 // Top Gear Hyper-Bike (U) 
 void hack_topgear_hb_u() {
 	//Game Playable Fix (Gent)
-	if(read_hword_in_memory(0x800021EA) == 0x0001) {
-		hword = 0;
-		write_byte_in_memory(0x800021EA);
+	if(read_hword_in_memory(0x800021EA, 0) == 0x0001) {
+		write_byte_in_memory(0x800021EA, 0);
 	}
 }
 
 // Top Gear Overdrive (E) 
 void hack_topgear_od_e() {
 	//Game Playable Fix (Gent)
-	if(read_hword_in_memory(0x80001AB2) == 0x0001) {
-		hword = 0;
-		write_byte_in_memory(0x80001AB2);
+	if(read_hword_in_memory(0x80001AB2, 0) == 0x0001) {
+		write_byte_in_memory(0x80001AB2, 0);
 	}
 }
 
 // Top Gear Overdrive (J) 
 void hack_topgear_od_j() {
 	//Game Playable Fix (Gent)
-	if(read_hword_in_memory(0x80001B4E) == 0x0001) {
-		hword = 0;
-		write_byte_in_memory(0x80001B4E);
+	if(read_hword_in_memory(0x80001B4E, 0) == 0x0001) {
+		write_byte_in_memory(0x80001B4E, 0);
 	}
 }
 
 // Top Gear Overdrive (U) 
 void hack_topgear_od_u() {
 	//Game Playable Fix (Gent)
-	if(read_hword_in_memory(0x80001B4E) == 0x0001) {
-		hword = 0;
-		write_byte_in_memory(0x80001B4E);
+	if(read_hword_in_memory(0x80001B4E, 0) == 0x0001) {
+		write_byte_in_memory(0x80001B4E, 0);
 	}
 }
 

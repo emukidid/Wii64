@@ -251,10 +251,10 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 			u32 rtype = addr & 3;
 			addr &= 0xFFFFFFFC;
 			if(likely((rtype == 3))) {
-				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
+				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr, 0));
 			}
 			else {
-				word = read_word_in_memory(addr);
+				unsigned long word = read_word_in_memory(addr, 0);
 				switch(rtype) {
 					case 0:
 						r4300.gpr[value] = (long)(r4300.gpr[value] & 0xFFFFFFFFFFFFFF00LL) | ((word >> 24) & 0xFF);
@@ -273,11 +273,11 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 		{
 			u32 ltype = (addr) & 3;
 			if(likely(!ltype)) {
-				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
+				r4300.gpr[value] = (long long)((long)read_word_in_memory(addr, 0));
 			}
 			else {
 				addr &= 0xFFFFFFFC;
-				unsigned long long int word = read_word_in_memory(addr);
+				unsigned long word = read_word_in_memory(addr, 0);
 				switch(ltype) {
 					case 1:
 						r4300.gpr[value] = (long long)((long)(r4300.gpr[value] & 0xFF) | (word << 8));
@@ -293,60 +293,54 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 		}
 		break;
 		case MEM_LW:
-			r4300.gpr[value] = (long long)((long)read_word_in_memory(addr));
+			r4300.gpr[value] = (long long)((long)read_word_in_memory(addr, 0));
 			break;
 		case MEM_LWU:
-			r4300.gpr[value] = (unsigned long long)((long)read_word_in_memory(addr));
+			r4300.gpr[value] = (unsigned long long)((long)read_word_in_memory(addr, 0));
 			break;
 		case MEM_LH:
-			r4300.gpr[value] = (long long)((short)read_hword_in_memory(addr));
+			r4300.gpr[value] = (long long)((short)read_hword_in_memory(addr, 0));
 			break;
 		case MEM_LHU:
-			r4300.gpr[value] = (unsigned long long)((unsigned short)read_hword_in_memory(addr));
+			r4300.gpr[value] = (unsigned long long)((unsigned short)read_hword_in_memory(addr, 0));
 			break;
 		case MEM_LB:
-			r4300.gpr[value] = (long long)((signed char)read_byte_in_memory(addr));
+			r4300.gpr[value] = (long long)((signed char)read_byte_in_memory(addr, 0));
 			break;
 		case MEM_LBU:
-			r4300.gpr[value] = (unsigned long long)((unsigned char)read_byte_in_memory(addr));
+			r4300.gpr[value] = (unsigned long long)((unsigned char)read_byte_in_memory(addr, 0));
 			break;
 		case MEM_LD:
-			r4300.gpr[value] = read_dword_in_memory(addr);
+			r4300.gpr[value] = read_dword_in_memory(addr, 0);
 			break;
 		case MEM_LWC1:
-			*((long*)r4300.fpr_single[value]) = (long)read_word_in_memory(addr);
+			*((long*)r4300.fpr_single[value]) = (long)read_word_in_memory(addr, 0);
 			break;
 		case MEM_LDC1:
-			*((long long*)r4300.fpr_double[value]) = read_dword_in_memory(addr);
+			*((long long*)r4300.fpr_double[value]) = read_dword_in_memory(addr, 0);
 			break;
 		case MEM_SW:
-			word = value;
-			write_word_in_memory(addr);
+			write_word_in_memory(addr, value);
 			check_memory(addr);
 			break;
 		case MEM_SH:
-			hword = value;
-			write_hword_in_memory(addr);
+			write_hword_in_memory(addr, value);
 			check_memory(addr);
 			break;
 		case MEM_SB:
-			byte = value;
-			write_byte_in_memory(addr);
+			write_byte_in_memory(addr, value);
 			check_memory(addr);
 			break;
 		case MEM_SD:
-			dword = r4300.gpr[value];
-			write_dword_in_memory(addr);
+			write_dword_in_memory(addr, r4300.gpr[value]);
 			check_memory(addr);
 			break;
 		case MEM_SWC1:
-			word = *((long*)r4300.fpr_single[value]);
-			write_word_in_memory(addr);
+			write_word_in_memory(addr, *((long*)r4300.fpr_single[value]));
 			check_memory(addr);
 			break;
 		case MEM_SDC1:
-			dword = *((unsigned long long*)r4300.fpr_double[value]);
-			write_dword_in_memory(addr);
+			write_dword_in_memory(addr, *((unsigned long long*)r4300.fpr_double[value]));
 			check_memory(addr);
 			break;
 		default:
@@ -360,9 +354,9 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 	return r4300.pc != pc ? r4300.pc : 0;
 }
 
-unsigned int dyna_mem_write(unsigned int addr, unsigned int type){
+unsigned int dyna_mem_write(unsigned int addr, unsigned int type, unsigned long long int value) {
 	unsigned long oldpc = r4300.pc;
-	rwmem[addr>>16][type](addr);
+	rwmem[addr>>16][type](addr, value);
 	check_memory(addr);
 	if(r4300.pc != oldpc) noCheckInterrupt = 1;
 	return r4300.pc != oldpc ? r4300.pc : 0;

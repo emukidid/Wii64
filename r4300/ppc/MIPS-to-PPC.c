@@ -4853,27 +4853,12 @@ unsigned char **invalid_code;
 
 void genCallDynaMem2(int type, int base, short immed){
 	PowerPC_instr ppc;
-	// value
-	switch(type){
-		case MEM_WRITE_BYTE:
-			GEN_LIS(ppc, 5, extractUpper16((unsigned int)&byte));
-			set_next_dst(ppc);
-			GEN_STB(ppc,3,extractLower16((unsigned int)&byte),5);
-			set_next_dst(ppc);
-			break;
-		case MEM_WRITE_HALF:
-			GEN_LIS(ppc, 5, extractUpper16((unsigned int)&hword));
-			set_next_dst(ppc);
-			GEN_STH(ppc,3,extractLower16((unsigned int)&hword),5);
-			set_next_dst(ppc);
-			break;
-		case MEM_WRITE_WORD:
-			GEN_LIS(ppc, 5, extractUpper16((unsigned int)&word));
-			set_next_dst(ppc);
-			GEN_STW(ppc,3,extractLower16((unsigned int)&word),5);
-			set_next_dst(ppc);
-			break;
-	}
+	// r5 = value (hi) - none in our case
+	GEN_LI(ppc, 5, 5, 0);
+	set_next_dst(ppc);
+	// r6 = value (lo)
+	GEN_ADDI(ppc, 6, 3, 0);
+	set_next_dst(ppc);
 	// r3 = address
 	GEN_ADDI(ppc, 3, base, immed);
 	set_next_dst(ppc);
