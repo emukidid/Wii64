@@ -26,7 +26,7 @@ typedef enum {
     N64Cycle1Alpha=3,
 } N64StageNumberType;
 
-typedef union {
+/*typedef union {
     struct {
         uint32 dwMux0;
         uint32 dwMux1;
@@ -37,7 +37,7 @@ typedef union {
 typedef struct {
     MuxType ori_mux;
     MuxType simple_mux;
-} SimpleMuxMapType;
+} SimpleMuxMapType;*/ //Never Used
 
 class DecodedMux
 {

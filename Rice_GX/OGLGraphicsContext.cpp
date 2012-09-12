@@ -88,11 +88,11 @@ bool COGLGraphicsContext::Initialize(HWND hWnd, HWND hWndStatus, uint32 dwWidth,
         windowSetting.toolbarHeightToUse = 0;
     }
 
+#ifndef __GX__
     int  depthBufferDepth = options.OpenglDepthBufferSetting;
     int  colorBufferDepth = 32;
     if( options.colorQuality == TEXTURE_FMT_A4R4G4B4 ) colorBufferDepth = 16;
 
-#ifndef __GX__
    // init sdl & gl
    const SDL_VideoInfo *videoInfo;
    Uint32 videoFlags = 0;
@@ -410,7 +410,6 @@ void VI_GX_showDEBUG()
 {
 	int i = 0;
 	GXColor fontColor = {150, 255, 150, 255};
-
 #ifdef SHOW_DEBUG
 	DEBUG_update();
 #ifndef MENU_V2
@@ -425,7 +424,7 @@ void VI_GX_showDEBUG()
 //			menu::IplFont::getInstance().drawString(10,(15*i+0),text[i], 0.8, false); 
 			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
 #endif
-#endif
+#endif //SHOW_DEBUG
 
 	//Reset any stats in DEBUG_stats
 //	DEBUG_stats(8, "RecompCache Blocks Freed", STAT_TYPE_CLEAR, 1);

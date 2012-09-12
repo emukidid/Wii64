@@ -742,13 +742,13 @@ void ReadConfiguration(void)
 #else //!__GX__
 #ifdef SHOW_DEBUG
         DEBUG_print("[RiceVideo] Disabled SSE processing.\n",DBG_RICE);
-#endif
+#endif //SHOW_DEBUG
 #endif //__GX__
     }
 
 #ifdef __GX__
 //Uncomment the following line to load sd:\wii64\texture.pak on ROM load
-//	options.bLoadHiResTextures = TRUE;
+	//options.bLoadHiResTextures = TRUE;
 #endif //__GX__
 
     status.isVertexShaderEnabled = status.isVertexShaderSupported && options.bEnableVertexShader;
@@ -933,7 +933,7 @@ void GenerateCurrentRomOptions()
 #ifdef SHOW_DEBUG
         sprintf(txtbuffer,"[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
 		DEBUG_print(txtbuffer,DBG_RICE); 
-#endif
+#endif //SHOW_DEBUG
 #endif //__GX__
 
     if( currentRomOptions.N64FrameBufferEmuType == 0 )      currentRomOptions.N64FrameBufferEmuType = defaultRomOptions.N64FrameBufferEmuType;
@@ -1970,7 +1970,7 @@ int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* szName)
 #ifdef SHOW_DEBUG
         sprintf(txtbuffer,"[RiceVideo] Found ROM '%s', CRC %s\n", IniSections[i].name, szCRC);
 		DEBUG_print(txtbuffer,DBG_RICE); 
-#endif		
+#endif //SHOW_DEBUG
 #endif //__GX__
             return i;
         }

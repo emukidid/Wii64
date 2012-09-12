@@ -337,11 +337,7 @@ CColorCombiner * OGLDeviceBuilder::CreateColorCombiner(CRender *pRender)
                 }
             }
 #else //!__GX__
-            m_deviceType = (SupportedDeviceType)options.OpenglRenderSetting;
-            GLint maxUnit = 8;
-            COGLGraphicsContext *pcontext = (COGLGraphicsContext *)(CGraphicsContext::g_pGraphicsContext);
 			m_pColorCombiner = new CTEVColorCombiner(pRender);
-//			printf("[RiceVideo] TEV Combiner");
 #endif //__GX__
         }
 

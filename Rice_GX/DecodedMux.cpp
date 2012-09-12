@@ -84,7 +84,7 @@ const char * translatedCombTypes[] =
 };
 
 const char* muxTypeStrs[] = {
-    "CM_FMT_TYPE_NOT_USED",
+/*    "CM_FMT_TYPE_NOT_USED",
     "CM_FMT_TYPE1_D",
     "CM_FMT_TYPE2_A_ADD_D",
     "CM_FMT_TYPE3_A_MOD_C",
@@ -94,6 +94,20 @@ const char* muxTypeStrs[] = {
     "CM_FMT_TYPE7_A_SUB_B_ADD_D",
     "CM_FMT_TYPE8_A_SUB_B_MOD_C",
     "CM_FMT_TYPE9_A_B_C_D",
+    "CM_FMT_TYPE_NOT_CHECKED",*/
+	//Fixed:
+    "CM_FMT_TYPE_NOT_USED",
+    "CM_FMT_TYPE1_D",
+    "CM_FMT_TYPE2_A_MOD_C",//"CM_FMT_TYPE2_A_ADD_D",
+    "CM_FMT_TYPE3_A_ADD_D",//"CM_FMT_TYPE3_A_MOD_C",
+    "CM_FMT_TYPE4_A_SUB_B",
+    "CM_FMT_TYPE5_A_MOD_C_ADD_D",
+    "CM_FMT_TYPE6_A_LERP_B_C",
+    "CM_FMT_TYPE7_A_SUB_B_ADD_D",
+    "CM_FMT_TYPE8_A_SUB_B_MOD_C",
+    "CM_FMT_TYPE9_A_ADD_B_MOD_C",//
+    "CM_FMT_TYPE10_A_B_C_D",
+    "CM_FMT_TYPE11_A_B_C_A",
     "CM_FMT_TYPE_NOT_CHECKED",
 };
 
@@ -154,6 +168,30 @@ void DecodedMux::Decode(uint32 dwMux0, uint32 dwMux1)
     m_dwShadeAlphaChannelFlag = 0;
     m_ColorTextureFlag[0] = 0;
     m_ColorTextureFlag[1] = 0;
+
+#ifdef SHOW_DEBUG
+	//sprintf(txtbuffer,"DispTEVMuxStr: index %d, Mux0 %8x, Mux1 %8x\r\n", index, m_dwLastMux0, m_dwLastMux1);
+	sprintf(txtbuffer,"\r\nDecodeMux: Mux0 0x%8x, Mux1 0x%8x\r\n", m_dwMux0, m_dwMux1);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+
+	for( int rgbalpha = 0; rgbalpha<2; rgbalpha++ ) 
+	{
+		for ( int cycle = 0; cycle<2; cycle++ )
+		{
+			CombinerFormatType type = splitType[cycle*2+rgbalpha];
+			N64CombinerType &m = m_n64Combiners[cycle*2+rgbalpha];
+
+			sprintf(txtbuffer,"RGBA %d Cycle %d Type %s:\r\n", rgbalpha, cycle, muxTypeStrs[type]); 
+			DEBUG_print(txtbuffer,DBG_USBGECKO);
+			sprintf(txtbuffer," abcd = %s%s(0x%2x), %s%s(0x%2x), %s%s(0x%2x), %s%s(0x%2x)\r\n", 
+				translatedCombTypes[m.a&MUX_MASK], (m.a&(~MUX_MASK))?"*":" ", m.a,
+				translatedCombTypes[m.b&MUX_MASK], (m.b&(~MUX_MASK))?"*":" ", m.b,
+				translatedCombTypes[m.c&MUX_MASK], (m.c&(~MUX_MASK))?"*":" ", m.c,
+				translatedCombTypes[m.d&MUX_MASK], (m.d&(~MUX_MASK))?"*":" ", m.d);
+			DEBUG_print(txtbuffer,DBG_USBGECKO);
+		}
+	}
+#endif //SHOW_DEBUG
 }
 
 int DecodedMux::Count(uint8 val, int cycle, uint8 mask)

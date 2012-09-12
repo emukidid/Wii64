@@ -978,6 +978,11 @@ bool OGLRender::RenderFlushTris()
 		GXcol.g = g_oglVtxColors[g_vtxIndex[i]][1];
 		GXcol.b = g_oglVtxColors[g_vtxIndex[i]][2];
 		GXcol.a = g_oglVtxColors[g_vtxIndex[i]][3];
+		//GXcol = (GXColor) {100,100,200,128};
+#ifdef SHOW_DEBUG
+//		sprintf(txtbuffer,"Vtx Color: {%d,%d,%d,%d} \r\n", g_oglVtxColors[g_vtxIndex[i]][0], g_oglVtxColors[g_vtxIndex[i]][1], g_oglVtxColors[g_vtxIndex[i]][2], g_oglVtxColors[g_vtxIndex[i]][3]);
+//		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
 //		GX_Color4u8(g_oglVtxColors[g_vtxIndex[i]][0], g_oglVtxColors[g_vtxIndex[i]][1], g_oglVtxColors[g_vtxIndex[i]][2], g_oglVtxColors[g_vtxIndex[i]][3]); 
 		GX_Color4u8(GXcol.r, GXcol.g, GXcol.b, GXcol.a); 
 		GX_TexCoord2f32(g_vtxBuffer[i].tcord[0].u,g_vtxBuffer[i].tcord[0].v);
@@ -1205,7 +1210,7 @@ COLOR OGLRender::PostProcessDiffuseColor(COLOR curDiffuseColor)
     uint32 alphaflag = m_pColorCombiner->m_pDecodedMux->m_dwShadeAlphaChannelFlag;
     if( colorflag+alphaflag != MUX_0 )
     {
-#ifndef _BIG_ENDIAN
+#if 1 //ndef _BIG_ENDIAN //Maybe no endian problem...
         if( (colorflag & 0xFFFFFF00) == 0 && (alphaflag & 0xFFFFFF00) == 0 )
 #else // !_BIG_ENDIAN
         if( (colorflag & 0x00FFFFFF) == 0 && (alphaflag & 0x00FFFFFF) == 0 )
