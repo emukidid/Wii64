@@ -334,6 +334,7 @@ extern unsigned int diff_sec(long long start,long long end);
 
 extern char printToScreen;
 extern char showFPSonScreen;
+extern GXRModeObj *rmode;
 
 struct VIInfo
 {
@@ -367,7 +368,7 @@ void VI_GX_showFPS(){
 #else
 	menu::IplFont::getInstance().drawInit(fontColor);
 	if(showFPSonScreen)
-		menu::IplFont::getInstance().drawString(10,35,caption, 1.0, false);
+		menu::IplFont::getInstance().drawString(20,40,caption, 1.0, false);
 #endif
 
 	//reset swap table from GUI/DEBUG
@@ -422,7 +423,7 @@ void VI_GX_showDEBUG()
 	if(printToScreen)
 		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
 //			menu::IplFont::getInstance().drawString(10,(15*i+0),text[i], 0.8, false); 
-			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
+			menu::IplFont::getInstance().drawString(20,(10*i+65),text[i], 0.5, false); 
 #endif
 #endif //SHOW_DEBUG
 
@@ -547,10 +548,14 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
 //	VI_GX_cleanUp();
 //	VI_GX_showStats();
    //TODO: Move the following and others to a "clean up" function
-	GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
-	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth+1,(u32) windowSetting.uDisplayHeight+1);	//Disable Scissor
+	// Set viewport to whole EFB and scissor to N64 frame for OSD
+	GX_SetViewport(0,0,rmode->fbWidth,rmode->efbHeight,0,1);
+	GX_SetScissor((u32) gGX.GXorigX,(u32) gGX.GXorigY,(u32) gGX.GXwidth,(u32) gGX.GXheight);	//Set Scissor to render plane for DEBUG prints
 	VI_GX_showFPS();
 	VI_GX_showDEBUG();
+	// Set viewport to N64 frame and disable scissor CopyDisp
+	GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
+	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth+1,(u32) windowSetting.uDisplayHeight+1);	//Disable Scissor
 //	if(VI.updateOSD)
 //	{
 //		if(VI.copy_fb)

@@ -919,7 +919,7 @@ void CTEVColorCombiner::GenerateCombinerSetting(int index)
 			numTex = 2;
 		}
 	}
-if(1) {
+
 	GX_SetNumTevStages(res.numOfUnits);
 	GX_SetNumChans (1);
 	GX_SetNumTexGens (numTex);
@@ -937,8 +937,8 @@ if(1) {
 		GX_SetTevKColorSel(GX_TEVSTAGE0+i, res.units[i].Kcol);
 		GX_SetTevKAlphaSel(GX_TEVSTAGE0+i, res.units[i].Kalpha);
 	}
-} else {
-	GX_SetTevOp(GX_TEVSTAGE0,GX_REPLACE);//GXTevMode);
+
+/*	GX_SetTevOp(GX_TEVSTAGE0,GX_REPLACE);//GXTevMode);
 //	if( pTexture )
 	//	GX_LoadTexObj(&pTexture->GXtex, 0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
 
@@ -946,7 +946,7 @@ if(1) {
 	GX_SetNumChans (1);
 	GX_SetNumTexGens (1);
 	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
-}
+*/
 #ifndef __GX__
     for( int i=0; i<res.numOfUnits; i++ )
     {

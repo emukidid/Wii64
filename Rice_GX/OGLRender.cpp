@@ -1387,6 +1387,12 @@ void OGLRender::UpdateScissor()
 		float lrx = max(gGX.GXorigX + min((width*windowSetting.fMultX) * gGX.GXscaleX,gGX.GXwidth), 0);
 		float lry = max(gGX.GXorigY + min((height*windowSetting.fMultY) * gGX.GXscaleY,gGX.GXheight), 0);
 		GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
+#ifdef SHOW_DEBUG
+//		sprintf(txtbuffer,"\r\nUpdateScissor: width %d, height %d, fMultX %f, fMultY %f, statBarHt %d, ulx %f, uly %f, lrx %f, lry %f\r\n",
+//			width, height, windowSetting.fMultX, windowSetting.fMultY, windowSetting.statusBarHeightToUse,
+//			ulx, uly, lrx, lry);
+//		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif //SHOW_DEBUG
 #endif //__GX__
     }
     else
@@ -1415,6 +1421,12 @@ void OGLRender::ApplyRDPScissor(bool force)
 		float lrx = max(gGX.GXorigX + min((width*windowSetting.fMultX) * gGX.GXscaleX,gGX.GXwidth), 0);
 		float lry = max(gGX.GXorigY + min((height*windowSetting.fMultY) * gGX.GXscaleY,gGX.GXheight), 0);
 		GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
+#ifdef SHOW_DEBUG
+//		sprintf(txtbuffer,"\r\nApplyRDPScissor: width %d, height %d, fMultX %f, fMultY %f, statBarHt %d, ulx %f, uly %f, lrx %f, lry %f\r\n",
+//			width, height, windowSetting.fMultX, windowSetting.fMultY, windowSetting.statusBarHeightToUse,
+//			ulx, uly, lrx, lry);
+//		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif //SHOW_DEBUG
 #endif //__GX__
     }
     else
@@ -1429,6 +1441,12 @@ void OGLRender::ApplyRDPScissor(bool force)
 		float lrx = max(gGX.GXorigX + min((gRDP.scissor.right*windowSetting.fMultX) * gGX.GXscaleX,gGX.GXwidth), 0);
 		float lry = max(gGX.GXorigY + min((gRDP.scissor.bottom*windowSetting.fMultY) * gGX.GXscaleY,gGX.GXheight), 0);
 		GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
+#ifdef SHOW_DEBUG
+//		sprintf(txtbuffer,"\r\nApplyRDPScissor: RSP.lft %d, RDP.rt %d, RDP.top %d, RDP.bot %d, uViHeight %d, \r\n    fMultX %f, fMultY %f, statBarHt %d, ulx %f, uly %f, lrx %f, lry %f\r\n",
+//			gRDP.scissor.left, gRDP.scissor.right, gRDP.scissor.top, gRDP.scissor.bottom, windowSetting.uViHeight,
+//			windowSetting.fMultX, windowSetting.fMultY, windowSetting.statusBarHeightToUse, ulx, uly, lrx, lry);
+//		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif //SHOW_DEBUG
 #endif //__GX__
     }
 
@@ -1450,6 +1468,13 @@ void OGLRender::ApplyScissorWithClipRatio(bool force)
 	float lrx = max(gGX.GXorigX + min((windowSetting.clipping.left+windowSetting.clipping.width) * gGX.GXscaleX,gGX.GXwidth), 0);
 	float lry = max(gGX.GXorigY + min(((gRSP.real_clip_scissor_top*windowSetting.fMultY) + windowSetting.clipping.height) * gGX.GXscaleY,gGX.GXheight), 0);
 	GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
+#ifdef SHOW_DEBUG
+//	sprintf(txtbuffer,"\r\nApplyScissorWithClipRatio: clip.lft %d, clip.wd %d, clip.ht %d, uViHeight %d, gRSP.clip_bot %d, fMultY %f, \r\n    statBarHt %d, ulx %f, uly %f, lrx %f, lry %f\r\n",
+//		windowSetting.clipping.left, windowSetting.clipping.width, windowSetting.clipping.height, 
+//		windowSetting.uViHeight, gRSP.real_clip_scissor_bottom, windowSetting.fMultY,
+//		windowSetting.statusBarHeightToUse, ulx, uly, lrx, lry);
+//	DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif //SHOW_DEBUG
 #endif //__GX__
 
     status.curScissor = RSP_SCISSOR;
@@ -1721,7 +1746,8 @@ void OGLRender::GXclearEFB()
 	GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
 	GX_SetFog(GX_FOG_NONE,0.1,1.0,0.0,1.0,(GXColor){0,0,0,255});
 	GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
-	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth+1,(u32) windowSetting.uDisplayHeight+1);	//Disable Scissor
+	//The OGL renderer doesn't disable scissoring
+//	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth+1,(u32) windowSetting.uDisplayHeight+1);	//Disable Scissor
 	GX_SetCullMode (GX_CULL_NONE);
 	Mtx44 GXprojection;
 	guMtxIdentity(GXprojection);

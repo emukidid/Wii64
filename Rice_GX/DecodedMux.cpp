@@ -169,7 +169,7 @@ void DecodedMux::Decode(uint32 dwMux0, uint32 dwMux1)
     m_ColorTextureFlag[0] = 0;
     m_ColorTextureFlag[1] = 0;
 
-#ifdef SHOW_DEBUG
+#if 0//def SHOW_DEBUG
 	//sprintf(txtbuffer,"DispTEVMuxStr: index %d, Mux0 %8x, Mux1 %8x\r\n", index, m_dwLastMux0, m_dwLastMux1);
 	sprintf(txtbuffer,"\r\nDecodeMux: Mux0 0x%8x, Mux1 0x%8x\r\n", m_dwMux0, m_dwMux1);
 	DEBUG_print(txtbuffer,DBG_USBGECKO);
