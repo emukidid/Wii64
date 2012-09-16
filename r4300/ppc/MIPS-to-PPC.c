@@ -791,19 +791,9 @@ static int LB(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 9, 0, 0);
+	GEN_BGE(ppc, 1, 8, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -863,19 +853,9 @@ static int LH(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 8, 0, 0);
+	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -941,19 +921,9 @@ static int LWL(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMPI(ppc, 0, 0, 1);
 	set_next_dst(ppc);
-	GEN_BNE(ppc, 1, 8, 0, 0);
+	GEN_BNE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
-	
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
+
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1010,19 +980,9 @@ static int LW(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 8, 0, 0);
+	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1079,19 +1039,9 @@ static int LBU(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 8, 0, 0);
+	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1148,19 +1098,9 @@ static int LHU(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 8, 0, 0);
+	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1226,22 +1166,12 @@ static int LWR(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMPI(ppc, 0, 3, 1);
 	set_next_dst(ppc);
-	GEN_BNE(ppc, 1, 9, 0, 0);
+	GEN_BNE(ppc, 1, 8, 0, 0);
 	set_next_dst(ppc);
 	
 	GEN_RLWINM(ppc, base, base, 0, 0, 29);	// addr &= 0xFFFFFFFC
 	set_next_dst(ppc);
-	
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
+
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1298,19 +1228,9 @@ static int LWU(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 8, 0, 0);
+	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1503,19 +1423,9 @@ static int LD(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 8, 0, 0);
+	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1603,19 +1513,9 @@ static int LWC1(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 7, 0, 0);
+	GEN_BGE(ppc, 1, 6, 0, 0);
 	set_next_dst(ppc);
 
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
@@ -1678,19 +1578,9 @@ static int LDC1(MIPS_instr mips){
 	set_next_dst(ppc);
 	GEN_CMP(ppc, base, 0, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 9, 0, 0);
+	GEN_BGE(ppc, 1, 8, 0, 0);
 	set_next_dst(ppc);
-
-	// Use rdram
-#ifdef USE_EXPANSION
-	// Mask sp with 0x007FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 9, 31);
-	set_next_dst(ppc);
-#else
-	// Mask sp with 0x003FFFFF
-	GEN_RLWINM(ppc, base, base, 0, 10, 31);
-	set_next_dst(ppc);
-#endif
+	
 	// Add rdram pointer
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);

@@ -27,7 +27,7 @@
 #include "../r4300.h"
 
 #define DYNAREG_R4300  14
-#define DYNAREG_RDRAM  15
+#define DYNAREG_RDRAM  15			// r15 stores the offset of rdram in MEM1
 #define DYNAREG_FUNC   16
 #define DYNAREG_ZERO   17
 

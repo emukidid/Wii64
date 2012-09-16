@@ -67,7 +67,7 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 		"mr	16, %2    \n"
 		"addi	17, 0, 0  \n"
 		:: "r" (&r4300),
-		   "r" (rdram),
+		   "r" (((u32)(&rdram)&0x17FFFFF)),
 		   "r" (func)
 		: "14", "15", "16", "17");
 
