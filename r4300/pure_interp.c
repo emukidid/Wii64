@@ -3068,7 +3068,7 @@ static void LDC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   *((long*)r4300.fpr_double[lfft]) = read_dword_in_memory((lfoffset+r4300.gpr[lfbase]), 0);
+   *((long long*)r4300.fpr_double[lfft]) = read_dword_in_memory((lfoffset+r4300.gpr[lfbase]), 0);
 }
 
 static void LD()
