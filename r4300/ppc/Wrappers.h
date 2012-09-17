@@ -26,10 +26,12 @@
 #include "Recompile.h"
 #include "../r4300.h"
 
-#define DYNAREG_R4300  14
-#define DYNAREG_RDRAM  15			// r15 stores the offset of rdram in MEM1
-#define DYNAREG_FUNC   16
-#define DYNAREG_ZERO   17
+#define DYNAREG_R4300	14
+#define DYNAREG_RDRAM	15			// r15 stores the offset of rdram in MEM1
+#define DYNAREG_FUNC	16
+#define DYNAREG_ZERO	17
+#define DYNAREG_INVCODE	18
+#define DYNAREG_RADDR	19			// temp non-volatile used in fastmem stores
 
 #define R4300OFF_PC 		0
 #define R4300OFF_LADDR		4
@@ -63,7 +65,8 @@ int dyna_update_count(unsigned int pc);
 unsigned int dyna_check_cop1_unusable(unsigned int pc, int isDelaySlot);
 unsigned int dyna_mem(unsigned int value, unsigned int addr,
                       memType type, unsigned int pc, int isDelaySlot);
-unsigned int dyna_mem_write(unsigned int addr, unsigned int type, unsigned long long int value);
+unsigned int dyna_mem_write(unsigned int addr, unsigned int type, 
+							unsigned long long int value, unsigned long pc, int isDelaySlot);
 void invalidate_func(unsigned int addr);
 
 //cop0 macros

@@ -66,10 +66,12 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 		"mr	15, %1    \n"
 		"mr	16, %2    \n"
 		"addi	17, 0, 0  \n"
+		"mr	18, %3    \n"
 		:: "r" (&r4300),
 		   "r" (((u32)(&rdram)&0x17FFFFF)),
-		   "r" (func)
-		: "14", "15", "16", "17");
+		   "r" (func),
+		   "r" (invalid_code)
+		: "14", "15", "16", "17", "18", "19");
 
 	end_section(TRAMP_SECTION);
 
@@ -354,11 +356,14 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 	return r4300.pc != pc ? r4300.pc : 0;
 }
 
-unsigned int dyna_mem_write(unsigned int addr, unsigned int type, unsigned long long int value) {
-	unsigned long oldpc = r4300.pc;
+unsigned int dyna_mem_write(unsigned int addr, unsigned int type, 
+							unsigned long long int value, unsigned long pc, int isDelaySlot) {
+	r4300.pc = pc;
+	r4300.delay_slot = isDelaySlot;
 	rwmem[addr>>16][type](addr, value);
 	check_memory(addr);
-	if(r4300.pc != oldpc) noCheckInterrupt = 1;
-	return r4300.pc != oldpc ? r4300.pc : 0;
+	r4300.delay_slot = 0;
+	if(r4300.pc != pc) noCheckInterrupt = 1;
+	return r4300.pc != pc ? r4300.pc : 0;
 }
 
