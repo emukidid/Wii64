@@ -72,9 +72,9 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 		   "r" (func),
 		   "r" (invalid_code)
 		: "14", "15", "16", "17", "18", "19");
-
+#ifdef PROFILE
 	end_section(TRAMP_SECTION);
-
+#endif
 	// naddr = code();
 	__asm__ volatile(
 		// Save the lr so the recompiled code won't have to
@@ -104,9 +104,11 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 
 void dynarec(unsigned int address){
 	while(!r4300.stop){
+#ifdef PROFILE
 		refresh_stat();
 		
 		start_section(TRAMP_SECTION);
+#endif
 		PowerPC_block* dst_block = blocks_get(address>>12);
 		unsigned long paddr = update_invalid_addr(address);
 		/*
@@ -186,10 +188,14 @@ unsigned int decodeNInterpret(MIPS_instr mips, unsigned int pc,
                               int isDelaySlot){
 	r4300.delay_slot = isDelaySlot; // Make sure we set r4300.delay_slot properly
 	r4300.pc = pc;
+#ifdef PROFILE
 	start_section(INTERP_SECTION);
+#endif
 	prefetch_opcode(mips);
 	interp_ops[MIPS_GET_OPCODE(mips)]();
+#ifdef PROFILE
 	end_section(INTERP_SECTION);
+#endif
 	r4300.delay_slot = 0;
 
 	if(r4300.pc != pc + 4) noCheckInterrupt = 1;
