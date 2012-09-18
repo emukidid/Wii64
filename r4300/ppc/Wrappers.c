@@ -67,14 +67,22 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 		"mr	16, %2    \n"
 		"addi	17, 0, 0  \n"
 		"mr	18, %3    \n"
+		"mr	19, %4    \n"
 		:: "r" (&r4300),
 		   "r" (((u32)(&rdram)&0x17FFFFF)),
 		   "r" (func),
-		   "r" (invalid_code)
-		: "14", "15", "16", "17", "18", "19");
+		   "r" (invalid_code),
+#ifdef USE_EXPANSION
+		   "r" (0x80800000)
+#else
+		   "r" (0x80400000)
+#endif
+		: "14", "15", "16", "17", "18", "19", "20");
+
 #ifdef PROFILE
 	end_section(TRAMP_SECTION);
 #endif
+
 	// naddr = code();
 	__asm__ volatile(
 		// Save the lr so the recompiled code won't have to

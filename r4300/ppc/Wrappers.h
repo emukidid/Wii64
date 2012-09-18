@@ -31,7 +31,8 @@
 #define DYNAREG_FUNC	16
 #define DYNAREG_ZERO	17
 #define DYNAREG_INVCODE	18
-#define DYNAREG_RADDR	19			// temp non-volatile used in fastmem stores
+#define DYNAREG_MEM_TOP 19
+#define DYNAREG_RADDR	20			// temp non-volatile used in fastmem stores
 
 #define R4300OFF_PC 		0
 #define R4300OFF_LADDR		4

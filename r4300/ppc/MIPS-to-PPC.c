@@ -23,7 +23,6 @@
 /* TODO: Optimize idle branches (generate a call to gen_interrupt)
          Optimize instruction scheduling & reduce branch instructions
  */
-//#define USE_INLINE_STORES 1
 #include <string.h>
 #include "MIPS-to-PPC.h"
 #include "Register-Cache.h"
@@ -783,13 +782,7 @@ static int LB(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 8, 0, 0);
 	set_next_dst(ppc);
@@ -845,13 +838,7 @@ static int LH(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
@@ -905,13 +892,7 @@ static int LWL(MIPS_instr mips){
 	set_next_dst(ppc);
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 11, 0, 0);
 	set_next_dst(ppc);
@@ -972,13 +953,7 @@ static int LW(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
@@ -1031,13 +1006,7 @@ static int LBU(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
@@ -1090,13 +1059,7 @@ static int LHU(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
@@ -1150,13 +1113,7 @@ static int LWR(MIPS_instr mips){
 	set_next_dst(ppc);
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 12, 0, 0);
 	set_next_dst(ppc);
@@ -1220,13 +1177,7 @@ static int LWU(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
@@ -1415,13 +1366,7 @@ static int LD(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 7, 0, 0);
 	set_next_dst(ppc);
@@ -1505,13 +1450,7 @@ static int LWC1(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 6, 0, 0);
 	set_next_dst(ppc);
@@ -1570,13 +1509,7 @@ static int LDC1(MIPS_instr mips){
 
 #ifdef FASTMEM
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, base, 0, 1);
+	GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 8, 0, 0);
 	set_next_dst(ppc);
@@ -4751,13 +4684,7 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 	
 	// If base in physical memory
-#ifdef USE_EXPANSION
-	GEN_LIS(ppc, 0, 0x8080);
-#else
-	GEN_LIS(ppc, 0, 0x8040);
-#endif
-	set_next_dst(ppc);
-	GEN_CMP(ppc, DYNAREG_RADDR, 0, 1);
+	GEN_CMP(ppc, DYNAREG_RADDR, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 13, 0, 0);	// TODO: This branch amount may change based on GC/Wii
 	set_next_dst(ppc);
