@@ -4686,23 +4686,20 @@ void genCallDynaMem2(int type, int base, short immed){
 	// If base in physical memory
 	GEN_CMP(ppc, DYNAREG_RADDR, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 13, 0, 0);	// TODO: This branch amount may change based on GC/Wii
+	GEN_BGE(ppc, 1, 11, 0, 0);	// TODO: This branch amount may change based on GC/Wii
 	set_next_dst(ppc);
 
 	/* Fast case - inside RDRAM */
 	
-	// Add rdram pointer
-	GEN_ADD(ppc, 3, DYNAREG_RDRAM, DYNAREG_RADDR);
-	set_next_dst(ppc);
 	// Perform the actual store
 	if(type == MEM_WRITE_BYTE){
-		GEN_STB(ppc, 6, 0, 3);
+		GEN_STBX(ppc, 6, DYNAREG_RDRAM, DYNAREG_RADDR);
 	}
 	else if(type == MEM_WRITE_HALF) {
-		GEN_STH(ppc, 6, 0, 3);
+		GEN_STHX(ppc, 6, DYNAREG_RDRAM, DYNAREG_RADDR);
 	}
 	else if(type == MEM_WRITE_WORD) {
-		GEN_STW(ppc, 6, 0, 3);
+		GEN_STWX(ppc, 6, DYNAREG_RDRAM, DYNAREG_RADDR);
 	}
 	set_next_dst(ppc);
 	
@@ -4710,9 +4707,7 @@ void genCallDynaMem2(int type, int base, short immed){
 #ifdef HW_RVL
 	GEN_RLWINM(ppc, 6, DYNAREG_RADDR, 20, 12, 31);	// address >> 12
 	set_next_dst(ppc);
-	GEN_ADD(ppc, 5, 6, DYNAREG_INVCODE);
-	set_next_dst(ppc);
-	GEN_LBZ(ppc, 3, 0, 5);
+	GEN_LBZX(ppc, 3, 6, DYNAREG_INVCODE);
 	set_next_dst(ppc);
 #else	// GameCube invalid_code is a bit array, add support.
 
@@ -4757,8 +4752,8 @@ void genCallDynaMem2(int type, int base, short immed){
 	GEN_LI(ppc, 4, 0, type);
 	set_next_dst(ppc);
 	// r5 = value (hi) - none in our case
-	GEN_LI(ppc, 5, 5, 0);
-	set_next_dst(ppc);
+	//GEN_LI(ppc, 5, 5, 0);
+	//set_next_dst(ppc);
 	// r3 = address
 	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
