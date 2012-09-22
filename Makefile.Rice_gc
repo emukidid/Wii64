@@ -18,4 +18,5 @@ OBJ_RICE_GX	= \
 		TextureArchive/ArchiveReader.o
 
 include Makefile.Rice
+include Makefile.base
 

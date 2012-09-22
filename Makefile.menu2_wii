@@ -22,4 +22,5 @@ LIB		= -lwiiuse -lbte
 ALL_OBJ		=
 
 include Makefile.menu2
+include Makefile.base
 

@@ -15,4 +15,5 @@ OBJ		= \
 		gc_memory/TLB-Cache.o \
 
 include Makefile.menu2
+include Makefile.base
 

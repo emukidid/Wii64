@@ -25,4 +25,5 @@ LIB		= -lwiiuse -lbte -lz
 ALL_OBJ		=
 
 include Makefile.Rice
+include Makefile.base
 
