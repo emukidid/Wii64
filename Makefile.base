@@ -4,19 +4,21 @@ CC		= powerpc-eabi-gcc
 CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
+LTO			 = #-flto # Uncomment to use link-time optimization
+DEBUG_FLAGS += #-DDEBUGON #-DSHOW_DEBUG #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
+FEATURES	+= #-DUSE_EXPANSION #-DUSE_TLB_CACHE #-DUSE_ROM_CACHE_L1 #-DEMBEDDED_FONTS
+
 MACHDEP		+= -mcpu=750 -meabi -mhard-float 
-LDFLAGS		+= $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref -flto
+LDFLAGS		+= $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref $(LTO)
 
 INCLUDE 	+= -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include
 LIBPATHS	+= -L$(DEVKITPRO)/portlibs/ppc/lib
 
 CFLAGS		+= \
-		-g -O3 -flto -Wall -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
+		-g -O3 $(LTO) -Wall -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
 		-DGEKKO -D__GX__ -DUSE_GUI -DRELEASE -DMENU_V2 \
 		-DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DNO_ASM \
-		#-DPRINTGECKO #-DDEBUGON #-DGLN64_GX #-fno-exceptions #-DUSE_TLB_CACHE \
-		#-DPPC_DYNAREC -DNO_BT -DPROFILE #-DSHOW_DEBUG #-DPRINTGECKO \
-		#-DDEBUGON -DUSE_ROM_CACHE_L1 -DPRINTGECKO -DGLN64_SDLOG -DEMBEDDED_FONTS -DUSE_EXPANSION -DPPC_DYNAREC -DSHOW_STATS
+		$(DEBUG_FLAGS) $(FEATURES) #-fno-exceptions
 
 CXXFLAGS	+= $(CFLAGS)
 
@@ -138,7 +140,7 @@ endif
 all:	$(DOL)
 
 $(ELF):	$(ALL_OBJ)
-	$(LD) $^ $(LDFLAGS) $(LIBPATHS) $(LIB) -Wl -o $@
+	$(LD) $^ $(LDFLAGS) $(LIBPATHS) $(LIB) -o $@
 
 $(DOL): $(ELF)
 	elf2dol $(ELF) $(DOL)
