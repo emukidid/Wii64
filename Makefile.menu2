@@ -1,5 +1,7 @@
 # Makefile for glN64 with menu2
 
+CFLAGS			+= -DGLN64_GX
+
 OBJ_GLN64_GX	+= \
 		glN64_GX/glN64.o \
 		glN64_GX/Config_linux.o \

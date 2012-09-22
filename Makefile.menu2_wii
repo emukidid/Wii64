@@ -3,24 +3,7 @@
 ELF		= wii64-glN64.elf
 DOL		= wii64-glN64.dol
 
-CFLAGS		= -DWII -DHW_RVL -DGLN64_GX -DUSE_EXPANSION -DUSE_INLINE_STORES -flto
-
-LDFLAGS		= -mrvl
-
-LIBPATHS 	= -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
-
-OBJ		= \
-		main/ROM-Cache-MEM2.o \
-		gc_memory/TLB-Cache-hash.o \
-
-OBJ_INPUT	= \
-		gc_input/controller-Classic.o \
-		gc_input/controller-WiimoteNunchuk.o
-
-LIB		= -lwiiuse -lbte
-
-ALL_OBJ		=
-
 include Makefile.menu2
+include Makefile.wii
 include Makefile.base
 

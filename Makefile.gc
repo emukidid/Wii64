@@ -1,0 +1,13 @@
+# Makefile for GC-specific code
+
+CFLAGS		+= -DHW_DOL -DUSE_TLB_CACHE -DTINY_TLBCACHE
+
+LDFLAGS		+= -mogc
+
+LIBPATHS	+= -L$(DEVKITPRO)/libogc/lib/cube -L$(DEVKITPRO)/libfat/libogc/lib/cube
+
+OBJ		+= \
+		main/ROM-Cache.o \
+		gc_memory/ARAM.o \
+		gc_memory/TLB-Cache.o \
+

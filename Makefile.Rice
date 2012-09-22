@@ -1,6 +1,7 @@
 # Makefile for Rice
 
 OBJ_RICE_GX	+= \
+		TextureArchive/ArchiveReader.o \
 		Rice_GX/OGLGraphicsContext.o \
 		Rice_GX/Debugger.o \
 		Rice_GX/Video.o \

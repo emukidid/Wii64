@@ -1,0 +1,18 @@
+# Makefile for Wii-specific code
+
+CFLAGS		+= -DWII -DHW_RVL -DAIDUMP -DUSE_EXPANSION -DUSE_INLINE_STORES
+
+LDFLAGS		+= -mrvl
+
+LIBPATHS 	+= -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
+
+OBJ		+= \
+		main/ROM-Cache-MEM2.o \
+		gc_memory/TLB-Cache-hash.o \
+
+OBJ_INPUT	+= \
+		gc_input/controller-Classic.o \
+		gc_input/controller-WiimoteNunchuk.o
+
+LIB		+= -ldi -lwiiuse -lbte -lz
+

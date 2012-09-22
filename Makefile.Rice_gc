@@ -3,20 +3,7 @@
 ELF		= cube64-Rice.elf
 DOL		= cube64-Rice.dol
 
-CFLAGS		= -DHW_DOL -DUSE_TLB_CACHE -DTINY_TLBCACHE
-
-LDFLAGS		= -mogc
-
-LIBPATHS	= -L$(DEVKITPRO)/libogc/lib/cube -L$(DEVKITPRO)/libfat/libogc/lib/cube
-
-OBJ		= \
-		main/ROM-Cache.o \
-		gc_memory/ARAM.o \
-		gc_memory/TLB-Cache.o \
-		
-OBJ_RICE_GX	= \
-		TextureArchive/ArchiveReader.o
-
 include Makefile.Rice
+include Makefile.gc
 include Makefile.base
 
