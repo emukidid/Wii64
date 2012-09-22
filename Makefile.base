@@ -4,13 +4,13 @@ CC		= powerpc-eabi-gcc
 CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
-MACHDEP		:= $(MACHDEP) -mcpu=750 -meabi -mhard-float 
-LDFLAGS		:= $(LDFLAGS) $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
+MACHDEP		+= -mcpu=750 -meabi -mhard-float 
+LDFLAGS		+= $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref
 
-INCLUDE 	:= $(INCLUDE) -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include
-LIBPATHS	:= $(LIBPATHS) -L$(DEVKITPRO)/portlibs/ppc/lib
+INCLUDE 	+= -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include
+LIBPATHS	+= -L$(DEVKITPRO)/portlibs/ppc/lib
 
-CFLAGS		:= $(CFLAGS) \
+CFLAGS		+= \
 		-g -O3 -Wall -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
 		-DGEKKO -D__GX__ -DUSE_GUI -DRELEASE -DMENU_V2 \
 		-DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DNO_ASM \
@@ -18,9 +18,9 @@ CFLAGS		:= $(CFLAGS) \
 		#-DPPC_DYNAREC -DNO_BT -DPROFILE #-DSHOW_DEBUG #-DPRINTGECKO \
 		#-DDEBUGON -DUSE_ROM_CACHE_L1 -DPRINTGECKO -DGLN64_SDLOG -DEMBEDDED_FONTS -DUSE_EXPANSION -DPPC_DYNAREC -DSHOW_STATS
 
-CXXFLAGS	:= $(CXXFLAGS) $(CFLAGS)
+CXXFLAGS	+= $(CFLAGS)
 
-OBJ		:= $(OBJ) \
+OBJ		+= \
 		main/gamehacks.o \
 		main/rom_gc.o \
 		main/main_gc-menu2.o \
@@ -84,18 +84,18 @@ OBJ		:= $(OBJ) \
 		r4300/profile.o \
 		main/adler32.o
 		
-OBJ_PPC		:= $(OBJ_PPC) \
+OBJ_PPC		+= \
 		r4300/ppc/MIPS-to-PPC.o \
 		r4300/ppc/Recompile.o \
 		r4300/ppc/Wrappers.o \
 		r4300/ppc/FuncTree.o \
 		r4300/ppc/Register-Cache.o
 
-OBJ_INPUT	:= $(OBJ_INPUT) \
+OBJ_INPUT	+= \
 		gc_input/input.o \
 		gc_input/controller-GC.o
 
-OBJ_RSPHLE	:= $(OBJ_RSPHLE) \
+OBJ_RSPHLE	+= \
 		rsp_hle/main.o \
 		rsp_hle/jpeg.o \
 		rsp_hle/ucode3.o \
@@ -103,17 +103,17 @@ OBJ_RSPHLE	:= $(OBJ_RSPHLE) \
 		rsp_hle/ucode1.o \
 		rsp_hle/ucode3mp3.o
 		
-OBJ_RSPHLEPPC	:= $(OBJ_RSPHLEPPC) \
+OBJ_RSPHLEPPC	+= \
 		rsp_hle-ppc/main.o \
 		rsp_hle-ppc/jpeg.o \
 		rsp_hle-ppc/ucode3.o \
 		rsp_hle-ppc/ucode2.o \
 		rsp_hle-ppc/ucode1.o
 
-OBJ_AUDIO	:= $(OBJ_AUDIO) \
+OBJ_AUDIO	+= \
 		gc_audio/audio.o
 
-HEADER		:= $(HEADER) \
+HEADER		+= \
 		main/rom.h \
 		r4300/r4300.h \
 		r4300/macros.h \
@@ -125,9 +125,9 @@ HEADER		:= $(HEADER) \
 		r4300/recomp.h \
 		gc_memory/pif.h
 
-LIB		:= $(LIB) -logc -lm -lfat -ldb -lz
+LIB		+= -logc -lm -lfat -ldb -lz
 
-ALL_OBJ		:= $(ALL_OBJ) $(OBJ) $(OBJ_INPUT) $(OBJ_AUDIO) $(OBJ_RSPHLE) $(OBJ_PPC)
+ALL_OBJ		+= $(OBJ) $(OBJ_INPUT) $(OBJ_AUDIO) $(OBJ_RSPHLE) $(OBJ_PPC)
 
 ifeq ($(strip mupen64_GX_gfx/main.cpp),)
 	export LD	:=	$(CC)

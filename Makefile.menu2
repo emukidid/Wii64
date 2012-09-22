@@ -1,6 +1,6 @@
 # Makefile for glN64 with menu2
 
-OBJ_GLN64_GX	:= $(OBJ_GLN64_GX) \
+OBJ_GLN64_GX	+= \
 		glN64_GX/glN64.o \
 		glN64_GX/Config_linux.o \
 		glN64_GX/OpenGL.o \
@@ -30,7 +30,7 @@ OBJ_GLN64_GX	:= $(OBJ_GLN64_GX) \
 		glN64_GX/F3DDKR.o \
 		glN64_GX/F3DWRUS.o
 
-ALL_OBJ		:= $(ALL_OBJ) $(OBJ_GLN64_GX)
+ALL_OBJ		+= $(OBJ_GLN64_GX)
 
 glN64_GX/glN64.o:		glN64_GX/glN64.cpp
 		$(CXX) $(CFLAGS) -DMAINDEF -D__LINUX__ -D__GX__ -c -o $@ $<

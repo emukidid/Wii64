@@ -1,6 +1,6 @@
 # Makefile for Rice
 
-OBJ_RICE_GX	:= $(OBJ_RICE_GX) \
+OBJ_RICE_GX	+= \
 		Rice_GX/OGLGraphicsContext.o \
 		Rice_GX/Debugger.o \
 		Rice_GX/Video.o \
@@ -33,7 +33,7 @@ OBJ_RICE_GX	:= $(OBJ_RICE_GX) \
 		Rice_GX/OGLDecodedMux.o \
 		Rice_GX/OGLRenderExt.o
 
-OBJ_RICE_GX_LIBLINUX	:= $(OBJ_RICE_GX_LIBLINUX) \
+OBJ_RICE_GX_LIBLINUX	+= \
 		Rice_GX/liblinux/bmp.o \
 		Rice_GX/liblinux/BMGImage.o \
 		Rice_GX/liblinux/pngrw.o \
@@ -53,5 +53,5 @@ OBJ_RICE_GX_LIBLINUX	:= $(OBJ_RICE_GX_LIBLINUX) \
 		Rice_GX/liblinux/pngwio.o \
 		Rice_GX/liblinux/pngwtran.o
 
-ALL_OBJ		:= $(ALL_OBJ) $(OBJ_RICE_GX)
+ALL_OBJ		+= $(OBJ_RICE_GX)
 
