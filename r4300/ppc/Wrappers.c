@@ -77,7 +77,7 @@ inline unsigned int dyna_run(PowerPC_func* func, unsigned int (*code)(void)){
 #else
 		   "r" (0x80400000)
 #endif
-		: "14", "15", "16", "17", "18", "19", "20");
+		: "14", "15", "16", "17", "18", "19");
 
 #ifdef PROFILE
 	end_section(TRAMP_SECTION);

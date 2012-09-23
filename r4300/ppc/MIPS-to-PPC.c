@@ -4645,11 +4645,11 @@ void genCallDynaMem2(memType type, int base, short immed){
 	PowerPC_instr ppc;
 	
 	// DYNAREG_RADDR = address
-	GEN_ADDI(ppc, DYNAREG_RADDR, base, immed);
+	GEN_ADDI(ppc, 4, base, immed);
 	set_next_dst(ppc);
 
 	// If base in physical memory
-	GEN_CMP(ppc, DYNAREG_RADDR, DYNAREG_MEM_TOP, 1);
+	GEN_CMP(ppc, 4, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
 	GEN_BGE(ppc, 1, 11, 0, 0);	// TODO: This branch amount may change based on GC/Wii
 	set_next_dst(ppc);
@@ -4658,19 +4658,19 @@ void genCallDynaMem2(memType type, int base, short immed){
 
 	// Perform the actual store
 	if(type == MEM_SB){
-		GEN_STBX(ppc, 3, DYNAREG_RDRAM, DYNAREG_RADDR);
+		GEN_STBX(ppc, 3, DYNAREG_RDRAM, 4);
 	}
 	else if(type == MEM_SH) {
-		GEN_STHX(ppc, 3, DYNAREG_RDRAM, DYNAREG_RADDR);
+		GEN_STHX(ppc, 3, DYNAREG_RDRAM, 4);
 	}
 	else if(type == MEM_SW || type == MEM_SWC1) {
-		GEN_STWX(ppc, 3, DYNAREG_RDRAM, DYNAREG_RADDR);
+		GEN_STWX(ppc, 3, DYNAREG_RDRAM, 4);
 	}
 	set_next_dst(ppc);
 	
 	// r5 = invalid_code_get(address>>12)
 #ifdef HW_RVL
-	GEN_RLWINM(ppc, 6, DYNAREG_RADDR, 20, 12, 31);	// address >> 12
+	GEN_RLWINM(ppc, 6, 4, 20, 12, 31);	// address >> 12
 	set_next_dst(ppc);
 	GEN_LBZX(ppc, 5, 6, DYNAREG_INVCODE);
 	set_next_dst(ppc);
@@ -4680,9 +4680,9 @@ void genCallDynaMem2(memType type, int base, short immed){
 	// if (!r5)
 	GEN_CMPI(ppc, 5, 0, 1);
 	set_next_dst(ppc);
-	GEN_BNE(ppc, 1, 15, 0, 0);
+	GEN_BNE(ppc, 1, 14, 0, 0);
 	set_next_dst(ppc);
-	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
+	GEN_ADDI(ppc, 3, 4, 0);
 	set_next_dst(ppc);
 	// invalidate_func(address);
 	GEN_B(ppc, add_jump((unsigned long)(&invalidate_func), 1, 1), 0, 1);
@@ -4697,20 +4697,18 @@ void genCallDynaMem2(memType type, int base, short immed){
 	set_next_dst(ppc);
 	
 	// Skip over else
-	GEN_B(ppc, 10, 0, 0);
+	GEN_B(ppc, 9, 0, 0);
 	set_next_dst(ppc);
 	
 	/* Slow case outside of RDRAM */
 	
+	// r4 = address (already set)
 	// adjust delay_slot and pc
 	// r5 = pc
 	GEN_LIS(ppc, 5, (get_src_pc()+4) >> 16);
 	set_next_dst(ppc);
 	// r6 = isDelaySlot
 	GEN_LI(ppc, 6, 0, isDelaySlot ? 1 : 0);
-	set_next_dst(ppc);
-	// r4 = address
-	GEN_ADDI(ppc, 4, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
 	GEN_ORI(ppc, 5, 5, get_src_pc()+4);
 	set_next_dst(ppc);
