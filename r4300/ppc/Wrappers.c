@@ -370,11 +370,33 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 	return r4300.pc != pc ? r4300.pc : 0;
 }
 
-unsigned int dyna_mem_write(unsigned int addr, unsigned int type, 
-							unsigned long long int value, unsigned long pc, int isDelaySlot) {
+unsigned int dyna_mem_write_byte(unsigned long value, unsigned int addr,
+								unsigned long pc, int isDelaySlot) {
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
-	rwmem[addr>>16][type](addr, value);
+	write_byte_in_memory(addr, value);
+	check_memory(addr);
+	r4300.delay_slot = 0;
+	if(r4300.pc != pc) noCheckInterrupt = 1;
+	return r4300.pc != pc ? r4300.pc : 0;
+}
+
+unsigned int dyna_mem_write_hword(unsigned long value, unsigned int addr,
+								unsigned long pc, int isDelaySlot) {
+	r4300.pc = pc;
+	r4300.delay_slot = isDelaySlot;
+	write_hword_in_memory(addr, value);
+	check_memory(addr);
+	r4300.delay_slot = 0;
+	if(r4300.pc != pc) noCheckInterrupt = 1;
+	return r4300.pc != pc ? r4300.pc : 0;
+}
+
+unsigned int dyna_mem_write_word(unsigned long value, unsigned int addr,
+								unsigned long pc, int isDelaySlot) {
+	r4300.pc = pc;
+	r4300.delay_slot = isDelaySlot;
+	write_word_in_memory(addr, value);
 	check_memory(addr);
 	r4300.delay_slot = 0;
 	if(r4300.pc != pc) noCheckInterrupt = 1;

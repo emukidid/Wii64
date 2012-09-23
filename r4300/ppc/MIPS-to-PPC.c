@@ -46,7 +46,7 @@ static void genJumpTo(unsigned int loc, unsigned int type);
 static void genUpdateCount(int checkCount);
 static void genCheckFP(void);
 void genCallDynaMem(memType type, int base, short immed);
-void genCallDynaMem2(int type, int base, short immed);
+void genCallDynaMem2(memType type, int base, short immed);
 void RecompCache_Update(PowerPC_func*);
 static int inline mips_is_jump(MIPS_instr);
 void jump_to(unsigned int);
@@ -1229,7 +1229,7 @@ static int SB(MIPS_instr mips){
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
 	invalidateRegisters();
-	genCallDynaMem2(MEM_WRITE_BYTE, base, MIPS_GET_IMMED(mips));
+	genCallDynaMem2(MEM_SB, base, MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1254,7 +1254,7 @@ static int SH(MIPS_instr mips){
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
 	invalidateRegisters();
-	genCallDynaMem2(MEM_WRITE_HALF, base, MIPS_GET_IMMED(mips));
+	genCallDynaMem2(MEM_SH, base, MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1290,7 +1290,7 @@ static int SW(MIPS_instr mips){
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
 	invalidateRegisters();
-	genCallDynaMem2(MEM_WRITE_WORD, base, MIPS_GET_IMMED(mips));
+	genCallDynaMem2(MEM_SW, base, MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1547,8 +1547,7 @@ static int SWC1(MIPS_instr mips){
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 	int addr = mapRegisterTemp(); // r5 = fpr_addr
 	
-	invalidateRegisters();
-#ifdef USE_INLINE_STORES
+
 	// addr = reg_cop1_simple[frt]
 	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
@@ -1556,14 +1555,8 @@ static int SWC1(MIPS_instr mips){
 	GEN_LWZ(ppc, rd, 0, addr);
 	set_next_dst(ppc);
 
-	genCallDynaMem2(MEM_WRITE_WORD, base, MIPS_GET_IMMED(mips));
-#else
-	// store from rt
-	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
-	set_next_dst(ppc);
-
-	genCallDynaMem(MEM_SWC1, base, MIPS_GET_IMMED(mips));
-#endif
+	invalidateRegisters();
+	genCallDynaMem2(MEM_SWC1, base, MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -4648,16 +4641,13 @@ void genCallDynaMem(memType type, int base, short immed){
 	set_next_dst(ppc);
 }
 
-void genCallDynaMem2(int type, int base, short immed){
+void genCallDynaMem2(memType type, int base, short immed){
 	PowerPC_instr ppc;
 	
 	// DYNAREG_RADDR = address
 	GEN_ADDI(ppc, DYNAREG_RADDR, base, immed);
 	set_next_dst(ppc);
-	// r6 = value (lo)
-	GEN_ADDI(ppc, 6, 3, 0);
-	set_next_dst(ppc);
-	
+
 	// If base in physical memory
 	GEN_CMP(ppc, DYNAREG_RADDR, DYNAREG_MEM_TOP, 1);
 	set_next_dst(ppc);
@@ -4665,32 +4655,32 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 
 	/* Fast case - inside RDRAM */
-	
+
 	// Perform the actual store
-	if(type == MEM_WRITE_BYTE){
-		GEN_STBX(ppc, 6, DYNAREG_RDRAM, DYNAREG_RADDR);
+	if(type == MEM_SB){
+		GEN_STBX(ppc, 3, DYNAREG_RDRAM, DYNAREG_RADDR);
 	}
-	else if(type == MEM_WRITE_HALF) {
-		GEN_STHX(ppc, 6, DYNAREG_RDRAM, DYNAREG_RADDR);
+	else if(type == MEM_SH) {
+		GEN_STHX(ppc, 3, DYNAREG_RDRAM, DYNAREG_RADDR);
 	}
-	else if(type == MEM_WRITE_WORD) {
-		GEN_STWX(ppc, 6, DYNAREG_RDRAM, DYNAREG_RADDR);
+	else if(type == MEM_SW || type == MEM_SWC1) {
+		GEN_STWX(ppc, 3, DYNAREG_RDRAM, DYNAREG_RADDR);
 	}
 	set_next_dst(ppc);
 	
-	// r3 = invalid_code_get(address>>12)
+	// r5 = invalid_code_get(address>>12)
 #ifdef HW_RVL
 	GEN_RLWINM(ppc, 6, DYNAREG_RADDR, 20, 12, 31);	// address >> 12
 	set_next_dst(ppc);
-	GEN_LBZX(ppc, 3, 6, DYNAREG_INVCODE);
+	GEN_LBZX(ppc, 5, 6, DYNAREG_INVCODE);
 	set_next_dst(ppc);
 #else	// GameCube invalid_code is a bit array, add support.
 
 #endif
-	// if (!r3)
-	GEN_CMPI(ppc, 3, 0, 1);
+	// if (!r5)
+	GEN_CMPI(ppc, 5, 0, 1);
 	set_next_dst(ppc);
-	GEN_BNE(ppc, 1, 16, 0, 0);
+	GEN_BNE(ppc, 1, 15, 0, 0);
 	set_next_dst(ppc);
 	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
@@ -4707,28 +4697,33 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 	
 	// Skip over else
-	GEN_B(ppc, 11, 0, 0);
+	GEN_B(ppc, 10, 0, 0);
 	set_next_dst(ppc);
 	
 	/* Slow case outside of RDRAM */
 	
 	// adjust delay_slot and pc
-	// r7 = pc
+	// r5 = pc
 	GEN_LIS(ppc, 5, (get_src_pc()+4) >> 16);
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 7, 5, get_src_pc()+4);
+	// r6 = isDelaySlot
+	GEN_LI(ppc, 6, 0, isDelaySlot ? 1 : 0);
 	set_next_dst(ppc);
-	// r8 = isDelaySlot
-	GEN_LI(ppc, 8, 0, isDelaySlot ? 1 : 0);
+	// r4 = address
+	GEN_ADDI(ppc, 4, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
-	// r4 = type
-	GEN_LI(ppc, 4, 0, type);
+	GEN_ORI(ppc, 5, 5, get_src_pc()+4);
 	set_next_dst(ppc);
-	// r3 = address
-	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
-	set_next_dst(ppc);
-	// call dyna_mem_write
-	GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write), 1, 1), 0, 1);
+	// call dyna_mem_write_<type>
+	if(type == MEM_SB){
+		GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_byte), 1, 1), 0, 1);
+	}
+	else if(type == MEM_SH) {
+		GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_hword), 1, 1), 0, 1);
+	}
+	else if(type == MEM_SW || type == MEM_SWC1) {
+		GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_word), 1, 1), 0, 1);
+	}
 	set_next_dst(ppc);
 	
 	// Check whether we need to take an interrupt
