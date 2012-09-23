@@ -483,7 +483,6 @@ static int JAL(MIPS_instr mips){
 }
 
 static int BEQ(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if((MIPS_GET_IMMED(mips) == 0xffff &&
 	    MIPS_GET_RA(mips) == MIPS_GET_RB(mips)) ||
@@ -499,7 +498,6 @@ static int BEQ(MIPS_instr mips){
 }
 
 static int BNE(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if(CANT_COMPILE_DELAY()){
 		genCallInterp(mips);
@@ -512,7 +510,6 @@ static int BNE(MIPS_instr mips){
 }
 
 static int BLEZ(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if(CANT_COMPILE_DELAY()){
 		genCallInterp(mips);
@@ -525,7 +522,6 @@ static int BLEZ(MIPS_instr mips){
 }
 
 static int BGTZ(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if(CANT_COMPILE_DELAY()){
 		genCallInterp(mips);
@@ -663,7 +659,6 @@ static int LUI(MIPS_instr mips){
 }
 
 static int BEQL(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if(CANT_COMPILE_DELAY()){
 		genCallInterp(mips);
@@ -676,7 +671,6 @@ static int BEQL(MIPS_instr mips){
 }
 
 static int BNEL(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if(CANT_COMPILE_DELAY()){
 		genCallInterp(mips);
@@ -689,7 +683,6 @@ static int BNEL(MIPS_instr mips){
 }
 
 static int BLEZL(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if(CANT_COMPILE_DELAY()){
 		genCallInterp(mips);
@@ -702,7 +695,6 @@ static int BLEZL(MIPS_instr mips){
 }
 
 static int BGTZL(MIPS_instr mips){
-	PowerPC_instr  ppc;
 
 	if(CANT_COMPILE_DELAY()){
 		genCallInterp(mips);
@@ -744,22 +736,22 @@ static int DADDI(MIPS_instr mips){
 }
 
 static int LDL(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_LDL
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LDL
+	PowerPC_instr ppc;
 	// TODO: ldl
 	return CONVERT_ERROR;
 #endif
 }
 
 static int LDR(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_LDR
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LDR
+	PowerPC_instr ppc;
 	// TODO: ldr
 	return CONVERT_ERROR;
 #endif
@@ -791,10 +783,10 @@ static int LB(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LBZ(ppc, 3, MIPS_GET_IMMED(mips), base);
+	GEN_LBZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	// extsb rt
-	GEN_EXTSB(ppc, 3, 3);
+	GEN_EXTSB(ppc, rd, rd);
 	set_next_dst(ppc);
 	// Have the value in r3 stored to rt
 	mapRegisterNew( MIPS_GET_RT(mips) );
@@ -807,7 +799,7 @@ static int LB(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LB, base, MIPS_GET_IMMED(mips));
@@ -847,7 +839,7 @@ static int LH(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LHA(ppc, 3, MIPS_GET_IMMED(mips), base);
+	GEN_LHA(ppc, rd, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	// Have the value in r3 stored to rt
 	mapRegisterNew( MIPS_GET_RT(mips) );
@@ -860,7 +852,7 @@ static int LH(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LH, base, MIPS_GET_IMMED(mips));
@@ -909,7 +901,7 @@ static int LWL(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LWZ(ppc, 3, 0, base);
+	GEN_LWZ(ppc, rd, 0, base);
 	set_next_dst(ppc);
 	// Have the value in r3 stored to rt
 	mapRegisterNew( MIPS_GET_RT(mips) );
@@ -922,7 +914,7 @@ static int LWL(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LWL, base, 0);
@@ -962,7 +954,7 @@ static int LW(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LWZ(ppc, 3, MIPS_GET_IMMED(mips), base);
+	GEN_LWZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	// Have the value in r3 stored to rt
 	mapRegisterNew( MIPS_GET_RT(mips) );
@@ -975,7 +967,7 @@ static int LW(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LW, base, MIPS_GET_IMMED(mips));
@@ -1015,7 +1007,7 @@ static int LBU(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LBZ(ppc, 3, MIPS_GET_IMMED(mips), base);
+	GEN_LBZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	// Have the value in r3 stored to rt
 	mapRegisterNew( MIPS_GET_RT(mips) );
@@ -1028,7 +1020,7 @@ static int LBU(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LBU, base, MIPS_GET_IMMED(mips));
@@ -1068,7 +1060,7 @@ static int LHU(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LHZ(ppc, 3, MIPS_GET_IMMED(mips), base);
+	GEN_LHZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	// Have the value in r3 stored to rt
 	mapRegisterNew( MIPS_GET_RT(mips) );
@@ -1081,7 +1073,7 @@ static int LHU(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LHU, base, MIPS_GET_IMMED(mips));
@@ -1133,7 +1125,7 @@ static int LWR(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LWZ(ppc, 3, 0, base);
+	GEN_LWZ(ppc, rd, 0, base);
 	set_next_dst(ppc);
 	// Have the value in r3 stored to rt
 	mapRegisterNew( MIPS_GET_RT(mips) );
@@ -1146,7 +1138,7 @@ static int LWR(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LWR, base, 0);
@@ -1203,7 +1195,7 @@ static int LWU(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LWU, base, MIPS_GET_IMMED(mips));
@@ -1223,7 +1215,7 @@ static int SB(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SB
-
+	
 	flushRegisters();
 	reset_code_addr();
 
@@ -1237,11 +1229,7 @@ static int SB(MIPS_instr mips){
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
 	invalidateRegisters();
-#ifdef USE_INLINE_STORES
 	genCallDynaMem2(MEM_WRITE_BYTE, base, MIPS_GET_IMMED(mips));
-#else
-	genCallDynaMem(MEM_SB, base, MIPS_GET_IMMED(mips));
-#endif
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1266,21 +1254,17 @@ static int SH(MIPS_instr mips){
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
 	invalidateRegisters();
-#ifdef USE_INLINE_STORES
 	genCallDynaMem2(MEM_WRITE_HALF, base, MIPS_GET_IMMED(mips));
-#else
-	genCallDynaMem(MEM_SH, base, MIPS_GET_IMMED(mips));
-#endif
 	return CONVERT_SUCCESS;
 #endif
 }
 
 static int SWL(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SWL
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SWL
+	PowerPC_instr ppc;
 	// TODO: swl
 	return CONVERT_ERROR;
 #endif
@@ -1306,44 +1290,39 @@ static int SW(MIPS_instr mips){
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
 	invalidateRegisters();
-#ifdef USE_INLINE_STORES
 	genCallDynaMem2(MEM_WRITE_WORD, base, MIPS_GET_IMMED(mips));
-#else
-	genCallDynaMem(MEM_SW, base, MIPS_GET_IMMED(mips));
-#endif
-
 	return CONVERT_SUCCESS;
 #endif
 }
 
 static int SDL(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SDL
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SDL
+	PowerPC_instr ppc;
 	// TODO: sdl
 	return CONVERT_ERROR;
 #endif
 }
 
 static int SDR(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SDR
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SDR
+	PowerPC_instr ppc;
 	// TODO: sdr
 	return CONVERT_ERROR;
 #endif
 }
 
 static int SWR(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SWR
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SWR
+	PowerPC_instr ppc;
 	// TODO: swr
 	return CONVERT_ERROR;
 #endif
@@ -1391,7 +1370,7 @@ static int LD(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LD, base, MIPS_GET_IMMED(mips));
@@ -1421,7 +1400,7 @@ static int SD(MIPS_instr mips){
 	invalidateRegisters();
 
 	// store from rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_SD, base, MIPS_GET_IMMED(mips));
@@ -1459,13 +1438,13 @@ static int LWC1(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LWZ(ppc, 3, MIPS_GET_IMMED(mips), base);
+	GEN_LWZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	// addr = r4300.fpr_single[frt]
 	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// *addr = frs
-	GEN_STW(ppc, 3, 0, addr);
+	GEN_STW(ppc, rd, 0, addr);
 	set_next_dst(ppc);
 	// Skip over else
 	int not_fastmem_id = add_jump_special(1);
@@ -1475,7 +1454,7 @@ static int LWC1(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into frt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LWC1, base, MIPS_GET_IMMED(mips));
@@ -1518,7 +1497,7 @@ static int LDC1(MIPS_instr mips){
 	GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 	set_next_dst(ppc);
 	// Perform the actual load
-	GEN_LWZ(ppc, 3, MIPS_GET_IMMED(mips), base);
+	GEN_LWZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 	set_next_dst(ppc);
 	GEN_LWZ(ppc, 6, MIPS_GET_IMMED(mips)+4, base);
 	set_next_dst(ppc);
@@ -1526,7 +1505,7 @@ static int LDC1(MIPS_instr mips){
 	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_64, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// *addr = frs
-	GEN_STW(ppc, 3, 0, addr);
+	GEN_STW(ppc, rd, 0, addr);
 	set_next_dst(ppc);
 	GEN_STW(ppc, 6, 4, addr);
 	set_next_dst(ppc);
@@ -1538,7 +1517,7 @@ static int LDC1(MIPS_instr mips){
 #endif // FASTMEM
 
 	// load into frt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_LDC1, base, MIPS_GET_IMMED(mips));
@@ -1574,13 +1553,13 @@ static int SWC1(MIPS_instr mips){
 	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_32, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// frs = *addr
-	GEN_LWZ(ppc, 3, 0, addr);
+	GEN_LWZ(ppc, rd, 0, addr);
 	set_next_dst(ppc);
 
 	genCallDynaMem2(MEM_WRITE_WORD, base, MIPS_GET_IMMED(mips));
 #else
 	// store from rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_SWC1, base, MIPS_GET_IMMED(mips));
@@ -1607,7 +1586,7 @@ static int SDC1(MIPS_instr mips){
 	invalidateRegisters();
 
 	// store from rt
-	GEN_LI(ppc, 3, 0, MIPS_GET_RT(mips));
+	GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
 	set_next_dst(ppc);
 
 	genCallDynaMem(MEM_SDC1, base, MIPS_GET_IMMED(mips));
@@ -1621,22 +1600,22 @@ static int CACHE(MIPS_instr mips){
 }
 
 static int LL(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_LL
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LL
+	PowerPC_instr ppc;
 	// TODO: ll
 	return CONVERT_ERROR;
 #endif
 }
 
 static int SC(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SC
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SC
+	PowerPC_instr ppc;
 	// TODO: sc
 	return CONVERT_ERROR;
 #endif
@@ -1819,32 +1798,32 @@ static int JALR(MIPS_instr mips){
 }
 
 static int SYSCALL(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SYSCALL
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SYSCALL
+	PowerPC_instr ppc;
 	// TODO: syscall
 	return CONVERT_ERROR;
 #endif
 }
 
 static int BREAK(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_BREAK
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_BREAK
+	PowerPC_instr ppc;
 	return CONVERT_ERROR;
 #endif
 }
 
 static int SYNC(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SYNC
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SYNC
+	PowerPC_instr ppc;
 	return CONVERT_ERROR;
 #endif
 }
@@ -2207,44 +2186,44 @@ static int DSRAV(MIPS_instr mips){
 }
 
 static int DMULT(MIPS_instr mips){
-	PowerPC_instr ppc;
 #if defined(INTERPRET_DW) || defined(INTERPRET_DMULT)
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_DW || INTERPRET_DMULT
+	PowerPC_instr ppc;
 	// TODO: dmult
 	return CONVERT_ERROR;
 #endif
 }
 
 static int DMULTU(MIPS_instr mips){
-	PowerPC_instr ppc;
 #if defined(INTERPRET_DW) || defined(INTERPRET_DMULTU)
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_DW || INTERPRET_DMULTU
+	PowerPC_instr ppc;
 	// TODO: dmultu
 	return CONVERT_ERROR;
 #endif
 }
 
 static int DDIV(MIPS_instr mips){
-	PowerPC_instr ppc;
 #if defined(INTERPRET_DW) || defined(INTERPRET_DDIV)
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_DW || INTERPRET_DDIV
+	PowerPC_instr ppc;
 	// TODO: ddiv
 	return CONVERT_ERROR;
 #endif
 }
 
 static int DDIVU(MIPS_instr mips){
-	PowerPC_instr ppc;
 #if defined(INTERPRET_DW) || defined(INTERPRET_DDIVU)
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_DW || INTERPRET_DDIVU
+	PowerPC_instr ppc;
 	// TODO: ddivu
 	return CONVERT_ERROR;
 #endif
@@ -2618,11 +2597,11 @@ static int SLTU(MIPS_instr mips){
 }
 
 static int TEQ(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_TRAPS
 	genCallInterp(mips);
 	return INTERPRETED;
 #else
+	PowerPC_instr ppc;
 	return CONVERT_ERROR;
 #endif
 }
@@ -2649,7 +2628,6 @@ static int SPECIAL(MIPS_instr mips){
 //   BLTZ, BGEZ, BLTZL, BGEZL, BLZAL, BGEZAL, BLTZALL, BGEZALL
 //   It's less work to handle them all in one function
 static int REGIMM(MIPS_instr mips){
-	PowerPC_instr  ppc;
 	int which = MIPS_GET_RT(mips);
 	int cond   = which & 1; // t = GE, f = LT
 	int likely = which & 2;
@@ -2670,41 +2648,41 @@ static int REGIMM(MIPS_instr mips){
 // -- COP0 Instructions --
 
 static int TLBR(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_TLBR
 	genCallInterp(mips);
 	return INTERPRETED;
 #else
+	PowerPC_instr ppc;
 	return CONVERT_ERROR;
 #endif
 }
 
 static int TLBWI(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_TLBWI
 	genCallInterp(mips);
 	return INTERPRETED;
 #else
+	PowerPC_instr ppc;
 	return CONVERT_ERROR;
 #endif
 }
 
 static int TLBWR(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_TLBWR
 	genCallInterp(mips);
 	return INTERPRETED;
 #else
+	PowerPC_instr ppc;
 	return CONVERT_ERROR;
 #endif
 }
 
 static int TLBP(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_TLBP
 	genCallInterp(mips);
 	return INTERPRETED;
 #else
+	PowerPC_instr ppc;
 	return CONVERT_ERROR;
 #endif
 }
@@ -2735,7 +2713,7 @@ static int ERET(MIPS_instr mips){
 	GEN_STW(ppc, 3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// check_interupt()
-	GEN_B(ppc, add_jump(&check_interupt, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump((unsigned long)(&check_interupt), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	// Load the old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -2920,7 +2898,6 @@ static int MTC0(MIPS_instr mips){
 }
 
 static int TLB(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_TLB
 	genCallInterp(mips);
 	return INTERPRETED;
@@ -3224,7 +3201,7 @@ static int SQRT_FP(MIPS_instr mips, int dbl){
 	invalidateRegisters();
 
 	// call sqrt
-	GEN_B(ppc, add_jump(dbl ? &sqrt : &sqrtf, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&sqrt) : (unsigned long)(&sqrtf), 1, 1), 0, 1);
 	set_next_dst(ppc);
 
 	mapFPRNew( MIPS_GET_FD(mips), dbl ); // maps to f1 (FP return)
@@ -3327,14 +3304,14 @@ static int ROUND_L_FP(MIPS_instr mips, int dbl){
 
 	flushRegisters();
 	int fd = MIPS_GET_FD(mips);
-	int fs = mapFPR( MIPS_GET_FS(mips), dbl );
+	mapFPR( MIPS_GET_FS(mips), dbl );
 	invalidateFPR( MIPS_GET_FS(mips) );
 
 	// round
-	GEN_B(ppc, add_jump(dbl ? &round : &roundf, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&round) : (unsigned long)(&roundf), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	// convert
-	GEN_B(ppc, add_jump(dbl ? &__fixdfdi : &__fixsfdi, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
@@ -3369,11 +3346,11 @@ static int TRUNC_L_FP(MIPS_instr mips, int dbl){
 
 	flushRegisters();
 	int fd = MIPS_GET_FD(mips);
-	int fs = mapFPR( MIPS_GET_FS(mips), dbl );
+	mapFPR( MIPS_GET_FS(mips), dbl );
 	invalidateFPR( MIPS_GET_FS(mips) );
 
 	// convert
-	GEN_B(ppc, add_jump(dbl ? &__fixdfdi : &__fixsfdi, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
@@ -3408,14 +3385,14 @@ static int CEIL_L_FP(MIPS_instr mips, int dbl){
 
 	flushRegisters();
 	int fd = MIPS_GET_FD(mips);
-	int fs = mapFPR( MIPS_GET_FS(mips), dbl );
+	mapFPR( MIPS_GET_FS(mips), dbl );
 	invalidateFPR( MIPS_GET_FS(mips) );
 
 	// ceil
-	GEN_B(ppc, add_jump(dbl ? &ceil : &ceilf, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&ceil) : (unsigned long)(&ceilf), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	// convert
-	GEN_B(ppc, add_jump(dbl ? &__fixdfdi : &__fixsfdi, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
@@ -3450,14 +3427,14 @@ static int FLOOR_L_FP(MIPS_instr mips, int dbl){
 
 	flushRegisters();
 	int fd = MIPS_GET_FD(mips);
-	int fs = mapFPR( MIPS_GET_FS(mips), dbl );
+	mapFPR( MIPS_GET_FS(mips), dbl );
 	invalidateFPR( MIPS_GET_FS(mips) );
 
 	// round
-	GEN_B(ppc, add_jump(dbl ? &floor : &floorf, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&floor) : (unsigned long)(&floorf), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	// convert
-	GEN_B(ppc, add_jump(dbl ? &__fixdfdi : &__fixsfdi, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
@@ -3700,12 +3677,12 @@ static int CVT_L_FP(MIPS_instr mips, int dbl){
 
 	flushRegisters();
 	int fd = MIPS_GET_FD(mips);
-	int fs = mapFPR( MIPS_GET_FS(mips), dbl );
+	mapFPR( MIPS_GET_FS(mips), dbl );
 	invalidateFPR( MIPS_GET_FS(mips) );
 
 	// FIXME: I'm fairly certain this will always trunc
 	// convert
-	GEN_B(ppc, add_jump(dbl ? &__fixdfdi : &__fixsfdi, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
@@ -4365,7 +4342,7 @@ static int CVT_FP_L(MIPS_instr mips, int dbl){
 
 	flushRegisters();
 	int fs = MIPS_GET_FS(mips);
-	int fd = mapFPRNew( MIPS_GET_FD(mips), dbl ); // f1
+	mapFPRNew( MIPS_GET_FD(mips), dbl ); // f1
 	int hi = mapRegisterTemp(); // r3
 	int lo = mapRegisterTemp(); // r4
 
@@ -4381,7 +4358,7 @@ static int CVT_FP_L(MIPS_instr mips, int dbl){
 	set_next_dst(ppc);
 
 	// convert
-	GEN_B(ppc, add_jump(dbl ? &__floatdidf : &__floatdisf, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump(dbl ? (unsigned long)(&__floatdidf) : (unsigned long)(&__floatdisf), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	// Load old LR
@@ -4460,7 +4437,7 @@ static void genCallInterp(MIPS_instr mips){
 	set_next_dst(ppc);
 	// Branch to decodeNInterpret
 	//GEN_BCTRL(ppc);
-	GEN_B(ppc, add_jump(&decodeNInterpret, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump((unsigned long)(&decodeNInterpret), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	// Load the old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -4499,7 +4476,7 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 		GEN_ADDI(ppc, 3, DYNAREG_FUNC, 0);
 		set_next_dst(ppc);
 		// Call RecompCache_Update(func)
-		GEN_B(ppc, add_jump(&RecompCache_Update, 1, 1), 0, 1);
+		GEN_B(ppc, add_jump((unsigned long)(&RecompCache_Update), 1, 1), 0, 1);
 		set_next_dst(ppc);
 		// Restore LR
 		GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -4575,7 +4552,7 @@ static void genUpdateCount(int checkCount){
 	GEN_ORI(ppc, 3, 3, get_src_pc()+4);
 	set_next_dst(ppc);
 	// Call dyna_update_count
-	GEN_B(ppc, add_jump(&dyna_update_count, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump((unsigned long)(&dyna_update_count), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	// Load the lr
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -4619,7 +4596,7 @@ static void genCheckFP(void){
 		set_next_dst(ppc);
 		// Call dyna_check_cop1_unusable
 		//GEN_BCTRL(ppc);
-		GEN_B(ppc, add_jump(&dyna_check_cop1_unusable, 1, 1), 0, 1);
+		GEN_B(ppc, add_jump((unsigned long)(&dyna_check_cop1_unusable), 1, 1), 0, 1);
 		set_next_dst(ppc);
 		// Load the old LR
 		GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -4655,7 +4632,7 @@ void genCallDynaMem(memType type, int base, short immed){
 	GEN_LI(ppc, 7, 0, isDelaySlot ? 1 : 0);
 	set_next_dst(ppc);
 	// call dyna_mem
-	GEN_B(ppc, add_jump(&dyna_mem, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump((unsigned long)(&dyna_mem), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	// Load old LR
 	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
@@ -4670,8 +4647,6 @@ void genCallDynaMem(memType type, int base, short immed){
 	GEN_BNELR(ppc, 6, 0);
 	set_next_dst(ppc);
 }
-
-#ifdef USE_INLINE_STORES
 
 void genCallDynaMem2(int type, int base, short immed){
 	PowerPC_instr ppc;
@@ -4720,7 +4695,7 @@ void genCallDynaMem2(int type, int base, short immed){
 	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
 	// invalidate_func(address);
-	GEN_B(ppc, add_jump(&invalidate_func, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump((unsigned long)(&invalidate_func), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	// Load old LR
@@ -4758,7 +4733,7 @@ void genCallDynaMem2(int type, int base, short immed){
 	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
 	// call dyna_mem_write
-	GEN_B(ppc, add_jump(&dyna_mem_write, 1, 1), 0, 1);
+	GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write), 1, 1), 0, 1);
 	set_next_dst(ppc);
 	
 	// Check whether we need to take an interrupt
@@ -4780,7 +4755,6 @@ void genCallDynaMem2(int type, int base, short immed){
 	int callSize = get_curr_dst() - preCall;
 	set_jump_special(not_fastmem_id, callSize+1);
 }
-#endif
 
 static int mips_is_jump(MIPS_instr instr){
 	int opcode = MIPS_GET_OPCODE(instr);
