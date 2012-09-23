@@ -4690,7 +4690,7 @@ void genCallDynaMem2(int type, int base, short immed){
 	// if (!r3)
 	GEN_CMPI(ppc, 3, 0, 1);
 	set_next_dst(ppc);
-	GEN_BNE(ppc, 1, 5, 0, 0);
+	GEN_BNE(ppc, 1, 16, 0, 0);
 	set_next_dst(ppc);
 	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
@@ -4707,10 +4707,8 @@ void genCallDynaMem2(int type, int base, short immed){
 	set_next_dst(ppc);
 	
 	// Skip over else
-	int not_fastmem_id = add_jump_special(1);
-	GEN_B(ppc, not_fastmem_id, 0, 0);
+	GEN_B(ppc, 11, 0, 0);
 	set_next_dst(ppc);
-	PowerPC_instr* preCall = get_curr_dst();
 	
 	/* Slow case outside of RDRAM */
 	
@@ -4726,9 +4724,6 @@ void genCallDynaMem2(int type, int base, short immed){
 	// r4 = type
 	GEN_LI(ppc, 4, 0, type);
 	set_next_dst(ppc);
-	// r5 = value (hi) - none in our case
-	//GEN_LI(ppc, 5, 5, 0);
-	//set_next_dst(ppc);
 	// r3 = address
 	GEN_ADDI(ppc, 3, DYNAREG_RADDR, 0);
 	set_next_dst(ppc);
@@ -4751,9 +4746,6 @@ void genCallDynaMem2(int type, int base, short immed){
 	// If so, return to trampoline
 	GEN_BNELR(ppc, 6, 0);
 	set_next_dst(ppc);
-	
-	int callSize = get_curr_dst() - preCall;
-	set_jump_special(not_fastmem_id, callSize+1);
 }
 
 static int mips_is_jump(MIPS_instr instr){
