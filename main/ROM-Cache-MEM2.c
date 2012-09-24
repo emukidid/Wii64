@@ -91,16 +91,22 @@ void ROMCache_deinit(){
 }
 
 void* ROMCache_pointer(u32 rom_offset){
+#ifdef PROFILE
 	start_section(ROMREAD_SECTION);
+#endif
 	if(ROMTooBig){
 		u32 block = rom_offset >> BLOCK_SHIFT;
 		u32 block_offset = rom_offset & BLOCK_MASK;
 		
 		ensure_block(block);
+#ifdef PROFILE
 		end_section(ROMREAD_SECTION);
+#endif
 		return ROMBlocks[block] + block_offset;
 	} else {
+#ifdef PROFILE
 		end_section(ROMREAD_SECTION);
+#endif
 		return ROMCACHE_LO + rom_offset;
 	}
 }
@@ -141,7 +147,9 @@ static void ensure_block(u32 block){
 }
 
 void ROMCache_read(u8* dest, u32 offset, u32 length){
+#ifdef PROFILE
   start_section(ROMREAD_SECTION);
+#endif
   if(ROMTooBig){
 		u32 block = offset>>BLOCK_SHIFT;
 		u32 length2 = length;
@@ -169,7 +177,9 @@ void ROMCache_read(u8* dest, u32 offset, u32 length){
 	} else {
 		memcpy(dest, ROMCACHE_LO + offset, length);
 	}
+#ifdef PROFILE
 	end_section(ROMREAD_SECTION);
+#endif
 }
 
 int ROMCache_load(fileBrowser_file* f){
