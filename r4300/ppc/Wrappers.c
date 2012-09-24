@@ -250,11 +250,6 @@ void invalidate_func(unsigned int addr){
 		RecompCache_Free(func->start_addr);
 }
 
-#define check_memory(address) \
-	if(!invalid_code_get(address>>12)/* && \
-	   blocks[address>>12]->code_addr[(address&0xfff)>>2]*/) \
-		invalidate_func(address);
-
 unsigned int dyna_mem(unsigned int value, unsigned int addr,
                       memType type, unsigned int pc, int isDelaySlot){
 	//start_section(DYNAMEM_SECTION);
@@ -335,29 +330,11 @@ unsigned int dyna_mem(unsigned int value, unsigned int addr,
 		case MEM_LDC1:
 			*((long long*)r4300.fpr_double[value]) = read_dword_in_memory(addr, 0);
 			break;
-		case MEM_SW:
-			write_word_in_memory(addr, value);
-			check_memory(addr);
-			break;
-		case MEM_SH:
-			write_hword_in_memory(addr, value);
-			check_memory(addr);
-			break;
-		case MEM_SB:
-			write_byte_in_memory(addr, value);
-			check_memory(addr);
-			break;
 		case MEM_SD:
 			write_dword_in_memory(addr, r4300.gpr[value]);
-			check_memory(addr);
-			break;
-		case MEM_SWC1:
-			write_word_in_memory(addr, *((long*)r4300.fpr_single[value]));
-			check_memory(addr);
 			break;
 		case MEM_SDC1:
 			write_dword_in_memory(addr, *((unsigned long long*)r4300.fpr_double[value]));
-			check_memory(addr);
 			break;
 		default:
 			r4300.stop = 1;
@@ -375,7 +352,6 @@ unsigned int dyna_mem_write_byte(unsigned long value, unsigned int addr,
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
 	write_byte_in_memory(addr, value);
-	check_memory(addr);
 	r4300.delay_slot = 0;
 	if(r4300.pc != pc) noCheckInterrupt = 1;
 	return r4300.pc != pc ? r4300.pc : 0;
@@ -386,7 +362,6 @@ unsigned int dyna_mem_write_hword(unsigned long value, unsigned int addr,
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
 	write_hword_in_memory(addr, value);
-	check_memory(addr);
 	r4300.delay_slot = 0;
 	if(r4300.pc != pc) noCheckInterrupt = 1;
 	return r4300.pc != pc ? r4300.pc : 0;
@@ -397,7 +372,6 @@ unsigned int dyna_mem_write_word(unsigned long value, unsigned int addr,
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
 	write_word_in_memory(addr, value);
-	check_memory(addr);
 	r4300.delay_slot = 0;
 	if(r4300.pc != pc) noCheckInterrupt = 1;
 	return r4300.pc != pc ? r4300.pc : 0;

@@ -856,11 +856,12 @@ unsigned long long int read_nomemd(unsigned long address, unsigned long long int
 	return read_dword_in_memory(address, 0);
 }
 
+#define check_memory(address) \
+	if(!interpcore && !invalid_code_get(address>>12)) \
+		invalidate_func(address);
 unsigned long long int write_nomem(unsigned long address, unsigned long long int data)
 {
-/*   if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
-       invalid_code_set(address>>12, 1);*/
+	check_memory(address);
 	address = virtual_to_physical_address(address,1);
 	if (address == 0x00000000) return 0;
 	return write_word_in_memory(address, data);
@@ -868,9 +869,7 @@ unsigned long long int write_nomem(unsigned long address, unsigned long long int
 
 unsigned long long int write_nomemb(unsigned long address, unsigned long long int data)
 {
-/*   if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
-       invalid_code_set(address>>12, 1);*/
+	check_memory(address);
 	address = virtual_to_physical_address(address,1);
 	if (address == 0x00000000) return 0;
 	return write_byte_in_memory(address, data);
@@ -878,9 +877,7 @@ unsigned long long int write_nomemb(unsigned long address, unsigned long long in
 
 unsigned long long int write_nomemh(unsigned long address, unsigned long long int data)
 {
-/*   if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
-       invalid_code_set(address>>12, 1);*/
+	check_memory(address);
 	address = virtual_to_physical_address(address,1);
 	if (address == 0x00000000) return 0;
 	return write_hword_in_memory(address, data);
@@ -888,9 +885,7 @@ unsigned long long int write_nomemh(unsigned long address, unsigned long long in
 
 unsigned long long int write_nomemd(unsigned long address, unsigned long long int data)
 {
-/*   if (!interpcore && !invalid_code_get(address>>12))
-     //if (blocks[address>>12]->code_addr[(address&0xFFF)/4])
-       invalid_code_set(address>>12, 1);*/
+	check_memory(address);
 	address = virtual_to_physical_address(address,1);
 	if (address == 0x00000000) return 0;
 	return write_dword_in_memory(address, data);
