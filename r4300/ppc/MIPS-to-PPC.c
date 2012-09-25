@@ -52,7 +52,7 @@ static void genJumpTo(unsigned int loc, unsigned int type);
 static void genUpdateCount(int checkCount);
 static void genCheckFP(void);
 void genCallDynaMem(memType type, int base, short immed);
-void genCallDynaMem2(memType type, int base, short immed);
+void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isPhysical);
 void RecompCache_Update(PowerPC_func*);
 static int inline mips_is_jump(MIPS_instr);
 void jump_to(unsigned int);
@@ -1382,8 +1382,23 @@ static int SB(MIPS_instr mips){
 	}
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
-	invalidateRegisters();
-	genCallDynaMem2(MEM_SB, base, MIPS_GET_IMMED(mips));
+	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
+	int isPhysical = 1, isVirtual = 1;
+	if(isConstant){
+		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
+		int immediate = MIPS_GET_IMMED(mips);
+		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
+		
+		if((constant + immediate) > (int)RAM_TOP)
+			isPhysical = 0;
+		else
+			isVirtual = 0;
+	}
+
+	if(isVirtual)
+		invalidateRegisters();
+
+	genCallDynaMem2(MEM_SB, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1406,9 +1421,24 @@ static int SH(MIPS_instr mips){
 		set_next_dst(ppc);
 	}
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
+	
+	int isPhysical = 1, isVirtual = 1;
+	if(isConstant){
+		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
+		int immediate = MIPS_GET_IMMED(mips);
+		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
+		
+		if((constant + immediate) > (int)RAM_TOP)
+			isPhysical = 0;
+		else
+			isVirtual = 0;
+	}
 
-	invalidateRegisters();
-	genCallDynaMem2(MEM_SH, base, MIPS_GET_IMMED(mips));
+	if(isVirtual)
+		invalidateRegisters();
+
+	genCallDynaMem2(MEM_SH, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1443,8 +1473,23 @@ static int SW(MIPS_instr mips){
 	}
 	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
-	invalidateRegisters();
-	genCallDynaMem2(MEM_SW, base, MIPS_GET_IMMED(mips));
+	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
+	int isPhysical = 1, isVirtual = 1;
+	if(isConstant){
+		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
+		int immediate = MIPS_GET_IMMED(mips);
+		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
+		
+		if((constant + immediate) > (int)RAM_TOP)
+			isPhysical = 0;
+		else
+			isVirtual = 0;
+	}
+
+	if(isVirtual)
+		invalidateRegisters();
+
+	genCallDynaMem2(MEM_SW, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1710,7 +1755,7 @@ static int SWC1(MIPS_instr mips){
 	set_next_dst(ppc);
 
 	invalidateRegisters();
-	genCallDynaMem2(MEM_SWC1, base, MIPS_GET_IMMED(mips));
+	genCallDynaMem2(MEM_SWC1, base, MIPS_GET_IMMED(mips), 1, 1);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -4795,104 +4840,112 @@ void genCallDynaMem(memType type, int base, short immed){
 	set_next_dst(ppc);
 }
 
-void genCallDynaMem2(memType type, int base, short immed){
+void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isPhysical){
 	PowerPC_instr ppc;
-	
+
 	// DYNAREG_RADDR = address
 	GEN_ADDI(ppc, 4, base, immed);
 	set_next_dst(ppc);
 
-	// If base in physical memory
-	GEN_CMP(ppc, 4, DYNAREG_MEM_TOP, 1);
-	set_next_dst(ppc);
-	GEN_BGE(ppc, 1, 11, 0, 0);	// TODO: This branch amount may change based on GC/Wii
-	set_next_dst(ppc);
-
-	/* Fast case - inside RDRAM */
-
-	// Perform the actual store
-	if(type == MEM_SB){
-		GEN_STBX(ppc, 3, DYNAREG_RDRAM, 4);
+	if(isPhysical && isVirtual){
+		// If base in physical memory
+		GEN_CMP(ppc, 4, DYNAREG_MEM_TOP, 1);
+		set_next_dst(ppc);
+		GEN_BGE(ppc, 1, 11, 0, 0);	// TODO: This branch amount may change based on GC/Wii
+		set_next_dst(ppc);
 	}
-	else if(type == MEM_SH) {
-		GEN_STHX(ppc, 3, DYNAREG_RDRAM, 4);
-	}
-	else if(type == MEM_SW || type == MEM_SWC1) {
-		GEN_STWX(ppc, 3, DYNAREG_RDRAM, 4);
-	}
-	set_next_dst(ppc);
 	
-	// r5 = invalid_code_get(address>>12)
-#ifdef HW_RVL
-	GEN_RLWINM(ppc, 6, 4, 20, 12, 31);	// address >> 12
-	set_next_dst(ppc);
-	GEN_LBZX(ppc, 5, 6, DYNAREG_INVCODE);
-	set_next_dst(ppc);
-#else	// GameCube invalid_code is a bit array, add support.
+	if(isPhysical) {
+		/* Fast case - inside RDRAM */
 
-#endif
-	// if (!r5)
-	GEN_CMPI(ppc, 5, 0, 1);
-	set_next_dst(ppc);
-	GEN_BNE(ppc, 1, 14, 0, 0);
-	set_next_dst(ppc);
-	GEN_ADDI(ppc, 3, 4, 0);
-	set_next_dst(ppc);
-	// invalidate_func(address);
-	GEN_B(ppc, add_jump((unsigned long)(&invalidate_func), 1, 1), 0, 1);
-	set_next_dst(ppc);
-	
-	// Load old LR
-	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
-	set_next_dst(ppc);
+		// Perform the actual store
+		if(type == MEM_SB){
+			GEN_STBX(ppc, 3, DYNAREG_RDRAM, 4);
+		}
+		else if(type == MEM_SH) {
+			GEN_STHX(ppc, 3, DYNAREG_RDRAM, 4);
+		}
+		else if(type == MEM_SW || type == MEM_SWC1) {
+			GEN_STWX(ppc, 3, DYNAREG_RDRAM, 4);
+		}
+		set_next_dst(ppc);
+		
+		// r5 = invalid_code_get(address>>12)
+	#ifdef HW_RVL
+		GEN_RLWINM(ppc, 6, 4, 20, 12, 31);	// address >> 12
+		set_next_dst(ppc);
+		GEN_LBZX(ppc, 5, 6, DYNAREG_INVCODE);
+		set_next_dst(ppc);
+	#else	// GameCube invalid_code is a bit array, add support.
 
-	// Restore LR
-	GEN_MTLR(ppc, 0);
-	set_next_dst(ppc);
-	
-	// Skip over else
-	GEN_B(ppc, 9, 0, 0);
-	set_next_dst(ppc);
-	
-	/* Slow case outside of RDRAM */
-	
-	// r4 = address (already set)
-	// adjust delay_slot and pc
-	// r5 = pc
-	GEN_LIS(ppc, 5, (get_src_pc()+4) >> 16);
-	set_next_dst(ppc);
-	// r6 = isDelaySlot
-	GEN_LI(ppc, 6, 0, isDelaySlot ? 1 : 0);
-	set_next_dst(ppc);
-	GEN_ORI(ppc, 5, 5, get_src_pc()+4);
-	set_next_dst(ppc);
-	// call dyna_mem_write_<type>
-	if(type == MEM_SB){
-		GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_byte), 1, 1), 0, 1);
-	}
-	else if(type == MEM_SH) {
-		GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_hword), 1, 1), 0, 1);
-	}
-	else if(type == MEM_SW || type == MEM_SWC1) {
-		GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_word), 1, 1), 0, 1);
-	}
-	set_next_dst(ppc);
-	
-	// Check whether we need to take an interrupt
-	GEN_CMPI(ppc, 3, 0, 6);
-	set_next_dst(ppc);
-	
-	// Load old LR
-	GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
-	set_next_dst(ppc);
+	#endif
+		// if (!r5)
+		GEN_CMPI(ppc, 5, 0, 1);
+		set_next_dst(ppc);
+		GEN_BNE(ppc, 1, (isVirtual && isPhysical) ? 14 : 5, 0, 0);
+		set_next_dst(ppc);
+		GEN_ADDI(ppc, 3, 4, 0);
+		set_next_dst(ppc);
+		// invalidate_func(address);
+		GEN_B(ppc, add_jump((unsigned long)(&invalidate_func), 1, 1), 0, 1);
+		set_next_dst(ppc);
+		
+		// Load old LR
+		GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
+		set_next_dst(ppc);
 
-	// Restore LR
-	GEN_MTLR(ppc, 0);
-	set_next_dst(ppc);
+		// Restore LR
+		GEN_MTLR(ppc, 0);
+		set_next_dst(ppc);
+	}
+	
+	if(isVirtual && isPhysical) {
+		// Skip over else
+		GEN_B(ppc, 9, 0, 0);
+		set_next_dst(ppc);
+	}
+	
+	if(isVirtual) {
+		/* Slow case outside of RDRAM */
+		
+		// r4 = address (already set)
+		// adjust delay_slot and pc
+		// r5 = pc
+		GEN_LIS(ppc, 5, (get_src_pc()+4) >> 16);
+		set_next_dst(ppc);
+		// r6 = isDelaySlot
+		GEN_LI(ppc, 6, 0, isDelaySlot ? 1 : 0);
+		set_next_dst(ppc);
+		GEN_ORI(ppc, 5, 5, get_src_pc()+4);
+		set_next_dst(ppc);
+		// call dyna_mem_write_<type>
+		if(type == MEM_SB){
+			GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_byte), 1, 1), 0, 1);
+		}
+		else if(type == MEM_SH) {
+			GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_hword), 1, 1), 0, 1);
+		}
+		else if(type == MEM_SW || type == MEM_SWC1) {
+			GEN_B(ppc, add_jump((unsigned long)(&dyna_mem_write_word), 1, 1), 0, 1);
+		}
+		set_next_dst(ppc);
+		
+		// Check whether we need to take an interrupt
+		GEN_CMPI(ppc, 3, 0, 6);
+		set_next_dst(ppc);
+		
+		// Load old LR
+		GEN_LWZ(ppc, 0, DYNAOFF_LR, 1);
+		set_next_dst(ppc);
 
-	// If so, return to trampoline
-	GEN_BNELR(ppc, 6, 0);
-	set_next_dst(ppc);
+		// Restore LR
+		GEN_MTLR(ppc, 0);
+		set_next_dst(ppc);
+
+		// If so, return to trampoline
+		GEN_BNELR(ppc, 6, 0);
+		set_next_dst(ppc);
+	}
 }
 
 static int mips_is_jump(MIPS_instr instr){
