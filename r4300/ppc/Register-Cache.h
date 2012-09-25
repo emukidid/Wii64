@@ -46,6 +46,17 @@ void flushRegister(int reg);
 // Does not alter mappings in any way
 RegMappingType getRegisterMapping(int reg);
 
+// Constant Propagation
+// Create a mapping for a 32-bit register (reg) to a HW register (returned)
+// The value mapped may have a constant value (isConstant) to be set later
+int mapConstantNew(int reg, int isConstant);
+// Return whether a register (reg) has a constant value mapped to it
+int isRegisterConstant(int reg);
+// Get the constant value held by a register (reg)
+unsigned int getRegisterConstant(int reg);
+// Set the constant value (constant) held by a register (reg)
+void setRegisterConstant(int reg, unsigned int constant);
+
 
 // -- FPRs --
 // Create a mapping for a FPR (fpr) treated as double or single (dbl)
