@@ -31,6 +31,7 @@
 #include "../../gc_memory/memory.h"
 #include <math.h>
 #include "../Invalid_Code.h"
+#include "../../gui/DEBUG.h"
 
 #include <assert.h>
 
@@ -775,12 +776,6 @@ static int LB(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LB
 
-	flushRegisters();
-	reset_code_addr();
-
-	int rd = mapRegisterTemp(); // r3 = rd
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
 	if(isConstant){
@@ -794,8 +789,17 @@ static int LB(MIPS_instr mips){
 			isVirtual = 0;
 	}
 
-	if(isVirtual)
-		invalidateRegisters();
+	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
+	//if(isPhysical && isVirtual)
+		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
+	//else
+		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
+
+	flushRegisters();
+	reset_code_addr();
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 #ifdef FASTMEM
 	if(isPhysical && isVirtual){
@@ -809,19 +813,19 @@ static int LB(MIPS_instr mips){
 		// Add rdram pointer
 		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 		set_next_dst(ppc);
-		int _rd = mapRegisterNew( MIPS_GET_RT(mips) );
 		// Perform the actual load
-		GEN_LBZ(ppc, _rd, MIPS_GET_IMMED(mips), base);
+		GEN_LBZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 		set_next_dst(ppc);
 		// extsb rt
-		GEN_EXTSB(ppc, _rd, _rd);
+		GEN_EXTSB(ppc, rd, rd);
 		set_next_dst(ppc);
+		mapRegisterNew( MIPS_GET_RT(mips) );
+		flushRegisters();
 	}
 
 	PowerPC_instr* preCall;
 	int not_fastmem_id;
 	if(isPhysical && isVirtual){
-		flushRegisters();
 		// Skip over else
 		not_fastmem_id = add_jump_special(1);
 		GEN_B(ppc, not_fastmem_id, 0, 0);
@@ -854,12 +858,6 @@ static int LH(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LH
 
-	flushRegisters();
-	reset_code_addr();
-
-	int rd = mapRegisterTemp(); // r3 = rd
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
 	if(isConstant){
@@ -872,9 +870,17 @@ static int LH(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
+	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
+	//if(isPhysical && isVirtual)
+		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
+	//else
+		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
-	if(isVirtual)
-		invalidateRegisters();
+	flushRegisters();
+	reset_code_addr();
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 #ifdef FASTMEM
 	if(isPhysical && isVirtual){
@@ -889,14 +895,15 @@ static int LH(MIPS_instr mips){
 		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 		set_next_dst(ppc);
 		// Perform the actual load
-		GEN_LHA(ppc, mapRegisterNew( MIPS_GET_RT(mips) ), MIPS_GET_IMMED(mips), base);
+		GEN_LHA(ppc, rd, MIPS_GET_IMMED(mips), base);
 		set_next_dst(ppc);
+		mapRegisterNew( MIPS_GET_RT(mips) );
+		flushRegisters();
 	}
-	
+
 	PowerPC_instr* preCall;
 	int not_fastmem_id;
 	if(isPhysical && isVirtual){
-		flushRegisters();
 		// Skip over else
 		not_fastmem_id = add_jump_special(1);
 		GEN_B(ppc, not_fastmem_id, 0, 0);
@@ -991,12 +998,6 @@ static int LW(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LW
 
-	flushRegisters();
-	reset_code_addr();
-
-	int rd = mapRegisterTemp(); // r3 = rd
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
 	if(isConstant){
@@ -1009,9 +1010,17 @@ static int LW(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
+	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
+	//if(isPhysical && isVirtual)
+		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
+	//else
+		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
-	if(isVirtual)
-		invalidateRegisters();
+	flushRegisters();
+	reset_code_addr();
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 #ifdef FASTMEM
 	if(isPhysical && isVirtual){
@@ -1026,14 +1035,15 @@ static int LW(MIPS_instr mips){
 		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 		set_next_dst(ppc);
 		// Perform the actual load
-		GEN_LWZ(ppc, mapRegisterNew( MIPS_GET_RT(mips)), MIPS_GET_IMMED(mips), base);
+		GEN_LWZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 		set_next_dst(ppc);
+		mapRegisterNew( MIPS_GET_RT(mips) );
+		flushRegisters();
 	}
 
 	PowerPC_instr* preCall;
 	int not_fastmem_id;
 	if(isPhysical && isVirtual){
-		flushRegisters();
 		// Skip over else
 		not_fastmem_id = add_jump_special(1);
 		GEN_B(ppc, not_fastmem_id, 0, 0);
@@ -1068,12 +1078,6 @@ static int LBU(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LBU
 
-	flushRegisters();
-	reset_code_addr();
-
-	int rd = mapRegisterTemp(); // r3 = rd
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
 	if(isConstant){
@@ -1086,9 +1090,17 @@ static int LBU(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
+	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
+	//if(isPhysical && isVirtual)
+		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
+	//else
+		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
-	if(isVirtual)
-		invalidateRegisters();
+	flushRegisters();
+	reset_code_addr();
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 #ifdef FASTMEM
 	if(isPhysical && isVirtual){
@@ -1104,14 +1116,15 @@ static int LBU(MIPS_instr mips){
 		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 		set_next_dst(ppc);
 		// Perform the actual load
-		GEN_LBZ(ppc, mapRegisterNew( MIPS_GET_RT(mips) ), MIPS_GET_IMMED(mips), base);
+		GEN_LBZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 		set_next_dst(ppc);
+		mapRegisterNew( MIPS_GET_RT(mips) );
+		flushRegisters();
 	}
 
 	PowerPC_instr* preCall;
 	int not_fastmem_id;
 	if(isPhysical && isVirtual){
-		flushRegisters();
 		// Skip over else
 		not_fastmem_id = add_jump_special(1);
 		GEN_B(ppc, not_fastmem_id, 0, 0);
@@ -1145,12 +1158,6 @@ static int LHU(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LHU
 
-	flushRegisters();
-	reset_code_addr();
-
-	int rd = mapRegisterTemp(); // r3 = rd
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
 	if(isConstant){
@@ -1163,9 +1170,17 @@ static int LHU(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
+	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
+	//if(isPhysical && isVirtual)
+		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
+	//else
+		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
-	if(isVirtual)
-		invalidateRegisters();
+	flushRegisters();
+	reset_code_addr();
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 #ifdef FASTMEM
 	if(isPhysical && isVirtual){
@@ -1181,14 +1196,15 @@ static int LHU(MIPS_instr mips){
 		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
 		set_next_dst(ppc);
 		// Perform the actual load
-		GEN_LHZ(ppc, mapRegisterNew( MIPS_GET_RT(mips) ), MIPS_GET_IMMED(mips), base);
+		GEN_LHZ(ppc, rd, MIPS_GET_IMMED(mips), base);
 		set_next_dst(ppc);
+		mapRegisterNew( MIPS_GET_RT(mips) );
+		flushRegisters();
 	}
 
 	PowerPC_instr* preCall;
 	int not_fastmem_id;
 	if(isPhysical && isVirtual){
-		flushRegisters();
 		// Skip over else
 		not_fastmem_id = add_jump_special(1);
 		GEN_B(ppc, not_fastmem_id, 0, 0);
@@ -1288,12 +1304,6 @@ static int LWU(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LWU
 
-	flushRegisters();
-	reset_code_addr();
-
-	int rd = mapRegisterTemp(); // r3 = rd
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
 	if(isConstant){
@@ -1307,8 +1317,17 @@ static int LWU(MIPS_instr mips){
 			isVirtual = 0;
 	}
 
-	if(isVirtual)
-		invalidateRegisters();
+	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
+	//if(isPhysical && isVirtual)
+		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
+	//else
+		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
+
+	flushRegisters();
+	reset_code_addr();
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 #ifdef FASTMEM
 	if(isPhysical && isVirtual){
@@ -1331,12 +1350,12 @@ static int LWU(MIPS_instr mips){
 		// Zero out the upper word
 		GEN_LI(ppc, value.hi, 0, 0);
 		set_next_dst(ppc);
+		flushRegisters();
 	}
 
 	PowerPC_instr* preCall;
 	int not_fastmem_id;
 	if(isPhysical && isVirtual){
-		flushRegisters();
 		// Skip over else
 		not_fastmem_id = add_jump_special(1);
 		GEN_B(ppc, not_fastmem_id, 0, 0);
@@ -1369,18 +1388,6 @@ static int SB(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SB
-	
-	flushRegisters();
-	reset_code_addr();
-
-	if( MIPS_GET_RT(mips) ){
-		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
-	} else {
-		mapRegisterTemp();
-		GEN_LI(ppc, 3, 0, 0); // r3 = 0
-		set_next_dst(ppc);
-	}
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
@@ -1395,8 +1402,17 @@ static int SB(MIPS_instr mips){
 			isVirtual = 0;
 	}
 
-	if(isVirtual)
-		invalidateRegisters();
+	flushRegisters();
+	reset_code_addr();
+	if( MIPS_GET_RT(mips) ){
+		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
+	} else {
+		mapRegisterTemp();
+		GEN_LI(ppc, 3, 0, 0); // r3 = 0
+		set_next_dst(ppc);
+	}
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 	genCallDynaMem2(MEM_SB, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
 	return CONVERT_SUCCESS;
@@ -1410,17 +1426,6 @@ static int SH(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SH
 
-	flushRegisters();
-	reset_code_addr();
-
-	if( MIPS_GET_RT(mips) ){
-		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
-	} else {
-		mapRegisterTemp();
-		GEN_LI(ppc, 3, 0, 0); // r3 = 0
-		set_next_dst(ppc);
-	}
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	
 	int isPhysical = 1, isVirtual = 1;
@@ -1435,8 +1440,17 @@ static int SH(MIPS_instr mips){
 			isVirtual = 0;
 	}
 
-	if(isVirtual)
-		invalidateRegisters();
+	flushRegisters();
+	reset_code_addr();
+	if( MIPS_GET_RT(mips) ){
+		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
+	} else {
+		mapRegisterTemp();
+		GEN_LI(ppc, 3, 0, 0); // r3 = 0
+		set_next_dst(ppc);
+	}
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 	genCallDynaMem2(MEM_SH, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
 	return CONVERT_SUCCESS;
@@ -1461,18 +1475,6 @@ static int SW(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SW
 
-	flushRegisters();
-	reset_code_addr();
-
-	if( MIPS_GET_RT(mips) ){
-		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
-	} else {
-		mapRegisterTemp();
-		GEN_LI(ppc, 3, 0, 0); // r3 = 0
-		set_next_dst(ppc);
-	}
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-
 	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
 	if(isConstant){
@@ -1486,8 +1488,17 @@ static int SW(MIPS_instr mips){
 			isVirtual = 0;
 	}
 
-	if(isVirtual)
-		invalidateRegisters();
+	flushRegisters();
+	reset_code_addr();
+	if( MIPS_GET_RT(mips) ){
+		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
+	} else {
+		mapRegisterTemp();
+		GEN_LI(ppc, 3, 0, 0); // r3 = 0
+		set_next_dst(ppc);
+	}
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
 
 	genCallDynaMem2(MEM_SW, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
 	return CONVERT_SUCCESS;
@@ -4843,6 +4854,11 @@ void genCallDynaMem(memType type, int base, short immed){
 void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isPhysical){
 	PowerPC_instr ppc;
 
+	//if(isPhysical && isVirtual)
+		//DEBUG_stats(7, "Store non-const", STAT_TYPE_ACCUM, 1);
+	//else
+		//DEBUG_stats(8, "Store const", STAT_TYPE_ACCUM, 1);
+	
 	// DYNAREG_RADDR = address
 	GEN_ADDI(ppc, 4, base, immed);
 	set_next_dst(ppc);
