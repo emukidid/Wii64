@@ -176,47 +176,47 @@ u16 readWPAD(void);
 
 void load_config(char *loaded_path) {
 	//config stuff
-	fileBrowser_file* configFile_file;
+	fileBrowser_file configFile_file;
 	char prefix[16];
 	int (*configFile_init)(fileBrowser_file*) = fileBrowser_libfat_init;
 
 	if(loaded_path[0] == 'u') {  
-		configFile_file = &saveDir_libfat_USB;
+		memcpy(&configFile_file, &saveDir_libfat_USB, sizeof(fileBrowser_file));
 		strcpy(prefix,"usb:/wii64/");
 	}
 	else
 	{
-		configFile_file = &saveDir_libfat_Default;
+		memcpy(&configFile_file, &saveDir_libfat_Default, sizeof(fileBrowser_file));
 		strcpy(prefix,"sd:/wii64/");
 	}
-	if(configFile_init(configFile_file)) {                	//only if device initialized ok
-		sprintf(configFile_file->name, "%s%s", prefix, "settings.cfg");
-		FILE* f = fopen( configFile_file->name, "r" );  //attempt to open file
+	if(configFile_init(&configFile_file)) {                	//only if device initialized ok
+		sprintf(configFile_file.name, "%s%s", prefix, "settings.cfg");
+		FILE* f = fopen( configFile_file.name, "r" );  //attempt to open file
 		if(f) {        //open ok, read it
 			readConfig(f);
 			fclose(f);
 		}
-		sprintf(configFile_file->name, "%s%s", prefix, "controlG.cfg");
-		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		sprintf(configFile_file.name, "%s%s", prefix, "controlG.cfg");
+		f = fopen( configFile_file.name, "r" );  //attempt to open file
 		if(f) {
 			load_configurations(f, &controller_GC);					//write out GC controller mappings
 			fclose(f);
 		}
 #ifdef HW_RVL
-		sprintf(configFile_file->name, "%s%s", prefix, "controlC.cfg");
-		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		sprintf(configFile_file.name, "%s%s", prefix, "controlC.cfg");
+		f = fopen( configFile_file.name, "r" );  //attempt to open file
 		if(f) {
 			load_configurations(f, &controller_Classic);			//write out Classic controller mappings
 			fclose(f);
 		}
-		sprintf(configFile_file->name, "%s%s", prefix, "controlN.cfg");
-		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		sprintf(configFile_file.name, "%s%s", prefix, "controlN.cfg");
+		f = fopen( configFile_file.name, "r" );  //attempt to open file
 		if(f) {
 			load_configurations(f, &controller_WiimoteNunchuk);	//write out WM+NC controller mappings
 			fclose(f);
 		}
-		sprintf(configFile_file->name, "%s%s", prefix, "controlW.cfg");
-		f = fopen( configFile_file->name, "r" );  //attempt to open file
+		sprintf(configFile_file.name, "%s%s", prefix, "controlW.cfg");
+		f = fopen( configFile_file.name, "r" );  //attempt to open file
 		if(f) {
 			load_configurations(f, &controller_Wiimote);			//write out Wiimote controller mappings
 			fclose(f);
