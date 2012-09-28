@@ -254,6 +254,7 @@ void invalidateRegister(int reg){
 	if(regMap[reg].map.lo >= 0)
 		availableRegs[ regMap[reg].map.lo ] = 1;
 	regMap[reg].map.hi = regMap[reg].map.lo = -1;
+	regMap[reg].constant = 0;
 }
 
 void flushRegister(int reg){
@@ -264,6 +265,7 @@ void flushRegister(int reg){
 		availableRegs[ regMap[reg].map.lo ] = 1;
 	}
 	regMap[reg].map.hi = regMap[reg].map.lo = -1;
+	regMap[reg].constant = 0;
 }
 
 RegMappingType getRegisterMapping(int reg){
