@@ -31,7 +31,6 @@
 #include "../../gc_memory/memory.h"
 #include <math.h>
 #include "../Invalid_Code.h"
-#include "../../gui/DEBUG.h"
 
 #include <assert.h>
 
@@ -789,12 +788,6 @@ static int LB(MIPS_instr mips){
 			isVirtual = 0;
 	}
 
-	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
-	//if(isPhysical && isVirtual)
-		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
-	//else
-		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
-
 	flushRegisters();
 	reset_code_addr();
 	int rd = mapRegisterTemp(); // r3 = rd
@@ -870,11 +863,6 @@ static int LH(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
-	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
-	//if(isPhysical && isVirtual)
-		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
-	//else
-		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
 	flushRegisters();
 	reset_code_addr();
@@ -1010,11 +998,6 @@ static int LW(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
-	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
-	//if(isPhysical && isVirtual)
-		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
-	//else
-		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
 	flushRegisters();
 	reset_code_addr();
@@ -1090,11 +1073,6 @@ static int LBU(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
-	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
-	//if(isPhysical && isVirtual)
-		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
-	//else
-		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
 	flushRegisters();
 	reset_code_addr();
@@ -1170,11 +1148,6 @@ static int LHU(MIPS_instr mips){
 		else
 			isVirtual = 0;
 	}
-	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
-	//if(isPhysical && isVirtual)
-		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
-	//else
-		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
 	flushRegisters();
 	reset_code_addr();
@@ -1317,11 +1290,6 @@ static int LWU(MIPS_instr mips){
 			isVirtual = 0;
 	}
 
-	isPhysical = 1; isVirtual = 1;	//TODO get rid of this when fixed.
-	//if(isPhysical && isVirtual)
-		//DEBUG_stats(9, "Load non-const", STAT_TYPE_ACCUM, 1);
-	//else
-		//DEBUG_stats(10, "Load const", STAT_TYPE_ACCUM, 1);
 
 	flushRegisters();
 	reset_code_addr();
@@ -2026,8 +1994,7 @@ static int SYNC(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SYNC
-	PowerPC_instr ppc;
-	return CONVERT_ERROR;
+	return CONVERT_SUCCESS;
 #endif
 }
 
@@ -4854,11 +4821,6 @@ void genCallDynaMem(memType type, int base, short immed){
 void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isPhysical){
 	PowerPC_instr ppc;
 
-	//if(isPhysical && isVirtual)
-		//DEBUG_stats(7, "Store non-const", STAT_TYPE_ACCUM, 1);
-	//else
-		//DEBUG_stats(8, "Store const", STAT_TYPE_ACCUM, 1);
-	
 	// DYNAREG_RADDR = address
 	GEN_ADDI(ppc, 4, base, immed);
 	set_next_dst(ppc);
