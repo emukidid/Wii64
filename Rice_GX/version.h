@@ -1,8 +1,8 @@
 /**
- * Mupen64 - version.h
+ * Wii64 - version.h
  * Copyright (C) 2008 Richard Goedeken
- *
- * Mupen64Plus homepage: http://code.google.com/p/mupen64plus/
+ * Copyright (C) 2010, 2011, 2012 sepp256
+ * Wii64 homepage: http://code.google.com/p/mupen64gc/
  *
  * This program is free software; you can redistribute it and/
  * or modify it under the terms of the GNU General Public Li-

@@ -1,5 +1,9 @@
 /*
+Rice_GX - RSP_Parser.h
 Copyright (C) 2003 Rice1964
+Copyright (C) 2010, 2011, 2012 sepp256 (Port to Wii/Gamecube/PS3)
+Wii64 homepage: http://www.emulatemii.com
+email address: sepp256@gmail.com
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License

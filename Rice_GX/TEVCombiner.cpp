@@ -1,7 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   Wii64 - TEVCombiner.cpp                                               *
  *   Wii64 homepage: http://code.google.com/p/mupen64gc/                   *
- *   Copyright (C) 2010 sepp256                                            *
+ *   Copyright (C) 2010, 2011, 2012 sepp256                                *
  *   Copyright (C) 2003 Rice1964                                           *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *

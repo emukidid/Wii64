@@ -1,5 +1,9 @@
 /*
+Rice_GX - TextureManager.cpp
 Copyright (C) 2003 Rice1964
+Copyright (C) 2010, 2011, 2012 sepp256 (Port to Wii/Gamecube/PS3)
+Wii64 homepage: http://www.emulatemii.com
+email address: sepp256@gmail.com
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -24,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # include "../gc_memory/MEM2.h"
 # define GX_TEXTURE_CACHE_SIZE TEXCACHE_SIZE //8MB for Wii
 # else //HW_RVL
-# define GX_TEXTURE_CACHE_SIZE (1*1024*1024) //1MB for GC
+# define GX_TEXTURE_CACHE_SIZE (4*1024*1024) //4MB for GC
 # endif //!HW_RVL
 	heap_cntrl* GXtexCache = NULL;
 #endif //__GX__

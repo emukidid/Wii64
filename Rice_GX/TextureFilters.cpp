@@ -1,5 +1,9 @@
 /*
+Rice_GX - TextureFilters.cpp
 Copyright (C) 2003 Rice1964
+Copyright (C) 2010, 2011, 2012 sepp256 (Port to Wii/Gamecube/PS3)
+Wii64 homepage: http://www.emulatemii.com
+email address: sepp256@gmail.com
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -2389,13 +2393,14 @@ void LoadHiresTexture( TxtrCacheEntry &entry )
 		//bool readOK = reader->readTexture( info.lpSurface, archiveEntry );
 		unsigned int stride = info.lPitch * 4; // 4 lines in GX tile
 		bool readOK = reader->readTexture( info.lpSurface, archiveEntry, archiveEntryInfo, stride);
-#ifdef SHOW_DEBUG		
+#ifdef SHOW_DEBUG
 		if (readOK)
 			sprintf(txtbuffer,"readTexture success\r\n");
 		else
 			sprintf(txtbuffer,"readTexture FAIL\r\n");
 		DEBUG_print(txtbuffer,DBG_USBGECKO);
-#endif
+#endif //SHOW_DEBUG
+
 		// Are the following calls needed?
 		// gHiresTxtrInfos[idx].scaleShift is never filled in, so I don't understand why it is used below..
 		// The size is hard-coded to 4, but if we add more GX formats, the size needs to be adjusted accordingly

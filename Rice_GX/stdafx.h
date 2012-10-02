@@ -1,7 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- *   Mupen64plus - stdafx.h                                                *
+ *   Rice_GX - stdafx.h                                                    *
+ *   Copyright (C) 2003 Rice1964                                           *
+ *   Copyright (C) 2010, 2011, 2012 sepp256 (Port to Wii/Gamecube/PS3)     *
  *   Mupen64Plus homepage: http://code.google.com/p/mupen64plus/           *
- *   Copyright (C) 2002 Rice1964                                           *
+ *   Wii64 homepage: http://www.emulatemii.com                             *
+ *   email address: sepp256@gmail.com                                      *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
