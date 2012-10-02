@@ -15,9 +15,6 @@ OBJ_RICE_GX	+= \
 		Rice_GX/RenderBase.o \
 		Rice_GX/FrameBuffer.o \
 		Rice_GX/Texture.o \
-		Rice_GX/TextureFilters_2xsai.o \
-		Rice_GX/TextureFilters_hq2x.o \
-		Rice_GX/TextureFilters_hq4x.o \
 		Rice_GX/OGLRender.o \
 		Rice_GX/OGLTexture.o \
 		Rice_GX/TEVBlender.o \
@@ -33,6 +30,9 @@ OBJ_RICE_GX	+= \
 		Rice_GX/RenderTexture.o \
 		Rice_GX/OGLDecodedMux.o \
 		Rice_GX/OGLRenderExt.o
+#		Rice_GX/TextureFilters_2xsai.o \
+#		Rice_GX/TextureFilters_hq2x.o \
+#		Rice_GX/TextureFilters_hq4x.o \
 
 OBJ_RICE_GX_LIBLINUX	+= \
 		Rice_GX/liblinux/bmp.o \

@@ -36,6 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "../TextureArchive/ArchiveReader.h"
 #endif //__GX__
 
+#ifndef __GX__ //Disable texture filters for __GX__
 /************************************************************************/
 /* 2X filters                                                           */
 /************************************************************************/
@@ -603,7 +604,7 @@ void SmoothFilter_16(uint16 *pdata, uint32 width, uint32 height, uint32 pitch, u
     }
     delete [] pcopy;
 }
-
+#endif //!__GX__
 
 void EnhanceTexture(TxtrCacheEntry *pEntry)
 {
@@ -636,6 +637,7 @@ void EnhanceTexture(TxtrCacheEntry *pEntry)
     uint32 nWidth = srcInfo.dwCreatedWidth;
     uint32 nHeight = srcInfo.dwCreatedHeight;
 
+#ifndef __GX__
     if( options.textureEnhancement == TEXTURE_SHARPEN_ENHANCEMENT || options.textureEnhancement == TEXTURE_SHARPEN_MORE_ENHANCEMENT )
     {
         if( pEntry->pTexture->GetPixelSize() == 4 )
@@ -647,6 +649,7 @@ void EnhanceTexture(TxtrCacheEntry *pEntry)
         SAFE_DELETE(pEntry->pEnhancedTexture);
         return;
     }
+#endif //!__GX__
 
     pEntry->dwEnhancementFlag = options.textureEnhancement;
     if( options.bSmallTextureOnly )
@@ -660,7 +663,7 @@ void EnhanceTexture(TxtrCacheEntry *pEntry)
         }
     }
 
-
+#ifndef __GX__
     CTexture* pSurfaceHandler = NULL;
     if( options.textureEnhancement == TEXTURE_HQ4X_ENHANCEMENT )
     {
@@ -773,6 +776,13 @@ void EnhanceTexture(TxtrCacheEntry *pEntry)
     pEntry->pTexture->EndUpdate(&srcInfo);
 
     pEntry->pEnhancedTexture = pSurfaceHandler;
+#else //!__GX__
+	//TODO: Implement 2xSaI enhancement for __GX__
+	pEntry->pTexture->EndUpdate(&srcInfo);
+	SAFE_DELETE(pEntry->pEnhancedTexture);
+	pEntry->dwEnhancementFlag = TEXTURE_NO_ENHANCEMENT;
+	return;
+#endif //__GX__
 }
 
 

@@ -4,12 +4,12 @@ CC		= powerpc-eabi-gcc
 CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
-LTO			 = #-flto # Uncomment to use link-time optimization
+LTO			 = -flto # Uncomment to use link-time optimization
 DEBUG_FLAGS += #-DDEBUGON #-DSHOW_DEBUG #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
 FEATURES	+= #-DUSE_EXPANSION #-DUSE_TLB_CACHE #-DUSE_ROM_CACHE_L1 #-DEMBEDDED_FONTS
 
 MACHDEP		+= -mcpu=750 -meabi -mhard-float 
-LDFLAGS		+= $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref $(LTO)
+LDFLAGS		+= -O3 $(LTO) $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref $(LTO)
 
 INCLUDE 	+= -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include
 LIBPATHS	+= -L$(DEVKITPRO)/portlibs/ppc/lib

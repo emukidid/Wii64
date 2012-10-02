@@ -59,7 +59,7 @@ Graphics::Graphics(GXRModeObj *rmode)
 	}
 #endif
 	if (memcmp( &vmode_phys, &TVPal528IntDf, sizeof(GXRModeObj)) == 0)
-		memcpy( &vmode_phys, &TVPal574IntDfScale, sizeof(GXRModeObj));
+		memcpy( &vmode_phys, &TVPal576IntDfScale, sizeof(GXRModeObj));
 
 	//vmode->efbHeight = viewportHeight; // Note: all possible modes have efbHeight of 480
 
