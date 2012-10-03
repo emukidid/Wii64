@@ -75,6 +75,9 @@ int rounding_mode = 0x33F, trunc_mode = 0xF3F, round_mode = 0x33F,
 
 inline unsigned long update_invalid_addr(unsigned long addr)
 {
+   if(rom_base_in_tlb && (addr >= 0x7f000000 && addr < 0x80000000)) {
+	return rom_base_in_tlb + (addr & 0x7FFFFF);	// GoldenEye Hack
+   }
    if (addr >= 0x80000000 && addr < 0xa0000000)
      {
 	if (invalid_code_get(addr>>12)) invalid_code_set((addr+0x20000000)>>12, 1);
