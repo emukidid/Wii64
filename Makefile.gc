@@ -1,6 +1,6 @@
 # Makefile for GC-specific code
 
-CFLAGS		+= -DHW_DOL -DUSE_TLB_CACHE -DTINY_TLBCACHE
+CFLAGS		+= -DHW_DOL -DUSE_TLB_CACHE -DTINY_TLBCACHE -D__gamecube__
 
 LDFLAGS		+= -mogc
 
@@ -11,3 +11,4 @@ OBJ		+= \
 		gc_memory/ARAM.o \
 		gc_memory/TLB-Cache.o \
 
+LIB		+= -lz

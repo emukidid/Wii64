@@ -423,6 +423,7 @@ unsigned long long int write_pifb(unsigned long address, unsigned long long int)
 unsigned long long int write_pifh(unsigned long address, unsigned long long int);
 unsigned long long int write_pifd(unsigned long address, unsigned long long int);
 
+void do_SP_Task(int delayedDP, int cycles);
 void update_SP();
 void update_DPC();
 

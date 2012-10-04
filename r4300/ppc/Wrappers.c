@@ -157,9 +157,13 @@ void dynarec(unsigned int address){
 			   (paddr >= 0x90000000 && paddr < 0xa0000000))
 				dst_block->mips_code =
 					ROMCache_pointer((paddr-(address-dst_block->start_address))&0x0FFFFFFF);
+#ifdef PROFILE
 			start_section(COMPILER_SECTION);
+#endif
 			func = recompile_block(dst_block, address);
+#ifdef PROFILE
 			end_section(COMPILER_SECTION);
+#endif
 		} else {
 #ifdef USE_RECOMP_CACHE
 			RecompCache_Update(func);
@@ -216,6 +220,7 @@ int dyna_update_count(unsigned int pc, int isDelaySlot){
 #else
 int dyna_update_count(unsigned int pc){
 #endif
+	do_SP_Task(1,(pc - r4300.last_pc) / 2);
 	Count += (pc - r4300.last_pc)/2;
 	r4300.last_pc = pc;
 

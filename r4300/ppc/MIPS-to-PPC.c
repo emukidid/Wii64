@@ -4666,7 +4666,7 @@ void genCallDynaMem(memType type, int base, short immed){
 
 void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isPhysical){
 	PowerPC_instr ppc;
-
+	
 	// DYNAREG_RADDR = address
 	GEN_ADDI(ppc, 4, base, immed);
 	set_next_dst(ppc);
@@ -4675,7 +4675,11 @@ void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isP
 		// If base in physical memory
 		GEN_CMP(ppc, 4, DYNAREG_MEM_TOP, 1);
 		set_next_dst(ppc);
-		GEN_BGE(ppc, 1, 11, 0, 0);	// TODO: This branch amount may change based on GC/Wii
+#ifdef HW_RVL
+		GEN_BGE(ppc, 1, 11, 0, 0);
+#else
+		GEN_BGE(ppc, 1, 13, 0, 0);
+#endif
 		set_next_dst(ppc);
 	}
 	
@@ -4700,13 +4704,24 @@ void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isP
 		set_next_dst(ppc);
 		GEN_LBZX(ppc, 5, 6, DYNAREG_INVCODE);
 		set_next_dst(ppc);
+		GEN_CMPI(ppc, 5, 0, 0);
+		set_next_dst(ppc);
 	#else	// GameCube invalid_code is a bit array, add support.
-
+		// invalid_code[block_num>>3] & (1<<(block_num&0x7))
+		// (invalid_code[block_num>>3] >> (block_num & 0x7)) & 1
+		GEN_RLWINM(ppc, 5, 4, 20, 29, 31);	// r5 = block_num & 0x7
+		set_next_dst(ppc);
+		GEN_RLWINM(ppc, 6, 4, 17, 15, 31);	// r6 = block_num >> 3
+		set_next_dst(ppc);
+		GEN_LBZX(ppc, 6, 6, DYNAREG_INVCODE);	// r6 = invalid_code[block_num>>3]
+		set_next_dst(ppc);
+		GEN_SRW(ppc, 5, 6, 5);	// r5 = invalid_code[block_num>>3] >> (block_num & 0x7)
+		set_next_dst(ppc);
+		GEN_ANDI(ppc, 5, 5, 1);	// r5 = invalid_code[block_num>>3] & (1 << (block_num & 0x7))
+		set_next_dst(ppc);	// Note, the ANDI here will set CR0 for the BNE directly after.
 	#endif
 		// if (!r5)
-		GEN_CMPI(ppc, 5, 0, 1);
-		set_next_dst(ppc);
-		GEN_BNE(ppc, 1, (isVirtual && isPhysical) ? 14 : 5, 0, 0);
+		GEN_BNE(ppc, 0, (isVirtual && isPhysical) ? 14 : 5, 0, 0);
 		set_next_dst(ppc);
 		GEN_ADDI(ppc, 3, 4, 0);
 		set_next_dst(ppc);

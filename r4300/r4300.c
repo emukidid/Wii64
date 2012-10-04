@@ -212,6 +212,7 @@ void update_count()
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
 	}
 #endif
+	do_SP_Task(1,(r4300.pc - r4300.last_pc) / 2);
 	Count = Count + (r4300.pc - r4300.last_pc) / 2;
 	r4300.last_pc = r4300.pc;
 	
