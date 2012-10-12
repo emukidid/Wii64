@@ -39,5 +39,6 @@ int (*saveFile_init)(fileBrowser_file*) = NULL;
 //int (*saveFile_exists)(fileBrowser_file*) = NULL;
 int (*saveFile_readFile)(fileBrowser_file*, void*, unsigned int) = NULL;
 int (*saveFile_writeFile)(fileBrowser_file*, void*, unsigned int) = NULL;
+int (*saveFile_deleteFile)(fileBrowser_file*) = NULL;
 int (*saveFile_deinit)(fileBrowser_file*) = NULL;
 

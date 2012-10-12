@@ -107,6 +107,15 @@ int saveFlashram(fileBrowser_file* savepath){
 	return 1;
 }
 
+int deleteFlashram(fileBrowser_file* savepath){
+	fileBrowser_file saveFile;
+	memcpy(&saveFile, savepath, sizeof(fileBrowser_file));
+	memset(&saveFile.name[0],0,FILE_BROWSER_MAX_PATH_LEN);
+	sprintf((char*)saveFile.name,"%s/%s%s.fla",savepath->name,ROM_SETTINGS.goodname,saveregionstr());
+
+	return saveFile_deleteFile(&saveFile);
+}
+
 void save_flashram_infos(char *buf)
 {
    memcpy(buf+0 , &use_flashram , 4);

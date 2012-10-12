@@ -307,6 +307,10 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 #endif
 }
 
+int fileBrowser_libfat_deleteFile(fileBrowser_file* file){
+	return (remove(file->name) == -1) ? 0 : 1;
+}
+
 int fileBrowser_libfat_deinit(fileBrowser_file* f){
 	return 0;
 }

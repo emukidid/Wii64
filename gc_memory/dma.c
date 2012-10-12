@@ -104,6 +104,15 @@ int saveSram(fileBrowser_file* savepath){
 	return 1;
 }
 
+int deleteSram(fileBrowser_file* savepath){
+	fileBrowser_file saveFile;
+	memcpy(&saveFile, savepath, sizeof(fileBrowser_file));
+	memset(&saveFile.name[0],0,FILE_BROWSER_MAX_PATH_LEN);
+	sprintf((char*)saveFile.name,"%s/%s%s.sra",savepath->name,ROM_SETTINGS.goodname,saveregionstr());
+
+	return saveFile_deleteFile(&saveFile);
+}
+
 void dma_pi_read()
 {
    int i;

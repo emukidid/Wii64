@@ -40,15 +40,19 @@ extern char savepath[];
 
 int loadEeprom(fileBrowser_file* savepath);
 int saveEeprom(fileBrowser_file* savepath);
+int deleteEeprom(fileBrowser_file* savepath);
 
 int loadMempak(fileBrowser_file* savepath);
 int saveMempak(fileBrowser_file* savepath);
+int deleteMempak(fileBrowser_file* savepath);
 
 int loadSram(fileBrowser_file* savepath);
 int saveSram(fileBrowser_file* savepath);
+int deleteSram(fileBrowser_file* savepath);
 
 int loadFlashram(fileBrowser_file* savepath);
 int saveFlashram(fileBrowser_file* savepath);
+int deleteFlashram(fileBrowser_file* savepath);
 
 #endif
 

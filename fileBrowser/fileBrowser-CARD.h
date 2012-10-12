@@ -34,6 +34,7 @@ extern fileBrowser_file topLevel_CARD_SlotB;
 int fileBrowser_CARD_readDir(fileBrowser_file*, fileBrowser_file**);
 int fileBrowser_CARD_readFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_CARD_writeFile(fileBrowser_file*, void*, unsigned int);
+int fileBrowser_CARD_deleteFile(fileBrowser_file*);
 int fileBrowser_CARD_seekFile(fileBrowser_file*, unsigned int, unsigned int);
 int fileBrowser_CARD_init(fileBrowser_file* file);
 int fileBrowser_CARD_deinit(fileBrowser_file* file);

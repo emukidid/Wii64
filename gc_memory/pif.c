@@ -118,6 +118,15 @@ int saveEeprom(fileBrowser_file* savepath){
 
 }
 
+int deleteEeprom(fileBrowser_file* savepath) {
+	fileBrowser_file saveFile;
+	memcpy(&saveFile, savepath, sizeof(fileBrowser_file));
+	memset(&saveFile.name[0],0,FILE_BROWSER_MAX_PATH_LEN);
+	sprintf((char*)saveFile.name,"%s/%s%s.eep",savepath->name,ROM_SETTINGS.goodname,saveregionstr());
+
+	return saveFile_deleteFile(&saveFile);
+}
+
 void init_eeprom() {
   int i;
   for (i=0; i<0x800; i++) eeprom[i] = 0;
@@ -298,6 +307,15 @@ int saveMempak(fileBrowser_file* savepath){
 	  return -1;
 
 	return 1;
+}
+
+int deleteMempak(fileBrowser_file* savepath){
+	fileBrowser_file saveFile;
+	memcpy(&saveFile, savepath, sizeof(fileBrowser_file));
+	memset(&saveFile.name[0],0,FILE_BROWSER_MAX_PATH_LEN);
+	sprintf((char*)saveFile.name,"%s/%s%s.mpk",savepath->name,ROM_SETTINGS.goodname,saveregionstr());
+
+	return saveFile_deleteFile(&saveFile);
 }
 
 void internal_ReadController(int Control, BYTE *Command)

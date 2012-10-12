@@ -163,6 +163,11 @@ int fileBrowser_CARD_writeFile(fileBrowser_file* file, void* buffer, unsigned in
 	return -1;  /* failed to find or create a new file */
 }
 
+int fileBrowser_CARD_deleteFile(fileBrowser_file* file){
+	int slot = file->discoffset;
+	return (CARD_Delete(slot, file->name) == CARD_ERROR_READY) ? 1 : 0;
+}
+
 int fileBrowser_CARD_init(fileBrowser_file* file) {
 	int slot = file->discoffset;
 	return mount_card(slot); //mount via slot number

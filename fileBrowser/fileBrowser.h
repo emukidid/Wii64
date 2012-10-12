@@ -81,6 +81,8 @@ extern int (*saveFile_readFile)(fileBrowser_file*, void*, unsigned int);
 
 extern int (*saveFile_writeFile)(fileBrowser_file*, void*, unsigned int);
 
+extern int (*saveFile_deleteFile)(fileBrowser_file*);
+
 extern int (*saveFile_deinit)(fileBrowser_file*);
 
 #endif

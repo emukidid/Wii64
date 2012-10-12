@@ -43,20 +43,22 @@ void Func_ShowRomInfo();
 void Func_ResetROM();
 void Func_LoadSave();
 void Func_SaveGame();
+void Func_DeleteSave();
 void Func_LoadState();
 void Func_SaveState();
 void Func_StateCycle();
 void Func_ReturnFromCurrentRomFrame();
 
-#define NUM_FRAME_BUTTONS 7
+#define NUM_FRAME_BUTTONS 8
 #define FRAME_BUTTONS currentRomFrameButtons
 #define FRAME_STRINGS currentRomFrameStrings
 
-static char FRAME_STRINGS[7][25] =
+static char FRAME_STRINGS[8][25] =
 	{ "Show ROM Info",
 	  "Restart Game",
 	  "Load Save File",
 	  "Save Game",
+	  "Delete Save Game",
 	  "Load State",
 	  "Save State",
 	  "Slot 0"};
@@ -78,13 +80,14 @@ struct ButtonInfo
 	ButtonFunc		returnFunc;
 } FRAME_BUTTONS[NUM_FRAME_BUTTONS] =
 { //	button	buttonStyle	buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc			returnFunc
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	 60.0,	340.0,	56.0,	 5,	 1,	-1,	-1,	Func_ShowRomInfo,	Func_ReturnFromCurrentRomFrame }, // Show ROM Info
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	120.0,	340.0,	56.0,	 0,	 2,	-1,	-1,	Func_ResetROM,		Func_ReturnFromCurrentRomFrame }, // Reset ROM
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	150.0,	180.0,	340.0,	56.0,	 1,	 3,	-1,	-1,	Func_LoadSave,		Func_ReturnFromCurrentRomFrame }, // Load Native Save
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	150.0,	240.0,	340.0,	56.0,	 2,	 4,	-1,	-1,	Func_SaveGame,		Func_ReturnFromCurrentRomFrame }, // Save Native Save
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	150.0,	300.0,	220.0,	56.0,	 3,	 5,	 6,	 6,	Func_LoadState,		Func_ReturnFromCurrentRomFrame }, // Load State 
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	150.0,	360.0,	220.0,	56.0,	 4,	 0,	 6,	 6,	Func_SaveState,		Func_ReturnFromCurrentRomFrame }, // Save State 
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[6],	390.0,	330.0,	100.0,	56.0,	 3,	 0,	 4,	 4,	Func_StateCycle,	Func_ReturnFromCurrentRomFrame }, // Cycle State 
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	 50.0,	340.0,	50.0,	 7,	 1,	-1,	-1,	Func_ShowRomInfo,	Func_ReturnFromCurrentRomFrame }, // Show ROM Info
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	110.0,	340.0,	50.0,	 0,	 2,	-1,	-1,	Func_ResetROM,		Func_ReturnFromCurrentRomFrame }, // Reset ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	150.0,	170.0,	340.0,	50.0,	 1,	 3,	-1,	-1,	Func_LoadSave,		Func_ReturnFromCurrentRomFrame }, // Load Native Save
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	150.0,	230.0,	340.0,	50.0,	 2,	 4,	-1,	-1,	Func_SaveGame,		Func_ReturnFromCurrentRomFrame }, // Save Native Save
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	150.0,	290.0,	340.0,	50.0,	 3,	 5,	-1,	-1,	Func_DeleteSave,	Func_ReturnFromCurrentRomFrame }, // Delete Native Save
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	150.0,	350.0,	220.0,	50.0,	 4,	 6,	 7,	 7,	Func_LoadState,		Func_ReturnFromCurrentRomFrame }, // Load State 
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[6],	150.0,	410.0,	220.0,	50.0,	 5,	 7,	 7,	 7,	Func_SaveState,		Func_ReturnFromCurrentRomFrame }, // Save State 
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[7],	390.0,	375.0,	100.0,	50.0,	 6,	 0,	 5,	 5,	Func_StateCycle,	Func_ReturnFromCurrentRomFrame }, // Cycle State 
 };
 
 CurrentRomFrame::CurrentRomFrame()
@@ -305,6 +308,50 @@ void Func_SaveGame()
 	else		menu::MessageBox::getInstance().setMessage("Failed to Save");
 }
 
+void Func_DeleteSave()
+{
+	if(!menu::MessageBox::getInstance().askMessage("Are you sure you want to delete the save?"))
+		return;
+	switch (nativeSaveDevice)
+	{
+		case NATIVESAVEDEVICE_SD:
+		case NATIVESAVEDEVICE_USB:
+			// Adjust saveFile pointers
+			saveFile_dir = (nativeSaveDevice==NATIVESAVEDEVICE_SD) ? &saveDir_libfat_Default:&saveDir_libfat_USB;
+			saveFile_readFile  = fileBrowser_libfat_readFile;
+			saveFile_writeFile = fileBrowser_libfat_writeFile;
+			saveFile_init      = fileBrowser_libfat_init;
+			saveFile_deinit    = fileBrowser_libfat_deinit;
+			saveFile_deleteFile= fileBrowser_libfat_deleteFile;
+		break;
+		case NATIVESAVEDEVICE_CARDA:
+		case NATIVESAVEDEVICE_CARDB:
+			// Adjust saveFile pointers
+			saveFile_dir       = (nativeSaveDevice==NATIVESAVEDEVICE_CARDA) ? &saveDir_CARD_SlotA:&saveDir_CARD_SlotB;
+			saveFile_readFile  = fileBrowser_CARD_readFile;
+			saveFile_writeFile = fileBrowser_CARD_writeFile;
+			saveFile_init      = fileBrowser_CARD_init;
+			saveFile_deinit    = fileBrowser_CARD_deinit;
+			saveFile_deleteFile= fileBrowser_CARD_deleteFile;
+		break;
+	}
+
+	// Try deleting everything
+	saveFile_init(saveFile_dir);
+	u32 eepromDeleted = deleteEeprom(saveFile_dir);
+	u32 sramDeleted = deleteSram(saveFile_dir);
+	u32 mempakDeleted = deleteMempak(saveFile_dir);
+	u32 flashramDeleted = deleteFlashram(saveFile_dir);
+	saveFile_deinit(saveFile_dir);
+
+	if(!flashramDeleted && !sramDeleted && !eepromDeleted && !mempakDeleted) {
+		menu::MessageBox::getInstance().setMessage("Nothing to delete");
+	}
+	else {
+		menu::MessageBox::getInstance().setMessage("Successfully deleted");
+	}
+}
+
 void Func_LoadState()
 {
   if(!savestates_exists(LOADSTATE)) {
@@ -333,7 +380,7 @@ void Func_StateCycle()
 {
 	which_slot = (which_slot+1) %10;
 	savestates_select_slot(which_slot);
-	FRAME_STRINGS[6][5] = which_slot + '0';
+	FRAME_STRINGS[7][5] = which_slot + '0';
 }
 
 void Func_ReturnFromCurrentRomFrame()
