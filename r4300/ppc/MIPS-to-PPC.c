@@ -53,7 +53,7 @@ static void genUpdateCount(int checkCount);
 static void genCheckFP(void);
 void genRecompileLoad(memType type, MIPS_instr mips);
 void genCallDynaMem(memType type, int base, short immed);
-void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isPhysical);
+void genRecompileStore(memType type, MIPS_instr mips);
 void RecompCache_Update(PowerPC_func*);
 static int inline mips_is_jump(MIPS_instr);
 void jump_to(unsigned int);
@@ -1025,91 +1025,96 @@ static int LWU(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LWU
+	PowerPC_instr ppc;
+	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
+	int isPhysical = 1, isVirtual = 1;
+	if(isConstant){
+		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
+		int immediate = MIPS_GET_IMMED(mips);
+		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
+		
+		if((constant + immediate) > (int)RAM_TOP)
+			isPhysical = 0;
+		else
+			isVirtual = 0;
+	}
 
-	genRecompileLoad(MEM_LWU, mips);
+	flushRegisters();
+	reset_code_addr();
+	int rd = mapRegisterTemp(); // r3 = rd
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	invalidateRegisters();
+
+#ifdef FASTMEM
+	if(isPhysical && isVirtual){
+		// If base in physical memory
+		GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
+		set_next_dst(ppc);
+		GEN_BGE(ppc, 1, 7, 0, 0);
+		set_next_dst(ppc);
+	}
+
+	if(isPhysical) {
+		// Add rdram pointer
+		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
+		set_next_dst(ppc);
+		// Create a mapping for this value
+		RegMapping value = mapRegister64New( MIPS_GET_RT(mips) );
+		// Perform the actual load
+		GEN_LWZ(ppc, value.lo, MIPS_GET_IMMED(mips), base);
+		set_next_dst(ppc);
+		// Zero out the upper word
+		GEN_LI(ppc, value.hi, 0, 0);
+		set_next_dst(ppc);
+		flushRegisters();
+	}
+
+	PowerPC_instr* preCall;
+	int not_fastmem_id;
+	if(isPhysical && isVirtual){
+		// Skip over else
+		not_fastmem_id = add_jump_special(1);
+		GEN_B(ppc, not_fastmem_id, 0, 0);
+		set_next_dst(ppc);
+		preCall = get_curr_dst();
+	}
+#endif // FASTMEM
+
+	if(isVirtual) {
+		// load into rt
+		GEN_LI(ppc, rd, 0, MIPS_GET_RT(mips));
+		set_next_dst(ppc);
+
+		genCallDynaMem(MEM_LWU, base, MIPS_GET_IMMED(mips));
+	}
+#ifdef FASTMEM
+	if(isPhysical && isVirtual){
+		int callSize = get_curr_dst() - preCall;
+		set_jump_special(not_fastmem_id, callSize+1);
+	}
+#endif
 	return CONVERT_SUCCESS;
 #endif
 }
 
 static int SB(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SB
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SB
 
-	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
-	int isPhysical = 1, isVirtual = 1;
-	if(isConstant){
-		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
-		int immediate = MIPS_GET_IMMED(mips);
-		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
-		
-		if((constant + immediate) > (int)RAM_TOP)
-			isPhysical = 0;
-		else
-			isVirtual = 0;
-		//recompiledStoreVirt+=(isVirtual);
-		//recompiledStorePhys+=(isPhysical);
-	}
-	//recompiledStores++;
-	//printConstantPropStats();
-
-	flushRegisters();
-	reset_code_addr();
-	if( MIPS_GET_RT(mips) ){
-		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
-	} else {
-		mapRegisterTemp();
-		GEN_LI(ppc, 3, 0, 0); // r3 = 0
-		set_next_dst(ppc);
-	}
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-	invalidateRegisters();
-
-	genCallDynaMem2(MEM_SB, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
+	genRecompileStore(MEM_SB, mips);
 	return CONVERT_SUCCESS;
 #endif
 }
 
 static int SH(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SH
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SH
 
-	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
-	
-	int isPhysical = 1, isVirtual = 1;
-	if(isConstant){
-		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
-		int immediate = MIPS_GET_IMMED(mips);
-		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
-		
-		if((constant + immediate) > (int)RAM_TOP)
-			isPhysical = 0;
-		else
-			isVirtual = 0;
-		//recompiledStoreVirt+=(isVirtual);
-		//recompiledStorePhys+=(isPhysical);
-	}
-	//recompiledStores++;
-	//printConstantPropStats();
-
-	flushRegisters();
-	reset_code_addr();
-	if( MIPS_GET_RT(mips) ){
-		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
-	} else {
-		mapRegisterTemp();
-		GEN_LI(ppc, 3, 0, 0); // r3 = 0
-		set_next_dst(ppc);
-	}
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-	invalidateRegisters();
-
-	genCallDynaMem2(MEM_SH, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
+	genRecompileStore(MEM_SH, mips);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1126,42 +1131,12 @@ static int SWL(MIPS_instr mips){
 }
 
 static int SW(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SW
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SW
 
-	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
-	int isPhysical = 1, isVirtual = 1;
-	if(isConstant){
-		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
-		int immediate = MIPS_GET_IMMED(mips);
-		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
-		
-		if((constant + immediate) > (int)RAM_TOP)
-			isPhysical = 0;
-		else
-			isVirtual = 0;
-		//recompiledStoreVirt+=(isVirtual);
-		//recompiledStorePhys+=(isPhysical);
-	}
-	//recompiledStores++;
-	//printConstantPropStats();
-
-	flushRegisters();
-	reset_code_addr();
-	if( MIPS_GET_RT(mips) ){
-		mapRegister( MIPS_GET_RT(mips) ); // r3 = value
-	} else {
-		mapRegisterTemp();
-		GEN_LI(ppc, 3, 0, 0); // r3 = 0
-		set_next_dst(ppc);
-	}
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-	invalidateRegisters();
-
-	genCallDynaMem2(MEM_SW, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
+	genRecompileStore(MEM_SW, mips);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1426,45 +1401,12 @@ static int LDC1(MIPS_instr mips){
 }
 
 static int SWC1(MIPS_instr mips){
-	PowerPC_instr ppc;
 #ifdef INTERPRET_SWC1
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SWC1
 
-	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
-	int isPhysical = 1, isVirtual = 1;
-	if(isConstant){
-		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
-		int immediate = MIPS_GET_IMMED(mips);
-		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
-		
-		if((constant + immediate) > (int)RAM_TOP)
-			isPhysical = 0;
-		else
-			isVirtual = 0;
-		//recompiledStoreVirt+=(isVirtual);
-		//recompiledStorePhys+=(isPhysical);
-	}
-	//recompiledStores++;
-	//printConstantPropStats();
-
-	flushRegisters();
-	reset_code_addr();
-	genCheckFP();
-	int rd = mapRegisterTemp(); // r3 = rd
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-	int addr = mapRegisterTemp(); // r5 = fpr_addr
-	invalidateRegisters();
-
-	// addr = reg_cop1_simple[frt]
-	GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_32, DYNAREG_R4300);
-	set_next_dst(ppc);
-	// frs = *addr
-	GEN_LWZ(ppc, rd, 0, addr);
-	set_next_dst(ppc);
-
-	genCallDynaMem2(MEM_SWC1, base, MIPS_GET_IMMED(mips), isVirtual, isPhysical);
+	genRecompileStore(MEM_SWC1, mips);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -4582,16 +4524,6 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 				// extsb rt
 				GEN_EXTSB(ppc, rd, rd);
 			break;
-			case MEM_LWU: {
-				// Create a mapping for this value
-				RegMapping value = mapRegister64New( MIPS_GET_RT(mips) );
-				// Perform the actual load
-				GEN_LWZ(ppc, value.lo, MIPS_GET_IMMED(mips), rdram_base);
-				set_next_dst(ppc);
-				// Zero out the upper word
-				GEN_LI(ppc, value.hi, 0, 0);
-				}
-			break;
 			default:
 			break;
 		}
@@ -4664,8 +4596,51 @@ void genCallDynaMem(memType type, int base, short immed){
 	set_next_dst(ppc);
 }
 
-void genCallDynaMem2(memType type, int base, short immed, int isVirtual, int isPhysical){
+void genRecompileStore(memType type, MIPS_instr mips){
 	PowerPC_instr ppc;
+	
+	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
+	int isPhysical = 1, isVirtual = 1;
+	if(isConstant){
+		int immediate = MIPS_GET_IMMED(mips);
+		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
+		immediate |= (immediate&0x8000) ? 0xffff0000 : 0;
+		
+		if((constant + immediate) > (int)RAM_TOP)
+			isPhysical = 0;
+		else
+			isVirtual = 0;
+	}
+
+	int rd = 0;
+	flushRegisters();
+	reset_code_addr();
+	if(type == MEM_SWC1) {
+		genCheckFP();
+		rd = mapRegisterTemp(); // r3 = rd
+	}
+	else {
+		if( MIPS_GET_RT(mips) ){
+			rd = mapRegister( MIPS_GET_RT(mips) ); // r3 = value
+		} else {
+			rd = mapRegisterTemp();
+			GEN_LI(ppc, rd, 0, 0); // r3 = 0
+			set_next_dst(ppc);
+		}
+	}
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
+	int addr = mapRegisterTemp(); // r5 = fpr_addr
+	short immed = MIPS_GET_IMMED(mips);
+	invalidateRegisters();
+	
+	if(type == MEM_SWC1) {	
+		// addr = reg_cop1_simple[frt]
+		GEN_LWZ(ppc, addr, (MIPS_GET_RT(mips)*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+		set_next_dst(ppc);
+		// frs = *addr
+		GEN_LWZ(ppc, rd, 0, addr);
+		set_next_dst(ppc);
+	}
 	
 	// DYNAREG_RADDR = address
 	GEN_ADDI(ppc, 4, base, immed);
