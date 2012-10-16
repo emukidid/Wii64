@@ -69,12 +69,12 @@ long long __fixsfdi(float);
 	 (get_src_pc() <  0x80000000 || \
 	  get_src_pc() >= 0xC0000000))
 
-static inline unsigned short extractUpper16(void* address){
+static inline unsigned short extractUpper16(unsigned int address){
 	unsigned int addr = (unsigned int)address;
 	return (addr>>16) + ((addr>>15)&1);
 }
 
-static inline short extractLower16(void* address){
+static inline short extractLower16(unsigned int address){
 	unsigned int addr = (unsigned int)address;
 	return addr&0x8000 ? (addr&0xffff)-0x10000 : addr&0xffff;
 }
@@ -212,10 +212,10 @@ static int branch(int offset, condition cond, int link, int likely){
 		// Set LR to next instruction
 		int lr = mapRegisterNew(MIPS_REG_LR);
 		// lis	lr, pc@ha(0)
-		GEN_LIS(ppc, lr, (get_src_pc()+8)>>16);
+		GEN_LIS(ppc, lr, extractUpper16(get_src_pc()+8));
 		set_next_dst(ppc);
 		// la	lr, pc@l(lr)
-		GEN_ORI(ppc, lr, lr, get_src_pc()+8);
+		GEN_ADDI(ppc, lr, lr, extractLower16(get_src_pc()+8));
 		set_next_dst(ppc);
 
 		flushRegisters();
@@ -264,9 +264,9 @@ static int branch(int offset, condition cond, int link, int likely){
 
 		// The branch isn't taken, but we need to check interrupts
 		// Load the address of the next instruction
-		GEN_LIS(ppc, 3, (get_src_pc()+4)>>16);
+		GEN_LIS(ppc, 3, extractUpper16(get_src_pc()+4));
 		set_next_dst(ppc);
-		GEN_ORI(ppc, 3, 3, get_src_pc()+4);
+		GEN_ADDI(ppc, 3, 3, extractLower16(get_src_pc()+4));
 		set_next_dst(ppc);
 		// If taking the interrupt, return to the trampoline
 		GEN_BLELR(ppc, 2, 0);
@@ -278,16 +278,16 @@ static int branch(int offset, condition cond, int link, int likely){
 		if(cond != NONE){
 			GEN_BC(ppc, 4, 0, 0, bo, bi);
 			set_next_dst(ppc);
-			GEN_LIS(ppc, 3, (get_src_pc()+4)>>16);
+			GEN_LIS(ppc, 3, extractUpper16(get_src_pc()+4));
 			set_next_dst(ppc);
-			GEN_ORI(ppc, 3, 3, get_src_pc()+4);
+			GEN_ADDI(ppc, 3, 3, extractLower16(get_src_pc()+4));
 			set_next_dst(ppc);
 			GEN_B(ppc, 3, 0, 0);
 			set_next_dst(ppc);
 		}
-		GEN_LIS(ppc, 3, (get_src_pc() + (offset<<2))>>16);
+		GEN_LIS(ppc, 3, extractUpper16(get_src_pc() + (offset<<2)));
 		set_next_dst(ppc);
-		GEN_ORI(ppc, 3, 3, get_src_pc() + (offset<<2));
+		GEN_ADDI(ppc, 3, 3, extractLower16(get_src_pc() + (offset<<2)));
 		set_next_dst(ppc);
 		GEN_STW(ppc, 3, 0+R4300OFF_LADDR, DYNAREG_R4300);
 		set_next_dst(ppc);
@@ -388,9 +388,9 @@ static int J(MIPS_instr mips){
 		genJumpTo(MIPS_GET_LI(mips), JUMPTO_ADDR);
 	} else {
 		// r4300.last_pc = naddr
-		GEN_LIS(ppc, 3, naddr>>16);
+		GEN_LIS(ppc, 3, extractUpper16(naddr));
 		set_next_dst(ppc);
-		GEN_ORI(ppc, 3, 3, naddr);
+		GEN_ADDI(ppc, 3, 3, extractLower16(naddr));
 		set_next_dst(ppc);
 		GEN_STW(ppc, 3, 0+R4300OFF_LADDR, DYNAREG_R4300);
 		set_next_dst(ppc);
@@ -444,10 +444,10 @@ static int JAL(MIPS_instr mips){
 	// Set LR to next instruction
 	int lr = mapRegisterNew(MIPS_REG_LR);
 	// lis	lr, pc@ha(0)
-	GEN_LIS(ppc, lr, (get_src_pc()+4)>>16);
+	GEN_LIS(ppc, lr, extractUpper16(get_src_pc()+4));
 	set_next_dst(ppc);
 	// la	lr, pc@l(lr)
-	GEN_ORI(ppc, lr, lr, get_src_pc()+4);
+	GEN_ADDI(ppc, lr, lr, extractLower16(get_src_pc()+4));
 	set_next_dst(ppc);
 
 	flushRegisters();
@@ -460,9 +460,9 @@ static int JAL(MIPS_instr mips){
 		genJumpTo(MIPS_GET_LI(mips), JUMPTO_ADDR);
 	} else {
 		// r4300.last_pc = naddr
-		GEN_LIS(ppc, 3, naddr>>16);
+		GEN_LIS(ppc, 3, extractUpper16(naddr));
 		set_next_dst(ppc);
-		GEN_ORI(ppc, 3, 3, naddr);
+		GEN_ADDI(ppc, 3, 3, extractLower16(naddr));
 		set_next_dst(ppc);
 		GEN_STW(ppc, 3, 0+R4300OFF_LADDR, DYNAREG_R4300);
 		set_next_dst(ppc);
@@ -1615,10 +1615,10 @@ static int JALR(MIPS_instr mips){
 	// Set LR to next instruction
 	int rd = mapRegisterNew(MIPS_GET_RD(mips));
 	// lis	lr, pc@ha(0)
-	GEN_LIS(ppc, rd, (get_src_pc()+4)>>16);
+	GEN_LIS(ppc, rd, extractUpper16(get_src_pc()+4));
 	set_next_dst(ppc);
 	// la	lr, pc@l(lr)
-	GEN_ORI(ppc, rd, rd, get_src_pc()+4);
+	GEN_ADDI(ppc, rd, rd, extractLower16(get_src_pc()+4));
 	set_next_dst(ppc);
 
 	flushRegisters();
@@ -2543,13 +2543,13 @@ static int ERET(MIPS_instr mips){
 	GEN_LWZ(ppc, 3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
 	// Load upper address of llbit
-	GEN_LIS(ppc, 4, extractUpper16(&r4300.llbit));
+	GEN_LIS(ppc, 4, extractUpper16((unsigned int)&r4300.llbit));
 	set_next_dst(ppc);
 	// Status & 0xFFFFFFFD
 	GEN_RLWINM(ppc, 3, 3, 0, 31, 29);
 	set_next_dst(ppc);
 	// llbit = 0
-	GEN_STW(ppc, DYNAREG_ZERO, extractLower16(&r4300.llbit), 4);
+	GEN_STW(ppc, DYNAREG_ZERO, extractLower16((unsigned int)&r4300.llbit), 4);
 	set_next_dst(ppc);
 	// Store updated Status
 	GEN_STW(ppc, 3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
@@ -4267,15 +4267,15 @@ static void genCallInterp(MIPS_instr mips){
 	//GEN_MTCTR(ppc, DYNAREG_INTERP);
 	//set_next_dst(ppc);
 	// Load our argument into r3 (mips)
-	GEN_LIS(ppc, 3, mips>>16);
+	GEN_LIS(ppc, 3, extractUpper16(mips));
 	set_next_dst(ppc);
 	// Load the current PC as the second arg
-	GEN_LIS(ppc, 4, get_src_pc()>>16);
+	GEN_LIS(ppc, 4, extractUpper16(get_src_pc()));
 	set_next_dst(ppc);
 	// Load the lower halves of mips and PC
-	GEN_ORI(ppc, 3, 3, mips);
+	GEN_ADDI(ppc, 3, 3, extractLower16(mips));
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 4, 4, get_src_pc());
+	GEN_ADDI(ppc, 4, 4, extractLower16(get_src_pc()));
 	set_next_dst(ppc);
 	// Branch to decodeNInterpret
 	//GEN_BCTRL(ppc);
@@ -4326,9 +4326,9 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 		GEN_MTLR(ppc, 0);
 		set_next_dst(ppc);
 		// Load the address as the return value
-		GEN_LIS(ppc, 3, loc >> 16);
+		GEN_LIS(ppc, 3, extractUpper16(loc));
 		set_next_dst(ppc);
-		GEN_ORI(ppc, 3, 3, loc);
+		GEN_ADDI(ppc, 3, 3, extractLower16(loc));
 		set_next_dst(ppc);
 		// Since we could be linking, return on interrupt
 		GEN_BLELR(ppc, 2, 0);
@@ -4349,13 +4349,13 @@ static void genUpdateCount(int checkCount){
 	// Dynarec inlined code equivalent:
 	int tmp = mapRegisterTemp();
 	// lis    tmp, pc >> 16
-	GEN_LIS(ppc, tmp, (get_src_pc()+4)>>16);
+	GEN_LIS(ppc, tmp, extractUpper16(get_src_pc()+4));
 	set_next_dst(ppc);
 	// lwz    r0,  0(&r4300.last_pc)     // r0 = r4300.last_pc
 	GEN_LWZ(ppc, 0, 0+R4300OFF_LADDR, DYNAREG_R4300);
 	set_next_dst(ppc);
-	// ori    tmp, tmp, pc & 0xffff  // tmp = pc
-	GEN_ORI(ppc, tmp, tmp, get_src_pc()+4);
+	// addi    tmp, tmp, pc & 0xffff  // tmp = pc
+	GEN_ADDI(ppc, tmp, tmp, extractLower16(get_src_pc()+4));
 	set_next_dst(ppc);
 	// stw    tmp, 0(&r4300.last_pc)     // r4300.last_pc = pc
 	GEN_STW(ppc, tmp, 0+R4300OFF_LADDR, DYNAREG_R4300);
@@ -4389,9 +4389,9 @@ static void genUpdateCount(int checkCount){
 	unmapRegisterTemp(tmp);
 #else
 	// Load the current PC as the argument
-	GEN_LIS(ppc, 3, (get_src_pc()+4)>>16);
+	GEN_LIS(ppc, 3, extractUpper16(get_src_pc()+4));
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 3, 3, get_src_pc()+4);
+	GEN_ADDI(ppc, 3, 3, extractLower16(get_src_pc()+4));
 	set_next_dst(ppc);
 	// Call dyna_update_count
 	GEN_B(ppc, add_jump((unsigned long)(&dyna_update_count), 1, 1), 0, 1);
@@ -4428,13 +4428,13 @@ static void genCheckFP(void){
 		//GEN_MTCTR(ppc, DYNAREG_CHKFP);
 		//set_next_dst(ppc);
 		// Load the current PC as arg 1 (upper half)
-		GEN_LIS(ppc, 3, get_src_pc()>>16);
+		GEN_LIS(ppc, 3, extractUpper16(get_src_pc()));
 		set_next_dst(ppc);
 		// Pass in whether this instruction is in the delay slot as arg 2
 		GEN_LI(ppc, 4, 0, isDelaySlot ? 1 : 0);
 		set_next_dst(ppc);
 		// Current PC (lower half)
-		GEN_ORI(ppc, 3, 3, get_src_pc());
+		GEN_ADDI(ppc, 3, 3, extractLower16(get_src_pc()));
 		set_next_dst(ppc);
 		// Call dyna_check_cop1_unusable
 		//GEN_BCTRL(ppc);
@@ -4565,7 +4565,7 @@ void genCallDynaMem(memType type, int base, short immed){
 	PowerPC_instr ppc;
 	// PRE: value to store, or register # to load into should be in r3
 	// Pass PC as arg 4 (upper half)
-	GEN_LIS(ppc, 6, (get_src_pc()+4)>>16);
+	GEN_LIS(ppc, 6, extractUpper16(get_src_pc()+4));
 	set_next_dst(ppc);
 	// addr = base + immed (arg 2)
 	GEN_ADDI(ppc, 4, base, immed);
@@ -4574,7 +4574,7 @@ void genCallDynaMem(memType type, int base, short immed){
 	GEN_LI(ppc, 5, 0, type);
 	set_next_dst(ppc);
 	// Lower half of PC
-	GEN_ORI(ppc, 6, 6, get_src_pc()+4);
+	GEN_ADDI(ppc, 6, 6, extractLower16(get_src_pc()+4));
 	set_next_dst(ppc);
 	// isDelaySlot as arg 5
 	GEN_LI(ppc, 7, 0, isDelaySlot ? 1 : 0);
@@ -4725,12 +4725,12 @@ void genRecompileStore(memType type, MIPS_instr mips){
 		// r4 = address (already set)
 		// adjust delay_slot and pc
 		// r5 = pc
-		GEN_LIS(ppc, 5, (get_src_pc()+4) >> 16);
+		GEN_LIS(ppc, 5, extractUpper16(get_src_pc()+4));
 		set_next_dst(ppc);
 		// r6 = isDelaySlot
 		GEN_LI(ppc, 6, 0, isDelaySlot ? 1 : 0);
 		set_next_dst(ppc);
-		GEN_ORI(ppc, 5, 5, get_src_pc()+4);
+		GEN_ADDI(ppc, 5, 5, extractLower16(get_src_pc()+4));
 		set_next_dst(ppc);
 		// call dyna_mem_write_<type>
 		if(type == MEM_SB){

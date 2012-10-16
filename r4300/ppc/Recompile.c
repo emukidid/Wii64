@@ -88,6 +88,17 @@ void set_next_dst(PowerPC_instr i){ *(ppc_dst++) = i; ++code_length; }
 // Adjusts the code_addr for the current instruction to account for flushes
 void reset_code_addr(void){ if(src<=src_last) code_addr[src-1-src_first] = ppc_dst; }
 
+static inline unsigned short extractUpper16(void* address){
+	unsigned int addr = (unsigned int)address;
+	return (addr>>16) + ((addr>>15)&1);
+}
+
+static inline short extractLower16(void* address){
+	unsigned int addr = (unsigned int)address;
+	return addr&0x8000 ? (addr&0xffff)-0x10000 : addr&0xffff;
+}
+
+
 int add_jump(int old_jump, int is_j, int is_call){
 	int id = current_jump;
 	jump_node* jump = &jump_table[current_jump++];
@@ -550,9 +561,9 @@ static void genJumpPad(void){
 	PowerPC_instr ppc = NEW_PPC_INSTR();
 
 	// noCheckInterrupt = 1
-	GEN_LIS(ppc, 3, (unsigned int)(&noCheckInterrupt)>>16);
+	GEN_LIS(ppc, 3, extractUpper16((unsigned int)(&noCheckInterrupt)));
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 3, 3, (unsigned int)(&noCheckInterrupt));
+	GEN_ADDI(ppc, 3, 3, extractLower16((unsigned int)(&noCheckInterrupt)));
 	set_next_dst(ppc);
 	GEN_LI(ppc, 0, 0, 1);
 	set_next_dst(ppc);
@@ -564,9 +575,9 @@ static void genJumpPad(void){
 	
 	// Set the next address to the first address in the next block if
 	//   we've really reached the end of the block, not jumped to the pad
-	GEN_LIS(ppc, 3, (get_src_pc()+4)>>16);
+	GEN_LIS(ppc, 3, extractUpper16(get_src_pc()+4));
 	set_next_dst(ppc);
-	GEN_ORI(ppc, 3, 3, get_src_pc()+4);
+	GEN_ADDI(ppc, 3, 3, extractLower16(get_src_pc()+4));
 	set_next_dst(ppc);
 
 	// return destination
