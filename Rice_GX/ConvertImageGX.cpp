@@ -970,7 +970,7 @@ void ConvertCI4_IA16_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 	bool bIgnoreAlpha = (tinfo.TLutFmt==TLUT_FMT_UNKNOWN);
 
 	if (!pTexture->StartUpdate(&dInfo))
-	return;
+		return;
 
 	if (tinfo.bSwapped)
 	{

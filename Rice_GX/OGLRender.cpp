@@ -736,10 +736,14 @@ bool OGLRender::RenderTexRect()
 		//glVertex3f(g_texRectTVtx[3].x, g_texRectTVtx[3].y, depth);
 		GX_Position3f32( g_texRectTVtx[i].x, g_texRectTVtx[i].y, depth );
 		//glColor4f(g_texRectTVtx[3].r, g_texRectTVtx[3].g, g_texRectTVtx[3].b, g_texRectTVtx[3].a);
-		GX_Color4u8( (u8) (g_texRectTVtx[i].r*255),
+/*		GX_Color4u8( (u8) (g_texRectTVtx[i].r*255),
 			(u8) (g_texRectTVtx[i].g*255),
 			(u8) (g_texRectTVtx[i].b*255),
-			(u8) (g_texRectTVtx[i].a*255));
+			(u8) (g_texRectTVtx[i].a*255));*/
+		GX_Color4u8( (u8) (g_texRectTVtx[i].r),
+			(u8) (g_texRectTVtx[i].g),
+			(u8) (g_texRectTVtx[i].b),
+			(u8) (g_texRectTVtx[i].a));
 		//TexCoord(g_texRectTVtx[3]);
 		//glTexCoord2f(vtxInfo.tcord[0].u, vtxInfo.tcord[0].v);
 		GX_TexCoord2f32( g_texRectTVtx[i].tcord[0].u, g_texRectTVtx[i].tcord[0].v );
@@ -1214,7 +1218,7 @@ COLOR OGLRender::PostProcessDiffuseColor(COLOR curDiffuseColor)
     uint32 alphaflag = m_pColorCombiner->m_pDecodedMux->m_dwShadeAlphaChannelFlag;
     if( colorflag+alphaflag != MUX_0 )
     {
-#if 1 //ndef _BIG_ENDIAN //Maybe no endian problem...
+#if 1 //ndef _BIG_ENDIAN //Maybe no endian problem... This is testing whether colorflag or alphaflag are pointers
         if( (colorflag & 0xFFFFFF00) == 0 && (alphaflag & 0xFFFFFF00) == 0 )
 #else // !_BIG_ENDIAN
         if( (colorflag & 0x00FFFFFF) == 0 && (alphaflag & 0x00FFFFFF) == 0 )
@@ -1224,6 +1228,10 @@ COLOR OGLRender::PostProcessDiffuseColor(COLOR curDiffuseColor)
         }
         else
             color = (CalculateConstFactor(colorflag, alphaflag, curDiffuseColor));
+#if 0 //def SHOW_DEBUG
+		sprintf(txtbuffer,"\r\nPostProcDiffCol: cflag 0x%8x, aflag 0x%8x, color 0x%8x\r\n",colorflag, alphaflag, color);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
     }
 
     //return (color<<8)|(color>>24);

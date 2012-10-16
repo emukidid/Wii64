@@ -57,7 +57,7 @@ RGBMapType RGBArgsMap[] =
 	{GX_CC_RASA,	GX_CC_RASA,		GX_CA_RASA,		GX_TEV_KCSEL_1,		GX_TEV_KCSEL_1,		GX_TEV_KASEL_1		},	//MUX_SHADE_ALPHA,
 	{GX_CC_KONST,	GX_CC_KONST,	GX_CA_KONST,	GX_TEV_KCSEL_K1_A,	GX_TEV_KCSEL_K1_A,	GX_TEV_KASEL_K1_A	},	//MUX_ENV_ALPHA,
 	{GX_CC_KONST,	GX_CC_KONST,	GX_CA_KONST,	GX_TEV_KCSEL_K2,	GX_TEV_KCSEL_K2,	GX_TEV_KASEL_K2_A	},	//MUX_LODFRAC,
-	{GX_CC_KONST,	GX_CC_KONST,	GX_CA_KONST,	GX_TEV_KCSEL_K2,	GX_TEV_KCSEL_K2,	GX_TEV_KASEL_K2_A	},	//MUX_PRIMLODFRAC,
+	{GX_CC_KONST,	GX_CC_KONST,	GX_CA_KONST,	GX_TEV_KCSEL_K3,	GX_TEV_KCSEL_K3,	GX_TEV_KASEL_K3_A	},	//MUX_PRIMLODFRAC,
 	{GX_CC_RASC,	GX_CC_RASC,		GX_CA_RASA,		GX_TEV_KCSEL_1,		GX_TEV_KCSEL_1,		GX_TEV_KASEL_1		},	//MUX_K5
 	{GX_CC_RASC,	GX_CC_RASC,		GX_CA_RASA,		GX_TEV_KCSEL_1,		GX_TEV_KCSEL_1,		GX_TEV_KASEL_1		},	//MUX_UNK
 	{GX_CC_CPREV,	GX_CC_CPREV,	GX_CA_APREV,	GX_TEV_KCSEL_1,		GX_TEV_KCSEL_1,		GX_TEV_KASEL_1		},	//MUX_GX_PREV
@@ -367,6 +367,16 @@ void CTEVColorCombiner::InitCombinerCycle12(void)
 
 	bool combinerIsChanged = false;
 
+#if 0 //def SHOW_DEBUG
+	if( m_pDecodedMux->m_dwMux0 == 0x0026a004 && m_pDecodedMux->m_dwMux1 == 0x1f1093fb )
+	{
+		sprintf(txtbuffer,"\r\nInitCombinerCycle12: detected Mux0 0x%8x, Mux1 0x%8x and converted\r\n", m_pDecodedMux->m_dwMux0, m_pDecodedMux->m_dwMux1);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+		m_pDecodedMux->m_dwMux0 = 0x00FFFFFF; //0, 0, 0, 1
+		m_pDecodedMux->m_dwMux1 = 0xFFFF7DBE; //0, 0, 0, 1
+	}
+#endif //SHOW_DEBUG
+	
 	if( m_pDecodedMux->m_dwMux0 != m_dwLastMux0 || m_pDecodedMux->m_dwMux1 != m_dwLastMux1  || m_lastIndex < 0 )
 	{
 		combinerIsChanged = true;
@@ -433,8 +443,8 @@ int CTEVColorCombiner::ParseDecodedMux()
 	//TexN <- color inputs (?)
 	//KREG0 <- MUX_PRIM
 	//KREG1 <- MUX_ENV
-	//KREG2 <- MUX_LODFRAC, MUX_PRIMLODFRAC
-	//KREG3 <- MUX_1(alpha)??
+	//KREG2 <- MUX_LODFRAC
+	//KREG3 <- MUX_PRIMLODFRAC
 	//REG0 <- MUX_COMBINED
 	//REG1 <-
 	//REG2 <- backup PRIM/ENV/LODFRAC ??
@@ -448,10 +458,12 @@ int CTEVColorCombiner::ParseDecodedMux()
 
 	//TODO: There could be a problem for MUX_COMPLEMENT in the alpha channel when multiplying by MUX_1 because a KONST register must be used for alpha.
 	
-#define NextAvailable(stage, arg) \
+#define NextAvailable(stage, rgbalpha, arg) \
 	while ( (((arg&MUX_MASK)==MUX_TEXEL0 || (arg&MUX_MASK)==MUX_T0_ALPHA) && res.units[stage].tex==1) || \
-			(((arg&MUX_MASK)==MUX_TEXEL1 || (arg&MUX_MASK)==MUX_T1_ALPHA) && res.units[stage].tex==0) ) \
-			stage++;
+		    (((arg&MUX_MASK)==MUX_TEXEL1 || (arg&MUX_MASK)==MUX_T1_ALPHA) && res.units[stage].tex==0) ) { \
+		res.units[stage].Combs[rgbalpha].argD = MUX_GX_PREV; \
+		if ( stage > 0 ) res.units[stage].ops[rgbalpha].clamp = res.units[stage-1].ops[rgbalpha].clamp; \
+		stage++; } 
 
     TEVCombinerSaveType res;
 	for (int stage=0; stage<16; stage++)
@@ -501,7 +513,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				stage++;
 				break;
 			case CM_FMT_TYPE_D:             // = A
-				NextAvailable(stage, m.d);
+				NextAvailable(stage, rgbalpha, m.d);
 				if( !(m.d&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.d;
@@ -514,7 +526,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				stage++;
 				break;
 			case CM_FMT_TYPE_A_ADD_D:           // = A+D
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.a;
@@ -525,7 +537,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 					res.units[stage].Combs[rgbalpha].argC = m.a;
 				}
 				stage++;
-				NextAvailable(stage, m.d);
+				NextAvailable(stage, rgbalpha, m.d);
 				if( !(m.d&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argA = m.d;
@@ -539,7 +551,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				stage++;
 				break;
 			case CM_FMT_TYPE_A_SUB_B:           // = A-B
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.a;
@@ -550,7 +562,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 					res.units[stage].Combs[rgbalpha].argC = m.a;
 				}
 				stage++;
-				NextAvailable(stage, m.b);
+				NextAvailable(stage, rgbalpha, m.b);
 				if( !(m.b&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argA = m.b;
@@ -565,7 +577,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				stage++;
 				break;
 			case CM_FMT_TYPE_A_MOD_C:           // = A*C
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.a;
@@ -576,7 +588,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 					res.units[stage].Combs[rgbalpha].argC = m.a;
 				}
 				stage++;
-				NextAvailable(stage, m.c);
+				NextAvailable(stage, rgbalpha, m.c);
 				if( !(m.c&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argB = m.c;
@@ -590,7 +602,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				stage++;
 				break;
 			case CM_FMT_TYPE_A_MOD_C_ADD_D: // = A*C+D
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.a;
@@ -601,7 +613,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 					res.units[stage].Combs[rgbalpha].argC = m.a;
 				}
 				stage++;
-				NextAvailable(stage, m.c);
+				NextAvailable(stage, rgbalpha, m.c);
 				if( !(m.c&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argB = m.c;
@@ -614,7 +626,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				}
 				res.units[stage].ops[rgbalpha].clamp = GX_FALSE;
 				stage++;
-				NextAvailable(stage, m.d);
+				NextAvailable(stage, rgbalpha, m.d);
 				if( !(m.d&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argA = m.d;
@@ -628,7 +640,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				stage++;
 				break;
 			case CM_FMT_TYPE_A_LERP_B_C:        // = (A-B)*C+B = A*C - B*C + B = A*C + B*(1-C)
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.a;
@@ -640,7 +652,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				}
 				res.units[stage].ops[rgbalpha].tevregid = GX_TEVREG1 + tempreg;
 				stage++;
-				NextAvailable(stage, m.b);
+				NextAvailable(stage, rgbalpha, m.b);
 				if( !(m.b&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.b;
@@ -651,7 +663,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 					res.units[stage].Combs[rgbalpha].argC = m.b;
 				}
 				stage++;
-				NextAvailable(stage, m.c);
+				NextAvailable(stage, rgbalpha, m.c);
 				if( !(m.c&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argA = MUX_GX_PREV;
@@ -668,7 +680,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				tempreg++;
 				break;
 			case CM_FMT_TYPE_A_SUB_B_ADD_D: // = A-B+D
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.a;
@@ -679,7 +691,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 					res.units[stage].Combs[rgbalpha].argC = m.a;
 				}
 				stage++;
-				NextAvailable(stage, m.d);
+				NextAvailable(stage, rgbalpha, m.d);
 				if( !(m.d&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argA = m.d;
@@ -692,7 +704,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				res.units[stage].Combs[rgbalpha].argD = MUX_GX_PREV;
 				res.units[stage].ops[rgbalpha].clamp = GX_FALSE;
 				stage++;
-				NextAvailable(stage, m.b);
+				NextAvailable(stage, rgbalpha, m.b);
 				if( !(m.b&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argA = m.b;
@@ -707,7 +719,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				stage++;
 				break;
 			case CM_FMT_TYPE_A_SUB_B_MOD_C: // = (A-B)*C = A*C - B*C
-				NextAvailable(stage, m.c);
+				NextAvailable(stage, rgbalpha, m.c);
 				if( !(m.c&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.c;
@@ -719,7 +731,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				}
 				res.units[stage].ops[rgbalpha].tevregid = GX_TEVREG1 + tempreg;
 				stage++;
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argB = m.a;
@@ -732,7 +744,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				}
 				res.units[stage].ops[rgbalpha].clamp = GX_FALSE;
 				stage++;
-				NextAvailable(stage, m.b);
+				NextAvailable(stage, rgbalpha, m.b);
 				if( !(m.b&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argB = m.b;
@@ -750,7 +762,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				break;
 			case CM_FMT_TYPE_A_B_C_D:           // = (A-B)*C+D = A*C - B*C + D
 			default:
-				NextAvailable(stage, m.c);
+				NextAvailable(stage, rgbalpha, m.c);
 				if( !(m.c&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argD = m.c;
@@ -762,7 +774,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				}
 				res.units[stage].ops[rgbalpha].tevregid = GX_TEVREG1 + tempreg;
 				stage++;
-				NextAvailable(stage, m.a);
+				NextAvailable(stage, rgbalpha, m.a);
 				if( !(m.a&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argB = m.a;
@@ -775,7 +787,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				}
 				res.units[stage].ops[rgbalpha].clamp = GX_FALSE;
 				stage++;
-				NextAvailable(stage, m.b);
+				NextAvailable(stage, rgbalpha, m.b);
 				if( !(m.b&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argB = m.b;
@@ -790,7 +802,7 @@ int CTEVColorCombiner::ParseDecodedMux()
 				res.units[stage].ops[rgbalpha].tevop = GX_TEV_SUB;
 				res.units[stage].ops[rgbalpha].clamp = GX_FALSE;
 				stage++;
-				NextAvailable(stage, m.d);
+				NextAvailable(stage, rgbalpha, m.d);
 				if( !(m.d&MUX_COMPLEMENT) )
 				{
 					res.units[stage].Combs[rgbalpha].argA = m.d;
@@ -851,7 +863,8 @@ int CTEVColorCombiner::ParseDecodedMux()
 
 	res.primIsUsed = mux.isUsed(MUX_PRIM);
 	res.envIsUsed = mux.isUsed(MUX_ENV);
-	res.lodFracIsUsed = mux.isUsed(MUX_LODFRAC) || mux.isUsed(MUX_PRIMLODFRAC);
+	res.lodFracIsUsed = mux.isUsed(MUX_LODFRAC);
+	res.primLodFracIsUsed = mux.isUsed(MUX_PRIMLODFRAC);
 
 	//Save Parsed Result
 	res.dwMux0 = m_pDecodedMux->m_dwMux0;
@@ -920,14 +933,41 @@ void CTEVColorCombiner::GenerateCombinerSetting(int index)
 		}
 	}
 
+#if 0 //def SHOW_DEBUG
+//	if( m_pDecodedMux->m_dwMux0 == 0x0026a004 && m_pDecodedMux->m_dwMux1 == 0x1f1093fb )
+	if( m_pDecodedMux->m_dwMux0 == 0x00272c04 && m_pDecodedMux->m_dwMux1 == 0x1f1093ff )
+	{
+		sprintf(txtbuffer,"\r\nGenCombSetng: detected Mux0 0x%8x, Mux1 0x%8x, pTex0 0x%8x, pTex1 0x%8x\r\n", m_pDecodedMux->m_dwMux0, m_pDecodedMux->m_dwMux1, pTexture, pTexture1);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+	}
+#endif //SHOW_DEBUG
+	
 	GX_SetNumTevStages(res.numOfUnits);
+//	GX_SetNumTevStages(res.numOfUnits+1);
 	GX_SetNumChans (1);
 	GX_SetNumTexGens (numTex);
+//	GX_SetNumTexGens (numTex+1);
 	gGX.GXmultiTex = (numTex == 2) ? true : false;
 
 	for( int i=0; i<res.numOfUnits; i++ )
 	{
 		GX_SetTevOrder (GX_TEVSTAGE0+i, res.units[i].order.texcoord, res.units[i].order.texmap, res.units[i].order.color);
+#if 0 //for debugging
+		if( m_pDecodedMux->m_dwMux0 == 0x00267e60 && m_pDecodedMux->m_dwMux1 == 0x350cf37f && i==res.numOfUnits-1) //OOT Intro Index1
+		{
+//			GX_SetTevOrder (GX_TEVSTAGE0+i, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+//			GX_SetTevColorIn(GX_TEVSTAGE0+i, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ONE);
+//			GX_SetTevAlphaIn(GX_TEVSTAGE0+i, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_RASA); //GX_CA_RASA, GX_CA_KONST
+//			GX_SetTevKAlphaSel(GX_TEVSTAGE0+i, GX_TEV_KASEL_K0_A);
+		}
+		else
+		{
+//			GX_SetTevOrder (GX_TEVSTAGE0+i, res.units[i].order.texcoord, res.units[i].order.texmap, res.units[i].order.color);
+//			GX_SetTevColorIn(GX_TEVSTAGE0+i, res.units[i].rgbIn.a, res.units[i].rgbIn.b, res.units[i].rgbIn.c, res.units[i].rgbIn.d);
+//			GX_SetTevAlphaIn(GX_TEVSTAGE0+i, res.units[i].alphaIn.a, res.units[i].alphaIn.b, res.units[i].alphaIn.c, res.units[i].alphaIn.d);
+//			GX_SetTevKAlphaSel(GX_TEVSTAGE0+i, res.units[i].Kalpha);
+		}
+#endif
 		GX_SetTevColorIn(GX_TEVSTAGE0+i, res.units[i].rgbIn.a, res.units[i].rgbIn.b, res.units[i].rgbIn.c, res.units[i].rgbIn.d);
 		GX_SetTevAlphaIn(GX_TEVSTAGE0+i, res.units[i].alphaIn.a, res.units[i].alphaIn.b, res.units[i].alphaIn.c, res.units[i].alphaIn.d);
 		GX_SetTevColorOp(GX_TEVSTAGE0+i, res.units[i].rgbOp.tevop, res.units[i].rgbOp.tevbias, 
@@ -937,6 +977,16 @@ void CTEVColorCombiner::GenerateCombinerSetting(int index)
 		GX_SetTevKColorSel(GX_TEVSTAGE0+i, res.units[i].Kcol);
 		GX_SetTevKAlphaSel(GX_TEVSTAGE0+i, res.units[i].Kalpha);
 	}
+
+	if( 0 ) //m_pDecodedMux->m_dwMux0 == 0x00267e60 && m_pDecodedMux->m_dwMux1 == 0x350cf37f ) //OOT Intro Index1
+	{
+//		GX_SetTevColorIn(GX_TEVSTAGE0+res.numOfUnits-1, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_C2);
+		GX_SetTevColorIn(GX_TEVSTAGE0+res.numOfUnits-1, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ONE);
+	}
+
+	//Configure final stage for Ztexture
+//	GX_SetTevOp ((u8) res.numOfUnits, GX_PASSCLR);
+//	GX_SetTevOrder ((u8) res.numOfUnits, GX_TEXMAP2, GX_TEXMAP2, GX_COLORNULL);
 
 /*	GX_SetTevOp(GX_TEVSTAGE0,GX_REPLACE);//GXTevMode);
 //	if( pTexture )
@@ -986,16 +1036,25 @@ void CTEVColorCombiner::GenerateCombinerSettingConstants(int index)
 		GXcol.b = (u8) (dwColor&0xFF);
 		GXcol.a = (u8) (dwColor>>24);
 		GX_SetTevKColor(GX_KCOLOR0, GXcol);
+#if 0//def SHOW_DEBUG
+		sprintf(txtbuffer,"\r\nGenCombConst: prim (%d,%d,%d,%d)\r\n",GXcol.r,GXcol.g,GXcol.b,GXcol.a);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
 	}
 	if( res.envIsUsed )
 	{
 		//fv = GetEnvColorfv();   // CONSTANT COLOR
 		dwColor = GetEnvColor();
+//		dwColor = 0xFFFFFFFF; //Testing..
 		GXcol.r = (u8) ((dwColor>>16)&0xFF);
 		GXcol.g = (u8) ((dwColor>>8)&0xFF);
 		GXcol.b = (u8) (dwColor&0xFF);
 		GXcol.a = (u8) (dwColor>>24);
 		GX_SetTevKColor(GX_KCOLOR1, GXcol);
+#if 0//def SHOW_DEBUG
+		sprintf(txtbuffer,"\r\nGenCombConst: env (%d,%d,%d,%d)\r\n",GXcol.r,GXcol.g,GXcol.b,GXcol.a);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
 	}
 	if( res.lodFracIsUsed )
 	{
@@ -1004,6 +1063,20 @@ void CTEVColorCombiner::GenerateCombinerSettingConstants(int index)
 		//fv = &tempf[0];
 		GXcol.r = GXcol.g = GXcol.b = GXcol.a = (u8) (gRDP.LODFrac&0xFF);
 		GX_SetTevKColor(GX_KCOLOR2, GXcol);
+#if 0//def SHOW_DEBUG
+		sprintf(txtbuffer,"\r\nGenCombConst: lodfrac (%d,%d,%d,%d)\r\n",GXcol.r,GXcol.g,GXcol.b,GXcol.a);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
+    }
+	if( res.primLodFracIsUsed )
+	{
+		//float frac2 = gRDP.primLODFrac / 255.0f;
+		GXcol.r = GXcol.g = GXcol.b = GXcol.a = (u8) (gRDP.primLODFrac&0xFF);
+		GX_SetTevKColor(GX_KCOLOR3, GXcol);
+#if 0//def SHOW_DEBUG
+		sprintf(txtbuffer,"\r\nGenCombConst: primlodfrac (%d,%d,%d,%d)\r\n",GXcol.r,GXcol.g,GXcol.b,GXcol.a);
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
     }
 }
 
@@ -1148,7 +1221,7 @@ void CTEVColorCombiner::DisplayTEVMuxString(int index)
 		}
 	}
 
-	sprintf(txtbuffer,"TEV Stages: %d, Texs: %d (%8x,%8x), prim %d, env %d, lod %d\r\n", res.numOfUnits, numTex, (u32)pTexture, (u32)pTexture1, res.primIsUsed, res.envIsUsed, res.lodFracIsUsed);
+	sprintf(txtbuffer,"TEV Stages: %d, Texs: %d (%8x,%8x), prim %d, env %d, lod %d, primlod %d\r\n", res.numOfUnits, numTex, (u32)pTexture, (u32)pTexture1, res.primIsUsed, res.envIsUsed, res.lodFracIsUsed, res.primLodFracIsUsed);
 	DEBUG_print(txtbuffer,DBG_USBGECKO);
 
 	for( int i=0; i<res.numOfUnits; i++ )

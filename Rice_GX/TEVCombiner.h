@@ -126,6 +126,7 @@ typedef struct {
 	bool    primIsUsed;
 	bool    envIsUsed;
 	bool    lodFracIsUsed;
+	bool    primLodFracIsUsed;
 } TEVCombinerSaveType;
 
 

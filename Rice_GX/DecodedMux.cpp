@@ -191,6 +191,14 @@ void DecodedMux::Decode(uint32 dwMux0, uint32 dwMux1)
 			DEBUG_print(txtbuffer,DBG_USBGECKO);
 		}
 	}
+	sprintf(txtbuffer," Decoded RGB0 abcd = %d, %d, %d, %d\r\n",aRGB0,bRGB0,cRGB0,dRGB0);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+	sprintf(txtbuffer," Decoded RGB1 abcd = %d, %d, %d, %d\r\n",aRGB1,bRGB1,cRGB1,dRGB1);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+	sprintf(txtbuffer," Decoded A0 abcd = %d, %d, %d, %d\r\n",aA0,bA0,cA0,dA0);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+	sprintf(txtbuffer," Decoded A1 abcd = %d, %d, %d, %d\r\n",aA1,bA1,cA1,dA1);
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
 #endif //SHOW_DEBUG
 }
 
@@ -449,6 +457,10 @@ void DecodedMux::Simplify(void)
 
 void DecodedMux::Reformat(bool do_complement)
 {
+#if 0//def SHOW_DEBUG
+	sprintf(txtbuffer,"DecodedMux:Reformat\r\n");
+	DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
     if( m_dWords[N64Cycle0RGB] == m_dWords[N64Cycle1RGB] )
     {
         aRGB1 = MUX_0;
@@ -477,7 +489,10 @@ void DecodedMux::Reformat(bool do_complement)
         N64CombinerType &m = m_n64Combiners[i];
         //if( m.a == MUX_0 || m.c == MUX_0 || m.a ==  m.b ) m.a = m.b = m.c = MUX_0;
         if( m.c == MUX_0 || m.a ==  m.b )   m.a = m.b = m.c = MUX_0;
-        if( do_complement && (m.b == MUX_1 || m.d == MUX_1) )  m.a = m.b = m.c = MUX_0;
+#ifndef __GX__
+		//sepp256: This seems to assume a single stage can't handle intermediate negative values
+		if( do_complement && (m.b == MUX_1 || m.d == MUX_1) )  m.a = m.b = m.c = MUX_0;
+#endif //!__GX__
         if( m.a == MUX_0 && m.b == m.d ) 
         {
             m.a = m.b;
@@ -510,7 +525,11 @@ void DecodedMux::Reformat(bool do_complement)
         //A=1, C=1, D=0     = 1-B
 
         splitType[i] = CM_FMT_TYPE_NOT_CHECKED; //All Type 1 will be changed to = D
+#ifndef __GX__
         if( m.c == MUX_0 || m.a==m.b || ( do_complement && (m.d == MUX_1 || m.b==MUX_1)) )
+#else //!__GX__ //We can handle negative intermediate values
+        if( m.c == MUX_0 || m.a==m.b )
+#endif //__GX__
         {
             splitType[i] = CM_FMT_TYPE_D;   //All Type 1 will be changed to = D
             m.a = m.b = m.c = MUX_0;
@@ -662,12 +681,14 @@ void DecodedMux::Reformat(bool do_complement)
             continue;
         }
 
-        if( m.c == m.d && do_complement )   // (A-B)*C+C   ==> (A + B|C ) * C
+#ifndef __GX__ //sepp256: This simplification is incorrect
+        if( m.c == m.d && do_complement )   // (A-B)*C+C   ==> (A + B|C ) * C <- This one looks wrong...
         {
             m.d = MUX_0;
             m.b |= MUX_COMPLEMENT;
             continue;
         }
+#endif //!__GX__
 
         if( m.a == m.d )
         {
