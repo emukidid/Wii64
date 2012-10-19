@@ -332,9 +332,6 @@ void internal_ReadController(int Control, BYTE *Command)
 	     getKeys(Control, &Keys);
 #endif
 	     *((unsigned long *)(Command + 3)) = Keys.Value;
-#ifdef COMPARE_CORE
-	     check_input_sync(Command+3);
-#endif
 	  }
 	break;
       case 2: // read controller pack

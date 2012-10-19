@@ -3188,9 +3188,6 @@ void pure_interpreter()
    while (!r4300.stop)
      {
 	prefetch();
-#ifdef COMPARE_CORE
-	compare_core();
-#endif
 	interp_ops[((op >> 26) & 0x3F)]();
 #ifdef DBG
 	if (debugger_mode) update_debugger();

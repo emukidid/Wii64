@@ -28,6 +28,7 @@
 **/
 
 #include <sys/stat.h>
+#include <stdarg.h>
 #include "r4300.h"
 #include "../gc_memory/memory.h"
 #include "../main/winlnxdefs.h"
@@ -39,25 +40,39 @@ static long long int comp_reg[32];
 extern unsigned long op;
 static unsigned long old_op;
 
+
+void print_gecko(const char* fmt, ...)
+{
+	if(usb_isgeckoalive(1)) {
+		char tempstr[2048];
+		va_list arglist;
+		va_start(arglist, fmt);
+		vsprintf(tempstr, fmt, arglist);
+		va_end(arglist);
+		// write out over usb gecko ;)
+		usb_sendbuffer_safe(1,tempstr,strlen(tempstr));
+	}
+}
+
 void display_error(char *txt)
 {
 	int i;
 	unsigned long *comp_reg2 = (unsigned long *) comp_reg;
-	printf("err: %s\n", txt);
-	printf("addr:%x\n", (int) r4300.pc);
+	print_gecko("err: %s\n", txt);
+	print_gecko("addr:%x\n", (int) r4300.pc);
 	if(!strcmp(txt, "PC"))
-		printf("%x - %x\n", (int) r4300.pc, *(int*) &comp_reg[0]);
-	printf("%x, %x\n", (unsigned int) r4300.reg_cop0[9],
+		print_gecko("%x - %x\n", (int) r4300.pc, *(int*) &comp_reg[0]);
+	print_gecko("%x, %x\n", (unsigned int) r4300.reg_cop0[9],
 			(unsigned int) comp_reg2[9]);
-	printf("erreur @:%x\n", (int) old_op);
-	printf("erreur @:%x\n", (int) op);
+	print_gecko("erreur @:%x\n", (int) old_op);
+	print_gecko("erreur @:%x\n", (int) op);
    
    if (!strcmp(txt, "gpr"))
        {
 	  for (i=0; i<32; i++)
 	    {
 	       if (r4300.gpr[i] != comp_reg[i])
-		 printf("reg[%d]=%llx != reg[%d]=%llx\n",
+		 print_gecko("reg[%d]=%llx != reg[%d]=%llx\n",
 			i, r4300.gpr[i], i, comp_reg[i]);
 	    }
        }
@@ -66,73 +81,44 @@ void display_error(char *txt)
 	  for (i=0; i<32; i++)
 	    {
 	       if (r4300.reg_cop0[i] != comp_reg2[i])
-		 printf("r4300.reg_cop0[%d]=%x != r4300.reg_cop0[%d]=%x\n",
+		 print_gecko("r4300.reg_cop0[%d]=%x != r4300.reg_cop0[%d]=%x\n",
 			i, (unsigned int)r4300.reg_cop0[i], i, (unsigned int)comp_reg2[i]);
 	    }
        }
-   /*for (i=0; i<32; i++)
-     {
-	if (r4300.reg_cop0[i] != comp_reg[i])
-	  printf("r4300.reg_cop0[%d]=%llx != reg[%d]=%llx\n",
-		 i, r4300.reg_cop0[i], i, comp_reg[i]);
-     }*/
    
    stop_it();
-}
-
-void check_input_sync(unsigned char *value)
-{
-   if(dynacore) {
-		fread(value, 4, 1, f);
-	} else {
-		fwrite(value, 4, 1, f);
-	}
 }
 
 void compare_core()
 {   
    if(dynacore) {
 		if(!pipe_opened) {
-			mkfifo("compare_pipe", 0600);
-			f = fopen("compare_pipe", "r");
+			f = fopen("sd:/compare_core.bin", "r");
 			pipe_opened = 1;
 		}
-		/*if(wait == 1 && r4300.reg_cop0[9] > 0x35000000) wait=0;
-		 if(wait) return;*/
 
+		memset(comp_reg, 0x13, 4*sizeof(long));
 		fread(comp_reg, 4, sizeof(long), f);
 		if(memcmp(&r4300.pc, comp_reg, 4))
 			display_error("PC");
+		memset(comp_reg, 0x13, 32*sizeof(long long int));
 		fread(comp_reg, 32, sizeof(long long int), f);
 		if(memcmp(r4300.gpr, comp_reg, 32 * sizeof(long long int)))
 			display_error("gpr");
+		memset(comp_reg, 0x13, 32*sizeof(long));
 		fread(comp_reg, 32, sizeof(long), f);
 		if(memcmp(r4300.reg_cop0, comp_reg, 32 * sizeof(long)))
 			display_error("cop0");
-		fread(comp_reg, 32, sizeof(long long int), f);
-		if(memcmp(r4300.fpr_data, comp_reg, 32 * sizeof(long long int)))
-			display_error("cop1");
-		/*fread(comp_reg, 1, sizeof(long), f);
-		 if (memcmp(&rdram[0x31280/4], comp_reg, sizeof(long)))
-		 display_error("mem");*/
-		/*fread (comp_reg, 4, 1, f);
-		 if (memcmp(&r4300.fcr31, comp_reg, 4))
-		 display_error();*/
 		old_op = op;
 	} else {
-		//if (r4300.reg_cop0[9] > 0x6800000) printf("PC=%x\n", (int)r4300.pc);
 		if(!pipe_opened) {
-			f = fopen("compare_pipe", "w");
+			remove("sd:/compare_core.bin");
+			f = fopen("sd:/compare_core.bin", "wb");
 			pipe_opened = 1;
 		}
-		/*if(wait == 1 && r4300.reg_cop0[9] > 0x35000000) wait=0;
-		 if(wait) return;*/
 
 		fwrite(&r4300.pc, 4, sizeof(long), f);
 		fwrite(r4300.gpr, 32, sizeof(long long int), f);
 		fwrite(r4300.reg_cop0, 32, sizeof(long), f);
-		fwrite(r4300.fpr_data, 32, sizeof(long long int), f);
-		//fwrite(&rdram[0x31280/4], 1, sizeof(long), f);
-		/*fwrite(&r4300.fcr31, 4, 1, f);*/
 	}
 }
