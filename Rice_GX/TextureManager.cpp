@@ -771,6 +771,14 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
         else
         {
             ; //Do something
+#ifdef __GX__
+			//sprintf(txtbuffer,"\r\nCRC or PalCRC Mismatch: addr %8x, CRC %8x,PalAddr %8x, PalCRC %8x maxCI %d\r\n",pgti->Address,dwAsmCRC,pgti->PalAddress,dwPalCRC,maxCI);
+			//DEBUG_print(txtbuffer,DBG_USBGECKO);
+			//If dwCRC or dwPalCRC has changed, the texel data is reconverted and overwrites the old GX texture
+			//So, finish drawing before the GX texture is messed up
+			//TODO: include PalCRC in the texture lookup
+			GX_DrawDone();
+#endif
         }
     }
 
@@ -1032,10 +1040,12 @@ void CTextureManager::ConvertTexture(TxtrCacheEntry * pEntry, bool fromTMEM)
             DebuggerAppendMsg("Palette Format: %s (%d)\n", textlutname[pEntry->ti.TLutFmt>>RSP_SETOTHERMODE_SHIFT_TEXTLUT], pEntry->ti.TLutFmt>>RSP_SETOTHERMODE_SHIFT_TEXTLUT);
         });
 #if 0//def __GX__
-		DEBUG_print(txtbuffer,DBG_SDGECKOOPEN); 
-		sprintf(txtbuffer,"ConvertTexture %x: pF = %s, %d, %d, bswp = %d\r\n", pEntry, strTable, tiFmt, tiSize, pEntry->ti.bSwapped);
-		DEBUG_print(txtbuffer,DBG_SDGECKOPRINT); 
-		DEBUG_print(txtbuffer,DBG_SDGECKOCLOSE); 
+//		DEBUG_print(txtbuffer,DBG_SDGECKOOPEN); 
+//		sprintf(txtbuffer,"ConvertTexture %x: pTex = %x, pF = %s, %d, %d, bswp = %d\r\n", pEntry, pEntry->pTexture, strTable, tiFmt, tiSize, pEntry->ti.bSwapped);
+		sprintf(txtbuffer,"ConvertTexture %x: pTex = %x, pF = %s, %d, %d, bswp = %d, TLutFmt = %d, RBGA %d, IA %d\r\n", pEntry, pEntry->pTexture, strTable, tiFmt, tiSize, pEntry->ti.bSwapped, pEntry->ti.TLutFmt, TLUT_FMT_RGBA16, TLUT_FMT_IA16);
+//		DEBUG_print(txtbuffer,DBG_SDGECKOPRINT); 
+//		DEBUG_print(txtbuffer,DBG_SDGECKOCLOSE); 
+		DEBUG_print(txtbuffer,DBG_USBGECKO);
 
 		static int texcount = 0;
 		sprintf(txtbuffer,"TextureManager::ConvertTexture %d", texcount++);
