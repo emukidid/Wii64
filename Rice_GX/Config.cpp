@@ -936,7 +936,7 @@ void GenerateCurrentRomOptions()
 #else //!__GX__
 #ifdef SHOW_DEBUG
         sprintf(txtbuffer,"[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
-		DEBUG_print(txtbuffer,DBG_RICE); 
+		DEBUG_print(txtbuffer,DBG_RICE+2); 
 #endif //SHOW_DEBUG
 #endif //__GX__
 
@@ -1973,7 +1973,7 @@ int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* szName)
 #else //!__GX__
 #ifdef SHOW_DEBUG
         sprintf(txtbuffer,"[RiceVideo] Found ROM '%s', CRC %s\n", IniSections[i].name, szCRC);
-		DEBUG_print(txtbuffer,DBG_RICE); 
+		DEBUG_print(txtbuffer,DBG_RICE+1); 
 #endif //SHOW_DEBUG
 #endif //__GX__
             return i;
@@ -2016,6 +2016,11 @@ int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* szName)
     newsection.dwScreenUpdateSetting = 0;
 
     IniSections.push_back(newsection);
+
+#ifdef SHOW_DEBUG
+	sprintf(txtbuffer,"[RiceVideo] New ROM ini entry '%s', CRC %s\n", newsection.name, szCRC);
+	DEBUG_print(txtbuffer,DBG_RICE+1); 
+#endif //SHOW_DEBUG
 
     bIniIsChanged = true;               // Flag to indicate we should be updated
     return IniSections.size()-1;            // -1 takes into account increment
