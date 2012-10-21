@@ -935,8 +935,10 @@ void GenerateCurrentRomOptions()
         printf("[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
 #else //!__GX__
 #ifdef SHOW_DEBUG
+	{
         sprintf(txtbuffer,"[RiceVideo] Enabled hacks for game: '%s'\n", g_curRomInfo.szGameName);
 		DEBUG_print(txtbuffer,DBG_RICE+2); 
+	}
 #endif //SHOW_DEBUG
 #endif //__GX__
 
