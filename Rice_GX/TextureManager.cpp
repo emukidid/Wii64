@@ -775,9 +775,10 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
 			//sprintf(txtbuffer,"\r\nCRC or PalCRC Mismatch: addr %8x, CRC %8x,PalAddr %8x, PalCRC %8x maxCI %d\r\n",pgti->Address,dwAsmCRC,pgti->PalAddress,dwPalCRC,maxCI);
 			//DEBUG_print(txtbuffer,DBG_USBGECKO);
 			//If dwCRC or dwPalCRC has changed, the texel data is reconverted and overwrites the old GX texture
-			//So, finish drawing before the GX texture is messed up
+			//So, finish drawing before the GX texture is overwritten and then invalidate the Texture memory
 			//TODO: include PalCRC in the texture lookup
 			GX_DrawDone();
+			GX_InvalidateTexAll();
 #endif
         }
     }
