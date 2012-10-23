@@ -196,7 +196,7 @@ void CTexture::ScaleImageToSurface(bool scaleS, bool scaleT)
 void CTexture::ClampImageToSurfaceS()
 {
 #ifdef __GX__
-	return;	// In GX we can always use the exact texture width.
+	return; // This function is never used.
 #else //__GX__
     if( !m_bClampedS && m_dwWidth < m_dwCreatedTextureWidth )
     {       
@@ -237,7 +237,7 @@ void CTexture::ClampImageToSurfaceS()
 void CTexture::ClampImageToSurfaceT()
 {
 #ifdef __GX__
-	return;	// In GX we can always use the exact texture height.
+	return; // This function is never used.
 #else //__GX__
     if( !m_bClampedT && m_dwHeight < m_dwCreatedTextureHeight )
     {

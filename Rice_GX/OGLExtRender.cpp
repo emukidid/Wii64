@@ -140,7 +140,7 @@ void COGLExtRender::SetTexWrapS(int unitno,GLuint flag)
 #endif //__GX__
     if( m_curBoundTex[unitno] != mtex[unitno] || mflag[unitno] != flag )
     {
-        mtex[unitno] = m_curBoundTex[0];
+        mtex[unitno] = m_curBoundTex[unitno];
         mflag[unitno] = flag;
 #ifndef __GX__
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, flag);
@@ -164,7 +164,7 @@ void COGLExtRender::SetTexWrapT(int unitno,GLuint flag)
 #endif //__GX__
     if( m_curBoundTex[unitno] != mtex[unitno] || mflag[unitno] != flag )
     {
-        mtex[unitno] = m_curBoundTex[0];
+        mtex[unitno] = m_curBoundTex[unitno];
         mflag[unitno] = flag;
 #ifndef __GX__
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, flag);
