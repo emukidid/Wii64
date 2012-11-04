@@ -124,6 +124,7 @@ void dynarec(unsigned int address){
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
 		*/
 		if(!paddr){ 
+			link_branch = NULL;
 			address = paddr = update_invalid_addr(r4300.pc);
 			dst_block = blocks_get(address>>12); 
 		}
@@ -187,6 +188,7 @@ void dynarec(unsigned int address){
 			r4300.last_pc = r4300.pc;
 			// Check for interrupts
 			if(r4300.next_interrupt <= Count){
+				link_branch = NULL;
 				gen_interupt();
 				address = r4300.pc;
 			}

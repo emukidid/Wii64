@@ -2538,7 +2538,16 @@ static int ERET(MIPS_instr mips){
 
 	flushRegisters();
 
+ #ifdef COMPARE_CORE
+ 	GEN_LI(ppc, 4, 0, 0);
+ 	set_next_dst(ppc);
+	// Hack: we count an extra instruction here; it's not worth working around
+	unget_last_src();
+ #endif
 	genUpdateCount(0);
+#ifdef COMPARE_CORE
+	get_next_src();
+#endif
 	// Load Status
 	GEN_LWZ(ppc, 3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
 	set_next_dst(ppc);
