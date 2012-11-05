@@ -64,9 +64,9 @@ unsigned long virtual_to_physical_address(unsigned long addresse, int w)
 		return rom_base_in_tlb + (addresse & 0x7FFFFF);	// GoldenEye Hack
 	}
 #ifdef USE_TLB_CACHE
-	unsigned long paddr = w ? TLBCache_get_w(addresse>>12) : TLBCache_get_r(addresse>>12);
+	unsigned long paddr = w==1 ? TLBCache_get_w(addresse>>12) : TLBCache_get_r(addresse>>12);
 #else
-	unsigned long paddr = w ? tlb_LUT_w[addresse>>12] : tlb_LUT_r[addresse>>12];
+	unsigned long paddr = w==1 ? tlb_LUT_w[addresse>>12] : tlb_LUT_r[addresse>>12];
 #endif
 	if(paddr)
 		return (paddr&0xFFFFF000)|(addresse&0xFFF);
