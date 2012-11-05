@@ -335,7 +335,6 @@ int autoSaveLoaded = NATIVESAVEDEVICE_NONE;
 
 int loadROM(fileBrowser_file* rom){
   int ret = 0;
-  savestates_job = 0; //clear all pending save states
 	// First, if there's already a loaded ROM
 	if(hasLoadedROM){
 		// Unload it, and deinit everything

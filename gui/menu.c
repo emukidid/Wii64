@@ -599,16 +599,16 @@ static inline void menuStack_push(menu_item*);
     if(!savestates_exists())
       return "No Save exists";
     else {
-      savestates_job = LOADSTATE;
-      return "Gameplay will resume from the savestate";
+      savestates_load();
+      return "State Loaded Successfully";
     }
   }
   static char* menuV1_savestate() {
     if(!hasLoadedROM) 
       return "No ROM Loaded";
     else {
-      savestates_job = SAVESTATE;
-      return "Gameplay will be saved once resumed";
+      savestates_save();
+      return "State Saved Successfully";
     }
   }
 	static int which_slot;

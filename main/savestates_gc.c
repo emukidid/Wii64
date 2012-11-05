@@ -55,7 +55,6 @@ extern int *autoinc_save_slot;
 void pauseAudio(void);
 void resumeAudio(void);
 
-int savestates_job = 0;
 extern BOOL hasLoadedROM;
 static unsigned int savestates_slot = 0;
 void savestates_select_slot(unsigned int s)

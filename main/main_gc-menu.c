@@ -223,7 +223,6 @@ extern BOOL flashramWritten;
 BOOL hasLoadedROM = FALSE;
 int loadROM(fileBrowser_file* rom){
 
-  savestates_job = 0;
 	// First, if there's already a loaded ROM
 	if(hasLoadedROM){
 		// Unload it, and deinit everything

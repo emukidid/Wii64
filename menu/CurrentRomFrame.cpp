@@ -358,8 +358,8 @@ void Func_LoadState()
     menu::MessageBox::getInstance().setMessage("Save doesn't exist");
   }
   else {
-    savestates_job = LOADSTATE;
-    gen_interupt();
+    savestates_load();
+	menu::MessageBox::getInstance().setMessage("State Loaded Successfully");
   }
 }
 
@@ -369,8 +369,8 @@ void Func_SaveState()
     menu::MessageBox::getInstance().setMessage("Failed to create save state");
   }
   else {
-    savestates_job = SAVESTATE;
-	gen_interupt();
+    savestates_save();
+	menu::MessageBox::getInstance().setMessage("State Saved Successfully");
   }
 }
 

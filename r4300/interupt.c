@@ -325,11 +325,6 @@ int chk_status(int chk) {
 
 void gen_interupt()
 {
-  if (savestates_job & LOADSTATE) {
-    savestates_load();
-    savestates_job &= ~LOADSTATE;
-    return;
-  }
   if (r4300.skip_jump) {
     if (q->count > Count || (Count - q->count) < 0x80000000) {
       r4300.next_interrupt = q->count;
@@ -456,9 +451,4 @@ void gen_interupt()
     break;
   }
   exception_general();
-   
-  if (savestates_job & SAVESTATE) {
-    savestates_save();
-    savestates_job &= ~SAVESTATE;
-  }
 }

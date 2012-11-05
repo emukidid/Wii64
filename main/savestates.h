@@ -32,8 +32,6 @@
 #define SAVESTATE 1
 #define LOADSTATE 2
 
-extern int savestates_job;
-
 void savestates_save();
 void savestates_load();
 int  savestates_exists(int mode);
