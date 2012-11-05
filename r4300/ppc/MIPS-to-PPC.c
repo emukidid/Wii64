@@ -768,21 +768,6 @@ static int LDR(MIPS_instr mips){
 	return CONVERT_ERROR;
 #endif
 }
-/*
-#include "../../gui/DEBUG.h"
-unsigned long recompiledStoreVirt = 0;
-unsigned long recompiledStorePhys = 0;
-unsigned long recompiledStores = 0;
-unsigned long recompiledLoadsVirt = 0;
-unsigned long recompiledLoadsPhys = 0;
-unsigned long recompiledLoads = 0;
-void printConstantPropStats() {
-	sprintf(txtbuffer, "%i loads (%.2f virt %.2f phys) %i stores (%.2f virt %.2f phys)", recompiledLoads, 
-			(float)(((float)recompiledLoadsVirt/(float)recompiledLoads) * 100),(float)(((float)recompiledLoadsPhys/(float)recompiledLoads) * 100),
-			recompiledStores, 
-			(float)(((float)recompiledStoreVirt/(float)recompiledStores) * 100),(float)(((float)recompiledStorePhys/(float)recompiledStores) * 100));
-	DEBUG_print(txtbuffer, 20);
-}*/
 
 static int LB(MIPS_instr mips){
 #ifdef INTERPRET_LB
@@ -825,11 +810,7 @@ static int LWL(MIPS_instr mips){
 			isPhysical = 0;
 		else
 			isVirtual = 0;
-		//recompiledLoadsVirt+=(isVirtual);
-		//recompiledLoadsPhys+=(isPhysical);
 	}
-	//recompiledLoads++;
-	////printConstantPropStats();
 
 	flushRegisters();
 	reset_code_addr();
@@ -844,26 +825,22 @@ static int LWL(MIPS_instr mips){
 		// If base in physical memory
 		GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 		set_next_dst(ppc);
-		GEN_BGE(ppc, 1, 11, 0, 0);
+		GEN_BGE(ppc, 1, 9, 0, 0);
 		set_next_dst(ppc);
-	}
-	if(isPhysical) {
 		// Fast case LWL when it's not actually mis-aligned, it's just a LW()
 		GEN_RLWINM(ppc, 0, base, 0, 30, 31);	// r0 = addr & 3
 		set_next_dst(ppc);
 		GEN_CMPI(ppc, 0, 0, 1);
 		set_next_dst(ppc);
-		GEN_BNE(ppc, 1, 7, 0, 0);
+		GEN_BNE(ppc, 1, 6, 0, 0);
 		set_next_dst(ppc);
-
-		// Add rdram pointer
-		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
-		set_next_dst(ppc);
+	}
+	if(isPhysical) {
+		// Create a mapping for this value
+		int value = mapRegisterNew( MIPS_GET_RT(mips) );
 		// Perform the actual load
-		GEN_LWZ(ppc, rd, 0, base);
+		GEN_LWZX(ppc, value, DYNAREG_RDRAM, base);
 		set_next_dst(ppc);
-		// Have the value in r3 stored to rt
-		mapRegisterNew( MIPS_GET_RT(mips) );
 		flushRegisters();
 	}
 	
@@ -947,11 +924,7 @@ static int LWR(MIPS_instr mips){
 			isPhysical = 0;
 		else
 			isVirtual = 0;
-		//recompiledLoadsVirt+=(isVirtual);
-		//recompiledLoadsPhys+=(isPhysical);
 	}
-	//recompiledLoads++;
-	////printConstantPropStats();
 
 	flushRegisters();
 	reset_code_addr();
@@ -966,29 +939,25 @@ static int LWR(MIPS_instr mips){
 		// If base in physical memory
 		GEN_CMP(ppc, base, DYNAREG_MEM_TOP, 1);
 		set_next_dst(ppc);
-		GEN_BGE(ppc, 1, 12, 0, 0);
+		GEN_BGE(ppc, 1, 10, 0, 0);
 		set_next_dst(ppc);
-	}
-	if(isPhysical) {
 		// Fast case LWR when it's not actually mis-aligned, it's just a LW()
 		GEN_RLWINM(ppc, 0, base, 0, 30, 31);	// r0 = addr & 3
 		set_next_dst(ppc);
 		GEN_CMPI(ppc, 0, 3, 1);
 		set_next_dst(ppc);
-		GEN_BNE(ppc, 1, 8, 0, 0);
+		GEN_BNE(ppc, 1, 7, 0, 0);
 		set_next_dst(ppc);
-		
+	}
+	if(isPhysical) {
 		GEN_RLWINM(ppc, base, base, 0, 0, 29);	// addr &= 0xFFFFFFFC
 		set_next_dst(ppc);
 
-		// Add rdram pointer
-		GEN_ADD(ppc, base, DYNAREG_RDRAM, base);
-		set_next_dst(ppc);
+		// Create a mapping for this value
+		int value = mapRegisterNew( MIPS_GET_RT(mips) );
 		// Perform the actual load
-		GEN_LWZ(ppc, rd, 0, base);
+		GEN_LWZX(ppc, value, DYNAREG_RDRAM, base);
 		set_next_dst(ppc);
-		// Have the value in r3 stored to rt
-		mapRegisterNew( MIPS_GET_RT(mips) );
 		flushRegisters();
 	}
 
