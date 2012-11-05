@@ -843,6 +843,7 @@ static void TLBWI()
 	for (i=tlb_e[Index&0x3F].start_even; i<tlb_e[Index&0x3F].end_even; i+=0x1000)
 	{
 	  invalid_code_set(i>>12, 1);
+	  if(dynacore && blocks[i>>12]) invalidate_block(blocks[i>>12]);
 #ifdef USE_TLB_CACHE
 	  TLBCache_set_r(i>>12, 0);
 #else
@@ -862,6 +863,7 @@ static void TLBWI()
 	for (i=tlb_e[Index&0x3F].start_odd; i<tlb_e[Index&0x3F].end_odd; i+=0x1000)
 	{
 	  invalid_code_set(i>>12, 1);
+	  if(dynacore && blocks[i>>12]) invalidate_block(blocks[i>>12]);
 #ifdef USE_TLB_CACHE
 	  TLBCache_set_r(i>>12, 0);
 #else
@@ -967,6 +969,7 @@ static void TLBWR()
 		for (i=tlb_e[Random].start_even; i<tlb_e[Random].end_even; i+=0x1000)
 		{
 		  invalid_code_set(i>>12, 1);
+		  if(dynacore && blocks[i>>12]) invalidate_block(blocks[i>>12]);
 #ifdef USE_TLB_CACHE
 			TLBCache_set_r(i>>12, 0);
 #else
@@ -985,6 +988,7 @@ static void TLBWR()
 		for (i=tlb_e[Random].start_odd; i<tlb_e[Random].end_odd; i+=0x1000)
 		{
 		  invalid_code_set(i>>12, 1);
+		  if(dynacore && blocks[i>>12]) invalidate_block(blocks[i>>12]);
 #ifdef USE_TLB_CACHE
 			TLBCache_set_r(i>>12, 0);
 #else
