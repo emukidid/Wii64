@@ -37,7 +37,7 @@
 
 #ifdef MEM2XFB
 // Testing the xfb in MEM2 (reduce Texture Cache by 2MB to accomodate)
-#define XFB_SIZE (2*MB) // XFB_SIZE*2 ~= 1.4MB but to keep things aligned, 2mb
+#define XFB_SIZE (1*MB) // XFB_SIZE*2 ~= 1.4MB but to keep things aligned, 2mb
 #define XFB0_LO	(MEM2_LO)
 #define XFB1_LO	(XFB0_LO + XFB_SIZE)
 #define XFB_HI	(XFB1_LO + XFB_SIZE)
