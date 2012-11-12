@@ -352,7 +352,7 @@ int vm_dsi_handler(frame_context* state, u32 DSISR)
 	// purge p_index if it's dirty
 	if (phys_map[p_index].dirty)
 	{
-		DCFlushRange(MEM_Base+p_index, 32);
+		DCFlushRange(MEM_Base+p_index, PAGE_SIZE);
 		AR_StartDMA(AR_MRAMTOARAM,MEM_Base+p_index,phys_map[p_index].page_index*PAGE_SIZE,PAGE_SIZE);
 //		ISFS_Seek(pagefile_fd, phys_map[p_index].page_index*PAGE_SIZE, SEEK_SET);
 //		ISFS_Write(pagefile_fd, MEM_Base+p_index, PAGE_SIZE);
