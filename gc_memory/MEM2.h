@@ -26,6 +26,10 @@
 #ifndef MEM2_H
 #define MEM2_H
 
+#ifdef ARAM_H
+#error MEM2 and ARAM included in the same code, FAIL!
+#endif
+
 // Define a MegaByte/KiloByte
 #define MB (1024*1024)
 #define KB (1024)

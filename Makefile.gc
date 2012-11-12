@@ -7,8 +7,11 @@ LDFLAGS		+= -mogc
 LIBPATHS	+= -L$(DEVKITPRO)/libogc/lib/cube -L$(DEVKITPRO)/libfat/libogc/lib/cube
 
 OBJ		+= \
-		main/ROM-Cache.o \
-		gc_memory/ARAM.o \
 		gc_memory/TLB-Cache.o \
+		vm/vm.o \
+		vm/dsihandler.o
 
 LIB		+= -lz
+
+vm/dsihandler.o:		vm/dsihandler.s
+		$(CC) -x assembler-with-cpp $(CFLAGS) -c -o $@ $<

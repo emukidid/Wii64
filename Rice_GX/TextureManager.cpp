@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # include "../gc_memory/MEM2.h"
 # define GX_TEXTURE_CACHE_SIZE TEXCACHE_SIZE //8MB for Wii
 # else //HW_RVL
-# define GX_TEXTURE_CACHE_SIZE (1*1024*1024) //4MB for GC
+# define GX_TEXTURE_CACHE_SIZE (2*1024*1024) //2MB for GC
 # endif //!HW_RVL
 	heap_cntrl* GXtexCache = NULL;
 #endif //__GX__

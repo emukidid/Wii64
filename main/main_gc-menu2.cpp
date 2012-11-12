@@ -64,6 +64,9 @@ extern "C" {
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-CARD.h"
 #include "wii64config.h"
+#ifndef HW_RVL
+#include "..\vm\vm.h"
+#endif
 }
 
 #ifdef WII
@@ -225,8 +228,11 @@ void load_config(char *loaded_path) {
 	}
 }
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]) {
 	/* INITIALIZE */
+#ifdef HW_DOL
+	VM_Init(16<<20, 2048<<10);			// Setup Virtual Memory with ARAM
+#endif
 #ifdef HW_RVL
 	L2Enhance();
 #endif
@@ -240,8 +246,6 @@ int main(int argc, char* argv[]){
 	Initialise(); // Stock OGC initialization
 #ifndef HW_RVL
   DVD_Init();  
-  AR_Init(NULL, 0);
-  ARQ_Init();
 #endif
 	MenuContext *menu = new MenuContext(vmode);
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
@@ -353,16 +357,12 @@ int loadROM(fileBrowser_file* rom){
 		closeDLL_gfx();
 		ROMCache_deinit();
 		free_memory();
-#ifndef HW_RVL
-		ARAM_manager_deinit();
-#endif
 	}
 	format_mempacks();
 	reset_flashram();
 	init_eeprom();
 	hasLoadedROM = TRUE;
 #ifndef HW_RVL
-	ARAM_manager_init();
 	TLBCache_init();
 #else
 	tlb_mem2_init();

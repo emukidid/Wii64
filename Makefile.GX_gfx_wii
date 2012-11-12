@@ -24,7 +24,7 @@ OBJ		=main/rom_gc.o \
 		main/main_gc-menu.o \
 		main/gc_dvd.o \
 		main/gczip.o \
-		main/ROM-Cache-MEM2.o \
+		main/ROM-Cache.o \
 		fileBrowser/fileBrowser-DVD.o \
 		fileBrowser/fileBrowser-libfat.o \
 		fileBrowser/fileBrowser-WiiFS.o \

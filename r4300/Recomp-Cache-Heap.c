@@ -23,13 +23,18 @@
 
 #include <ogc/lwp_heap.h>
 #include <stdlib.h>
-#include "../gc_memory/MEM2.h"
 #include "r4300.h"
 #include "ppc/Recompile.h"
 #include "ppc/Wrappers.h"
 #include "Invalid_Code.h"
 #include "Recomp-Cache.h"
 #include "ARAM-blocks.h"
+
+#ifdef HW_RVL
+#include "../gc_memory/MEM2.h"
+#else
+#include "../gc_memory/ARAM.h"
+#endif
 
 typedef struct _meta_node {
 	unsigned int  addr;

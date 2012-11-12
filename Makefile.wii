@@ -7,7 +7,6 @@ LDFLAGS		+= -mrvl
 LIBPATHS 	+= -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
 
 OBJ		+= \
-		main/ROM-Cache-MEM2.o \
 		gc_memory/TLB-Cache-hash.o \
 
 OBJ_INPUT	+= \

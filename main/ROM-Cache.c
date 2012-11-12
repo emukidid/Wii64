@@ -1,7 +1,7 @@
 /**
- * Wii64 - ROM-Cache.c (Gamecube ROM Cache)
+ * Wii64 - ROM-Cache.c (Wii/GC ROM Cache)
  * Copyright (C) 2007, 2008, 2009 Mike Slegeir
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2012 emu_kidid
  * 
  * This is how the ROM should be accessed, this way the ROM doesn't waste RAM
  *
@@ -22,24 +22,36 @@
  *
 **/
 
-
-#include <ogc/arqueue.h>
-#include <gccore.h>
-#include <malloc.h>
-#include <string.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <malloc.h>
 #include "../fileBrowser/fileBrowser.h"
 #include "../gui/gui_GX-menu.h"
-#include "../gc_memory/ARAM.h"
 #include "../r4300/r4300.h"
 #include "../gui/DEBUG.h"
 #include "../gui/GUI.h"
 #include "ROM-Cache.h"
-#include "rom.h"
 
-void DUMMY_print(char* string) { }
-void DUMMY_setLoadProg(float percent) { }
-void DUMMY_draw() { }
+#ifdef HW_RVL
+#include "../gc_memory/MEM2.h"
+#define BLOCK_SIZE  (512*1024)
+#define BLOCK_MASK  (BLOCK_SIZE-1)
+#define OFFSET_MASK (0xFFFFFFFF-BLOCK_MASK)
+#define BLOCK_SHIFT (19)	//only change ME and BLOCK_SIZE
+#define MAX_ROMSIZE (64*1024*1024)
+#define NUM_BLOCKS  (MAX_ROMSIZE/BLOCK_SIZE)
+#define LOAD_SIZE   (32*1024)
+#else
+#include "../gc_memory/ARAM.h"
+#define BLOCK_SIZE  (4*1024)
+#define BLOCK_MASK  (BLOCK_SIZE-1)
+#define OFFSET_MASK (0xFFFFFFFF-BLOCK_MASK)
+#define BLOCK_SHIFT (12)	//only change ME and BLOCK_SIZE
+#define MAX_ROMSIZE (64*1024*1024)
+#define NUM_BLOCKS  (MAX_ROMSIZE/BLOCK_SIZE)
+#define LOAD_SIZE   (4*1024)
+#endif
 
 #ifdef MENU_V2
 void LoadingBar_showBar(float percent, const char* string);
@@ -52,269 +64,192 @@ void LoadingBar_showBar(float percent, const char* string);
 #define DRAWGUI GUI_draw
 #endif
 
-#define BLOCK_MASK  (BLOCK_SIZE-1)
-#define OFFSET_MASK (0xFFFFFFFF-BLOCK_MASK)
-#define BLOCK_SHIFT (17)	//only change ME and BLOCK_SIZE in gc_memory/aram.h
-#define MAX_ROMSIZE (64*1024*1024)
-#define NUM_BLOCKS  (MAX_ROMSIZE/BLOCK_SIZE)
-
-static char ROM_too_big;
-static char* ROM, * ROM_blocks[NUM_BLOCKS];
-static u32 ROM_size;
-static fileBrowser_file* ROM_file;
+static u32   ROMSize;
+static int   ROMTooBig;
+static char* ROMBlocks[NUM_BLOCKS];
+static int   ROMBlocksLRU[NUM_BLOCKS];
+static fileBrowser_file* ROMFile;
 static char readBefore = 0;
 
-#ifdef USE_ROM_CACHE_L1
-#define L1_BLOCK_SIZE  (4*1024) //63 * 4kb = ~256kb
-#define L1_BLOCK_MASK  (L1_BLOCK_SIZE-1)
-#define L1_BLOCK_SHIFT (12)
-#define L1_NUM_BLOCKS  (8) //16368kb / 256kb = 63
-static u8  L1[L1_NUM_BLOCKS][L1_BLOCK_SIZE];
-static int L1tag[L1_NUM_BLOCKS];
-static u32 L1LRU[L1_NUM_BLOCKS];
-static u32 nextL1LRUValue;
-#endif
-
-static ARQRequest ARQ_request_ROM;
-extern void showLoadProgress(float progress);
+extern void showLoadProgress(float);
 extern void pauseAudio(void);
 extern void resumeAudio(void);
 extern BOOL hasLoadedROM;
 
-static u32 oldPointerOffset = -1;
-static u8 oldPointerBlock[4096];
+void DUMMY_print(char* string) { }
+void DUMMY_setLoadProg(float percent) { }
+void DUMMY_draw() { }
 
-// Pretty fast on GC but we could do better imho
-void* ROMCache_pointer(u32 rom_offset){
-  if((rom_offset != oldPointerOffset) || (oldPointerOffset == -1)) {
-    ROMCache_read(&oldPointerBlock[0], rom_offset, 4096);
-  }
-  return &oldPointerBlock[0];
-}
+static void ensure_block(u32 block);
 
-void ROMCache_init(fileBrowser_file* file){
+void ROMCache_init(fileBrowser_file* f){
   readBefore = 0; //de-init byteswapping
-	ROM_too_big = (file->size) > (ARAM_block_available_contiguous() * BLOCK_SIZE);
-	ROM_size = (file->size);
-#ifdef USE_ROM_CACHE_L1
-	nextL1LRUValue = 0;
-	int i;
-	for(i=0; i<L1_NUM_BLOCKS; ++i) L1tag[i] = -1;
-#endif
-	
-	//romFile_init( romFile_topLevel );
+  ROMFile = f;
+	ROMSize = f->size;
+	ROMTooBig = ROMSize > ROMCACHE_SIZE;
+
+	romFile_seekFile(f, 0, FILE_BROWSER_SEEK_SET);	// Lets be nice and keep the file at 0.
 }
 
 void ROMCache_deinit(){
-	if(ROM_too_big){
-		int i;
-		for(i=0; i<NUM_BLOCKS; ++i)
-			if(ROM_blocks[i])
-				ARAM_block_free(&ROM_blocks[i]);
-	} else
-		if(ROM) ARAM_block_free_contiguous(&ROM, ROM_size / BLOCK_SIZE);
 	//we don't de-init the romFile here because it takes too much time to fopen/fseek/fread/fclose
 }
 
-static void inline ROMCache_load_block(char* block, int rom_offset){
+void* ROMCache_pointer(u32 rom_offset){
+#ifdef PROFILE
+	start_section(ROMREAD_SECTION);
+#endif
+	if(ROMTooBig){
+		u32 block = rom_offset >> BLOCK_SHIFT;
+		u32 block_offset = rom_offset & BLOCK_MASK;
+		
+		ensure_block(block);
+#ifdef PROFILE
+		end_section(ROMREAD_SECTION);
+#endif
+		return ROMBlocks[block] + block_offset;
+	} else {
+#ifdef PROFILE
+		end_section(ROMREAD_SECTION);
+#endif
+		return ROMCACHE_LO + rom_offset;
+	}
+}
+
+static void ROMCache_load_block(char* dst, u32 rom_offset){
   if((hasLoadedROM) && (!r4300.stop))
     pauseAudio();
-	showLoadProgress(1.0f);
-	romFile_seekFile(ROM_file, rom_offset, FILE_BROWSER_SEEK_SET);
-	int bytes_read, offset=0, bytes_to_read=ARQ_GetChunkSize();
-	char* buffer = memalign(32, bytes_to_read);
-	int loads_til_update = 0;
-	do {
-		bytes_read = romFile_readFile(ROM_file, buffer, bytes_to_read);
-		byte_swap(buffer, bytes_read);
-		DCFlushRange(buffer, bytes_read);
-		ARQ_PostRequest(&ARQ_request_ROM, 0x10AD, ARQ_MRAMTOARAM, ARQ_PRIO_HI,
-		                block + offset, buffer, bytes_read);
+	showLoadProgress( 1.0f );
+	u32 offset = 0, bytes_read, loads_til_update = 0;
+	romFile_seekFile(ROMFile, rom_offset, FILE_BROWSER_SEEK_SET);
+	while(offset < BLOCK_SIZE){
+		bytes_read = romFile_readFile(ROMFile, dst + offset, LOAD_SIZE);
+		byte_swap(dst + offset, bytes_read);
 		offset += bytes_read;
 		
 		if(!loads_til_update--){
 //			showLoadProgress( (float)offset/BLOCK_SIZE );
-			loads_til_update = 16;
+			loads_til_update = 32;
 		}
-		
-	} while(offset != BLOCK_SIZE && bytes_read == bytes_to_read);
-	free(buffer);
-//	showLoadProgress(1.0f);
-  if((hasLoadedROM) && (!r4300.stop))
-    resumeAudio();
+	}
+//	showLoadProgress( 1.0f );
+	if((hasLoadedROM) && (!r4300.stop))
+	  resumeAudio();
 }
 
-
-//handles all alignment
-void ARAM_ReadFromBlock(char *block,int startOffset, int bytes, char *dest)
-{
-  int originalStartOffset = startOffset;
-  int originalBytes = bytes;
-  
-  if(startOffset%32 !=0)  //misaligned startoffset
-  {
-    startOffset -= startOffset % 32;
-    bytes+=(originalStartOffset%32);  //adjust for the extra startOffset now
-  }
-  
-  if(bytes%32 !=0)  //adjust again if misaligned size
-    bytes += 32 - (bytes%32);
-    
-  char* buffer = memalign(32,bytes);
-  
-  ARQ_PostRequest(&ARQ_request_ROM, 0x2EAD, AR_ARAMTOMRAM, ARQ_PRIO_LO,
-			                block + startOffset, buffer, bytes);
-	DCInvalidateRange(buffer, bytes);
-	memcpy(dest, buffer+(originalStartOffset%32), originalBytes);
-	
-	free(buffer);
+static void ensure_block(u32 block){
+	if(!ROMBlocks[block]){
+		// The block we're trying to read isn't in the cache
+		// Find the Least Recently Used Block
+		int i, max_i = 0, max_lru = 0;
+		for(i=0; i<NUM_BLOCKS; ++i)
+			if(ROMBlocks[i] && ROMBlocksLRU[i] > max_lru)
+				max_i = i, max_lru = ROMBlocksLRU[i];
+		ROMBlocks[block] = ROMBlocks[max_i]; // Take its place
+		ROMCache_load_block(ROMBlocks[block], block << BLOCK_SHIFT);
+		ROMBlocks[max_i] = 0; // Evict the LRU block
+	}
 }
 
-void ROMCache_read(u8* ram_dest, u32 rom_offset, u32 length){
-	start_section(ROMREAD_SECTION);
-	if(ROM_too_big){ // The whole ROM isn't in ARAM, we might have to move blocks in/out
+void ROMCache_read(u8* dest, u32 offset, u32 length){
+#ifdef PROFILE
+  start_section(ROMREAD_SECTION);
+#endif
+  if(ROMTooBig){
+		u32 block = offset>>BLOCK_SHIFT;
 		u32 length2 = length;
-		u32 offset2 = rom_offset&BLOCK_MASK;
-		char *dest = (char*)ram_dest;
+		u32 offset2 = offset&BLOCK_MASK;
+		
 		while(length2){
-  		char* block = ROM_blocks[rom_offset>>BLOCK_SHIFT];
-  		if(!block){ // This block is not alloced
-  			if(!ARAM_block_available())
-  				ARAM_block_free(ARAM_block_LRU('R'));
-  			block = ARAM_block_alloc(&ROM_blocks[rom_offset>>BLOCK_SHIFT], 'R');
-  			ROMCache_load_block(block, rom_offset&OFFSET_MASK);
-  		}
+			ensure_block(block);
 			
 			// Set length to the length for this block
 			if(length2 > BLOCK_SIZE - offset2)
 				length = BLOCK_SIZE - offset2;
 			else length = length2;
-					
+		
+			// Increment LRU's; set this one to 0
+			int i;
+			for(i=0; i<NUM_BLOCKS; ++i) ++ROMBlocksLRU[i];
+			ROMBlocksLRU[block] = 0;
+			
 			// Actually read for this block
-			ARAM_ReadFromBlock(block,offset2,length,dest);
-			ARAM_block_update_LRU(&block);
+			memcpy(dest, ROMBlocks[block] + offset2, length);
+			
 			// In case the read spans multiple blocks, increment state
-			length2 -= length; offset2 = 0; dest += length; rom_offset += length;
+			++block; length2 -= length; offset2 = 0; dest += length; offset += length;
 		}
-	  
-	} else { // The entire ROM is in ARAM contiguously
-#ifdef USE_ROM_CACHE_L1
-		if(rom_offset >> L1_BLOCK_SHIFT == (rom_offset+length-1) >> L1_BLOCK_SHIFT){
-			// Only worry about using L1 cache if the read falls
-			//   within only one block for the L1 for now
-			int i, min_i = 0;
-			for(i=0; i<L1_NUM_BLOCKS; ++i){
-				if(rom_offset >> L1_BLOCK_SHIFT == L1tag[i]){
-//					DEBUG_stats(7, "ROMCache L1 transfers", STAT_TYPE_ACCUM, 1);
-					memcpy(ram_dest, L1[i] + (rom_offset&L1_BLOCK_MASK), length);
-					return;
-				} else if(L1tag[i] < 0 || L1LRU[i] < L1LRU[min_i])
-					min_i = i;
-			}
-			
-//			DEBUG_stats(6, "ROMCache L1 misses", STAT_TYPE_ACCUM, 1);
-			L1tag[min_i] = rom_offset >> L1_BLOCK_SHIFT;
-			ARAM_ReadFromBlock(ROM,(rom_offset&(~L1_BLOCK_MASK)),L1_BLOCK_SIZE,(char*)L1[min_i]);
-			L1LRU[min_i] = nextL1LRUValue++;
-			
-//			DEBUG_stats(7, "ROMCache L1 transfers", STAT_TYPE_ACCUM, 1);
-			memcpy(ram_dest, L1[min_i] + (rom_offset&L1_BLOCK_MASK), length);
-		} else
-#endif
-		{
-  		//just read
-  		ARAM_ReadFromBlock(ROM,rom_offset,length,(char*)ram_dest);
-		}
+	} else {
+		memcpy(dest, ROMCACHE_LO + offset, length);
 	}
+#ifdef PROFILE
 	end_section(ROMREAD_SECTION);
+#endif
 }
 
-int ROMCache_load(fileBrowser_file* file){
-	char txt[64];
-	
+int ROMCache_load(fileBrowser_file* f){
+	char txt[128];
 #ifndef MENU_V2
 	GUI_clear();
 	GUI_centerText(true);
 #endif
-	sprintf(txt, "Loading ROM %s into ARAM", ROM_too_big ? "partially" : "fully");
+#ifdef HW_RVL
+	sprintf(txt, "Loading ROM %s into MEM2",ROMTooBig ? "partially" : "fully");
+#else
+	sprintf(txt, "Loading ROM %s into ARAM",ROMTooBig ? "partially" : "fully");
+#endif
 	PRINT(txt);
-	
-	ROM_file = file;
-	romFile_seekFile(ROM_file, 0, FILE_BROWSER_SEEK_SET);
 
-	int bytes_to_read = ARQ_GetChunkSize();
-	int* buffer = memalign(32, bytes_to_read);
-	if(ROM_too_big){ // We can't load the entire ROM
-		int i, block, available = ARAM_block_available();
-		for(i=0; i<available; ++i)
-		{
-			block = ARAM_block_alloc(&ROM_blocks[i], 'R');
-			int bytes_read, offset=0;
-			int loads_til_update = 0;
-			do {
-				bytes_read = romFile_readFile(ROM_file, buffer, bytes_to_read);
-				//initialize byteswapping
-			  if(!readBefore)
-			  {
-  			  if(init_byte_swap(*(unsigned int*)buffer) == BYTE_SWAP_BAD) {
-    			  romFile_deinit(ROM_file);
-    			  free(buffer);
-    			  return -2;
-  			  }
-  			  readBefore = 1;
-			  }
-				byte_swap((char*)buffer, bytes_read);
-				DCFlushRange(buffer, bytes_read);
-				ARQ_PostRequest(&ARQ_request_ROM, 0x10AD, AR_MRAMTOARAM, ARQ_PRIO_HI,
-				                block + offset, buffer, bytes_read);
-				offset += bytes_read;
-				
-				if(!loads_til_update--){
-					SETLOADPROG((float)i/available + (float)offset/(available*BLOCK_SIZE));
-					DRAWGUI();
-#ifdef MENU_V2
-					LoadingBar_showBar((float)i/available + (float)offset/(available*BLOCK_SIZE), txt);
-#endif
-					loads_til_update = 32;
-				}
-				
-			} while(offset != BLOCK_SIZE);
+	romFile_seekFile(ROMFile, 0, FILE_BROWSER_SEEK_SET);
+	
+	u32 offset = 0,loads_til_update = 0;
+	int bytes_read;
+	u32 sizeToLoad = MIN(ROMCACHE_SIZE, ROMSize);
+	while(offset < sizeToLoad){
+		bytes_read = romFile_readFile(ROMFile, ROMCACHE_LO + offset, LOAD_SIZE);
+		
+		if(bytes_read < 0){		// Read fail!
+
 			SETLOADPROG( -1.0f );
+			return -1;
 		}
-	} else {
-		ARAM_block_alloc_contiguous(&ROM, 'R', ROM_size / BLOCK_SIZE);
-		int bytes_read, offset=0;
-		int loads_til_update = 0;
-		do {
-			bytes_read = romFile_readFile(ROM_file, buffer, bytes_to_read);
-			//initialize byteswapping
-			if(!readBefore)
-			{
-  			if(init_byte_swap(*(unsigned int*)buffer) == BYTE_SWAP_BAD) {
-    		  romFile_deinit(ROM_file);
-    			free(buffer);
-    			return -2;
-  			}
-  			readBefore = 1;
-			}
-			byte_swap((char*)buffer, bytes_read);
-			DCFlushRange(buffer, bytes_read);
-			ARQ_PostRequest(&ARQ_request_ROM, 0x10AD, AR_MRAMTOARAM, ARQ_PRIO_HI,
-			                ROM + offset, buffer, bytes_read);
-			offset += bytes_read;
-			
-			if(!loads_til_update--){
-				SETLOADPROG( (float)offset/ROM_size );
-				DRAWGUI();
+		//initialize byteswapping if it isn't already
+		if(!readBefore)
+		{
+ 			if(init_byte_swap(*(unsigned int*)ROMCACHE_LO) == BYTE_SWAP_BAD) {
+ 			  romFile_deinit(ROMFile);
+ 			  return -2;
+		  }
+ 			readBefore = 1;
+		}
+		//byteswap
+		byte_swap(ROMCACHE_LO + offset, bytes_read);
+		
+		offset += bytes_read;
+		
+		if(!loads_til_update--){
+			SETLOADPROG( (float)offset/sizeToLoad );
+			DRAWGUI();
 #ifdef MENU_V2
-				LoadingBar_showBar((float)offset/ROM_size, txt);
+			LoadingBar_showBar((float)offset/sizeToLoad, txt);
 #endif
-				loads_til_update = 32;
-			}
-			
-		} while(bytes_read == bytes_to_read && offset != ROM_size);
-		SETLOADPROG( -1.0f );
+			loads_til_update = 16;
+		}
 	}
-	free(buffer);
-	return 0; //should fix to return if reads were successful
+	
+	if(ROMTooBig){ // Set block pointers if we need to
+		int i;
+		for(i=0; i<ROMCACHE_SIZE/BLOCK_SIZE; ++i)
+			ROMBlocks[i] = ROMCACHE_LO + i*BLOCK_SIZE;
+		for(; i<ROMSize/BLOCK_SIZE; ++i)
+			ROMBlocks[i] = 0;
+		for(i=0; i<ROMSize/BLOCK_SIZE; ++i)
+			ROMBlocksLRU[i] = i;
+	}
+	
+	SETLOADPROG( -1.0f );
+	return 0;
 }
+
+
+

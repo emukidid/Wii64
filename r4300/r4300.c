@@ -62,9 +62,8 @@ precomp_instr *PC = NULL;
 #include "../gc_memory/MEM2.h"
 PowerPC_block **blocks = (PowerPC_block*)(BLOCKS_LO);
 #else
-#ifndef ARAM_BLOCKCACHE
-PowerPC_block *blocks[0x100000];
-#endif
+#include "../gc_memory/ARAM.h"
+PowerPC_block **blocks = (PowerPC_block*)(BLOCKS_LO);
 #endif
 PowerPC_block *actual;
 #else

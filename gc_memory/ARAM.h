@@ -24,27 +24,46 @@
 #ifndef ARAM_H
 #define ARAM_H
 
-#define BLOCK_SIZE (128*1024)
+#ifdef MEM2_H
+#error MEM2 and ARAM included in the same code, FAIL!
+#endif
 
-void ARAM_manager_init(void);
-void ARAM_manager_deinit(void);
+#define MB (1024*1024)
+#define KB (1024)
 
-// Returns the number of available blocks
-int ARAM_block_available(void);
-int ARAM_block_available_contiguous(void);
+#define ARAM_VM_BASE	(0x7F000000)
+#define ARAM_START		((64*KB) + ARAM_VM_BASE) // Reserved for DSP/AESND/etc
+#define ARAM_SIZE		(16*MB)	// ARAM is 16MB for all we care
 
-// Allocs/Frees blocks in aram
-// ptr [in/out]: the pointer to the new ARAM_block pointer, e.g. &ROM_blocks[rom_offset>>20]
-// owner [in]: a char unique to the owner of the block
-// [out]: the address of the new block
-unsigned char* ARAM_block_alloc(unsigned char** ptr, unsigned char owner);
-unsigned char* ARAM_block_alloc_contiguous(unsigned char** ptr, unsigned char owner, unsigned int num_blocks);
-void ARAM_block_free(unsigned char** ptr);
-void ARAM_block_free_contiguous(unsigned char** ptr, unsigned int num_blocks);
+// 4MB Blocks
+#define BLOCKS_LO 		(ARAM_START)
+#define BLOCKS_HI 		(BLOCKS_LO + 4*MB)
 
-// Finds the least recently used block of the specified owner
-unsigned char** ARAM_block_LRU(unsigned char owner);
-void ARAM_block_update_LRU(unsigned char** ptr);
+// 1MB Invalid Code
+#define INVCODE_LO		(BLOCKS_HI)
+#define INVCODE_HI		(INVCODE_LO + 1*MB)
+
+// 128KB FlashROM
+#define FLASHRAM_LO		(INVCODE_HI)
+#define FLASHRAM_HI		(FLASHRAM_LO + 128*KB)
+
+// 32KB SRAM
+#define SRAM_LO			(FLASHRAM_HI)
+#define SRAM_HI			(SRAM_LO + 32*KB)
+
+// 32*4 MEMPAK
+#define MEMPACK_LO		(SRAM_HI)
+#define MEMPACK_HI		(MEMPACK_LO + 128*KB)
+
+// 2MB RecompCache Meta
+#define RECOMPMETA_LO   (MEMPACK_HI)
+#define RECOMPMETA_SIZE	(2*MB)
+#define RECOMPMETA_HI   (RECOMPMETA_LO + RECOMPMETA_SIZE)
+
+// ~8MB ROM Cache (fill up the rest of ARAM)
+#define ROMCACHE_LO		(RECOMPMETA_HI)
+#define ROMCACHE_SIZE	((ARAM_SIZE+ARAM_VM_BASE)-ROMCACHE_LO)
+#define ROMCACHE_HI		(ROMCACHE_LO + (ROMCACHE_SIZE))
 
 #endif
 

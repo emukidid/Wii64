@@ -4628,11 +4628,7 @@ void genRecompileStore(memType type, MIPS_instr mips){
 		// If base in physical memory
 		GEN_CMP(ppc, 4, DYNAREG_MEM_TOP, 1);
 		set_next_dst(ppc);
-#ifdef HW_RVL
 		GEN_BGE(ppc, 1, 11, 0, 0);
-#else
-		GEN_BGE(ppc, 1, 13, 0, 0);
-#endif
 		set_next_dst(ppc);
 	}
 	
@@ -4652,27 +4648,13 @@ void genRecompileStore(memType type, MIPS_instr mips){
 		set_next_dst(ppc);
 		
 		// r5 = invalid_code_get(address>>12)
-	#ifdef HW_RVL
 		GEN_RLWINM(ppc, 6, 4, 20, 12, 31);	// address >> 12
 		set_next_dst(ppc);
 		GEN_LBZX(ppc, 5, 6, DYNAREG_INVCODE);
 		set_next_dst(ppc);
 		GEN_CMPI(ppc, 5, 0, 0);
 		set_next_dst(ppc);
-	#else	// GameCube invalid_code is a bit array, add support.
-		// invalid_code[block_num>>3] & (1<<(block_num&0x7))
-		// (invalid_code[block_num>>3] >> (block_num & 0x7)) & 1
-		GEN_RLWINM(ppc, 5, 4, 20, 29, 31);	// r5 = block_num & 0x7
-		set_next_dst(ppc);
-		GEN_RLWINM(ppc, 6, 4, 17, 15, 31);	// r6 = block_num >> 3
-		set_next_dst(ppc);
-		GEN_LBZX(ppc, 6, 6, DYNAREG_INVCODE);	// r6 = invalid_code[block_num>>3]
-		set_next_dst(ppc);
-		GEN_SRW(ppc, 5, 6, 5);	// r5 = invalid_code[block_num>>3] >> (block_num & 0x7)
-		set_next_dst(ppc);
-		GEN_ANDI(ppc, 5, 5, 1);	// r5 = invalid_code[block_num>>3] & (1 << (block_num & 0x7))
-		set_next_dst(ppc);	// Note, the ANDI here will set CR0 for the BNE directly after.
-	#endif
+
 		// if (!r5)
 		GEN_BNE(ppc, 0, (isVirtual && isPhysical) ? 14 : 5, 0, 0);
 		set_next_dst(ppc);

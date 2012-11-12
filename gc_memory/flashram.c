@@ -61,10 +61,10 @@ static int mode;
 static unsigned long long status;
 #ifdef HW_RVL
 #include "MEM2.h"
-static unsigned char *flashram = (unsigned char*)(FLASHRAM_LO);
-#else //GC
-static unsigned char flashram[0x20000] __attribute__((aligned(32)));
+#else
+#include "ARAM.h"
 #endif
+static unsigned char *flashram = (unsigned char*)(FLASHRAM_LO);
 
 static unsigned long erase_offset, write_pointer;
 

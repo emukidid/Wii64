@@ -59,10 +59,10 @@
 
 #ifdef HW_RVL
 #include "MEM2.h"
-static unsigned char *sram = (unsigned char*)(SRAM_LO);
-#else //GC
-static unsigned char sram[0x8000] __attribute__((aligned(32)));
+#else
+#include "ARAM.h"
 #endif
+static unsigned char *sram = (unsigned char*)(SRAM_LO);
 
 BOOL sramWritten = FALSE;
 

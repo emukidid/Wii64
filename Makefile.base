@@ -25,6 +25,7 @@ CXXFLAGS	+= $(CFLAGS)
 OBJ		+= \
 		main/gamehacks.o \
 		main/rom_gc.o \
+		main/ROM-Cache.o \
 		main/main_gc-menu2.o \
 		main/gc_dvd.o \
 		main/gczip.o \

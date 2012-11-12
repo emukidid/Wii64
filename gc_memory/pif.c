@@ -58,13 +58,13 @@
 #include "../fileBrowser/fileBrowser.h"
 #include "Saves.h"
 
-static unsigned char eeprom[0x800] __attribute__((aligned(32)));
 #ifdef HW_RVL
 #include "MEM2.h"
-static unsigned char (*mempack)[0x8000] = (unsigned char(*)[0x8000])MEMPACK_LO;
-#else //GC
-static unsigned char mempack[4][0x8000] __attribute__((aligned(32)));
+#else
+#include "ARAM.h"
 #endif
+static unsigned char eeprom[0x800] __attribute__((aligned(32)));
+static unsigned char (*mempack)[0x8000] = (unsigned char(*)[0x8000])MEMPACK_LO;
 
 BOOL eepromWritten = FALSE;
 BOOL mempakWritten = FALSE;

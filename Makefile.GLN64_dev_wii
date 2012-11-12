@@ -25,7 +25,7 @@ CXXFLAGS	=$(CFLAGS)
 OBJ		=main/rom_gc.o \
 		main/main_gc-menu.o \
 		main/gc_dvd.o \
-		main/ROM-Cache-MEM2.o \
+		main/ROM-Cache.o \
 		main/gczip.o \
 		main/timers.o \
 		fileBrowser/fileBrowser-DVD.o \

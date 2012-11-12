@@ -67,11 +67,7 @@ extern R4300 r4300;
 extern precomp_instr *PC;
 #ifdef PPC_DYNAREC
 #include "ppc/Recompile.h"
-#ifdef HW_RVL
-extern PowerPC_block **blocks; 
-#else
-extern PowerPC_block *blocks[0x100000];
-#endif
+extern PowerPC_block **blocks;
 extern PowerPC_block *actual;
 #else
 extern precomp_block *blocks[0x100000], *actual;
