@@ -61,5 +61,6 @@ void tlb_mem2_init();
 #endif
 unsigned long virtual_to_physical_address(unsigned long addresse, int w);
 int probe_nop(unsigned long address);
+extern unsigned long rom_base_in_tlb;
 
 #endif

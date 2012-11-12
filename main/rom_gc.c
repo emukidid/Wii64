@@ -129,7 +129,7 @@ static unsigned int CRC_TABLE[TOTAL_NUM_16KBIT][2] = {
 
 // Checks if the current game is in the CRC list for 16kbit eeprom save type
 // cause it's cheaper to have a CRC list than an entire .ini file :)
-bool isEEPROM16k()
+int isROMEEPROM16k()
 {
   int i = 0;
   unsigned int curCRC[2];
@@ -138,9 +138,9 @@ bool isEEPROM16k()
   for (i = 0; i < TOTAL_NUM_16KBIT; i++)
   {
     if((CRC_TABLE[i][0] == curCRC[0])&&(CRC_TABLE[i][1] == curCRC[1]))
-      return true;
+      return 1;
   }
-  return false;
+  return 0;
 }
 
 void byte_swap(char* buffer, unsigned int length){
@@ -194,16 +194,22 @@ int rom_read(fileBrowser_file* file){
   // Replace any non file system complaint chars with underscores
   stripInvalidChars((char*)&ROM_SETTINGS.goodname[0]);
   // Fix save type for certain special sized (16kbit) eeprom games
-  if(isEEPROM16k())
-    ROM_SETTINGS.eeprom_16kb = 1;
-  else
-    ROM_SETTINGS.eeprom_16kb = 0;
+  ROM_SETTINGS.eeprom_16kb = isROMEEPROM16k();
   // Apply game specific hacks
   GameSpecificHackSetup();
   //Set VI limit based on ROM header
   InitTimer();
-
-   return ret;
+  // Setup GoldenEye TLB ROM access base address
+  if (ROM_HEADER->CRC1 == sl(0xDCBC50D1)) // US
+    rom_base_in_tlb = 0xb0034b30;
+  else if (ROM_HEADER->CRC1 == sl(0x0414CA61)) // E
+    rom_base_in_tlb = 0xb00329f0;
+  else if (ROM_HEADER->CRC1 == sl(0xA24F4CF1)) // J
+    rom_base_in_tlb = 0xb0034b70;
+  else 
+	rom_base_in_tlb = 0;
+	
+  return ret;
 }
 
 #define tr 
