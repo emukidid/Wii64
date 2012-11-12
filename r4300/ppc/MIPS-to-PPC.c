@@ -177,7 +177,7 @@ typedef enum { NONE=0, EQ, NE, LT, GT, LE, GE } condition;
 //   cond: type of branch to execute depending on cr 7
 //   link: if nonzero, branch and link
 //   likely: if nonzero, the delay slot will only be executed when cond is true
-static int branch(int offset, condition cond, int link, int likely){
+static int branch(int offset, condition cond, int link, int likely, int fp){
 	PowerPC_instr ppc;
 	int likely_id;
 	// Condition codes for bc (and their negations)
@@ -222,6 +222,15 @@ static int branch(int offset, condition cond, int link, int likely){
 	}
 
 	if(likely){
+		if(fp){
+			// This has to be done here because comparisons can happen in the delay slot
+			GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+			set_next_dst(ppc);
+			GEN_RLWINM(ppc, 0, 0, 9, 31, 31);
+			set_next_dst(ppc);
+			GEN_CMPI(ppc, 0, 0, 4);
+			set_next_dst(ppc);
+		}
 		// b[!cond] <past delay to update_count>
 		likely_id = add_jump_special(0);
 		GEN_BC(ppc, likely_id, 0, 0, nbo, bi);
@@ -249,6 +258,16 @@ static int branch(int offset, condition cond, int link, int likely){
 #endif
 
 	genUpdateCount(1); // Sets cr2 to (r4300.next_interrupt ? Count)
+
+	if(fp && !likely){
+		// This has to be done here because comparisons can happen in the delay slot
+		GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+		set_next_dst(ppc);
+		GEN_RLWINM(ppc, 0, 0, 9, 31, 31);
+		set_next_dst(ppc);
+		GEN_CMPI(ppc, 0, 0, 4);
+		set_next_dst(ppc);
+	}
 
 #ifndef INTERPRET_BRANCH
 	// If we're jumping out, we need to trampoline using genJumpTo
@@ -501,7 +520,7 @@ static int BEQ(MIPS_instr mips){
 	
 	genCmp64(4, MIPS_GET_RA(mips), MIPS_GET_RB(mips));
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), EQ, 0, 0);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), EQ, 0, 0, 0);
 }
 
 static int BNE(MIPS_instr mips){
@@ -513,7 +532,7 @@ static int BNE(MIPS_instr mips){
 
 	genCmp64(4, MIPS_GET_RA(mips), MIPS_GET_RB(mips));
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), NE, 0, 0);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), NE, 0, 0, 0);
 }
 
 static int BLEZ(MIPS_instr mips){
@@ -525,7 +544,7 @@ static int BLEZ(MIPS_instr mips){
 
 	genCmpi64(4, MIPS_GET_RA(mips), 0);
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), LE, 0, 0);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), LE, 0, 0, 0);
 }
 
 static int BGTZ(MIPS_instr mips){
@@ -537,7 +556,7 @@ static int BGTZ(MIPS_instr mips){
 
 	genCmpi64(4, MIPS_GET_RA(mips), 0);
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), GT, 0, 0);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), GT, 0, 0, 0);
 }
 
 static int ADDIU(MIPS_instr mips){
@@ -679,7 +698,7 @@ static int BEQL(MIPS_instr mips){
 
 	genCmp64(4, MIPS_GET_RA(mips), MIPS_GET_RB(mips));
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), EQ, 0, 1);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), EQ, 0, 1, 0);
 }
 
 static int BNEL(MIPS_instr mips){
@@ -691,7 +710,7 @@ static int BNEL(MIPS_instr mips){
 
 	genCmp64(4, MIPS_GET_RA(mips), MIPS_GET_RB(mips));
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), NE, 0, 1);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), NE, 0, 1, 0);
 }
 
 static int BLEZL(MIPS_instr mips){
@@ -703,7 +722,7 @@ static int BLEZL(MIPS_instr mips){
 
 	genCmpi64(4, MIPS_GET_RA(mips), 0);
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), LE, 0, 1);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), LE, 0, 1, 0);
 }
 
 static int BGTZL(MIPS_instr mips){
@@ -715,7 +734,7 @@ static int BGTZL(MIPS_instr mips){
 
 	genCmpi64(4, MIPS_GET_RA(mips), 0);
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), GT, 0, 1);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), GT, 0, 1, 0);
 }
 
 static int DADDIU(MIPS_instr mips){
@@ -2453,7 +2472,7 @@ static int REGIMM(MIPS_instr mips){
 	genCmpi64(4, MIPS_GET_RA(mips), 0);
 
 	return branch(signExtend(MIPS_GET_IMMED(mips),16),
-	              cond ? GE : LT, link, likely);
+	              cond ? GE : LT, link, likely, 0);
 }
 
 // -- COP0 Instructions --
@@ -2922,7 +2941,7 @@ static int BC(MIPS_instr mips){
 	GEN_CMPI(ppc, 0, 0, 4);
 	set_next_dst(ppc);
 
-	return branch(signExtend(MIPS_GET_IMMED(mips),16), cond?NE:EQ, 0, likely);
+	return branch(signExtend(MIPS_GET_IMMED(mips),16), cond?NE:EQ, 0, likely, 1);
 #endif
 }
 
@@ -4392,7 +4411,7 @@ static void genCheckFP(void){
 	PowerPC_instr ppc;
 	if(FP_need_check || isDelaySlot){
 		flushRegisters();
-		reset_code_addr();
+		if(!isDelaySlot) reset_code_addr(); // Calling this makes no sense in the context of the delay slot
 		// lwz r0, 12*4(r4300.reg_cop0)
 		GEN_LWZ(ppc, 0, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
 		set_next_dst(ppc);
