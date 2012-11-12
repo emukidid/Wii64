@@ -73,7 +73,7 @@ void TLB_refill_exception(unsigned long address, int w)
 {
   int usual_handler = 0, i = 0;
   
-  if (!dynacore && w != 2) {
+  if (w != 2) {
     update_count();
   }
   Cause = (w == 1) ? (3 << 2):(2 << 2);
