@@ -51,7 +51,6 @@ extern "C" {
 #include "../gc_input/controller.h"
 
 #include "../r4300/r4300.h"
-#include "../gc_memory/ARAM.h"
 #include "../gc_memory/memory.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "../gc_memory/tlb.h"
@@ -66,6 +65,7 @@ extern "C" {
 #include "wii64config.h"
 #ifndef HW_RVL
 #include "..\vm\vm.h"
+#include "../gc_memory/ARAM.h"
 #endif
 }
 
@@ -75,6 +75,7 @@ unsigned int MALLOC_MEM2 = 0;
 #include <wiiuse/wpad.h>
 #include "../gc_memory/MEM2.h"
 #endif
+
 
 
 /* NECESSARY FUNCTIONS AND VARIABLES */
