@@ -1,0 +1,35 @@
+# Makefile for glN64_GX
+
+CFLAGS	+= -DGLN64_GX -D__LINUX__
+
+OBJ_GLN64_GX	=glN64_GX/glN64.o \
+		glN64_GX/Config_linux.o \
+		glN64_GX/OpenGL.o \
+		glN64_GX/N64.o \
+		glN64_GX/RSP.o \
+		glN64_GX/VI.o \
+		glN64_GX/Textures.o \
+		glN64_GX/FrameBuffer.o \
+		glN64_GX/Combiner.o \
+		glN64_GX/gDP.o \
+		glN64_GX/gSP.o \
+		glN64_GX/GBI.o \
+		glN64_GX/DepthBuffer.o \
+		glN64_GX/CRC.o \
+		glN64_GX/2xSAI.o \
+		glN64_GX/TEV_combiner.o \
+		glN64_GX/RDP.o \
+		glN64_GX/F3D.o \
+		glN64_GX/F3DEX.o \
+		glN64_GX/F3DEX2.o \
+		glN64_GX/L3D.o \
+		glN64_GX/L3DEX.o \
+		glN64_GX/L3DEX2.o \
+		glN64_GX/S2DEX.o \
+		glN64_GX/S2DEX2.o \
+		glN64_GX/F3DPD.o \
+		glN64_GX/F3DDKR.o \
+		glN64_GX/F3DWRUS.o
+
+ALL_OBJ		+= $(OBJ_GLN64_GX)
+

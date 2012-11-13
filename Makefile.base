@@ -153,3 +153,5 @@ clean:
 menu/MenuResources.o:		menu/MenuResources.s
 		$(CC) -x assembler-with-cpp $(CFLAGS) -c -o $@ $<
 
+vm/dsihandler.o:		vm/dsihandler.s
+		$(CC) -x assembler-with-cpp $(CFLAGS) -c -o $@ $<

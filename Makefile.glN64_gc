@@ -1,0 +1,16 @@
+#Makefile MUPEN64 for glN64_GX + MenuV2 + GC
+
+ELF		= cube64-glN64.elf
+DOL		= cube64-glN64.dol
+
+#CFLAGS		=
+INCLUDE 	=
+#LD			= 
+#LDFLAGS 	=
+#LIBPATHS	= 
+LIB			= 
+
+include Makefile.glN64
+include Makefile.gc
+include Makefile.base
+

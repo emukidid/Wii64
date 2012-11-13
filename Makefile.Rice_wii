@@ -3,6 +3,13 @@
 ELF		= wii64-Rice.elf
 DOL		= wii64-Rice.dol
 
+#CFLAGS		= 
+INCLUDE 	=
+#LD			= 
+#LDFLAGS 	=
+#LIBPATHS	= 
+LIB			= 
+
 include Makefile.Rice
 include Makefile.wii
 include Makefile.base

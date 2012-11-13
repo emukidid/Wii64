@@ -13,5 +13,3 @@ OBJ		+= \
 
 LIB		+= -lz
 
-vm/dsihandler.o:		vm/dsihandler.s
-		$(CC) -x assembler-with-cpp $(CFLAGS) -c -o $@ $<
