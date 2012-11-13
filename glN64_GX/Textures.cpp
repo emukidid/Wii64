@@ -910,7 +910,7 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 #ifdef SHOW_DEBUG
 			DEBUG_print((char*)"Textures: Converting Invalid Texture Format",DBG_TXINFO);
 #endif
-      break;
+			break;
 		}
 	}
 	else //	!cache.enable2xSaI
@@ -1247,7 +1247,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 #ifdef SHOW_DEBUG
 			DEBUG_print((char*)"Textures: Converting Invalid Texture Format",DBG_TXINFO);
 #endif
-      break;
+			break;
 		}
 	}
 	else if (texInfo->textureBytes > 0) //	!cache.enable2xSaI

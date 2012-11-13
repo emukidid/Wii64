@@ -441,6 +441,14 @@ void gSPViewport( u32 v )
 	gSP.viewport.nearz	= gSP.viewport.vtrans[2] - gSP.viewport.vscale[2];
 	gSP.viewport.farz	= (gSP.viewport.vtrans[2] + gSP.viewport.vscale[2]) ;
 
+#ifdef __GX__
+	if (gSP.viewport.width < 0)
+	{
+		gSP.viewport.x = gSP.viewport.x + gSP.viewport.width;
+		gSP.viewport.width = -gSP.viewport.width;
+	}
+#endif //__GX__
+
 	gSP.changed |= CHANGED_VIEWPORT;
 
 #ifdef DEBUG

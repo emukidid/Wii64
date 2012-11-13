@@ -25,6 +25,8 @@
 #include "../gui/DEBUG.h"
 #endif
 
+#define MAINDEF		//Ensures only one copy of MicrocodeTypes and Combiner tables
+
 //#include <GL/gl.h>	//not available
 //#include <GL/glu.h>	//not available
 #include "glN64.h"
