@@ -2934,13 +2934,6 @@ static int BC(MIPS_instr mips){
 	int cond   = mips & 0x00010000;
 	int likely = mips & 0x00020000;
 
-	GEN_LWZ(ppc, 0, 0+R4300OFF_FCR31, DYNAREG_R4300);
-	set_next_dst(ppc);
-	GEN_RLWINM(ppc, 0, 0, 9, 31, 31);
-	set_next_dst(ppc);
-	GEN_CMPI(ppc, 0, 0, 4);
-	set_next_dst(ppc);
-
 	return branch(signExtend(MIPS_GET_IMMED(mips),16), cond?NE:EQ, 0, likely, 1);
 #endif
 }
