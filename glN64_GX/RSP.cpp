@@ -140,26 +140,31 @@ LoadLoop:
 		WORD fraction[4][4];
 	} *n64Mat = (struct _N64Matrix *)&RDRAM[address];
 	
-	for(int i=0; i<4; ++i){
-		/*for(int j=0; j<4; ++j)
-			mtx[i][j] = (float)n64Mat->integer[i][j] + (float)n64Mat->fraction[i][j] * recip;*/
-		
-		__asm__ volatile(
-			"psq_l    3,   (%3*8)(%0), 0, 5 \n"
-			"psq_l    4,   (%3*8)(%1), 0, 4 \n"
-			"psq_l    5, (%3*8+4)(%0), 0, 5 \n"
-			"psq_l    6, (%3*8+4)(%1), 0, 4 \n"
-			
-			"ps_add  4, 3, 4     \n"
-			"ps_add  6, 5, 6     \n"
-			
-			"psq_st   4,   (%3*16)(%2), 0, 0 \n"
-			"psq_st   6, (%3*16+8)(%2), 0, 0 \n"
-			:: "r" (n64Mat->fraction), "r" (n64Mat->integer),
-			   "r" (mtx), "n" (i)
-			 : "fr2", "fr3", "fr4", "fr5", "fr6",
-			   "r0", "memory");
-	}
+#define PS_ASM_LOAD_MATRIX(i) \
+		__asm__ volatile( \
+			"psq_l    3,   (%3*8)(%0), 0, 5 \n" \
+			"psq_l    4,   (%3*8)(%1), 0, 4 \n" \
+			"psq_l    5, (%3*8+4)(%0), 0, 5 \n" \
+			"psq_l    6, (%3*8+4)(%1), 0, 4 \n" \
+			 \
+			"ps_add  4, 3, 4     \n" \
+			"ps_add  6, 5, 6     \n" \
+			 \
+			"psq_st   4,   (%3*16)(%2), 0, 0 \n" \
+			"psq_st   6, (%3*16+8)(%2), 0, 0 \n" \
+			:: "r" (n64Mat->fraction), "r" (n64Mat->integer), \
+			   "r" (mtx), "n" (i) \
+			 : "fr3", "fr4", "fr5", "fr6", \
+			   "memory")
+	PS_ASM_LOAD_MATRIX(0);
+	PS_ASM_LOAD_MATRIX(1);
+	PS_ASM_LOAD_MATRIX(2);
+	PS_ASM_LOAD_MATRIX(3);
+
+	/*for(int i=0; i<4; ++i){
+		for(int j=0; j<4; ++j)
+			mtx[i][j] = (float)n64Mat->integer[i][j] + (float)n64Mat->fraction[i][j] * recip;
+	}*/
 	
 # else // GEKKO
 	struct _N64Matrix
