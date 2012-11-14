@@ -23,7 +23,8 @@
 #define F3DPD		8
 #define F3DDKR		9
 #define F3DWRUS	    10
-#define NONE		11
+#define F3DCBFD		11
+#define NONE		12
 
 #ifdef MAINDEF
 const char *MicrocodeTypes[] =
@@ -39,13 +40,14 @@ const char *MicrocodeTypes[] =
 	"Perfect Dark",
 	"DKR/JFG",
 	"Waverace US",
+	"CBFD",
 	"None"
 };
 #else
 extern const char *MicrocodeTypes[];
 #endif
 
-static const int numMicrocodeTypes = 11;
+static const int numMicrocodeTypes = 12;
 
 
 // Fixed point conversion factors

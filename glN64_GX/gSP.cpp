@@ -641,6 +641,67 @@ void gSPVertex( u32 v, u32 n, u32 v0 )
 #endif
 }
 
+void gSPNIVertex( u32 v, u32 n, u32 v0 )
+{
+	u32 address = RSP_SegmentToPhysical( v );
+
+	if ((address + sizeof( Vertex ) * n) > RDRAMSize)
+	{
+		return;
+	}
+
+	Vertex* vertex = (Vertex*)&RDRAM[address];
+
+	if ((n + v0) < (80))
+	{
+		for (unsigned int i = v0; i < n + v0; i++)
+		{
+			gSP.vertices[i].x = vertex->x;
+			gSP.vertices[i].y = vertex->y;
+			gSP.vertices[i].z = vertex->z;
+			gSP.vertices[i].flag = 0;
+			gSP.vertices[i].s = _FIXED2FLOAT( vertex->s, 5 );
+			gSP.vertices[i].t = _FIXED2FLOAT( vertex->t, 5 );
+
+			u8 *color = &RDRAM[gSP.vertexColorBase + (i << 1)];
+
+			if (gSP.geometryMode & G_LIGHTING)
+			{
+				gSP.vertices[i].nx = (s8)color[0];
+				gSP.vertices[i].ny = (s8)color[1];
+				gSP.vertices[i].nz = (s8)vertex->flag;
+				gSP.vertices[i].a = vertex->color.a * 0.0039215689f;
+//				gSP.vertices[i].a = GXcastu8f32( vertex->color.a );
+			}
+			else
+			{
+				gSP.vertices[i].r = vertex->color.r * 0.0039215689f;
+				gSP.vertices[i].g = vertex->color.g * 0.0039215689f;
+				gSP.vertices[i].b = vertex->color.b * 0.0039215689f;
+				gSP.vertices[i].a = vertex->color.a * 0.0039215689f;
+/*				gSP.vertices[i].r = GXcastu8f32( vertex->color.r );
+				gSP.vertices[i].g = GXcastu8f32( vertex->color.g );
+				gSP.vertices[i].b = GXcastu8f32( vertex->color.b );
+				gSP.vertices[i].a = GXcastu8f32( vertex->color.a );
+*/			}
+
+			gSPProcessVertex(i);
+
+			if (gSP.geometryMode & G_LIGHTING)
+			{
+				gSP.vertices[i].r = vertex->color.r * 0.0039215689f;
+				gSP.vertices[i].g = vertex->color.g * 0.0039215689f;
+				gSP.vertices[i].b = vertex->color.b * 0.0039215689f;
+//				gSP.vertices[i].r *= GXcastu8f32( vertex->color.r );
+//				gSP.vertices[i].g *= GXcastu8f32( vertex->color.g );
+//				gSP.vertices[i].b *= GXcastu8f32( vertex->color.b );
+			}
+
+			vertex++;
+		}
+	}
+}
+
 void gSPCIVertex( u32 v, u32 n, u32 v0 )
 {
 	u32 address = RSP_SegmentToPhysical( v );
