@@ -286,16 +286,19 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 	return func;
 }
 
-void init_block(MIPS_instr* mips_code, PowerPC_block* ppc_block){
+void init_block(PowerPC_block* ppc_block, unsigned int paddr){
 	unsigned int length = (ppc_block->end_address - ppc_block->start_address)/sizeof(MIPS_instr);
   PowerPC_block* temp_block;
 
-	/*if(!ppc_block->code_addr){
-		ppc_block->code_addr = malloc(length * sizeof(PowerPC_instr*));
-		memset(ppc_block->code_addr, 0, length * sizeof(PowerPC_instr*));
-	}*/
-	ppc_block->mips_code = mips_code;
+	extern unsigned char *rom;
+	unsigned int offset = (paddr & 0x03FFFFFF) >> 2;
+	unsigned int* base;
+	if(paddr > 0xb0000000) base = rom;
+	else if(paddr >= 0xa4000000) base = SP_DMEM;
+	else base = rdram;
 
+	ppc_block->mips_code = offset + base;
+	
 	// FIXME: Equivalent addresses should point to the same code/funcs?
 	if(ppc_block->end_address < 0x80000000 || ppc_block->start_address >= 0xc0000000){
 		unsigned long paddr;
@@ -310,7 +313,7 @@ void init_block(MIPS_instr* mips_code, PowerPC_block* ppc_block){
 		     temp_block->funcs = NULL;
 		     temp_block->start_address = paddr & ~0xFFF;
 		     temp_block->end_address = (paddr & ~0xFFF) + 0x1000;
-		     init_block(mips_code, temp_block);
+		     init_block(temp_block, paddr);
 		}
 
 		paddr += ppc_block->end_address - ppc_block->start_address - 4;
@@ -323,7 +326,7 @@ void init_block(MIPS_instr* mips_code, PowerPC_block* ppc_block){
 		     temp_block->funcs = NULL;
 		     temp_block->start_address = paddr & ~0xFFF;
 		     temp_block->end_address = (paddr & ~0xFFF) + 0x1000;
-		     init_block(mips_code + 0xffc, temp_block);
+		     init_block(temp_block, paddr + 0xffc);
 		}
 
 	} else {
@@ -340,7 +343,7 @@ void init_block(MIPS_instr* mips_code, PowerPC_block* ppc_block){
 				temp_block->funcs = NULL;
 				temp_block->start_address = (start+0x20000000) & ~0xFFF;
 				temp_block->end_address		= ((start+0x20000000) & ~0xFFF) + 0x1000;
-				init_block(mips_code, temp_block);
+				init_block(temp_block, paddr);
 			}
 		}
 		if(start >= 0xa0000000 && end < 0xc0000000 &&
@@ -354,8 +357,7 @@ void init_block(MIPS_instr* mips_code, PowerPC_block* ppc_block){
 				temp_block->funcs = NULL;
 				temp_block->start_address		= (start-0x20000000) & ~0xFFF;
 				temp_block->end_address			= ((start-0x20000000) & ~0xFFF) + 0x1000;
-				init_block(mips_code, temp_block);
-					
+				init_block(temp_block, paddr);
 			}
 		}
 	}
@@ -365,11 +367,6 @@ void init_block(MIPS_instr* mips_code, PowerPC_block* ppc_block){
 void deinit_block(PowerPC_block* ppc_block){
   PowerPC_block* temp_block;
 	invalidate_block(ppc_block);
-	/*if(ppc_block->code_addr){
-		invalidate_block(ppc_block);
-		free(ppc_block->code_addr);
-		ppc_block->code_addr = NULL;
-	}*/
 	invalid_code_set(ppc_block->start_address>>12, 1);
 
 	// We need to mark all equivalent addresses as invalid
@@ -377,6 +374,8 @@ void deinit_block(PowerPC_block* ppc_block){
 		unsigned long paddr;
 
 		paddr = virtual_to_physical_address(ppc_block->start_address, 2);
+		init_block(ppc_block, paddr);
+		
 		temp_block = blocks_get(paddr>>12);
 		if(temp_block){
 		     //blocks[paddr>>12]->code_addr = NULL;
@@ -403,6 +402,8 @@ void deinit_block(PowerPC_block* ppc_block){
 			//blocks[(start-0x20000000)>>12]->code_addr = NULL;
 			invalid_code_set((start-0x20000000)>>12, 1);
 		}
+
+		init_block(ppc_block, start);
 	}
 }
 
@@ -595,10 +596,6 @@ void invalidate_block(PowerPC_block* ppc_block){
 		return NULL;
 	}
 	ppc_block->funcs = free_tree(ppc_block->funcs);
-	// NULL out code_addr
-	//memset(ppc_block->code_addr, 0, 1024 * sizeof(PowerPC_instr*));
-	// Now that we've handled the invalidation, reinit ourselves
-	init_block(ppc_block->mips_code, ppc_block);
 }
 
 int func_was_freed(PowerPC_func* func){

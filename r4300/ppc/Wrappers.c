@@ -138,15 +138,12 @@ void dynarec(unsigned int address){
 			dst_block->funcs         = NULL;
 			dst_block->start_address = address & ~0xFFF;
 			dst_block->end_address   = (address & ~0xFFF) + 0x1000;
-			if((paddr >= 0xb0000000 && paddr < 0xc0000000) ||
-			   (paddr >= 0x90000000 && paddr < 0xa0000000)){
-				init_block(NULL, dst_block);
-			} else {
-				init_block(rdram+(((paddr-(address-dst_block->start_address)) & 0x1FFFFFFF)>>2),
-						   dst_block);
-			}
+			
+			init_block(dst_block, paddr - (address-dst_block->start_address));
+
 		} else if(invalid_code_get(address>>12)){
 			invalidate_block(dst_block);
+			init_block(dst_block, paddr - (address-dst_block->start_address));
 		}
 
 		PowerPC_func* func = find_func(&dst_block->funcs, address);

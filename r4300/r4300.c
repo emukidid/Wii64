@@ -249,7 +249,7 @@ void init_blocks()
 #endif
    invalid_code_set(0xa4000000>>12, 1);
    actual=temp_block;
-   init_block(SP_DMEM, temp_block);
+   init_block(temp_block, 0xa4000000);
 
 #ifdef DBG
    if (debugger_mode) // debugger shows initial state (before 1st instruction).
