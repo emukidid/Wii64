@@ -973,9 +973,17 @@ bool OGLRender::RenderFlushTris()
 		else
 		{
 			invW = (g_vtxProjected5[g_vtxIndex[i]][3] != 0) ? 1/g_vtxProjected5[g_vtxIndex[i]][3] : 0.0f;
-			GX_Position3f32( g_vtxProjected5[g_vtxIndex[i]][0]*invW, g_vtxProjected5[g_vtxIndex[i]][1]*invW, g_vtxProjected5[g_vtxIndex[i]][2]*invW );
+			//Fix for NoN tri's
+			GX_Position3f32( g_vtxProjected5[g_vtxIndex[i]][0]*invW, g_vtxProjected5[g_vtxIndex[i]][1]*invW, max(-1.0f,g_vtxProjected5[g_vtxIndex[i]][2]*invW) );
+//			GX_Position3f32( g_vtxProjected5[g_vtxIndex[i]][0]*invW, g_vtxProjected5[g_vtxIndex[i]][1]*invW, g_vtxProjected5[g_vtxIndex[i]][2]*invW );
 //			invW = (OGL.vertices[i].w != 0) ? 1/OGL.vertices[i].w : 0.0f;
 //			GX_Position3f32( OGL.vertices[i].x*invW, OGL.vertices[i].y*invW, OGL.vertices[i].z*invW );
+#if 0//def SHOW_DEBUG
+			sprintf(txtbuffer,"\r\nVertex %i: x = %f, y = %f, z = %f, InvW = %f", i, g_vtxProjected5[g_vtxIndex[i]][0], g_vtxProjected5[g_vtxIndex[i]][1], g_vtxProjected5[g_vtxIndex[i]][2], invW);
+			DEBUG_print(txtbuffer,DBG_USBGECKO);
+			sprintf(txtbuffer,"\r\nVertex %i: xw = %f, y = %f, z = %f", i, g_vtxProjected5[g_vtxIndex[i]][0]*invW, g_vtxProjected5[g_vtxIndex[i]][1]*invW, g_vtxProjected5[g_vtxIndex[i]][2]*invW);
+			DEBUG_print(txtbuffer,DBG_USBGECKO);
+#endif
 		}
 //		GX_Position3f32(OGL.vertices[i].x/OGL.vertices[i].w, OGL.vertices[i].y/OGL.vertices[i].w, OGL.vertices[i].z/OGL.vertices[i].w);
 //		GXcol.r = (u8) (min(OGL.vertices[i].color.r,1.0)*255);
