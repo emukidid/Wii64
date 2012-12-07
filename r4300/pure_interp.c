@@ -883,14 +883,13 @@ static void tlb_adler_invalidation_pt2(unsigned int page)
 	}
 }
 
-static void TLBWI()
-{
+static void TLBW(unsigned long tlbIdx) {
 	//DEBUG_stats(15, "TLBWI", STAT_TYPE_ACCUM, 1);
 	unsigned int i;
 
-	if (tlb_e[Index&0x3F].v_even)
+	if (tlb_e[tlbIdx].v_even)
 	{
-		for (i=tlb_e[Index&0x3F].start_even; i<tlb_e[Index&0x3F].end_even; i+=0x1000)
+		for (i=tlb_e[tlbIdx].start_even; i<tlb_e[tlbIdx].end_even; i+=0x1000)
 		{
 			tlb_adler_invalidation_pt1(i>>12);
 #ifdef USE_TLB_CACHE
@@ -899,17 +898,17 @@ static void TLBWI()
 			tlb_LUT_r[i>>12] = 0;
 #endif
 		}
-		if (tlb_e[Index&0x3F].d_even)
-			for (i=tlb_e[Index&0x3F].start_even; i<tlb_e[Index&0x3F].end_even; i+=0x1000)
+		if (tlb_e[tlbIdx].d_even)
+			for (i=tlb_e[tlbIdx].start_even; i<tlb_e[tlbIdx].end_even; i+=0x1000)
 #ifdef USE_TLB_CACHE
 				TLBCache_set_w(i>>12, 0);
 #else
 				tlb_LUT_w[i>>12] = 0;
 #endif
 	}
-	if (tlb_e[Index&0x3F].v_odd)
+	if (tlb_e[tlbIdx].v_odd)
 	{
-		for (i=tlb_e[Index&0x3F].start_odd; i<tlb_e[Index&0x3F].end_odd; i+=0x1000)
+		for (i=tlb_e[tlbIdx].start_odd; i<tlb_e[tlbIdx].end_odd; i+=0x1000)
 		{
 			tlb_adler_invalidation_pt1(i>>12);
 #ifdef USE_TLB_CACHE
@@ -918,226 +917,115 @@ static void TLBWI()
 			tlb_LUT_r[i>>12] = 0;
 #endif
 		}
-		if (tlb_e[Index&0x3F].d_odd)
-			for (i=tlb_e[Index&0x3F].start_odd; i<tlb_e[Index&0x3F].end_odd; i+=0x1000)
+		if (tlb_e[tlbIdx].d_odd)
+			for (i=tlb_e[tlbIdx].start_odd; i<tlb_e[tlbIdx].end_odd; i+=0x1000)
 #ifdef USE_TLB_CACHE
 				TLBCache_set_w(i>>12, 0);
 #else
 				tlb_LUT_w[i>>12] = 0;
 #endif
 	}
-	tlb_e[Index&0x3F].g = (EntryLo0 & EntryLo1 & 1);
-	tlb_e[Index&0x3F].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
-	tlb_e[Index&0x3F].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
-	tlb_e[Index&0x3F].c_even = (EntryLo0 & 0x38) >> 3;
-	tlb_e[Index&0x3F].c_odd = (EntryLo1 & 0x38) >> 3;
-	tlb_e[Index&0x3F].d_even = (EntryLo0 & 0x4) >> 2;
-	tlb_e[Index&0x3F].d_odd = (EntryLo1 & 0x4) >> 2;
-	tlb_e[Index&0x3F].v_even = (EntryLo0 & 0x2) >> 1;
-	tlb_e[Index&0x3F].v_odd = (EntryLo1 & 0x2) >> 1;
-	tlb_e[Index&0x3F].asid = (EntryHi & 0xFF);
-	tlb_e[Index&0x3F].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
-	//tlb_e[Index&0x3F].r = (EntryHi & 0xC000000000000000LL) >> 62;
-	tlb_e[Index&0x3F].mask = (PageMask & 0x1FFE000) >> 13;
+	tlb_e[tlbIdx].g = (EntryLo0 & EntryLo1 & 1);
+	tlb_e[tlbIdx].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
+	tlb_e[tlbIdx].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
+	tlb_e[tlbIdx].c_even = (EntryLo0 & 0x38) >> 3;
+	tlb_e[tlbIdx].c_odd = (EntryLo1 & 0x38) >> 3;
+	tlb_e[tlbIdx].d_even = (EntryLo0 & 0x4) >> 2;
+	tlb_e[tlbIdx].d_odd = (EntryLo1 & 0x4) >> 2;
+	tlb_e[tlbIdx].v_even = (EntryLo0 & 0x2) >> 1;
+	tlb_e[tlbIdx].v_odd = (EntryLo1 & 0x2) >> 1;
+	tlb_e[tlbIdx].asid = (EntryHi & 0xFF);
+	tlb_e[tlbIdx].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
+	//tlb_e[tlbIdx].r = (EntryHi & 0xC000000000000000LL) >> 62;
+	tlb_e[tlbIdx].mask = (PageMask & 0x1FFE000) >> 13;
 
-	tlb_e[Index&0x3F].start_even = tlb_e[Index&0x3F].vpn2 << 13;
-	tlb_e[Index&0x3F].end_even = tlb_e[Index&0x3F].start_even+
-		(tlb_e[Index&0x3F].mask << 12) + 0xFFF;
-	tlb_e[Index&0x3F].phys_even = tlb_e[Index&0x3F].pfn_even << 12;
+	tlb_e[tlbIdx].start_even = tlb_e[tlbIdx].vpn2 << 13;
+	tlb_e[tlbIdx].end_even = tlb_e[tlbIdx].start_even+
+		(tlb_e[tlbIdx].mask << 12) + 0xFFF;
+	tlb_e[tlbIdx].phys_even = tlb_e[tlbIdx].pfn_even << 12;
 
-	if (tlb_e[Index&0x3F].v_even)
+	if (tlb_e[tlbIdx].v_even)
 	{
-		if (tlb_e[Index&0x3F].start_even < tlb_e[Index&0x3F].end_even &&
-				!(tlb_e[Index&0x3F].start_even >= 0x80000000 &&
-					tlb_e[Index&0x3F].end_even < 0xC0000000) &&
-				tlb_e[Index&0x3F].phys_even < 0x20000000)
+		if (tlb_e[tlbIdx].start_even < tlb_e[tlbIdx].end_even &&
+				!(tlb_e[tlbIdx].start_even >= 0x80000000 &&
+					tlb_e[tlbIdx].end_even < 0xC0000000) &&
+				tlb_e[tlbIdx].phys_even < 0x20000000)
 		{
-			for (i=tlb_e[Index&0x3F].start_even;i<tlb_e[Index&0x3F].end_even;i+=0x1000)
+			for (i=tlb_e[tlbIdx].start_even;i<tlb_e[tlbIdx].end_even;i+=0x1000)
 #ifdef USE_TLB_CACHE
 				TLBCache_set_r(i>>12, 0x80000000 |
-						(tlb_e[Index&0x3F].phys_even + (i - tlb_e[Index&0x3F].start_even + 0xFFF)));
+						(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF)));
 #else
 				tlb_LUT_r[i>>12] = 0x80000000 |
-					(tlb_e[Index&0x3F].phys_even + (i - tlb_e[Index&0x3F].start_even + 0xFFF));
+					(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF));
 #endif
-			if (tlb_e[Index&0x3F].d_even)
-				for (i=tlb_e[Index&0x3F].start_even;i<tlb_e[Index&0x3F].end_even;i+=0x1000)
+			if (tlb_e[tlbIdx].d_even)
+				for (i=tlb_e[tlbIdx].start_even;i<tlb_e[tlbIdx].end_even;i+=0x1000)
 #ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, 0x80000000 |
-							(tlb_e[Index&0x3F].phys_even + (i - tlb_e[Index&0x3F].start_even + 0xFFF)));
+							(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF)));
 #else
 					tlb_LUT_w[i>>12] = 0x80000000 |
-						(tlb_e[Index&0x3F].phys_even + (i - tlb_e[Index&0x3F].start_even + 0xFFF));
+						(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF));
 #endif
 		}
-		for (i=tlb_e[Index&0x3F].start_even>>12; i<=tlb_e[Index&0x3F].end_even>>12; i++)
+		for (i=tlb_e[tlbIdx].start_even>>12; i<=tlb_e[tlbIdx].end_even>>12; i++)
 		{
 			tlb_adler_invalidation_pt2(i);
 		}
 	}
 
-	tlb_e[Index&0x3F].start_odd = tlb_e[Index&0x3F].end_even+1;
-	tlb_e[Index&0x3F].end_odd = tlb_e[Index&0x3F].start_odd+
-		(tlb_e[Index&0x3F].mask << 12) + 0xFFF;
-	tlb_e[Index&0x3F].phys_odd = tlb_e[Index&0x3F].pfn_odd << 12;
+	tlb_e[tlbIdx].start_odd = tlb_e[tlbIdx].end_even+1;
+	tlb_e[tlbIdx].end_odd = tlb_e[tlbIdx].start_odd+
+		(tlb_e[tlbIdx].mask << 12) + 0xFFF;
+	tlb_e[tlbIdx].phys_odd = tlb_e[tlbIdx].pfn_odd << 12;
 
-	if (tlb_e[Index&0x3F].v_odd)
+	if (tlb_e[tlbIdx].v_odd)
 	{
-		if (tlb_e[Index&0x3F].start_odd < tlb_e[Index&0x3F].end_odd &&
-				!(tlb_e[Index&0x3F].start_odd >= 0x80000000 &&
-					tlb_e[Index&0x3F].end_odd < 0xC0000000) &&
-				tlb_e[Index&0x3F].phys_odd < 0x20000000)
+		if (tlb_e[tlbIdx].start_odd < tlb_e[tlbIdx].end_odd &&
+				!(tlb_e[tlbIdx].start_odd >= 0x80000000 &&
+					tlb_e[tlbIdx].end_odd < 0xC0000000) &&
+				tlb_e[tlbIdx].phys_odd < 0x20000000)
 		{
-			for (i=tlb_e[Index&0x3F].start_odd;i<tlb_e[Index&0x3F].end_odd;i+=0x1000)
+			for (i=tlb_e[tlbIdx].start_odd;i<tlb_e[tlbIdx].end_odd;i+=0x1000)
 #ifdef USE_TLB_CACHE
 				TLBCache_set_r(i>>12, 0x80000000 |
-						(tlb_e[Index&0x3F].phys_odd + (i - tlb_e[Index&0x3F].start_odd + 0xFFF)));
+						(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF)));
 #else
 				tlb_LUT_r[i>>12] = 0x80000000 |
-					(tlb_e[Index&0x3F].phys_odd + (i - tlb_e[Index&0x3F].start_odd + 0xFFF));
+					(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF));
 #endif
-			if (tlb_e[Index&0x3F].d_odd)
-				for (i=tlb_e[Index&0x3F].start_odd;i<tlb_e[Index&0x3F].end_odd;i+=0x1000)
+			if (tlb_e[tlbIdx].d_odd)
+				for (i=tlb_e[tlbIdx].start_odd;i<tlb_e[tlbIdx].end_odd;i+=0x1000)
 #ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, 0x80000000 |
-							(tlb_e[Index&0x3F].phys_odd + (i - tlb_e[Index&0x3F].start_odd + 0xFFF)));
+							(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF)));
 #else
 					tlb_LUT_w[i>>12] = 0x80000000 |
-						(tlb_e[Index&0x3F].phys_odd + (i - tlb_e[Index&0x3F].start_odd + 0xFFF));
+						(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF));
 #endif
 		}
-		for (i=tlb_e[Index&0x3F].start_odd>>12; i<=tlb_e[Index&0x3F].end_odd>>12; i++)
+		for (i=tlb_e[tlbIdx].start_odd>>12; i<=tlb_e[tlbIdx].end_odd>>12; i++)
 		{
 			tlb_adler_invalidation_pt2(i);
 		}
 	}
+}
+
+
+static void TLBWI()
+{
+	TLBW(Index&0x3F);
 	r4300.pc+=4;
 }
 
 static void TLBWR()
 {
 	//DEBUG_stats(16, "TLBWR", STAT_TYPE_ACCUM, 1);
-	unsigned int i;
 	update_count();
 	Random = (Count/2 % (32 - Wired)) + Wired;
 
-	if (tlb_e[Random].v_even){
-		for (i=tlb_e[Random].start_even; i<tlb_e[Random].end_even; i+=0x1000)
-		{
-			tlb_adler_invalidation_pt1(i>>12);
-#ifdef USE_TLB_CACHE
-			TLBCache_set_r(i>>12, 0);
-#else
-			tlb_LUT_r[i>>12] = 0;
-#endif
-		}
-		if (tlb_e[Random].d_even)
-			for (i=tlb_e[Random].start_even; i<tlb_e[Random].end_even; i+=0x1000)
-#ifdef USE_TLB_CACHE
-				TLBCache_set_w(i>>12, 0);
-#else
-				tlb_LUT_w[i>>12] = 0;
-#endif
-	}
-	if (tlb_e[Random].v_odd){
-		for (i=tlb_e[Random].start_odd; i<tlb_e[Random].end_odd; i+=0x1000)
-		{
-			tlb_adler_invalidation_pt1(i>>12);
-#ifdef USE_TLB_CACHE
-			TLBCache_set_r(i>>12, 0);
-#else
-			tlb_LUT_r[i>>12] = 0;
-#endif
-		}
-		if (tlb_e[Random].d_odd)
-			for (i=tlb_e[Random].start_odd; i<tlb_e[Random].end_odd; i+=0x1000)
-#ifdef USE_TLB_CACHE
-				TLBCache_set_w(i>>12, 0);
-#else
-				tlb_LUT_w[i>>12] = 0;
-#endif
-	}
-
-	tlb_e[Random].g = (EntryLo0 & EntryLo1 & 1);
-	tlb_e[Random].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
-	tlb_e[Random].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
-	tlb_e[Random].c_even = (EntryLo0 & 0x38) >> 3;
-	tlb_e[Random].c_odd = (EntryLo1 & 0x38) >> 3;
-	tlb_e[Random].d_even = (EntryLo0 & 0x4) >> 2;
-	tlb_e[Random].d_odd = (EntryLo1 & 0x4) >> 2;
-	tlb_e[Random].v_even = (EntryLo0 & 0x2) >> 1;
-	tlb_e[Random].v_odd = (EntryLo1 & 0x2) >> 1;
-	tlb_e[Random].asid = (EntryHi & 0xFF);
-	tlb_e[Random].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
-	//tlb_e[Random].r = (EntryHi & 0xC000000000000000LL) >> 62;
-	tlb_e[Random].mask = (PageMask & 0x1FFE000) >> 13;
-
-	tlb_e[Random].start_even = tlb_e[Random].vpn2 << 13;
-	tlb_e[Random].end_even = tlb_e[Random].start_even+
-		(tlb_e[Random].mask << 12) + 0xFFF;
-	tlb_e[Random].phys_even = tlb_e[Random].pfn_even << 12;
-
-	if (tlb_e[Random].v_even){
-		if(tlb_e[Random].start_even < tlb_e[Random].end_even &&
-				!(tlb_e[Random].start_even >= 0x80000000 &&
-					tlb_e[Random].end_even < 0xC0000000) &&
-				tlb_e[Random].phys_even < 0x20000000){
-			for (i=tlb_e[Random].start_even;i<tlb_e[Random].end_even;i+=0x1000)
-#ifdef USE_TLB_CACHE
-				TLBCache_set_r(i>>12, 0x80000000 |
-						(tlb_e[Random].phys_even + (i - tlb_e[Random].start_even + 0xFFF)));
-#else
-				tlb_LUT_r[i>>12] = 0x80000000 |
-					(tlb_e[Random].phys_even + (i - tlb_e[Random].start_even + 0xFFF));
-#endif
-			if (tlb_e[Random].d_even)
-				for (i=tlb_e[Random].start_even;i<tlb_e[Random].end_even;i+=0x1000)
-#ifdef USE_TLB_CACHE
-					TLBCache_set_w(i>>12, 0x80000000 |
-							(tlb_e[Random].phys_even + (i - tlb_e[Random].start_even + 0xFFF)));
-#else
-					tlb_LUT_w[i>>12] = 0x80000000 |
-						(tlb_e[Random].phys_even + (i - tlb_e[Random].start_even + 0xFFF));
-#endif
-		}
-		for (i=tlb_e[Random].start_even>>12; i<=tlb_e[Random].end_even>>12; i++)
-		{
-			tlb_adler_invalidation_pt2(i);
-		}
-	}
-	tlb_e[Random].start_odd = tlb_e[Random].end_even+1;
-	tlb_e[Random].end_odd = tlb_e[Random].start_odd+
-		(tlb_e[Random].mask << 12) + 0xFFF;
-	tlb_e[Random].phys_odd = tlb_e[Random].pfn_odd << 12;
-
-	if (tlb_e[Random].v_odd){
-		if(tlb_e[Random].start_odd < tlb_e[Random].end_odd &&
-				!(tlb_e[Random].start_odd >= 0x80000000 &&
-					tlb_e[Random].end_odd < 0xC0000000) &&
-				tlb_e[Random].phys_odd < 0x20000000){
-			for (i=tlb_e[Random].start_odd;i<tlb_e[Random].end_odd;i+=0x1000)
-#ifdef USE_TLB_CACHE
-				TLBCache_set_r(i>>12, 0x80000000 |
-						(tlb_e[Random].phys_odd + (i - tlb_e[Random].start_odd + 0xFFF)));
-#else
-				tlb_LUT_r[i>>12] = 0x80000000 |
-					(tlb_e[Random].phys_odd + (i - tlb_e[Random].start_odd + 0xFFF));
-#endif
-			if (tlb_e[Random].d_odd)
-				for (i=tlb_e[Random].start_odd;i<tlb_e[Random].end_odd;i+=0x1000)
-#ifdef USE_TLB_CACHE
-					TLBCache_set_w(i>>2, 0x80000000 |
-							(tlb_e[Random].phys_odd + (i - tlb_e[Random].start_odd + 0xFFF)));
-#else
-					tlb_LUT_w[i>>12] = 0x80000000 |
-						(tlb_e[Random].phys_odd + (i - tlb_e[Random].start_odd + 0xFFF));
-#endif
-		}
-		for (i=tlb_e[Random].start_odd>>12; i<=tlb_e[Random].end_odd>>12; i++)
-		{
-			tlb_adler_invalidation_pt2(i);
-		}
-	}
+	TLBW(Random);
 	r4300.pc+=4;
 }
 
