@@ -847,7 +847,7 @@ static void tlb_adler_invalidation_pt1(unsigned int page)
 			invalid_code_set(page, 1);
 		if(!invalid_code_get(page))
 		{
-			blocks[page]->adler32 = adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000);
+			blocks[page]->adler32 = adler32(0, (const char*)&rdram[(paddr&0x7FFFFF)/4], 0x1000);
 
 			invalid_code_set(page, 1);
 		}
@@ -874,7 +874,7 @@ static void tlb_adler_invalidation_pt2(unsigned int page)
 #else
 			unsigned int paddr = tlb_LUT_r[page];
 #endif
-			if(blocks[page]->adler32 == adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000))
+			if(blocks[page]->adler32 == adler32(0, (const char*)&rdram[(paddr&0x7FFFFF)/4], 0x1000))
 				invalid_code_set(page, 0);
 			else
 				invalidate_block(blocks[page]);
