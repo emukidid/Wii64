@@ -830,6 +830,7 @@ static void TLBR()
    EntryLo1 = (tlb_e[index].pfn_odd << 6) | (tlb_e[index].c_odd << 3)
      | (tlb_e[index].d_odd << 2) | (tlb_e[index].v_odd << 1)
        | tlb_e[index].g;
+	//print_gecko("TLBR index %i PageMask %08X EntryHi %08X EntryLo0 %08X EntryLo1 %08X\r\n",index,PageMask,EntryHi,EntryLo0,EntryLo1);
    r4300.pc+=4;
 }
 
@@ -847,8 +848,7 @@ static void tlb_adler_invalidation_pt1(unsigned int page)
 			invalid_code_set(page, 1);
 		if(!invalid_code_get(page))
 		{
-			blocks[page]->adler32 = adler32(0, (const char*)&rdram[(paddr&0x7FFFFF)/4], 0x1000);
-
+			blocks[page]->adler32 = adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000);
 			invalid_code_set(page, 1);
 		}
 		else if(blocks[page])
@@ -874,17 +874,21 @@ static void tlb_adler_invalidation_pt2(unsigned int page)
 #else
 			unsigned int paddr = tlb_LUT_r[page];
 #endif
-			if(blocks[page]->adler32 == adler32(0, (const char*)&rdram[(paddr&0x7FFFFF)/4], 0x1000))
+			if(blocks[page]->adler32 == adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000)) {
 				invalid_code_set(page, 0);
-			else
+				print_gecko("pt2 NOT invalid paddr %08X stored adler %08X actual %08X\r\n",paddr,blocks[page]->adler32,adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000));
+			}
+			else {
 				invalidate_block(blocks[page]);
+				print_gecko("pt2 invalid paddr %08X stored adler %08X actual %08X\r\n",paddr,blocks[page]->adler32,adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000));
+			}
 		}
 #endif
 	}
 }
 
 static void TLBW(unsigned long tlbIdx) {
-	//DEBUG_stats(15, "TLBWI", STAT_TYPE_ACCUM, 1);
+
 	unsigned int i;
 
 	if (tlb_e[tlbIdx].v_even)
@@ -944,6 +948,24 @@ static void TLBW(unsigned long tlbIdx) {
 		(tlb_e[tlbIdx].mask << 12) + 0xFFF;
 	tlb_e[tlbIdx].phys_even = tlb_e[tlbIdx].pfn_even << 12;
 
+	print_gecko("tlb_e[%i] entry created!\r\n",tlbIdx);
+	print_gecko("tlb_e[%i].g\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].g		);
+	print_gecko("tlb_e[%i].pfn_even\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].pfn_even);
+	print_gecko("tlb_e[%i].pfn_odd\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].pfn_odd );
+	print_gecko("tlb_e[%i].c_even\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].c_even  );
+	print_gecko("tlb_e[%i].c_odd\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].c_odd   );
+	print_gecko("tlb_e[%i].d_even\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].d_even  );
+	print_gecko("tlb_e[%i].d_odd\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].d_odd   );
+	print_gecko("tlb_e[%i].v_even\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].v_even  );
+	print_gecko("tlb_e[%i].v_odd\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].v_odd   );
+	print_gecko("tlb_e[%i].asid\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].asid    );
+	print_gecko("tlb_e[%i].vpn2\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].vpn2    );
+	print_gecko("tlb_e[%i].mask\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].mask    );
+	
+	print_gecko("tlb_e[%i].start_even\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].start_even);
+	print_gecko("tlb_e[%i].end_even\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].end_even);
+	print_gecko("tlb_e[%i].phys_even\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].phys_even);
+	
 	if (tlb_e[tlbIdx].v_even)
 	{
 		if (tlb_e[tlbIdx].start_even < tlb_e[tlbIdx].end_even &&
@@ -952,6 +974,7 @@ static void TLBW(unsigned long tlbIdx) {
 				tlb_e[tlbIdx].phys_even < 0x20000000)
 		{
 			for (i=tlb_e[tlbIdx].start_even;i<tlb_e[tlbIdx].end_even;i+=0x1000)
+			{
 #ifdef USE_TLB_CACHE
 				TLBCache_set_r(i>>12, 0x80000000 |
 						(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF)));
@@ -959,8 +982,12 @@ static void TLBW(unsigned long tlbIdx) {
 				tlb_LUT_r[i>>12] = 0x80000000 |
 					(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF));
 #endif
+				print_gecko("SET (v_even) tlb_LUT_r[%08X] = %08X\r\n", i>>12, tlb_LUT_r[i>>12]);
+			}
 			if (tlb_e[tlbIdx].d_even)
-				for (i=tlb_e[tlbIdx].start_even;i<tlb_e[tlbIdx].end_even;i+=0x1000)
+			{
+				for (i=tlb_e[tlbIdx].start_even;i<tlb_e[tlbIdx].end_even;i+=0x1000) 
+				{
 #ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, 0x80000000 |
 							(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF)));
@@ -968,6 +995,9 @@ static void TLBW(unsigned long tlbIdx) {
 					tlb_LUT_w[i>>12] = 0x80000000 |
 						(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF));
 #endif
+					print_gecko("SET (d_even) tlb_LUT_w[%08X] = %08X\r\n", i>>12, tlb_LUT_w[i>>12]);
+				}
+			}
 		}
 		for (i=tlb_e[tlbIdx].start_even>>12; i<=tlb_e[tlbIdx].end_even>>12; i++)
 		{
@@ -979,6 +1009,9 @@ static void TLBW(unsigned long tlbIdx) {
 	tlb_e[tlbIdx].end_odd = tlb_e[tlbIdx].start_odd+
 		(tlb_e[tlbIdx].mask << 12) + 0xFFF;
 	tlb_e[tlbIdx].phys_odd = tlb_e[tlbIdx].pfn_odd << 12;
+	print_gecko("tlb_e[%i].start_odd\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].start_odd);
+	print_gecko("tlb_e[%i].end_odd\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].end_odd);
+	print_gecko("tlb_e[%i].phys_odd\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].phys_odd);
 
 	if (tlb_e[tlbIdx].v_odd)
 	{
@@ -988,6 +1021,7 @@ static void TLBW(unsigned long tlbIdx) {
 				tlb_e[tlbIdx].phys_odd < 0x20000000)
 		{
 			for (i=tlb_e[tlbIdx].start_odd;i<tlb_e[tlbIdx].end_odd;i+=0x1000)
+			{
 #ifdef USE_TLB_CACHE
 				TLBCache_set_r(i>>12, 0x80000000 |
 						(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF)));
@@ -995,8 +1029,12 @@ static void TLBW(unsigned long tlbIdx) {
 				tlb_LUT_r[i>>12] = 0x80000000 |
 					(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF));
 #endif
+				print_gecko("SET (v_odd) tlb_LUT_r[%08X] = %08X\r\n", i>>12, tlb_LUT_r[i>>12]);
+			}
 			if (tlb_e[tlbIdx].d_odd)
+			{
 				for (i=tlb_e[tlbIdx].start_odd;i<tlb_e[tlbIdx].end_odd;i+=0x1000)
+				{
 #ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, 0x80000000 |
 							(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF)));
@@ -1004,6 +1042,9 @@ static void TLBW(unsigned long tlbIdx) {
 					tlb_LUT_w[i>>12] = 0x80000000 |
 						(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF));
 #endif
+					print_gecko("SET (d_odd) tlb_LUT_w[%08X] = %08X\r\n", i>>12, tlb_LUT_w[i>>12]);
+				}
+			}
 		}
 		for (i=tlb_e[tlbIdx].start_odd>>12; i<=tlb_e[tlbIdx].end_odd>>12; i++)
 		{
