@@ -64,7 +64,7 @@ extern "C" {
 #include "../fileBrowser/fileBrowser-CARD.h"
 #include "wii64config.h"
 #ifndef HW_RVL
-#include "..\vm\vm.h"
+#include "../vm/vm.h"
 #include "../gc_memory/ARAM.h"
 #endif
 }
@@ -232,7 +232,7 @@ void load_config(char *loaded_path) {
 int main(int argc, char* argv[]) {
 	/* INITIALIZE */
 #ifdef HW_DOL
-	VM_Init(16<<20, 2048<<10);			// Setup Virtual Memory with ARAM
+	VM_Init(ARAM_SIZE, MRAM_BACKING);		// Setup Virtual Memory with the entire ARAM
 #endif
 #ifdef HW_RVL
 	L2Enhance();

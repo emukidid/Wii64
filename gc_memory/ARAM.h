@@ -31,9 +31,13 @@
 #define MB (1024*1024)
 #define KB (1024)
 
-#define ARAM_VM_BASE	(0x7F000000)
-#define ARAM_START		((64*KB) + ARAM_VM_BASE) // Reserved for DSP/AESND/etc
-#define ARAM_SIZE		(16*MB)	// ARAM is 16MB for all we care
+#define MRAM_BACKING	(2*MB)			// Use 2MB to page our 16MB
+
+#define ARAM_RESERVED	(64*KB)			// Reserved for DSP/AESND/etc
+
+#define ARAM_VM_BASE	(0x7F000000)	// Map ARAM to here
+#define ARAM_START		(ARAM_RESERVED + ARAM_VM_BASE) 
+#define ARAM_SIZE		((16*MB) - ARAM_RESERVED)	// ARAM is ~16MB
 
 // 4MB Blocks
 #define BLOCKS_LO 		(ARAM_START)
@@ -62,8 +66,8 @@
 
 // ~8MB ROM Cache (fill up the rest of ARAM)
 #define ROMCACHE_LO		(RECOMPMETA_HI)
-#define ROMCACHE_SIZE	((ARAM_SIZE+ARAM_VM_BASE)-ROMCACHE_LO)
-#define ROMCACHE_HI		(ROMCACHE_LO + (ROMCACHE_SIZE))
+#define ROMCACHE_HI		(ARAM_START+ARAM_SIZE)
+#define ROMCACHE_SIZE	(ROMCACHE_HI-ROMCACHE_LO)
 
 #endif
 
