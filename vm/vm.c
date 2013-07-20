@@ -353,9 +353,7 @@ int vm_dsi_handler(frame_context* state, u32 DSISR)
 	if (phys_map[p_index].dirty)
 	{
 		DCFlushRange(MEM_Base+p_index, PAGE_SIZE);
-		AR_StartDMA(AR_MRAMTOARAM,MEM_Base+p_index,phys_map[p_index].page_index*PAGE_SIZE,PAGE_SIZE);
-//		ISFS_Seek(pagefile_fd, phys_map[p_index].page_index*PAGE_SIZE, SEEK_SET);
-//		ISFS_Write(pagefile_fd, MEM_Base+p_index, PAGE_SIZE);
+		AR_StartDMA(AR_MRAMTOARAM,(u32)(MEM_Base+p_index),phys_map[p_index].page_index*PAGE_SIZE,PAGE_SIZE);
 		while (AR_GetDMAStatus());
 		virt_map[phys_map[p_index].page_index].committed = 1;
 		virt_map[phys_map[p_index].page_index].p_map_index = pmap_max;
@@ -367,10 +365,8 @@ int vm_dsi_handler(frame_context* state, u32 DSISR)
 	if (virt_map[v_index].committed)
 	{
 		DCInvalidateRange(MEM_Base+p_index, PAGE_SIZE);
-		AR_StartDMA(AR_ARAMTOMRAM,MEM_Base+p_index,v_index*PAGE_SIZE,PAGE_SIZE);
+		AR_StartDMA(AR_ARAMTOMRAM,(u32)(MEM_Base+p_index),v_index*PAGE_SIZE,PAGE_SIZE);
 		while (AR_GetDMAStatus());
-//		ISFS_Seek(pagefile_fd, v_index*PAGE_SIZE, SEEK_SET);
-//		ISFS_Read(pagefile_fd, MEM_Base+p_index, PAGE_SIZE);
 //		printf("VM page %d was fetched\r\n", v_index);
 	}
 	else
