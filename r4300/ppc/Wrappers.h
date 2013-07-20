@@ -56,6 +56,7 @@ typedef enum { MEM_LWL,  MEM_LWR,  MEM_LW,   MEM_LH,   MEM_LB,   MEM_LD,
                MEM_SW,   MEM_SH,   MEM_SB,   MEM_SD,
                MEM_SWC1, MEM_SDC1                    } memType;
 
+void dynarec(unsigned int address);
 unsigned int decodeNInterpret(MIPS_instr, unsigned int, int);
 #ifdef COMPARE_CORE
 int dyna_update_count(unsigned int pc, int isDelaySlot);

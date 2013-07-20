@@ -32,6 +32,7 @@
 #include <math.h>
 #include "r4300.h"
 #include "exception.h"
+#include "Recomp-Cache.h"
 #include "../gc_memory/memory.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "macros.h"
@@ -186,7 +187,7 @@ static void BREAK(){
 #ifdef DEBUGON
 	_break(); return;
 #endif
-	printf("-- BREAK @ %08x: DUMPING N64 REGISTERS --\n", r4300.pc);
+	/*printf("-- BREAK @ %08x: DUMPING N64 REGISTERS --\n", r4300.pc);
 	int i;
 	for(i=0; i<32; i+=4)
 		printf("r%2d: %08x  r%2d: %08x  r%2d: %08x  r%2d: %08x\n",
@@ -194,7 +195,7 @@ static void BREAK(){
 		       i+2, (unsigned int)r4300.gpr[i+2], i+3, (unsigned int)r4300.gpr[i+3]);
 	printf("Press A to continue execution\n");
 	while(!(PAD_ButtonsHeld(0) & PAD_BUTTON_A));
-	while( (PAD_ButtonsHeld(0) & PAD_BUTTON_A));
+	while( (PAD_ButtonsHeld(0) & PAD_BUTTON_A));*/
 #endif
 }
 
@@ -848,7 +849,7 @@ static void tlb_adler_invalidation_pt1(unsigned int page)
 			invalid_code_set(page, 1);
 		if(!invalid_code_get(page))
 		{
-			blocks[page]->adler32 = adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000);
+			blocks[page]->adler32 = adler32(0, (Bytef *)&rdram[(paddr&0x7FF000)/4], 0x1000);
 			invalid_code_set(page, 1);
 		}
 		else if(blocks[page])
@@ -874,7 +875,7 @@ static void tlb_adler_invalidation_pt2(unsigned int page)
 #else
 			unsigned int paddr = tlb_LUT_r[page];
 #endif
-			if(blocks[page]->adler32 == adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000)) {
+			if(blocks[page]->adler32 == adler32(0, (Bytef *)&rdram[(paddr&0x7FF000)/4], 0x1000)) {
 				invalid_code_set(page, 0);
 				//print_gecko("pt2 NOT invalid paddr %08X stored adler %08X actual %08X\r\n",paddr,blocks[page]->adler32,adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000));
 			}

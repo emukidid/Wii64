@@ -38,6 +38,7 @@
 #include "Invalid_Code.h"
 #include "Recomp-Cache.h"
 #include "ARAM-blocks.h"
+#include "ppc/Wrappers.h"
 #include <malloc.h>
 
 #ifdef DBG
@@ -60,10 +61,10 @@ precomp_instr *PC = NULL;
 #include "ppc/Recompile.h"
 #ifdef HW_RVL
 #include "../gc_memory/MEM2.h"
-PowerPC_block **blocks = (PowerPC_block*)(BLOCKS_LO);
+PowerPC_block **blocks = (PowerPC_block**)(BLOCKS_LO);
 #else
 #include "../gc_memory/ARAM.h"
-PowerPC_block **blocks = (PowerPC_block*)(BLOCKS_LO);
+PowerPC_block **blocks = (PowerPC_block**)(BLOCKS_LO);
 #endif
 PowerPC_block *actual;
 #else
@@ -283,11 +284,8 @@ void go()
 
 void cpu_init(void){
    long long CRC = 0;
-   unsigned int j;
-
-   j=0;
    debug_count = 0;
-   ROMCache_read((char*)SP_DMEM+0x40, 0x40, 0xFBC);
+   ROMCache_read((u8*)SP_DMEM+0x40, 0x40, 0xFBC);
    r4300.delay_slot=0;
    r4300.skip_jump=0;
    r4300.stop = 0;

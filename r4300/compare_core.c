@@ -26,6 +26,7 @@
  * USA.
  *
 **/
+#ifdef COMPARE_CORE
 
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -122,3 +123,4 @@ void compare_core()
 		fwrite(r4300.reg_cop0, 32, sizeof(long), f);
 	}
 }
+#endif

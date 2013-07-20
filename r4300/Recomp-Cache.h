@@ -34,6 +34,7 @@
 #define RECOMP_CACHE_SIZE (7*1024*1024)
 #endif
 
+void RecompCache_Init(void);
 // Allocate and free memory to be used for recompiled code
 //   Any memory allocated this way can be freed at any time
 //   you must check invalid_code before you can access it
@@ -43,6 +44,8 @@ void RecompCache_Free(unsigned int addr);
 // Update the LRU info of the indicated block
 //   (call when the block is accessed)
 void RecompCache_Update(PowerPC_func* func);
+void RecompCache_Link(PowerPC_func* src_func, PowerPC_instr* src_instr,
+                      PowerPC_func* dst_func, PowerPC_instr* dst_instr);
 
 // Allocate memory from the meta cache
 //   This will free from both the recomp and meta caches if capacity is hit

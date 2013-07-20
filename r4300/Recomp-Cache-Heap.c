@@ -20,7 +20,7 @@
  *
 **/
 
-
+#include <gccore.h>
 #include <ogc/lwp_heap.h>
 #include <stdlib.h>
 #include "r4300.h"
@@ -320,7 +320,7 @@ void RecompCache_Init(void){
 	}
 	if(!meta_cache){
 		meta_cache = malloc(sizeof(heap_cntrl));
-		__lwp_heap_init(meta_cache, RECOMPMETA_LO,
+		__lwp_heap_init(meta_cache, (void*)RECOMPMETA_LO,
 		                RECOMPMETA_SIZE, 32);
 	}
 }

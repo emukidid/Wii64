@@ -34,7 +34,6 @@
 #include <gccore.h>
 #include "Register-Cache.h"
 #include "../../gc_memory/memory.h"
-#include "../../main/ROM-Cache.h"
 #include "../Invalid_Code.h"
 #include "../interupt.h"
 #include "Recompile.h"
@@ -293,7 +292,7 @@ void init_block(PowerPC_block* ppc_block, unsigned int paddr){
 	PowerPC_block* temp_block;
 
 	unsigned int offset = (paddr & 0x03FFFFFF) >> 2;
-	if(paddr > 0xb0000000) ppc_block->mips_code = (MIPS_instr*)ROMCache_pointer(offset);
+	if(paddr > 0xb0000000) ppc_block->mips_code = 0;	// ROM Cache in use.
 	else if(paddr >= 0xa4000000) ppc_block->mips_code = (MIPS_instr*)(&SP_DMEM + offset);
 	else ppc_block->mips_code = (MIPS_instr*)(&rdram[0] + offset);
 	
