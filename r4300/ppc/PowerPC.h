@@ -429,73 +429,73 @@ PowerPC_instr Instruction(int opcode, ...);
 
 // Let's make this easier: define a macro for each instruction
 
-#define GEN_B(ppc,dst,aa,lk) \
+#define _B(ppc,dst,aa,lk) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_B); \
 	  PPC_SET_LI    (ppc, (dst)); \
 	  PPC_SET_AA    (ppc, (aa)); \
 	  PPC_SET_LK    (ppc, (lk)); }
 
-#define GEN_MTCTR(ppc,rs) \
+#define _MTCTR(ppc,rs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MTSPR); \
 	  PPC_SET_RD    (ppc, (rs)); \
 	  PPC_SET_SPR   (ppc, 0x120); }
 
-#define GEN_MFCTR(ppc,rd) \
+#define _MFCTR(ppc,rd) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MFSPR); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_SPR   (ppc, 0x120); }
 
-#define GEN_ADDIS(ppc,rd,ra,immed) \
+#define _ADDIS(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ADDIS); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LIS(ppc,rd,immed) \
-	GEN_ADDIS(ppc,rd,0,immed)
+#define _LIS(ppc,rd,immed) \
+	_ADDIS(ppc,rd,0,immed)
 
-#define GEN_LI(ppc,rd,rs,immed) \
+#define _LI(ppc,rd,rs,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ADDI); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (rs)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LWZ(ppc,rd,immed,ra) \
+#define _LWZ(ppc,rd,immed,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_LWZ); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LHZ(ppc,rd,immed,ra) \
+#define _LHZ(ppc,rd,immed,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_LHZ); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LHA(ppc,rd,immed,ra) \
+#define _LHA(ppc,rd,immed,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_LHA); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LBZ(ppc,rd,immed,ra) \
+#define _LBZ(ppc,rd,immed,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_LBZ); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LBZX(ppc,rd,ra,rb) \
+#define _LBZX(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_LBZX); \
@@ -503,55 +503,55 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_EXTSB(ppc,rd,rs) \
+#define _EXTSB(ppc,rd,rs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_EXTSB); \
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (rs)); }
 
-#define GEN_EXTSH(ppc,rd,rs) \
+#define _EXTSH(ppc,rd,rs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_EXTSH); \
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (rs)); }
 
-#define GEN_STB(ppc,rs,immed,ra) \
+#define _STB(ppc,rs,immed,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_STB); \
 	  PPC_SET_RD    (ppc, (rs)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_STH(ppc,rs,immed,ra) \
+#define _STH(ppc,rs,immed,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_STH); \
 	  PPC_SET_RD    (ppc, (rs)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_STW(ppc,rs,immed,ra) \
+#define _STW(ppc,rs,immed,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_STW); \
 	  PPC_SET_RD    (ppc, (rs)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_BCTR(ppc) \
+#define _BCTR(ppc) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_XL); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_BCCTR); \
 	  PPC_SET_BO    (ppc, 0x14); }
 
-#define GEN_BCTRL(ppc) \
+#define _BCTRL(ppc) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_XL); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_BCCTR); \
 	  PPC_SET_LK    (ppc, 1); \
 	  PPC_SET_BO    (ppc, 0x14); }
 
-#define GEN_CMP(ppc,ra,rb,cr) \
+#define _CMP(ppc,ra,rb,cr) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_CMP); \
@@ -559,7 +559,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RB    (ppc, (rb)); \
 	  PPC_SET_CRF   (ppc, (cr)); }
 
-#define GEN_CMPL(ppc,ra,rb,cr) \
+#define _CMPL(ppc,ra,rb,cr) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_CMPL); \
@@ -567,21 +567,21 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RB    (ppc, (rb)); \
 	  PPC_SET_CRF   (ppc, (cr)); }
 
-#define GEN_CMPI(ppc,ra,immed,cr) \
+#define _CMPI(ppc,ra,immed,cr) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_CMPI); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); \
 	  PPC_SET_CRF   (ppc, (cr)); }
 
-#define GEN_CMPLI(ppc,ra,immed,cr) \
+#define _CMPLI(ppc,ra,immed,cr) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_CMPLI); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); \
 	  PPC_SET_CRF   (ppc, (cr)); }
 
-#define GEN_BC(ppc,dst,aa,lk,bo,bi) \
+#define _BC(ppc,dst,aa,lk,bo,bi) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_BC); \
 	  PPC_SET_BD    (ppc, (dst)); \
@@ -590,50 +590,50 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_AA    (ppc, (aa)); \
 	  PPC_SET_LK    (ppc, (lk)); }
 
-#define GEN_BNE(ppc,cr,dst,aa,lk) \
+#define _BNE(ppc,cr,dst,aa,lk) \
 	/* FIXME: The docs didn't seem consistant on the BO */ \
 	/* BO: Branch if CR bit is 0 */ \
 	/* BI: Check EQ bit in CR specified */ \
-	GEN_BC(ppc, dst, aa, lk, 0x4, (((cr)<<2)+2))
+	_BC(ppc, dst, aa, lk, 0x4, (((cr)<<2)+2))
 
-#define GEN_BEQ(ppc,cr,dst,aa,lk) \
+#define _BEQ(ppc,cr,dst,aa,lk) \
 	/* FIXME: The docs didn't seem consistant on the BO */ \
 	/* BO: Branch if CR bit is 1 */ \
 	/* BI: Check EQ bit in CR specified */ \
-	GEN_BC(ppc, dst, aa, lk, 0xc, (((cr)<<2)+2))
+	_BC(ppc, dst, aa, lk, 0xc, (((cr)<<2)+2))
 
-#define GEN_BGT(ppc,cr,dst,aa,lk) \
+#define _BGT(ppc,cr,dst,aa,lk) \
 	/* FIXME: The docs didn't seem consistant on the BO */ \
 	/* BO: Branch if CR bit is 1 */ \
 	/* BI: Check GT bit in CR specified */ \
-	GEN_BC(ppc, dst, aa, lk, 0xc, (((cr)<<2)+1))
+	_BC(ppc, dst, aa, lk, 0xc, (((cr)<<2)+1))
 
-#define GEN_BLE(ppc,cr,dst,aa,lk) \
+#define _BLE(ppc,cr,dst,aa,lk) \
 	/* FIXME: The docs didn't seem consistant on the BO */ \
 	/* BO: Branch if CR bit is 0 */ \
 	/* BI: Check GT bit in CR specified */ \
-	GEN_BC(ppc, dst, aa, lk, 0x4, (((cr)<<2)+1))
+	_BC(ppc, dst, aa, lk, 0x4, (((cr)<<2)+1))
 
-#define GEN_BGE(ppc,cr,dst,aa,lk) \
+#define _BGE(ppc,cr,dst,aa,lk) \
 	/* FIXME: The docs didn't seem consistant on the BO */ \
 	/* BO: Branch if CR bit is 0 */ \
 	/* BI: Check LT bit in CR specified */ \
-	GEN_BC(ppc, dst, aa, lk, 0x4, (((cr)<<2)+0))
+	_BC(ppc, dst, aa, lk, 0x4, (((cr)<<2)+0))
 
-#define GEN_BLT(ppc,cr,dst,aa,lk) \
+#define _BLT(ppc,cr,dst,aa,lk) \
 	/* FIXME: The docs didn't seem consistant on the BO */ \
 	/* BO: Branch if CR bit is 1 */ \
 	/* BI: Check LT bit in CR specified */ \
-	GEN_BC(ppc, dst, aa, lk, 0xc, (((cr)<<2)+0))
+	_BC(ppc, dst, aa, lk, 0xc, (((cr)<<2)+0))
 
-#define GEN_ADDI(ppc,rd,ra,immed) \
+#define _ADDI(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ADDI); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_RLWINM(ppc,rd,ra,sh,mb,me) \
+#define _RLWINM(ppc,rd,ra,sh,mb,me) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_RLWINM); \
 	  PPC_SET_RA    (ppc, (rd)); \
@@ -642,13 +642,13 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_MB    (ppc, (mb)); \
 	  PPC_SET_ME    (ppc, (me)); }
 
-#define GEN_SRWI(ppc,rd,ra,sh) \
-	GEN_RLWINM(ppc, rd, ra, 32-sh, sh, 31)
+#define _SRWI(ppc,rd,ra,sh) \
+	_RLWINM(ppc, rd, ra, 32-sh, sh, 31)
 
-#define GEN_SLWI(ppc,rd,ra,sh) \
-	GEN_RLWINM(ppc, rd, ra, sh, 0, 31-sh)
+#define _SLWI(ppc,rd,ra,sh) \
+	_RLWINM(ppc, rd, ra, sh, 0, 31-sh)
 
-#define GEN_SRAWI(ppc,rd,ra,sh) \
+#define _SRAWI(ppc,rd,ra,sh) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_SRAWI); \
@@ -656,7 +656,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_SH    (ppc, (sh)); }
 
-#define GEN_SLW(ppc,rd,ra,rb) \
+#define _SLW(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_SLW); \
@@ -664,7 +664,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_SRW(ppc,rd,ra,rb) \
+#define _SRW(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_SRW); \
@@ -672,7 +672,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_SRAW(ppc,rd,ra,rb) \
+#define _SRAW(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_SRAW); \
@@ -680,28 +680,28 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_ANDI(ppc,rd,ra,immed) \
+#define _ANDI(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ANDI); \
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_ORI(ppc,rd,ra,immed) \
+#define _ORI(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ORI); \
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_XORI(ppc,rd,ra,immed) \
+#define _XORI(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_XORI); \
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_MULLW(ppc,rd,ra,rb) \
+#define _MULLW(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MULLW); \
@@ -709,7 +709,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_MULHW(ppc,rd,ra,rb) \
+#define _MULHW(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MULHW); \
@@ -717,7 +717,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_MULHWU(ppc,rd,ra,rb) \
+#define _MULHWU(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MULHWU); \
@@ -725,7 +725,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_DIVW(ppc,rd,ra,rb) \
+#define _DIVW(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_DIVW); \
@@ -733,7 +733,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_DIVWU(ppc,rd,ra,rb) \
+#define _DIVWU(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_DIVWU); \
@@ -741,7 +741,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_ADD(ppc,rd,ra,rb) \
+#define _ADD(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_ADD); \
@@ -749,7 +749,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_STBX(ppc,rd,ra,rb) \
+#define _STBX(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_STBX); \
@@ -757,7 +757,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_STHX(ppc,rd,ra,rb) \
+#define _STHX(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_STHX); \
@@ -765,7 +765,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_STWX(ppc,rd,ra,rb) \
+#define _STWX(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_STWX); \
@@ -773,7 +773,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_LWZX(ppc,rd,ra,rb) \
+#define _LWZX(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_LWZX); \
@@ -781,7 +781,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_SUBF(ppc,rd,ra,rb) \
+#define _SUBF(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_SUBF); \
@@ -789,7 +789,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_SUBFC(ppc,rd,ra,rb) \
+#define _SUBFC(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_SUBFC); \
@@ -797,7 +797,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_SUBFE(ppc,rd,ra,rb) \
+#define _SUBFE(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_SUBFE); \
@@ -805,17 +805,17 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_ADDIC(ppc,rd,ra,immed) \
+#define _ADDIC(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ADDIC); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_SUB(ppc,rd,ra,rb) \
-	GEN_SUBF(ppc,rd,rb,ra)
+#define _SUB(ppc,rd,ra,rb) \
+	_SUBF(ppc,rd,rb,ra)
 
-#define GEN_AND(ppc,rd,ra,rb) \
+#define __AND(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_AND); \
@@ -823,7 +823,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_NOR(ppc,rd,ra,rb) \
+#define _NOR(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_NOR); \
@@ -831,7 +831,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_OR(ppc,rd,ra,rb) \
+#define _OR(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_OR); \
@@ -839,7 +839,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_XOR(ppc,rd,ra,rb) \
+#define _XOR(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_XOR); \
@@ -847,42 +847,42 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_BLR(ppc,lk) \
+#define _BLR(ppc,lk) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_XL); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_BCLR); \
 	  PPC_SET_BO    (ppc, 0x14); \
 	  PPC_SET_LK    (ppc, lk); }
 
-#define GEN_MTLR(ppc,rs) \
+#define _MTLR(ppc,rs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MTSPR); \
 	  PPC_SET_SPR   (ppc, 0x100); \
 	  PPC_SET_RD    (ppc, (rs)); }
 
-#define GEN_MFLR(ppc,rd) \
+#define _MFLR(ppc,rd) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MFSPR); \
 	  PPC_SET_SPR   (ppc, 0x100); \
 	  PPC_SET_RD    (ppc, (rd)); }
 
-#define GEN_MTCR(ppc,rs) \
+#define _MTCR(ppc,rs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MTCRF); \
 	  ppc |= 0xFF << 12; /* Set CRM so it copies all */ \
 	  PPC_SET_RD    (ppc, (rs)); }
 
-#define GEN_NEG(ppc,rd,rs) \
+#define _NEG(ppc,rd,rs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_NEG); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (rs)); }
 
-#define GEN_EQV(ppc,rd,ra,rb) \
+#define _EQV(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_EQV); \
@@ -890,14 +890,14 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_ADDZE(ppc,rd,rs) \
+#define _ADDZE(ppc,rd,rs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_ADDZE); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (rs)); }
 
-#define GEN_ADDC(ppc,rd,ra,rb) \
+#define _ADDC(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_ADDC); \
@@ -905,7 +905,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_ADDE(ppc,rd,ra,rb) \
+#define _ADDE(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_ADDE); \
@@ -913,49 +913,49 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_ADDME(ppc,rd,ra) \
+#define _ADDME(ppc,rd,ra) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_ADDME); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); }
 
-#define GEN_SUBFIC(ppc,rd,ra,immed) \
+#define _SUBFIC(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_SUBFIC); \
 	  PPC_SET_RD    (ppc, (rd)); \
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_STFD(ppc,fs,immed,rb) \
+#define _STFD(ppc,fs,immed,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_STFD); \
 	  PPC_SET_RD    (ppc, (fs)); \
 	  PPC_SET_RA    (ppc, (rb)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_STFS(ppc,fs,immed,rb) \
+#define _STFS(ppc,fs,immed,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_STFS); \
 	  PPC_SET_RD    (ppc, (fs)); \
 	  PPC_SET_RA    (ppc, (rb)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LFD(ppc,fd,immed,rb) \
+#define _LFD(ppc,fd,immed,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_LFD); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RA    (ppc, (rb)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_LFS(ppc,fd,immed,rb) \
+#define _LFS(ppc,fd,immed,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_LFS); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RA    (ppc, (rb)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_FADD(ppc,fd,fa,fb,dbl) \
+#define _FADD(ppc,fd,fa,fb,dbl) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, ((dbl) ? PPC_OPCODE_FPD : PPC_OPCODE_FPS)); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FADD); \
@@ -963,7 +963,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (fa)); \
 	  PPC_SET_RB    (ppc, (fb)); }
 
-#define GEN_FSUB(ppc,fd,fa,fb,dbl) \
+#define _FSUB(ppc,fd,fa,fb,dbl) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, ((dbl) ? PPC_OPCODE_FPD : PPC_OPCODE_FPS)); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FSUB); \
@@ -971,7 +971,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (fa)); \
 	  PPC_SET_RB    (ppc, (fb)); }
 
-#define GEN_FMUL(ppc,fd,fa,fb,dbl) \
+#define _FMUL(ppc,fd,fa,fb,dbl) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, ((dbl) ? PPC_OPCODE_FPD : PPC_OPCODE_FPS)); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FMUL); \
@@ -979,7 +979,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (fa)); \
 	  PPC_SET_RC    (ppc, (fb)); }
 
-#define GEN_FDIV(ppc,fd,fa,fb,dbl) \
+#define _FDIV(ppc,fd,fa,fb,dbl) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, ((dbl) ? PPC_OPCODE_FPD : PPC_OPCODE_FPS)); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FDIV); \
@@ -987,42 +987,42 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (fa)); \
 	  PPC_SET_RB    (ppc, (fb)); }
 
-#define GEN_FABS(ppc,fd,fs) \
+#define _FABS(ppc,fd,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FABS); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_FMR(ppc,fd,fs) \
+#define _FMR(ppc,fd,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FMR); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_FNEG(ppc,fd,fs) \
+#define _FNEG(ppc,fd,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FNEG); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_FCTIW(ppc,fd,fs) \
+#define _FCTIW(ppc,fd,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FCTIW); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_FCTIWZ(ppc,fd,fs) \
+#define _FCTIWZ(ppc,fd,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FCTIWZ); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_STFIWX(ppc,fs,ra,rb) \
+#define _STFIWX(ppc,fs,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_X); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_STFIWX); \
@@ -1030,21 +1030,21 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (ra)); \
 	  PPC_SET_RB    (ppc, (rb)); }
 
-#define GEN_MTFSFI(ppc,field,immed) \
+#define _MTFSFI(ppc,field,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MTFSFI); \
 	  PPC_SET_CRF   (ppc, (field)); \
 	  PPC_SET_RB    (ppc, ((immed)<<1)); }
 
-#define GEN_MTFSF(ppc,fields,fs) \
+#define _MTFSF(ppc,fields,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_MTFSF); \
 	  PPC_SET_FM    (ppc, (fields)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_FCMPU(ppc,fa,fb,cr) \
+#define _FCMPU(ppc,fa,fb,cr) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FCMPU); \
@@ -1052,14 +1052,14 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RB    (ppc, (fb)); \
 	  PPC_SET_CRF   (ppc, (cr)); }
 
-#define GEN_FRSQRTE(ppc,fd,fs) \
+#define _FRSQRTE(ppc,fd,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FRSQRTE); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_FSEL(ppc,fd,fa,fb,fc) \
+#define _FSEL(ppc,fd,fa,fb,fc) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FSEL); \
@@ -1068,14 +1068,14 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RB    (ppc, (fc)); \
 	  PPC_SET_RC    (ppc, (fb)); }
 
-#define GEN_FRES(ppc,fd,fs) \
+#define _FRES(ppc,fd,fs) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPS); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FRES); \
 	  PPC_SET_RD    (ppc, (fd)); \
 	  PPC_SET_RB    (ppc, (fs)); }
 
-#define GEN_FNMSUB(ppc,fd,fa,fb,fc) \
+#define _FNMSUB(ppc,fd,fa,fb,fc) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_FPD); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_FNMSUB); \
@@ -1084,7 +1084,7 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RB    (ppc, (fc)); \
 	  PPC_SET_RC    (ppc, (fb)); }
 
-#define GEN_BCLR(ppc,lk,bo,bi) \
+#define _BCLR(ppc,lk,bo,bi) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_XL); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_BCLR); \
@@ -1092,33 +1092,33 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_BI    (ppc, (bi)); \
 	  PPC_SET_LK    (ppc, (lk)); }
 
-#define GEN_BNELR(ppc,cr,lk) \
+#define _BNELR(ppc,cr,lk) \
 	/* NOTE: This branch is marked unlikely to be taken */ \
 	/* BO: Branch if CR bit is 0 */ \
 	/* BI: Check EQ bit in CR specified */ \
-	GEN_BCLR(ppc, lk, 0x4, (((cr)<<2)+2))
+	_BCLR(ppc, lk, 0x4, (((cr)<<2)+2))
 
-#define GEN_BLELR(ppc,cr,lk) \
+#define _BLELR(ppc,cr,lk) \
 	/* NOTE: This branch is marked unlikely to be taken */ \
 	/* BO: Branch if CR bit is 0 */ \
 	/* BI: Check GT bit in CR specified */ \
-	GEN_BCLR(ppc, lk, 0x4, (((cr)<<2)+1))
+	_BCLR(ppc, lk, 0x4, (((cr)<<2)+1))
 
-#define GEN_ANDIS(ppc,rd,ra,immed) \
+#define _ANDIS(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ANDIS); \
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_ORIS(ppc,rd,rs,immed) \
+#define _ORIS(ppc,rd,rs,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ORIS); \
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (rs)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
 
-#define GEN_CROR(ppc,cd,ca,cb) \
+#define _CROR(ppc,cd,ca,cb) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_XL); \
 	  PPC_SET_FUNC  (ppc, PPC_FUNC_CROR); \

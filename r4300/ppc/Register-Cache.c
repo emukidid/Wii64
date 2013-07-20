@@ -50,22 +50,17 @@ static int availableRegs[32];
 
 // Actually perform the store for a dirty register mapping
 static void _flushRegister(int reg){
-	PowerPC_instr ppc;
 	if(regMap[reg].map.hi >= 0){
 		// Simply store the mapped MSW
-		GEN_STW(ppc, regMap[reg].map.hi, (reg*8)+R4300OFF_GPR, DYNAREG_R4300);
-		set_next_dst(ppc);
+		GEN_STW(regMap[reg].map.hi, (reg*8)+R4300OFF_GPR, DYNAREG_R4300);
 	} else {
 		// Sign extend to 64-bits
-		GEN_SRAWI(ppc, 0, regMap[reg].map.lo, 31);
-		set_next_dst(ppc);
+		GEN_SRAWI(0, regMap[reg].map.lo, 31);
 		// Store the MSW
-		GEN_STW(ppc, 0, (reg*8)+R4300OFF_GPR, DYNAREG_R4300);
-		set_next_dst(ppc);
+		GEN_STW(0, (reg*8)+R4300OFF_GPR, DYNAREG_R4300);
 	}
 	// Store the LSW
-	GEN_STW(ppc, regMap[reg].map.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
-	set_next_dst(ppc);
+	GEN_STW(regMap[reg].map.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
 }
 // Find an available HW reg or -1 for none
 static int getAvailableHWReg(void){
@@ -167,7 +162,6 @@ RegMapping mapRegister64New(int reg){
 }
 
 int mapRegister(int reg){
-	PowerPC_instr ppc;
 	if(!reg) return DYNAREG_ZERO; // Return r0 mapped to r14
 	regMap[reg].lru = nextLRUVal++;
 	// If its already been mapped, just return that value
@@ -181,23 +175,18 @@ int mapRegister(int reg){
 	// Iterate over the HW registers and find one that's available
 	int available = getAvailableHWReg();
 	if(available >= 0){
-		GEN_LWZ(ppc, available, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
-		set_next_dst(ppc);
-		
+		GEN_LWZ(available, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
 		return regMap[reg].map.lo = available;
 	}
 	// We didn't find an available register, so flush one
 	RegMapping lru = flushLRURegister();
 	if(lru.hi >= 0) availableRegs[lru.hi] = 1;
 	// And load the registers value to the register we flushed
-	GEN_LWZ(ppc, lru.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
-	set_next_dst(ppc);
-	
+	GEN_LWZ(lru.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
 	return regMap[reg].map.lo = lru.lo;
 }
 
 RegMapping mapRegister64(int reg){
-	PowerPC_instr ppc;
 	if(!reg) return (RegMapping){ DYNAREG_ZERO, DYNAREG_ZERO };
 	regMap[reg].lru = nextLRUVal++;
 	// If its already been mapped, just return that value
@@ -214,8 +203,7 @@ RegMapping mapRegister64(int reg){
 				regMap[reg].map.hi = lru.lo;
 			}
 			// Sign extend to 64-bits
-			GEN_SRAWI(ppc, regMap[reg].map.hi, regMap[reg].map.lo, 31);
-			set_next_dst(ppc);
+			GEN_SRAWI(regMap[reg].map.hi, regMap[reg].map.lo, 31);
 		}
 		// Return the mapping
 		return regMap[reg].map;
@@ -240,10 +228,8 @@ RegMapping mapRegister64(int reg){
 		regMap[reg].map.hi = lru.lo;
 	}
 	// Load the values into the registers
-	GEN_LWZ(ppc, regMap[reg].map.hi, (reg*8)+R4300OFF_GPR, DYNAREG_R4300);
-	set_next_dst(ppc);
-	GEN_LWZ(ppc, regMap[reg].map.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
-	set_next_dst(ppc);
+	GEN_LWZ(regMap[reg].map.hi, (reg*8)+R4300OFF_GPR, DYNAREG_R4300);
+	GEN_LWZ(regMap[reg].map.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
 	// Return the mapping
 	return regMap[reg].map;
 }
@@ -317,20 +303,15 @@ static int availableFPRs[32];
 
 // Actually perform the store for a dirty register mapping
 static void _flushFPR(int reg){
-	PowerPC_instr ppc;
 	// Store the register to memory (indirectly)
 	int addr = mapRegisterTemp();
 	
 	if(fprMap[reg].dbl){
-		GEN_LWZ(ppc, addr, (reg*4)+R4300OFF_FPR_64, DYNAREG_R4300);
-		set_next_dst(ppc);
-		GEN_STFD(ppc, fprMap[reg].map, 0, addr);
-		set_next_dst(ppc);
+		GEN_LWZ(addr, (reg*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+		GEN_STFD(fprMap[reg].map, 0, addr);
 	} else {
-		GEN_LWZ(ppc, addr, (reg*4)+R4300OFF_FPR_32, DYNAREG_R4300);
-		set_next_dst(ppc);
-		GEN_STFS(ppc, fprMap[reg].map, 0, addr);
-		set_next_dst(ppc);
+		GEN_LWZ(addr, (reg*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+		GEN_STFS(fprMap[reg].map, 0, addr);
 	}
 	
 	unmapRegisterTemp(addr);
@@ -381,8 +362,7 @@ int mapFPRNew(int fpr, int dbl){
 }
 
 int mapFPR(int fpr, int dbl){
-	PowerPC_instr ppc;
-	
+
 	fprMap[fpr].lru = nextLRUValFPR++;
 	fprMap[fpr].dbl = dbl; // Set whether this is a double-precision
 	
@@ -400,15 +380,11 @@ int mapFPR(int fpr, int dbl){
 	int addr = mapRegisterTemp();
 	
 	if(dbl){
-		GEN_LWZ(ppc, addr, (fpr*4)+R4300OFF_FPR_64, DYNAREG_R4300);
-		set_next_dst(ppc);
-		GEN_LFD(ppc, fprMap[fpr].map, 0, addr);
-		set_next_dst(ppc);
+		GEN_LWZ(addr, (fpr*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+		GEN_LFD(fprMap[fpr].map, 0, addr);
 	} else {
-		GEN_LWZ(ppc, addr, (fpr*4)+R4300OFF_FPR_32, DYNAREG_R4300);
-		set_next_dst(ppc);
-		GEN_LFS(ppc, fprMap[fpr].map, 0, addr);
-		set_next_dst(ppc);
+		GEN_LWZ(addr, (fpr*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+		GEN_LFS(fprMap[fpr].map, 0, addr);
 	}
 	
 	unmapRegisterTemp(addr);	

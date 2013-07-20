@@ -31,7 +31,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <gccore.h>
+#include "Register-Cache.h"
 #include "../../gc_memory/memory.h"
+#include "../../main/ROM-Cache.h"
 #include "../Invalid_Code.h"
 #include "../interupt.h"
 #include "Recompile.h"
@@ -287,17 +290,12 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 }
 
 void init_block(PowerPC_block* ppc_block, unsigned int paddr){
-	unsigned int length = (ppc_block->end_address - ppc_block->start_address)/sizeof(MIPS_instr);
-  PowerPC_block* temp_block;
+	PowerPC_block* temp_block;
 
-	extern unsigned char *rom;
 	unsigned int offset = (paddr & 0x03FFFFFF) >> 2;
-	unsigned int* base;
-	if(paddr > 0xb0000000) base = rom;
-	else if(paddr >= 0xa4000000) base = SP_DMEM;
-	else base = rdram;
-
-	ppc_block->mips_code = offset + base;
+	if(paddr > 0xb0000000) ppc_block->mips_code = (MIPS_instr*)ROMCache_pointer(offset);
+	else if(paddr >= 0xa4000000) ppc_block->mips_code = (MIPS_instr*)(&SP_DMEM + offset);
+	else ppc_block->mips_code = (MIPS_instr*)(&rdram[0] + offset);
 	
 	// FIXME: Equivalent addresses should point to the same code/funcs?
 	if(ppc_block->end_address < 0x80000000 || ppc_block->start_address >= 0xc0000000){
@@ -559,31 +557,22 @@ void jump_to(unsigned int address){
 unsigned long jump_target;
 
 static void genJumpPad(void){
-	PowerPC_instr ppc = NEW_PPC_INSTR();
-
 	// noCheckInterrupt = 1
-	GEN_LIS(ppc, 3, extractUpper16((unsigned int)(&noCheckInterrupt)));
-	set_next_dst(ppc);
-	GEN_ADDI(ppc, 3, 3, extractLower16((unsigned int)(&noCheckInterrupt)));
-	set_next_dst(ppc);
-	GEN_LI(ppc, 0, 0, 1);
-	set_next_dst(ppc);
-	GEN_STW(ppc, 0, 0, 3);
-	set_next_dst(ppc);
+	GEN_LIS(3, extractUpper16(&noCheckInterrupt));
+	GEN_ADDI(3, 3, extractLower16(&noCheckInterrupt));
+	GEN_LI(0, 0, 1);
+	GEN_STW(0, 0, 3);
 	
 	// TODO: I could link to the next block here
 	//       When I do, I need to ensure that noCheckInterrupt is cleared
 	
 	// Set the next address to the first address in the next block if
 	//   we've really reached the end of the block, not jumped to the pad
-	GEN_LIS(ppc, 3, extractUpper16(get_src_pc()+4));
-	set_next_dst(ppc);
-	GEN_ADDI(ppc, 3, 3, extractLower16(get_src_pc()+4));
-	set_next_dst(ppc);
+	GEN_LIS(3, extractUpper16((void*)(get_src_pc()+4)));
+	GEN_ADDI(3, 3, extractLower16((void*)(get_src_pc()+4)));
 
 	// return destination
-	GEN_BLR(ppc,0);
-	set_next_dst(ppc);
+	GEN_BLR(0);
 }
 
 void invalidate_block(PowerPC_block* ppc_block){

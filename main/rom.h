@@ -35,7 +35,6 @@
 int rom_read(fileBrowser_file*);
 int fill_header(fileBrowser_file*);
 void calculateMD5(fileBrowser_file*, unsigned char digest[16]);
-extern unsigned char *rom;
 #ifndef __PPC__
 extern int taille_rom;
 #else

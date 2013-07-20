@@ -61,4 +61,234 @@ void start_new_mapping(void);
     than one actual instruction       */
 int convert(void);
 
+#define GEN_B(dst,aa,lk) \
+{ PowerPC_instr ppc; _B(ppc,dst,aa,lk); set_next_dst(ppc); }
+#define GEN_MTCTR(rs) \
+{ PowerPC_instr ppc; _MTCTR(ppc,rs); set_next_dst(ppc); }
+#define GEN_MFCTR(rd) \
+{ PowerPC_instr ppc; _MFCTR(ppc,rd); set_next_dst(ppc); }
+#define GEN_ADDIS(rd,ra,immed) \
+{ PowerPC_instr ppc; _ADDIS(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_LIS(rd,immed) \
+{ PowerPC_instr ppc; _LIS(ppc,rd,immed); set_next_dst(ppc); }
+#define GEN_LI(rd,rs,immed) \
+{ PowerPC_instr ppc; _LI(ppc,rd,rs,immed); set_next_dst(ppc); }
+#define GEN_LWZ(rd,immed,ra) \
+{ PowerPC_instr ppc; _LWZ(ppc,rd,immed,ra); set_next_dst(ppc); }
+#define GEN_LHZ(rd,immed,ra) \
+{ PowerPC_instr ppc; _LHZ(ppc,rd,immed,ra); set_next_dst(ppc); }
+#define GEN_LHA(rd,immed,ra) \
+{ PowerPC_instr ppc; _LHA(ppc,rd,immed,ra); set_next_dst(ppc); }
+#define GEN_LBZ(rd,immed,ra) \
+{ PowerPC_instr ppc; _LBZ(ppc,rd,immed,ra); set_next_dst(ppc); }
+#define GEN_LBZX(rd,ra,rb) \
+{ PowerPC_instr ppc; _LBZX(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_EXTSB(rd,rs) \
+{ PowerPC_instr ppc; _EXTSB(ppc,rd,rs); set_next_dst(ppc); }
+#define GEN_EXTSH(rd,rs) \
+{ PowerPC_instr ppc; _EXTSH(ppc,rd,rs); set_next_dst(ppc); }
+#define GEN_EXTSW(rd,rs) \
+{ PowerPC_instr ppc; _EXTSW(ppc,rd,rs); set_next_dst(ppc); }
+#define GEN_STB(rs,immed,ra) \
+{ PowerPC_instr ppc; _STB(ppc,rs,immed,ra); set_next_dst(ppc); }
+#define GEN_STH(rs,immed,ra) \
+{ PowerPC_instr ppc; _STH(ppc,rs,immed,ra); set_next_dst(ppc); }
+#define GEN_STW(rs,immed,ra) \
+{ PowerPC_instr ppc; _STW(ppc,rs,immed,ra); set_next_dst(ppc); }
+#define GEN_BCTR(ppce) \
+{ PowerPC_instr ppc; _BCTR(ppc); set_next_dst(ppc); }
+#define GEN_BCTRL(ppce) \
+{ PowerPC_instr ppc; _BCTRL(ppc); set_next_dst(ppc); }
+#define GEN_BCCTR(bo,bi,lk) \
+{ PowerPC_instr ppc; _BCCTR(ppc,bo,bi,lk); set_next_dst(ppc); }
+#define GEN_CMP(ra,rb,cr) \
+{ PowerPC_instr ppc; _CMP(ppc,ra,rb,cr); set_next_dst(ppc); }
+#define GEN_CMPL(ra,rb,cr) \
+{ PowerPC_instr ppc; _CMPL(ppc,ra,rb,cr); set_next_dst(ppc); }
+#define GEN_CMPI(ra,immed,cr) \
+{ PowerPC_instr ppc; _CMPI(ppc,ra,immed,cr); set_next_dst(ppc); }
+#define GEN_CMPLI(ra,immed,cr) \
+{ PowerPC_instr ppc; _CMPLI(ppc,ra,immed,cr); set_next_dst(ppc); }
+#define GEN_BC(dst,aa,lk,bo,bi) \
+{ PowerPC_instr ppc; _BC(ppc,dst,aa,lk,bo,bi); set_next_dst(ppc); }
+#define GEN_BNE(cr,dst,aa,lk) \
+{ PowerPC_instr ppc; _BNE(ppc,cr,dst,aa,lk); set_next_dst(ppc); }
+#define GEN_BEQ(cr,dst,aa,lk) \
+{ PowerPC_instr ppc; _BEQ(ppc,cr,dst,aa,lk); set_next_dst(ppc); }
+#define GEN_BGT(cr,dst,aa,lk) \
+{ PowerPC_instr ppc; _BGT(ppc,cr,dst,aa,lk); set_next_dst(ppc); }
+#define GEN_BLE(cr,dst,aa,lk) \
+{ PowerPC_instr ppc; _BLE(ppc,cr,dst,aa,lk); set_next_dst(ppc); }
+#define GEN_BGE(cr,dst,aa,lk) \
+{ PowerPC_instr ppc; _BGE(ppc,cr,dst,aa,lk); set_next_dst(ppc); }
+#define GEN_BLT(cr,dst,aa,lk) \
+{ PowerPC_instr ppc; _BLT(ppc,cr,dst,aa,lk); set_next_dst(ppc); }
+#define GEN_ADDI(rd,ra,immed) \
+{ PowerPC_instr ppc; _ADDI(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_RLWINM(rd,ra,sh,mb,me) \
+{ PowerPC_instr ppc; _RLWINM(ppc,rd,ra,sh,mb,me); set_next_dst(ppc); }
+#define GEN_RLWIMI(rd,ra,sh,mb,me) \
+{ PowerPC_instr ppc; _RLWIMI(ppc,rd,ra,sh,mb,me); set_next_dst(ppc); }
+#define GEN_SRWI(rd,ra,sh) \
+{ PowerPC_instr ppc; _SRWI(ppc,rd,ra,sh); set_next_dst(ppc); }
+#define GEN_SLWI(rd,ra,sh) \
+{ PowerPC_instr ppc; _SLWI(ppc,rd,ra,sh); set_next_dst(ppc); }
+#define GEN_SRAWI(rd,ra,sh) \
+{ PowerPC_instr ppc; _SRAWI(ppc,rd,ra,sh); set_next_dst(ppc); }
+#define GEN_SLW(rd,ra,rb) \
+{ PowerPC_instr ppc; _SLW(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_SRW(rd,ra,rb) \
+{ PowerPC_instr ppc; _SRW(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_SRAW(rd,ra,rb) \
+{ PowerPC_instr ppc; _SRAW(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_ANDI(rd,ra,immed) \
+{ PowerPC_instr ppc; _ANDI(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_ORI(rd,ra,immed) \
+{ PowerPC_instr ppc; _ORI(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_XORI(rd,ra,immed) \
+{ PowerPC_instr ppc; _XORI(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_XORIS(rd,ra,immed) \
+{ PowerPC_instr ppc; _XORIS(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_MULLW(rd,ra,rb) \
+{ PowerPC_instr ppc; _MULLW(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_MULHW(rd,ra,rb) \
+{ PowerPC_instr ppc; _MULHW(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_MULHWU(rd,ra,rb) \
+{ PowerPC_instr ppc; _MULHWU(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_DIVW(rd,ra,rb) \
+{ PowerPC_instr ppc; _DIVW(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_DIVWU(rd,ra,rb) \
+{ PowerPC_instr ppc; _DIVWU(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_ADD(rd,ra,rb) \
+{ PowerPC_instr ppc; _ADD(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_SUBF(rd,ra,rb) \
+{ PowerPC_instr ppc; _SUBF(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_SUBFC(rd,ra,rb) \
+{ PowerPC_instr ppc; _SUBFC(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_SUBFE(rd,ra,rb) \
+{ PowerPC_instr ppc; _SUBFE(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_ADDIC(rd,ra,immed) \
+{ PowerPC_instr ppc; _ADDIC(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_SUB(rd,ra,rb) \
+{ PowerPC_instr ppc; _SUB(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_AND(rd,ra,rb) \
+{ PowerPC_instr ppc; __AND(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_NAND(rd,ra,rb) \
+{ PowerPC_instr ppc; _NAND(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_ANDC(rd,ra,rb) \
+{ PowerPC_instr ppc; _ANDC(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_NOR(rd,ra,rb) \
+{ PowerPC_instr ppc; _NOR(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_OR(rd,ra,rb) \
+{ PowerPC_instr ppc; _OR(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_XOR(rd,ra,rb) \
+{ PowerPC_instr ppc; _XOR(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_BLR(lk) \
+{ PowerPC_instr ppc; _BLR(ppc,lk); set_next_dst(ppc); }
+#define GEN_MTLR(rs) \
+{ PowerPC_instr ppc; _MTLR(ppc,rs); set_next_dst(ppc); }
+#define GEN_MFLR(rd) \
+{ PowerPC_instr ppc; _MFLR(ppc,rd); set_next_dst(ppc); }
+#define GEN_MTCR(rs) \
+{ PowerPC_instr ppc; _MTCR(ppc,rs); set_next_dst(ppc); }
+#define GEN_NEG(rd,rs) \
+{ PowerPC_instr ppc; _NEG(ppc,rd,rs); set_next_dst(ppc); }
+#define GEN_EQV(rd,ra,rb) \
+{ PowerPC_instr ppc; _EQV(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_ADDZE(rd,rs) \
+{ PowerPC_instr ppc; _ADDZE(ppc,rd,rs); set_next_dst(ppc); }
+#define GEN_ADDC(rd,ra,rb) \
+{ PowerPC_instr ppc; _ADDC(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_ADDE(rd,ra,rb) \
+{ PowerPC_instr ppc; _ADDE(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_SUBFIC(rd,ra,immed) \
+{ PowerPC_instr ppc; _SUBFIC(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_STFD(fs,immed,rb) \
+{ PowerPC_instr ppc; _STFD(ppc,fs,immed,rb); set_next_dst(ppc); }
+#define GEN_STFS(fs,immed,rb) \
+{ PowerPC_instr ppc; _STFS(ppc,fs,immed,rb); set_next_dst(ppc); }
+#define GEN_LFD(fd,immed,rb) \
+{ PowerPC_instr ppc; _LFD(ppc,fd,immed,rb); set_next_dst(ppc); }
+#define GEN_LFS(fd,immed,rb) \
+{ PowerPC_instr ppc; _LFS(ppc,fd,immed,rb); set_next_dst(ppc); }
+#define GEN_FADD(fd,fa,fb,dbl) \
+{ PowerPC_instr ppc; _FADD(ppc,fd,fa,fb,dbl); set_next_dst(ppc); }
+#define GEN_FSUB(fd,fa,fb,dbl) \
+{ PowerPC_instr ppc; _FSUB(ppc,fd,fa,fb,dbl); set_next_dst(ppc); }
+#define GEN_FMUL(fd,fa,fb,dbl) \
+{ PowerPC_instr ppc; _FMUL(ppc,fd,fa,fb,dbl); set_next_dst(ppc); }
+#define GEN_FDIV(fd,fa,fb,dbl) \
+{ PowerPC_instr ppc; _FDIV(ppc,fd,fa,fb,dbl); set_next_dst(ppc); }
+#define GEN_FABS(fd,fs) \
+{ PowerPC_instr ppc; _FABS(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FCFID(fd,fs) \
+{ PowerPC_instr ppc; _FCFID(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FRSP(fd,fs) \
+{ PowerPC_instr ppc; _FRSP(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FMR(fd,fs) \
+{ PowerPC_instr ppc; _FMR(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FNEG(fd,fs) \
+{ PowerPC_instr ppc; _FNEG(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FCTIW(fd,fs) \
+{ PowerPC_instr ppc; _FCTIW(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FCTIWZ(fd,fs) \
+{ PowerPC_instr ppc; _FCTIWZ(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_STFIWX(fs,ra,rb) \
+{ PowerPC_instr ppc; _STFIWX(ppc,fs,ra,rb); set_next_dst(ppc); }
+#define GEN_MTFSFI(field,immed) \
+{ PowerPC_instr ppc; _MTFSFI(ppc,field,immed); set_next_dst(ppc); }
+#define GEN_MTFSF(fields,fs) \
+{ PowerPC_instr ppc; _MTFSF(ppc,fields,fs); set_next_dst(ppc); }
+#define GEN_FCMPU(fa,fb,cr) \
+{ PowerPC_instr ppc; _FCMPU(ppc,fa,fb,cr); set_next_dst(ppc); }
+#define GEN_FRSQRTE(fd,fs) \
+{ PowerPC_instr ppc; _FRSQRTE(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FSQRT(fd,fs) \
+{ PowerPC_instr ppc; _FSQRT(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FSQRTS(fd,fs) \
+{ PowerPC_instr ppc; _FSQRTS(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FSEL(fd,fa,fb,fc) \
+{ PowerPC_instr ppc; _FSEL(ppc,fd,fa,fb,fc); set_next_dst(ppc); }
+#define GEN_FRES(fd,fs) \
+{ PowerPC_instr ppc; _FRES(ppc,fd,fs); set_next_dst(ppc); }
+#define GEN_FNMSUB(fd,fa,fc,fb) \
+{ PowerPC_instr ppc; _FNMSUB(ppc,fd,fa,fc,fb); set_next_dst(ppc); }
+#define GEN_FNMSUBS(fd,fa,fc,fb) \
+{ PowerPC_instr ppc; _FNMSUBS(ppc,fd,fa,fc,fb); set_next_dst(ppc); }
+#define GEN_FMADD(fd,fa,fc,fb) \
+{ PowerPC_instr ppc; _FMADD(ppc,fd,fa,fc,fb); set_next_dst(ppc); }
+#define GEN_FMADDS(fd,fa,fc,fb) \
+{ PowerPC_instr ppc; _FMADDS(ppc,fd,fa,fc,fb); set_next_dst(ppc); }
+#define GEN_BCLR(lk,bo,bi) \
+{ PowerPC_instr ppc; _BCLR(ppc,lk,bo,bi); set_next_dst(ppc); }
+#define GEN_BNELR(cr,lk) \
+{ PowerPC_instr ppc; _BNELR(ppc,cr,lk); set_next_dst(ppc); }
+#define GEN_BLELR(cr,lk) \
+{ PowerPC_instr ppc; _BLELR(ppc,cr,lk); set_next_dst(ppc); }
+#define GEN_ANDIS(rd,ra,immed) \
+{ PowerPC_instr ppc; _ANDIS(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_ORIS(rd,rs,immed) \
+{ PowerPC_instr ppc; _ORIS(ppc,rd,rs,immed); set_next_dst(ppc); }
+#define GEN_CROR(cd,ca,cb) \
+{ PowerPC_instr ppc; _CROR(ppc,cd,ca,cb); set_next_dst(ppc); }
+#define GEN_CRNOR(cd,ca,cb) \
+{ PowerPC_instr ppc; _CRNOR(ppc,cd,ca,cb); set_next_dst(ppc); }
+#define GEN_MFCR(rt) \
+{ PowerPC_instr ppc; _MFCR(ppc,rt); set_next_dst(ppc); }
+#define GEN_MCRXR(bf) \
+{ PowerPC_instr ppc; _MCRXR(ppc,bf); set_next_dst(ppc); }
+#define GEN_ADDME(rd,ra) \
+{ PowerPC_instr ppc; _ADDME(ppc,rd,ra); set_next_dst(ppc); }
+#define GEN_LWZX(rd,ra,rb) \
+{ PowerPC_instr ppc; _LWZX(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_STBX(rd,ra,rb) \
+{ PowerPC_instr ppc; _STBX(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_STHX(rd,ra,rb) \
+{ PowerPC_instr ppc; _STHX(ppc,rd,ra,rb); set_next_dst(ppc); }
+#define GEN_STWX(rd,ra,rb) \
+{ PowerPC_instr ppc; _STWX(ppc,rd,ra,rb); set_next_dst(ppc); }
+
+
+
+
 #endif

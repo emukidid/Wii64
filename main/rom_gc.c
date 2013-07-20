@@ -43,7 +43,6 @@
 
 #define PRINT GUI_print
 
-unsigned char* rom;
 static fileBrowser_file* rom_file;
 int rom_length;
 int ROM_byte_swap;
