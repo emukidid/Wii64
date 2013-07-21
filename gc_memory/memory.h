@@ -61,7 +61,7 @@ extern unsigned char *PIF_RAMb;
 #else
 	extern unsigned long rdram[0x800000/4/2]  __attribute__((aligned(32)));
 #endif
-
+extern unsigned char *rdramb;
 extern unsigned long long int (**rwmem[0x10000])(unsigned long, unsigned long long int);
 
 typedef struct _RDRAM_register

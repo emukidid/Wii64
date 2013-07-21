@@ -53,10 +53,9 @@ extern void update_debugger();
 
 #ifdef PPC_DYNAREC
 #include "Invalid_Code.h"
-#include "ARAM-blocks.h"
 
 static void invalidate_func(unsigned int addr){
-  PowerPC_block* block = blocks_get(addr>>12);
+  PowerPC_block* block = blocks[addr>>12];
 	PowerPC_func* func = find_func(&block->funcs, addr);
 	if(func)
 		RecompCache_Free(func->start_addr);

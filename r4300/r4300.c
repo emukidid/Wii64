@@ -37,7 +37,6 @@
 #include "recomp.h"
 #include "Invalid_Code.h"
 #include "Recomp-Cache.h"
-#include "ARAM-blocks.h"
 #include "ppc/Wrappers.h"
 #include <malloc.h>
 
@@ -66,9 +65,8 @@ PowerPC_block **blocks = (PowerPC_block**)(BLOCKS_LO);
 #include "../gc_memory/ARAM.h"
 PowerPC_block **blocks = (PowerPC_block**)(BLOCKS_LO);
 #endif
-PowerPC_block *actual;
 #else
-precomp_block *blocks[0x100000], *actual;
+precomp_block *blocks[0x100000];
 #endif
 int rounding_mode = 0x33F, trunc_mode = 0xF3F, round_mode = 0x33F,
     ceil_mode = 0xB3F, floor_mode = 0x73F;
@@ -231,7 +229,7 @@ void init_blocks()
    for (i=0; i<0x100000; i++)
      {
 	invalid_code_set(i, 1);
-	blocks_set(i, NULL);
+	blocks[i] = NULL;
      }
 #ifndef PPC_DYNAREC
    blocks[0xa4000000>>12] = malloc(sizeof(precomp_block));
@@ -241,16 +239,13 @@ void init_blocks()
    blocks[0xa4000000>>12]->start = 0xa4000000;
    blocks[0xa4000000>>12]->end = 0xa4001000;
 #else
-   PowerPC_block* temp_block = malloc(sizeof(PowerPC_block));
-   blocks_set(0xa4000000>>12, temp_block);
-   //blocks[0xa4000000>>12]->code_addr = NULL;
-   temp_block->funcs = NULL;
-   temp_block->start_address = 0xa4000000;
-   temp_block->end_address = 0xa4001000;
+   blocks[0xa4000000>>12] = malloc(sizeof(PowerPC_block));
+   blocks[0xa4000000>>12]->funcs = NULL;
+   blocks[0xa4000000>>12]->start_address = 0xa4000000;
+   blocks[0xa4000000>>12]->end_address = 0xa4001000;
 #endif
    invalid_code_set(0xa4000000>>12, 1);
-   actual=temp_block;
-   init_block(temp_block, 0xa4000000);
+   init_block(blocks[0xa4000000>>12], 0xa4000000);
 
 #ifdef DBG
    if (debugger_mode) // debugger shows initial state (before 1st instruction).
@@ -524,30 +519,29 @@ void cpu_deinit(void){
 	// No need to check these if we were in the pure interp
 	if(dynacore != 2 && !cpu_inited){
 		for (i=0; i<0x100000; i++) {
-  		PowerPC_block* temp_block = blocks_get(i);
-		if (temp_block) {
+		if (blocks[i]) {
 #ifdef PPC_DYNAREC
-			deinit_block(temp_block);
+			deinit_block(blocks[i]);
 #else
-			if (temp_block->block) {
+			if (blocks[i]->block) {
 #ifdef USE_RECOMP_CACHE
-				invalidate_block(temp_block);
+				invalidate_block(blocks[i]);
 #else
-				free(temp_block->block);
+				free(blocks[i]->block);
 #endif
-				temp_block->block = NULL;
+				blocks[i]->block = NULL;
 			}
-			if (temp_block->code) {
-				free(temp_block->code);
-				temp_block->code = NULL;
+			if (blocks[i]->code) {
+				free(blocks[i]->code);
+				blocks[i]->code = NULL;
 			}
-			if (temp_block->jumps_table) {
-				free(temp_block->jumps_table);
-				temp_block->jumps_table = NULL;
+			if (blocks[i]->jumps_table) {
+				free(blocks[i]->jumps_table);
+				blocks[i]->jumps_table = NULL;
 			}
 #endif
-			free(temp_block);
-			blocks_set(i, NULL);
+			free(blocks[i]);
+			blocks[i] = NULL;
 		}
 		}
 	}

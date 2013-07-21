@@ -39,7 +39,6 @@
 #include "Recompile.h"
 #include "../Recomp-Cache.h"
 #include "Wrappers.h"
-#include "../ARAM-blocks.h"
 
 #include "../../gui/DEBUG.h"
 
@@ -289,8 +288,6 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 }
 
 void init_block(PowerPC_block* ppc_block, unsigned int paddr){
-	PowerPC_block* temp_block;
-
 	unsigned int offset = (paddr & 0x03FFFFFF) >> 2;
 	if(paddr > 0xb0000000) ppc_block->mips_code = 0;	// ROM Cache in use.
 	else if(paddr >= 0xa4000000) ppc_block->mips_code = (MIPS_instr*)(&SP_DMEM + offset);
@@ -302,59 +299,51 @@ void init_block(PowerPC_block* ppc_block, unsigned int paddr){
 
 		paddr = virtual_to_physical_address(ppc_block->start_address, 2);
 		invalid_code_set(paddr>>12, 0);
-		temp_block = blocks_get(paddr>>12);
-		if(!temp_block){
-  		   temp_block = malloc(sizeof(PowerPC_block));
-		     blocks_set(paddr>>12, temp_block);
+		if(!blocks[paddr>>12]){
+  		   blocks[paddr>>12] = malloc(sizeof(PowerPC_block));
 		     //blocks[paddr>>12]->code_addr = ppc_block->code_addr;
-		     temp_block->funcs = NULL;
-		     temp_block->start_address = paddr & ~0xFFF;
-		     temp_block->end_address = (paddr & ~0xFFF) + 0x1000;
-		     init_block(temp_block, paddr);
+		     blocks[paddr>>12]->funcs = NULL;
+		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
+		     blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
+		     init_block(blocks[paddr>>12], paddr);
 		}
 
 		paddr += ppc_block->end_address - ppc_block->start_address - 4;
 		invalid_code_set(paddr>>12, 0);
-		temp_block = blocks_get(paddr>>12);
-		if(!temp_block){
-  		   temp_block = malloc(sizeof(PowerPC_block));
-		     blocks_set(paddr>>12, temp_block);
+		if(!blocks[paddr>>12]){
+  		   blocks[paddr>>12] = malloc(sizeof(PowerPC_block));
 		     //blocks[paddr>>12]->code_addr = ppc_block->code_addr;
-		     temp_block->funcs = NULL;
-		     temp_block->start_address = paddr & ~0xFFF;
-		     temp_block->end_address = (paddr & ~0xFFF) + 0x1000;
-		     init_block(temp_block, paddr + 0xffc);
+		     blocks[paddr>>12]->funcs = NULL;
+		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
+		     blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
+		     init_block(blocks[paddr>>12], paddr + 0xffc);
 		}
 
 	} else {
 		unsigned int start = ppc_block->start_address;
 		unsigned int end   = ppc_block->end_address;
-		temp_block = blocks_get((start+0x20000000)>>12);
 		if(start >= 0x80000000 && end < 0xa0000000 &&
 		   invalid_code_get((start+0x20000000)>>12)){
 			invalid_code_set((start+0x20000000)>>12, 0);
-			if(!temp_block){
-  			temp_block = malloc(sizeof(PowerPC_block));
-				blocks_set((start+0x20000000)>>12, temp_block);
+			if(!blocks[(start+0x20000000)>>12]){
+				blocks[(start+0x20000000)>>12] = malloc(sizeof(PowerPC_block));
 				//blocks[(start+0x20000000)>>12]->code_addr = ppc_block->code_addr;
-				temp_block->funcs = NULL;
-				temp_block->start_address = (start+0x20000000) & ~0xFFF;
-				temp_block->end_address		= ((start+0x20000000) & ~0xFFF) + 0x1000;
-				init_block(temp_block, paddr);
+				blocks[(start+0x20000000)>>12]->funcs = NULL;
+				blocks[(start+0x20000000)>>12]->start_address = (start+0x20000000) & ~0xFFF;
+				blocks[(start+0x20000000)>>12]->end_address		= ((start+0x20000000) & ~0xFFF) + 0x1000;
+				init_block(blocks[(start+0x20000000)>>12], paddr);
 			}
 		}
 		if(start >= 0xa0000000 && end < 0xc0000000 &&
 		   invalid_code_get((start-0x20000000)>>12)){
 			invalid_code_set((start-0x20000000)>>12, 0);
-			temp_block = blocks_get((start-0x20000000)>>12);
-			if(!temp_block){
-  			temp_block = malloc(sizeof(PowerPC_block));
-				blocks_set((start-0x20000000)>>12, temp_block);
+			if(!blocks[(start-0x20000000)>>12]){
+				blocks[(start-0x20000000)>>12] = malloc(sizeof(PowerPC_block));
 				//blocks[(start-0x20000000)>>12]->code_addr = ppc_block->code_addr;
-				temp_block->funcs = NULL;
-				temp_block->start_address		= (start-0x20000000) & ~0xFFF;
-				temp_block->end_address			= ((start-0x20000000) & ~0xFFF) + 0x1000;
-				init_block(temp_block, paddr);
+				blocks[(start-0x20000000)>>12]->funcs = NULL;
+				blocks[(start-0x20000000)>>12]->start_address		= (start-0x20000000) & ~0xFFF;
+				blocks[(start-0x20000000)>>12]->end_address			= ((start-0x20000000) & ~0xFFF) + 0x1000;
+				init_block(blocks[(start-0x20000000)>>12], paddr);
 			}
 		}
 	}
@@ -362,7 +351,7 @@ void init_block(PowerPC_block* ppc_block, unsigned int paddr){
 }
 
 void deinit_block(PowerPC_block* ppc_block){
-  PowerPC_block* temp_block;
+
 	invalidate_block(ppc_block);
 	invalid_code_set(ppc_block->start_address>>12, 1);
 
@@ -373,33 +362,24 @@ void deinit_block(PowerPC_block* ppc_block){
 		paddr = virtual_to_physical_address(ppc_block->start_address, 2);
 		init_block(ppc_block, paddr);
 		
-		temp_block = blocks_get(paddr>>12);
-		if(temp_block){
-		     //blocks[paddr>>12]->code_addr = NULL;
+		if(blocks[paddr>>12]){
 		     invalid_code_set(paddr>>12, 1);
 		}
 
 		paddr += ppc_block->end_address - ppc_block->start_address - 4;
-		temp_block = blocks_get(paddr>>12);
-		if(temp_block){
-		     //blocks[paddr>>12]->code_addr = NULL;
+		if(blocks[paddr>>12]){
 		     invalid_code_set(paddr>>12, 1);
 		}
 
 	} else {
 		unsigned int start = ppc_block->start_address;
 		unsigned int end   = ppc_block->end_address;
-		temp_block = blocks_get((start+0x20000000)>>12);
-		if(start >= 0x80000000 && end < 0xa0000000 && temp_block){
-			//blocks[(start+0x20000000)>>12]->code_addr = NULL;
+		if(start >= 0x80000000 && end < 0xa0000000 && blocks[(start+0x20000000)>>12]){
 			invalid_code_set((start+0x20000000)>>12, 1);
 		}
-		temp_block = blocks_get((start-0x20000000)>>12);
-		if(start >= 0xa0000000 && end < 0xc0000000 && temp_block){
-			//blocks[(start-0x20000000)>>12]->code_addr = NULL;
+		if(start >= 0xa0000000 && end < 0xc0000000 && blocks[(start-0x20000000)>>12]){
 			invalid_code_set((start-0x20000000)>>12, 1);
 		}
-
 		init_block(ppc_block, start);
 	}
 }

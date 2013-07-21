@@ -28,7 +28,6 @@
 #include "ppc/Wrappers.h"
 #include "Invalid_Code.h"
 #include "Recomp-Cache.h"
-#include "ARAM-blocks.h"
 
 #ifdef HW_RVL
 #include "../gc_memory/MEM2.h"
@@ -168,8 +167,7 @@ static void free_func(PowerPC_func* func, unsigned int addr){
 
 	// Remove any pointers to this code
 	// Remove the func from the block
-	PowerPC_block* block = blocks_get(addr>>12);
-	remove_func(&block->funcs, func);
+	remove_func(&blocks[addr>>12]->funcs, func);
 	// Remove func links
 	unlink_func(func);
 

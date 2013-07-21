@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include "../../gui/DEBUG.h"
 #include "../Invalid_Code.h"
-#include "../ARAM-blocks.h"
 #include "../../gc_memory/memory.h"
 #include "../../main/ROM-Cache.h"
 #include "../interupt.h"
@@ -119,7 +118,6 @@ void dynarec(unsigned int address){
 		
 		start_section(TRAMP_SECTION);
 #endif
-		PowerPC_block* dst_block = blocks_get(address>>12);
 		unsigned long paddr = update_invalid_addr(address);
 		/*
 		sprintf(txtbuffer, "trampolining to 0x%08x\n", address);
@@ -128,39 +126,37 @@ void dynarec(unsigned int address){
 		if(!paddr){ 
 			link_branch = NULL;
 			address = paddr = update_invalid_addr(r4300.pc);
-			dst_block = blocks_get(address>>12); 
 		}
 		
-		if(!dst_block){
+		if(!blocks[address>>12]){
 			/*sprintf(txtbuffer, "block at %08x doesn't exist\n", address&~0xFFF);
 			DEBUG_print(txtbuffer, DBG_USBGECKO);*/
-			dst_block = malloc(sizeof(PowerPC_block));
-			blocks_set(address>>12, dst_block);
+			blocks[address>>12] = malloc(sizeof(PowerPC_block));
 			//dst_block->code_addr     = NULL;
-			dst_block->funcs         = NULL;
-			dst_block->start_address = address & ~0xFFF;
-			dst_block->end_address   = (address & ~0xFFF) + 0x1000;
+			blocks[address>>12]->funcs         = NULL;
+			blocks[address>>12]->start_address = address & ~0xFFF;
+			blocks[address>>12]->end_address   = (address & ~0xFFF) + 0x1000;
 			
-			init_block(dst_block, paddr - (address-dst_block->start_address));
+			init_block(blocks[address>>12], paddr - (address-blocks[address>>12]->start_address));
 
 		} else if(invalid_code_get(address>>12)){
-			invalidate_block(dst_block);
-			init_block(dst_block, paddr - (address-dst_block->start_address));
+			invalidate_block(blocks[address>>12]);
+			init_block(blocks[address>>12], paddr - (address-blocks[address>>12]->start_address));
 		}
 
-		PowerPC_func* func = find_func(&dst_block->funcs, address);
+		PowerPC_func* func = find_func(&blocks[address>>12]->funcs, address);
 
 		if(!func || !func->code_addr[(address-func->start_addr)>>2]){
 			/*sprintf(txtbuffer, "code at %08x is not compiled\n", address);
 			DEBUG_print(txtbuffer, DBG_USBGECKO);*/
 			if((paddr >= 0xb0000000 && paddr < 0xc0000000) ||
 			   (paddr >= 0x90000000 && paddr < 0xa0000000))
-				dst_block->mips_code =
-					ROMCache_pointer((paddr-(address-dst_block->start_address))&0x0FFFFFFF);
+				blocks[address>>12]->mips_code =
+					ROMCache_pointer((paddr-(address-blocks[address>>12]->start_address))&0x0FFFFFFF);
 #ifdef PROFILE
 			start_section(COMPILER_SECTION);
 #endif
-			func = recompile_block(dst_block, address);
+			func = recompile_block(blocks[address>>12], address);
 #ifdef PROFILE
 			end_section(COMPILER_SECTION);
 #endif
@@ -249,8 +245,7 @@ unsigned int dyna_check_cop1_unusable(unsigned int pc, int isDelaySlot){
 }
 
 void invalidate_func(unsigned int addr){
-	PowerPC_block* block = blocks_get(addr>>12);
-	PowerPC_func* func = find_func(&block->funcs, addr);
+	PowerPC_func* func = find_func(&blocks[addr>>12]->funcs, addr);
 	if(func)
 		RecompCache_Free(func->start_addr);
 }

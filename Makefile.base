@@ -4,7 +4,7 @@ CC		= powerpc-eabi-gcc
 CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
-LTO			 = -flto # Uncomment to use link-time optimization
+LTO			 = #-flto  Uncomment to use link-time optimization
 DEBUG_FLAGS += #-DDEBUGON #-DSHOW_DEBUG #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
 FEATURES	+= #-DUSE_EXPANSION #-DUSE_TLB_CACHE #-DUSE_ROM_CACHE_L1 #-DEMBEDDED_FONTS
 
@@ -70,7 +70,6 @@ OBJ		+= \
 		r4300/r4300.o \
 		r4300/exception.o \
 		r4300/Invalid_Code.o \
-		r4300/ARAM-blocks.o \
 		r4300/Recomp-Cache-Heap.o \
 		gc_memory/tlb.o \
 		gc_memory/memory.o \
