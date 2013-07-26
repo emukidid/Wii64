@@ -37,6 +37,7 @@
 #include "../gc_memory/TLB-Cache.h"
 #include "macros.h"
 #include "interupt.h"
+#include "zlib.h"
 
 #define likely(x)       __builtin_expect((x),1)
 #define unlikely(x)     __builtin_expect((x),0)
