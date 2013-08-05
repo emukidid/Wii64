@@ -1,6 +1,6 @@
 /**
  * Wii64 - Image.h
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -32,6 +32,7 @@ public:
 	Image(void* texture, u16 wd, u16 ht, u8 fmt, u8 wrap_s, u8 wrap_t, u8 mipmap, void* lut, u8 lut_fmt, u8 lut_name, u16 lut_size);
 	~Image();
 	void activateImage(u8 mapid);
+	u8* getTexture();
 
 private:
 	GXTexObj obj;

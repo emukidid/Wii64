@@ -1,7 +1,7 @@
 /**
  * Wii64 - main_gc-menu2.cpp (aka MenuV2)
  * Copyright (C) 2007, 2008, 2009, 2010 Mike Slegeir
- * Copyright (C) 2007, 2008, 2009, 2010 sepp256
+ * Copyright (C) 2007, 2008, 2009, 2010, 2013 sepp256
  * Copyright (C) 2007, 2008, 2009, 2010 emu_kidid
  * 
  * New main that uses menu's instead of prompts
@@ -110,6 +110,7 @@ char renderCpuFramebuffer;
 #endif //!GLN64_GX
 extern timers Timers;
 char menuActive;
+char miniMenuActive;
        char saveEnabled;
        char creditsScrolling;
        char padNeedScan;
@@ -130,7 +131,8 @@ static struct {
 	char* value; // Not a string, but a char pointer
 	char  min, max;
 } OPTIONS[] =
-{ { "Audio", &audioEnabled, AUDIO_DISABLE, AUDIO_ENABLE },
+{ { "MiniMenu", &miniMenuActive, MINIMENU_DISABLE, MINIMENU_ENABLE },
+  { "Audio", &audioEnabled, AUDIO_DISABLE, AUDIO_ENABLE },
   { "FPS", &showFPSonScreen, FPS_HIDE, FPS_SHOW },
 //  { "Debug", &printToScreen, DEBUG_HIDE, DEBUG_SHOW },
   { "FBTex", &glN64_useFrameBufferTextures, GLN64_FBTEX_DISABLE, GLN64_FBTEX_ENABLE },
@@ -252,6 +254,7 @@ int main(int argc, char* argv[]) {
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
 
 	// Default Settings
+	miniMenuActive   = MINIMENU_ENABLE; // Activate MiniMenu
 	audioEnabled     = 1; // Audio
 #ifdef RELEASE
 	showFPSonScreen  = 0; // Show FPS on Screen
@@ -301,6 +304,12 @@ int main(int argc, char* argv[]) {
 #else
 	load_config("sd");
 #endif
+	//Switch to MiniMenu if active
+	if (miniMenuActive)
+	{
+		menu->setUseMiniMenu(true);
+		menu->setActiveFrame(MenuContext::FRAME_MAIN);
+	}
 	while (menu->isRunning()) {}
 
 	delete menu;

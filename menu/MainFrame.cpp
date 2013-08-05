@@ -1,6 +1,6 @@
 /**
  * Wii64 - MainFrame.cpp
- * Copyright (C) 2009, 2010 sepp256
+ * Copyright (C) 2009, 2010, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -23,6 +23,7 @@
 #include "SettingsFrame.h"
 #include "../libgui/Button.h"
 #include "../libgui/Gui.h"
+#include "../libgui/GuiResources.h"
 #include "../libgui/InputStatusBar.h"
 #include "../libgui/resources.h"
 //#include "../libgui/InputManager.h"
@@ -51,19 +52,21 @@ void Func_Settings();
 void Func_Credits();
 void Func_ExitToLoader();
 void Func_PlayGame();
+void Func_BasicMenu();
 
-#define NUM_MAIN_BUTTONS 6
+#define NUM_MAIN_BUTTONS 7
 #define FRAME_BUTTONS mainFrameButtons
 #define FRAME_STRINGS mainFrameStrings
 
-char FRAME_STRINGS[7][20] =
+char FRAME_STRINGS[8][20] =
 	{ "Load ROM",
 	  "Current ROM",
 	  "Settings",
 	  "Credits",
 	  "Quit",
 	  "Play Game",
-	  "Resume Game"};
+	  "Resume Game",
+	  "Basic"};
 
 
 struct ButtonInfo
@@ -83,17 +86,20 @@ struct ButtonInfo
 	ButtonFunc		returnFunc;
 } FRAME_BUTTONS[NUM_MAIN_BUTTONS] =
 { //	button	buttonStyle	buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc				returnFunc
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	315.0,	 60.0,	200.0,	56.0,	 5,	 1,	-1,	-1,	Func_LoadROM,			NULL }, // Load ROM
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	315.0,	120.0,	200.0,	56.0,	 0,	 2,	-1,	-1,	Func_CurrentROM,		NULL }, // Current ROM
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	315.0,	180.0,	200.0,	56.0,	 1,	 3,	-1,	-1,	Func_Settings,			NULL }, // Settings
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	315.0,	240.0,	200.0,	56.0,	 2,	 4,	-1,	-1,	Func_Credits,			NULL }, // Credits
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	315.0,	300.0,	200.0,	56.0,	 3,	 5,	-1,	-1,	Func_ExitToLoader,		NULL }, // Exit to Loader
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	315.0,	360.0,	200.0,	56.0,	 4,	 0,	-1,	-1,	Func_PlayGame,			NULL }, // Play/Resume Game
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	315.0,	 60.0,	200.0,	56.0,	 5,	 1,	 6,	 6,	Func_LoadROM,			NULL }, // Load ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	315.0,	120.0,	200.0,	56.0,	 0,	 2,	 6,	 6,	Func_CurrentROM,		NULL }, // Current ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	315.0,	180.0,	200.0,	56.0,	 1,	 3,	 6,	 6,	Func_Settings,			NULL }, // Settings
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	315.0,	240.0,	200.0,	56.0,	 2,	 4,	 6,	 6,	Func_Credits,			NULL }, // Credits
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	315.0,	300.0,	200.0,	56.0,	 3,	 5,	 6,	 6,	Func_ExitToLoader,		NULL }, // Exit to Loader
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	315.0,	360.0,	200.0,	56.0,	 4,	 0,	 6,	 6,	Func_PlayGame,			NULL }, // Play/Resume Game
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[7],	535.0,	360.0,	 80.0,	56.0,	 4,	 0,	 5,	 5,	Func_BasicMenu,			NULL }, // Basic Menu
 };
 
 MainFrame::MainFrame()
 {
-	inputStatusBar = new menu::InputStatusBar(450,100);
+	mainInfoBar = new menu::MainInfoBar();
+	add(mainInfoBar);
+	inputStatusBar = new menu::InputStatusBar(64,280);//260);
 	add(inputStatusBar);
 
 	for (int i = 0; i < NUM_MAIN_BUTTONS; i++)
@@ -128,6 +134,7 @@ MainFrame::~MainFrame()
 		delete FRAME_BUTTONS[i].button;
 	}
 	delete inputStatusBar;
+	delete mainInfoBar;
 }
 
 extern MenuContext *pMenuContext;
@@ -217,7 +224,7 @@ void Func_PlayGame()
 		return;
 	}
 	
-	//Wait until 'A' button released before play/resume game
+	//Wait until 'A' or 'B'button released before play/resume game
 	menu::Cursor::getInstance().setFreezeAction(true);
 	menu::Focus::getInstance().setFreezeAction(true);
 	int buttonHeld = 1;
@@ -227,10 +234,11 @@ void Func_PlayGame()
 		menu::Gui::getInstance().draw();
 		for (int i=0; i<4; i++)
 		{
-			if(PAD_ButtonsHeld(i) & PAD_BUTTON_A) buttonHeld++;
+			if(PAD_ButtonsHeld(i) & (PAD_BUTTON_A | PAD_BUTTON_B)) buttonHeld++;
 #ifdef HW_RVL
 			WPADData* wiiPad = WPAD_Data(i);
 			if(wiiPad->err == WPAD_ERR_NONE && wiiPad->btns_h & (WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A)) buttonHeld++;
+			if(wiiPad->err == WPAD_ERR_NONE && wiiPad->btns_h & (WPAD_BUTTON_B | WPAD_CLASSIC_BUTTON_B)) buttonHeld++;
 #endif
 		}
 	}
@@ -250,6 +258,11 @@ void Func_PlayGame()
 #ifdef DEBUGON
 	_break();
 #endif
+	//Create Thumbnail of last Framebuffer
+	menu::Gui::getInstance().gfx->copyFBTex(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 
+											FB_THUMB_WD, FB_THUMB_HT, FB_THUMB_FMT, FB_THUMB_BPP);
+
+	menuActive = 1;
 	menuActive = 1;
 	pauseInput();
 	pauseAudio();
@@ -322,4 +335,10 @@ void Func_SetPlayGame()
 void Func_SetResumeGame()
 {
 	FRAME_BUTTONS[5].buttonString = FRAME_STRINGS[6];
+}
+
+void Func_BasicMenu()
+{
+	pMenuContext->setUseMiniMenu(true);
+	pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 }

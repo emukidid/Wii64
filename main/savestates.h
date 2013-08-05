@@ -2,6 +2,7 @@
  * Mupen64 - savestates.h
  * Copyright (C) 2002 Hacktarux
  * Copyright (C) 2008, 2009 emu_kidid
+ * Copyright (C) 2013 sepp256
  *
  * Mupen64 homepage: http://mupen64.emulation64.com
  * email address: hacktarux@yahoo.fr
@@ -32,8 +33,15 @@
 #define SAVESTATE 1
 #define LOADSTATE 2
 
-void savestates_save();
-void savestates_load();
+# define FB_THUMB_WD 160
+# define FB_THUMB_HT 120
+# define FB_THUMB_BPP 2 //4 or 2
+# define FB_THUMB_FMT GX_TF_RGB565 //GX_TF_RGBA8 or GX_TF_RGB565
+# define FB_THUMB_SIZE (FB_THUMB_WD*FB_THUMB_HT*FB_THUMB_BPP)
+
+void savestates_save(unsigned int slot, u8* fb_tex);
+int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time);
+int savestates_load(unsigned int slot, u8* fb_tex);
 int  savestates_exists(int mode);
 
 void savestates_select_slot(unsigned int s);

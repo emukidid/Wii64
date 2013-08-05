@@ -1,6 +1,6 @@
 /**
  * Wii64 - Image.cpp
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -55,6 +55,11 @@ void Image::activateImage(u8 mapid)
 {
 	if (tlut_ptr) GX_LoadTlut(&tlut_obj, tlut_name);	
 	GX_LoadTexObj(&obj, mapid);
+}
+
+u8* Image::getTexture()
+{
+	return (u8*) img_ptr;	
 }
 
 } //namespace menu 

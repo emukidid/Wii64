@@ -1,6 +1,6 @@
 /**
- * Wii64 - MainFrame.h
- * Copyright (C) 2009, 2013 sepp256
+ * Wii64 - MainInfoBar.h
+ * Copyright (C) 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -18,23 +18,27 @@
  *
 **/
 
-#ifndef MAINFRAME_H
-#define MAINFRAME_H
+#ifndef MAININFOBAR_H
+#define MAININFOBAR_H
 
-#include "../libgui/Frame.h"
-#include "../libgui/InputStatusBar.h"
-#include "../libgui/MainInfoBar.h"
-#include "MenuTypes.h"
+//#include "GuiTypes.h"
+#include "Component.h"
 
-class MainFrame : public menu::Frame
+namespace menu {
+
+class MainInfoBar : public Component
 {
 public:
-	MainFrame();
-	~MainFrame();
+	MainInfoBar();
+	~MainInfoBar();
+	void updateTime(float deltaTime);
+	void drawComponent(Graphics& gfx);
+	Component* updateFocus(int direction, int buttonsPressed);
 
 private:
-	menu::MainInfoBar *mainInfoBar;
-	menu::InputStatusBar *inputStatusBar;
+
 };
+
+} //namespace menu 
 
 #endif

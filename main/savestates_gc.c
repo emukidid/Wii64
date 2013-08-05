@@ -2,6 +2,7 @@
  * Mupen64 - savestates.c
  * Copyright (C) 2002 Hacktarux
  * Copyright (C) 2008, 2009 emu_kidid
+ * Copyright (C) 2013 sepp256
  *
  * Mupen64 homepage: http://mupen64.emulation64.com
  * email address: hacktarux@yahoo.fr
@@ -46,15 +47,18 @@
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "wii64config.h"
 
+char* statesmagic = "W64";
 char* statespath = "/wii64/saves/";
 void LoadingBar_showBar(float percent, const char* string);
 #define SAVE_STATE_MSG "Saving State .."
 #define LOAD_STATE_MSG "Loading State .."
+#define STATE_VERSION 1
 
 extern int *autoinc_save_slot;
 void pauseAudio(void);
 void resumeAudio(void);
 
+static unsigned int savestates_version = STATE_VERSION;
 extern BOOL hasLoadedROM;
 static unsigned int savestates_slot = 0;
 void savestates_select_slot(unsigned int s)
@@ -86,11 +90,17 @@ int savestates_exists(int mode)
 	return 1;
 }
 
-void savestates_save()
+void savestates_save(unsigned int slot, u8* fb_tex)
 { 
 	gzFile f;
-	char *filename, buf[1024];
+	char *filename, buf[1024], date[10], time[10];
 	int len, i;
+	time_t now;
+
+	strftime(date, 9, "%D", localtime(&now));
+	strftime(time, 9, "%R", localtime(&now));
+	
+	savestates_select_slot(slot);
 	
 	/* fix the filename to %s.st%d format */
 	filename = malloc(1024);
@@ -108,6 +118,13 @@ void savestates_save()
 		return;
 	}
 	LoadingBar_showBar(0.0f, SAVE_STATE_MSG);
+	//Save Header
+	gzwrite(f, statesmagic, 3); //Write magic "W64"
+	gzwrite(f, &savestates_version, sizeof(unsigned int));
+	gzwrite(f, date, 9); //Write date string in MM/DD/YY format
+	gzwrite(f, time, 6); //Write time string in HH:MM format
+	gzwrite(f, fb_tex, FB_THUMB_SIZE);
+	//Save State
 	gzwrite(f, &rdram_register, sizeof(RDRAM_register));
 	gzwrite(f, &MI_register, sizeof(mips_register));
 	gzwrite(f, &pi_register, sizeof(PI_register));
@@ -174,12 +191,15 @@ void savestates_save()
 	LoadingBar_showBar(1.0f, SAVE_STATE_MSG);
 }
 
-void savestates_load()
+int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time)
 {
 	gzFile f = NULL;
-	char *filename, buf[1024];
-	int len, i;
+	char *filename, statesmagic_read[3];
+//	int len, i;
+	unsigned int savestates_version_read=0;
 		
+	savestates_select_slot(slot);
+
 	/* fix the filename to %s.st%d format */
 	filename = malloc(1024);
 #ifdef HW_RVL
@@ -193,9 +213,60 @@ void savestates_load()
 	free(filename);
 	
 	if (!f) {
-		return;
+		return -1;
+	}
+	//Load Header
+	gzread(f, statesmagic_read, 3); //Read magic "W64"
+	gzread(f, &savestates_version_read, sizeof(unsigned int));
+	if (!((strncmp(statesmagic, statesmagic_read, 3)==0)&&(savestates_version==savestates_version_read)))
+	{
+		gzclose(f);
+		return -1;
+	}
+	gzread(f, date, 9); // date string in MM/DD/YY format
+	gzread(f, time, 6); // time string in HH:MM format
+	gzread(f, fb_tex, FB_THUMB_SIZE);
+	gzclose(f);
+	return 0;
+}
+
+int savestates_load(unsigned int slot, u8* fb_tex)
+{
+	gzFile f = NULL;
+	char *filename, buf[1024], statesmagic_read[3], date[10], time[10];
+	int len, i;
+	unsigned int savestates_version_read;
+		
+	savestates_select_slot(slot);
+
+	/* fix the filename to %s.st%d format */
+	filename = malloc(1024);
+#ifdef HW_RVL
+	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
+			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+#else
+	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+#endif
+	
+	f = gzopen(filename, "rb");
+	free(filename);
+	
+	if (!f) {
+		return -1;
 	}
 	LoadingBar_showBar(0.0f, LOAD_STATE_MSG);
+	//Load Header
+	gzread(f, statesmagic_read, 3); //Read magic "W64"
+	gzread(f, &savestates_version_read, sizeof(unsigned int));
+	if (!((strncmp(statesmagic, statesmagic_read, 3)==0)&&(savestates_version==savestates_version_read)))
+	{
+		gzclose(f);
+		return -1;
+	}
+	gzread(f, date, 9); // date string in MM/DD/YY format
+	gzread(f, time, 6); // time string in HH:MM format
+	gzread(f, fb_tex, FB_THUMB_SIZE);
+	//Load State
 	gzread(f, &rdram_register, sizeof(RDRAM_register));
 	gzread(f, &MI_register, sizeof(mips_register));
 	gzread(f, &pi_register, sizeof(PI_register));
@@ -276,4 +347,5 @@ void savestates_load()
 	load_eventqueue_infos(buf);
 	gzclose(f);
 	LoadingBar_showBar(1.0f, LOAD_STATE_MSG);
+	return 0; //success!
 }

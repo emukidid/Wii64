@@ -1,6 +1,6 @@
 /**
  * Wii64 - wii64config.h
- * Copyright (C) 2007, 2008, 2009 sepp256
+ * Copyright (C) 2007, 2008, 2009, 2013 sepp256
  * 
  * External declaration and enumeration of config variables
  *
@@ -26,6 +26,13 @@
 
 #include "timers.h"
 
+
+extern char miniMenuActive;
+enum miniMenuActive
+{
+	MINIMENU_DISABLE=0,
+	MINIMENU_ENABLE
+};
 
 extern char audioEnabled;
 enum audioEnabled

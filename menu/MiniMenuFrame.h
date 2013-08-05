@@ -1,6 +1,6 @@
 /**
- * Wii64 - MainFrame.h
- * Copyright (C) 2009, 2013 sepp256
+ * Wii64 - MiniMenuFrame.h
+ * Copyright (C) 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -18,23 +18,26 @@
  *
 **/
 
-#ifndef MAINFRAME_H
-#define MAINFRAME_H
+#ifndef MINIMENUFRAME_H
+#define MINIMENUFRAME_H
 
 #include "../libgui/Frame.h"
 #include "../libgui/InputStatusBar.h"
-#include "../libgui/MainInfoBar.h"
+#include "../libgui/MiniInfoBar.h"
 #include "MenuTypes.h"
 
-class MainFrame : public menu::Frame
+class MiniMenuFrame : public menu::Frame
 {
 public:
-	MainFrame();
-	~MainFrame();
+	MiniMenuFrame();
+	~MiniMenuFrame();
+	void drawChildren(menu::Graphics& gfx);
 
 private:
-	menu::MainInfoBar *mainInfoBar;
+	menu::MiniInfoBar *miniInfoBar;
 	menu::InputStatusBar *inputStatusBar;
+	u16 previousButtonsGC[4];
+	u32 previousButtonsWii[4];
 };
 
 #endif

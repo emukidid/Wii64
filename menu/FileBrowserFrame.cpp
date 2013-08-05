@@ -23,6 +23,7 @@
 #include "MenuContext.h"
 #include "FileBrowserFrame.h"
 #include "../libgui/Button.h"
+#include "../libgui/GuiResources.h"
 #include "../libgui/resources.h"
 #include "../libgui/MessageBox.h"
 #include "../libgui/FocusManager.h"
@@ -424,6 +425,7 @@ extern BOOL hasLoadedROM;
 extern int rom_length;
 extern int autoSaveLoaded;
 void Func_SetPlayGame();
+void Func_MMRefreshStateInfo();
 
 void fileBrowserFrame_LoadFile(int i)
 {
@@ -509,6 +511,12 @@ void fileBrowserFrame_LoadFile(int i)
 			FRAME_BUTTONS[i+2].buttonString = FRAME_STRINGS[2];
 		pMenuContext->getFrame(MenuContext::FRAME_FILEBROWSER)->setDefaultFocus(FRAME_BUTTONS[2].button);
 		menu::Focus::getInstance().clearPrimaryFocus();*/
+
+		//Clear FB images
+		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
+		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
+		GX_InvalidateTexAll();
+		Func_MMRefreshStateInfo();
 
 		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 		if(hasLoadedROM) Func_SetPlayGame();

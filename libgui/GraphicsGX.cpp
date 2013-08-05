@@ -1,6 +1,6 @@
 /**
  * Wii64 - GraphicsGX.cpp
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -215,6 +215,73 @@ void Graphics::clearEFB(GXColor color, u32 zvalue)
 	GX_SetCopyClear(color, zvalue);
 	GX_CopyDisp(xfb[which_fb],GX_TRUE);
 	GX_Flush();
+}
+
+void Graphics::copyFBTex(u8* dest, int width, int height, u8 fmt, int bpp)
+{
+	//First copy full FB
+	u8* tempFB=NULL;
+	tempFB = (u8*) memalign(32, 320*240*bpp);
+	if (tempFB)
+	{
+		GX_SetTexCopySrc(0, 0, 640, 480);
+		GX_SetTexCopyDst(320, 240, fmt, GX_TRUE);
+		GX_CopyTex(tempFB, GX_FALSE);
+		GX_DrawDone();
+	//Next draw FB to thumbnail sized region of EFB
+		//Load texture
+		GXTexObj obj;
+		GX_InitTexObj(&obj, tempFB, 320, 240, fmt, GX_CLAMP, GX_CLAMP, GX_FALSE);
+		GX_LoadTexObj(&obj, GX_TEXMAP0);
+		//Setup TEV
+		setTEV(GX_REPLACE);
+		//Setup blending
+		enableBlending(false);
+		GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
+		GX_SetZMode(GX_DISABLE,GX_ALWAYS,GX_FALSE);
+		GX_SetCullMode (GX_CULL_NONE);
+		GX_SetFog(GX_FOG_NONE,0.1,1.0,0.0,1.0,(GXColor) {0,0,0,255});
+		Mtx44 GXprojection;
+		guMtxIdentity(GXprojection);
+		guOrtho(GXprojection, 0, 480, 0, 640, 0.0f, 1.0f);
+		GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
+		newModelView();
+		loadModelView();
+		GX_SetViewport((f32) 0,(f32) 0,(f32) 640,(f32) 480, 0.0f, 1.0f);
+		GX_SetScissor((u32) 0,(u32) 0,(u32) 640,(u32) 480);	//Set to the same size as the viewport.
+		//set vertex description here
+		GX_ClearVtxDesc();
+		GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
+		GX_SetVtxDesc(GX_VA_TEX0MTXIDX, GX_TEXMTX0);
+		GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+		GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+		//set vertex attribute formats here
+		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_F32, 0);
+		GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+		GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+			GX_Position2f32( (f32) 0, (f32) 0 );
+			GX_TexCoord2f32( 0.0f, 0.0f );
+			GX_Position2f32( (f32) width, (f32) 0 );
+			GX_TexCoord2f32( 1.0f, 0.0f );
+			GX_Position2f32( (f32) width, (f32) height );
+			GX_TexCoord2f32( 1.0f, 1.0f );
+			GX_Position2f32( (f32) 0, (f32) height );
+			GX_TexCoord2f32( 0.0f, 1.0f );
+		GX_End();
+	//Next copy FB thumbnail
+		GX_SetTexCopySrc(0, 0, width, height);
+		GX_SetTexCopyDst(width, height, fmt, GX_FALSE);
+		if (dest)
+			GX_CopyTex(dest, GX_FALSE);
+		GX_DrawDone();
+		DCFlushRange(dest, width*height*bpp);
+		free(tempFB);
+	}
+	else if (dest)
+	{
+		memset(dest, 0x00, width*height*bpp);
+		DCFlushRange(dest, width*height*bpp);
+	}
 }
 
 void Graphics::newModelView()

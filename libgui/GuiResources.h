@@ -1,6 +1,6 @@
 /**
  * Wii64 - GuiResources.h
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -24,6 +24,14 @@
 #include "GuiTypes.h"
 
 namespace menu {
+
+// 1/4 would be 160x120 = 19200 pix
+// 1/8 would be 80x60 = 4800 pix
+# define FB_THUMB_WD 160
+# define FB_THUMB_HT 120
+# define FB_THUMB_BPP 2 //4 or 2
+# define FB_THUMB_FMT GX_TF_RGB565 //GX_TF_RGBA8 or GX_TF_RGB565
+# define FB_THUMB_SIZE (FB_THUMB_WD*FB_THUMB_HT*FB_THUMB_BPP)
 
 class Resources
 {
@@ -52,7 +60,9 @@ public:
 		IMAGE_CONTROLLER_CLASSIC,
 		IMAGE_CONTROLLER_WIIMOTENUNCHUCK,
 		IMAGE_CONTROLLER_WIIMOTE,
-		IMAGE_N64_CONTROLLER
+		IMAGE_N64_CONTROLLER,
+		IMAGE_CURRENT_FB,
+		IMAGE_STATE_FB
 	};
 
 private:
@@ -68,6 +78,8 @@ private:
 	Image *controllerClassicImage, *controllerWiimoteNunchuckImage;
 	Image *controllerWiimoteImage;
 	Image *n64ControllerImage;
+	Image *currentFramebufferImage, *stateFramebufferImage;
+	u8	*currentFramebufferTexture, *stateFramebufferTexture;
 
 };
 

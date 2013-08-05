@@ -1,6 +1,6 @@
 /**
  * Wii64 - MenuContext.h
- * Copyright (C) 2009, 2010 sepp256
+ * Copyright (C) 2009, 2010, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -25,6 +25,7 @@
 #include "../libgui/Frame.h"
 #include "../libgui/InputManager.h"
 #include "MainFrame.h"
+#include "MiniMenuFrame.h"
 #include "LoadRomFrame.h"
 #include "FileBrowserFrame.h"
 #include "CurrentRomFrame.h"
@@ -44,6 +45,7 @@ public:
 	MenuContext(GXRModeObj *vmode);
 	~MenuContext();
 	bool isRunning();
+	void setUseMiniMenu(bool setUseMiniMenu);
 	void setActiveFrame(int frameIndex);
 	void setActiveFrame(int frameIndex, int submenu);
 	menu::Frame* getFrame(int frameIndex);
@@ -67,6 +69,7 @@ private:
 	void draw();
 	menu::Frame *currentActiveFrame;
 	MainFrame *mainFrame;
+	MiniMenuFrame *miniMenuFrame;
 	LoadRomFrame *loadRomFrame;
 	FileBrowserFrame *fileBrowserFrame;
 	CurrentRomFrame *currentRomFrame;
@@ -77,6 +80,7 @@ private:
 	ConfigureInputFrame *configureInputFrame;
 	ConfigurePaksFrame *configurePaksFrame;
 	ConfigureButtonsFrame *configureButtonsFrame;
+	bool useMiniMenu;
 
 };
 

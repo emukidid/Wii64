@@ -1,6 +1,6 @@
 /**
  * Wii64 - GuiResources.cpp
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -54,6 +54,16 @@ Resources::Resources()
 	controllerWiimoteNunchuckImage = new Image(ControlWiimoteNunchuckTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	controllerWiimoteImage = new Image(ControlWiimoteTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	n64ControllerImage = new Image(N64ControllerTexture, 208, 200, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	
+	//Thumbnail images for current FB and state FB
+	currentFramebufferTexture = (u8*) memalign(32, FB_THUMB_SIZE);
+	stateFramebufferTexture = (u8*) memalign(32, FB_THUMB_SIZE);
+	memset(currentFramebufferTexture, 0x00, FB_THUMB_SIZE);
+	memset(stateFramebufferTexture, 0x00, FB_THUMB_SIZE);
+	DCFlushRange(currentFramebufferTexture, FB_THUMB_SIZE);
+	DCFlushRange(stateFramebufferTexture, FB_THUMB_SIZE);
+	currentFramebufferImage = new Image(currentFramebufferTexture, FB_THUMB_WD, FB_THUMB_HT, FB_THUMB_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	stateFramebufferImage = new Image(stateFramebufferTexture, FB_THUMB_WD, FB_THUMB_HT, FB_THUMB_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
 
 }
 
@@ -75,6 +85,10 @@ Resources::~Resources()
 	delete controllerWiimoteNunchuckImage;
 	delete controllerWiimoteImage;
 	delete n64ControllerImage;
+	delete currentFramebufferImage;
+	delete stateFramebufferImage;
+	free(currentFramebufferTexture);
+	free(stateFramebufferTexture);
 }
 
 Image* Resources::getImage(int image)
@@ -129,6 +143,12 @@ Image* Resources::getImage(int image)
 		break;
 	case IMAGE_N64_CONTROLLER:
 		returnImage = n64ControllerImage;
+		break;
+	case IMAGE_CURRENT_FB:
+		returnImage = currentFramebufferImage;
+		break;
+	case IMAGE_STATE_FB:
+		returnImage = stateFramebufferImage;
 		break;
 	}
 	return returnImage;

@@ -1,6 +1,6 @@
 /**
  * Wii64 - MenuContext.cpp
- * Copyright (C) 2009, 2010 sepp256
+ * Copyright (C) 2009, 2010, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -27,6 +27,7 @@ MenuContext *pMenuContext;
 MenuContext::MenuContext(GXRModeObj *vmode)
 		: currentActiveFrame(0),
 		  mainFrame(0),
+		  miniMenuFrame(0),
 		  loadRomFrame(0),
 		  fileBrowserFrame(0),
 		  currentRomFrame(0),
@@ -36,13 +37,15 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 		  selectCPUFrame(0),
 		  configureInputFrame(0),
 		  configurePaksFrame(0),
-		  configureButtonsFrame(0)
+		  configureButtonsFrame(0),
+		  useMiniMenu(false)
 {
 	pMenuContext = this;
 
 	menu::Gui::getInstance().setVmode(vmode);
 
 	mainFrame = new MainFrame();
+	miniMenuFrame = new MiniMenuFrame();
 	loadRomFrame = new LoadRomFrame();
 	fileBrowserFrame = new FileBrowserFrame();
 	currentRomFrame = new CurrentRomFrame();
@@ -55,6 +58,7 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 	configureButtonsFrame = new ConfigureButtonsFrame();
 
 	menu::Gui::getInstance().addFrame(mainFrame);
+	menu::Gui::getInstance().addFrame(miniMenuFrame);
 	menu::Gui::getInstance().addFrame(loadRomFrame);
 	menu::Gui::getInstance().addFrame(fileBrowserFrame);
 	menu::Gui::getInstance().addFrame(currentRomFrame);
@@ -82,6 +86,7 @@ MenuContext::~MenuContext()
 	delete currentRomFrame;
 	delete fileBrowserFrame;
 	delete loadRomFrame;
+	delete miniMenuFrame;
 	delete mainFrame;
 	pMenuContext = NULL;
 }
@@ -99,6 +104,11 @@ bool MenuContext::isRunning()
 	return isRunning;
 }
 
+void MenuContext::setUseMiniMenu(bool setUseMiniMenu)
+{
+	useMiniMenu = setUseMiniMenu;
+}
+
 void MenuContext::setActiveFrame(int frameIndex)
 {
 	if(currentActiveFrame)
@@ -106,7 +116,10 @@ void MenuContext::setActiveFrame(int frameIndex)
 
 	switch(frameIndex) {
 	case FRAME_MAIN:
-		currentActiveFrame = mainFrame;
+		if(useMiniMenu)
+			currentActiveFrame = miniMenuFrame;
+		else
+			currentActiveFrame = mainFrame;
 		break;
 	case FRAME_LOADROM:
 		currentActiveFrame = loadRomFrame;

@@ -32,6 +32,7 @@ OBJ		+= \
 		main/timers.o \
 		menu/MenuContext.o \
 		menu/MainFrame.o \
+		menu/MiniMenuFrame.o \
 		menu/LoadRomFrame.o \
 		menu/FileBrowserFrame.o \
 		menu/ConfigureButtonsFrame.o\
@@ -57,7 +58,9 @@ OBJ		+= \
 		libgui/IPLFont.o \
 		libgui/LoadingBar.o \
 		libgui/Logo.o \
+		libgui/MainInfoBar.o \
 		libgui/MessageBox.o \
+		libgui/MiniInfoBar.o \
 		libgui/resources.o \
 		libgui/TextBox.o \
 		fileBrowser/fileBrowser-DVD.o \

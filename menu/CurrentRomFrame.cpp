@@ -1,6 +1,6 @@
 /**
  * Wii64 - CurrentRomFrame.cpp
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -20,6 +20,7 @@
 
 #include "MenuContext.h"
 #include "CurrentRomFrame.h"
+#include "../libgui/GuiResources.h"
 #include "../libgui/Button.h"
 #include "../libgui/resources.h"
 #include "../libgui/FocusManager.h"
@@ -174,6 +175,10 @@ void Func_ResetROM()
 		romOpen_audio();
 		romOpen_input();
 		cpu_init();
+		//Clear FB image
+		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
+		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
+		GX_InvalidateTexAll();
 		menu::MessageBox::getInstance().setMessage("Game restarted");
 		Func_SetPlayGame();
 	}
@@ -352,13 +357,16 @@ void Func_DeleteSave()
 	}
 }
 
+static unsigned int which_slot = 0;
+
 void Func_LoadState()
 {
   if(!savestates_exists(LOADSTATE)) {
     menu::MessageBox::getInstance().setMessage("Save doesn't exist");
   }
   else {
-    savestates_load();
+//    savestates_load();
+	savestates_load(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture());
 	menu::MessageBox::getInstance().setMessage("State Loaded Successfully");
   }
 }
@@ -369,12 +377,11 @@ void Func_SaveState()
     menu::MessageBox::getInstance().setMessage("Failed to create save state");
   }
   else {
-    savestates_save();
+//    savestates_save();
+	savestates_save(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture());
 	menu::MessageBox::getInstance().setMessage("State Saved Successfully");
   }
 }
-
-static unsigned int which_slot = 0;
 
 void Func_StateCycle()
 {
