@@ -107,7 +107,7 @@ struct ButtonInfo
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	 65.0,	240.0,	170.0,	56.0,	 0,	 3,	-1,	 2,	Func_MMSaveState,		Func_MMPlayGame }, // Save State
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	405.0,	240.0,	170.0,	56.0,	 0,	 5,	 1,	-1,	Func_MMLoadState,		Func_MMPlayGame }, // Load State
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	 50.0,	350.0,	150.0,	56.0,	 1,	-1,	-1,	 4,	Func_MMExitToLoader,	Func_MMPlayGame }, // Quit
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	240.0,	270.0,	160.0,	56.0,	 0,	-1,	 3,	 5,	Func_MMSelectROM,		Func_MMPlayGame }, // Select ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	240.0,	270.0,	160.0,	56.0,	 0,	-1,	 1,	 2,	Func_MMSelectROM,		Func_MMPlayGame }, // Select ROM
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	440.0,	350.0,	150.0,	56.0,	 2,	-1,	 4,	-1,	Func_MMAdvancedMenu,	Func_MMPlayGame }, // Advanced
 };
 
@@ -123,7 +123,7 @@ struct TextBoxInfo
 { //	textBox	textBoxString		x		y		scale	centered
 	{	NULL,	FRAME_STRINGS[6],	200.0,	430.0,	 1.0,	true }, // (Home) Quit
 	{	NULL,	FRAME_STRINGS[7],	440.0,	430.0,	 1.0,	true }, // (B) Resume
-	{	NULL,	FRAME_STRINGS[8],	320.0,	200.0,	 1.0,	true }, // Save State Slot #
+	{	NULL,	FRAME_STRINGS[8],	490.0,	320.0,	 1.0,	true }, // Save State Slot #
 };
 
 MiniMenuFrame::MiniMenuFrame()
@@ -319,6 +319,8 @@ void Func_MMResetROM()
 
 void Func_MMRefreshStateInfo()
 {
+	savestates_select_slot(which_slot);
+	FRAME_STRINGS[8][5] = which_slot + '0';
 	if(!hasLoadedROM)
 	{ //Clear State FB Image
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
@@ -327,8 +329,6 @@ void Func_MMRefreshStateInfo()
 		state_exists = false;
 		return;
 	}
-	savestates_select_slot(which_slot);
-	FRAME_STRINGS[8][5] = which_slot + '0';
 	if(savestates_load_header(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), state_date, state_time))
 	{
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
@@ -350,7 +350,7 @@ void Func_MMSaveState()
 	}
 	if(state_exists)
 	{
-		sprintf(question,"Replace state saved on %8s at %5s?", state_date, state_time);
+		sprintf(question,"Replace state saved on\n%8s at %5s?", state_date, state_time);
 		if(!menu::MessageBox::getInstance().askMessage(question))
 			return;
 	}
@@ -374,7 +374,7 @@ void Func_MMLoadState()
 	}
 	if(state_exists)
 	{
-		sprintf(question,"Load state saved on %8s at %5s?", state_date, state_time);
+		sprintf(question,"Load state saved on\n%8s at %5s?", state_date, state_time);
 		if(!menu::MessageBox::getInstance().askMessage(question))
 			return;
 	}
@@ -386,7 +386,7 @@ void Func_MMLoadState()
 	else {
 		savestates_load(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture());
 		memcpy(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), FB_THUMB_SIZE);
-		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), FB_THUMB_SIZE);
+		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
 		GX_InvalidateTexAll();
 		menu::MessageBox::getInstance().setMessage("State Loaded Successfully");
 	}

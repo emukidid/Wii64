@@ -93,12 +93,12 @@ int savestates_exists(int mode)
 void savestates_save(unsigned int slot, u8* fb_tex)
 { 
 	gzFile f;
-	char *filename, buf[1024], date[10], time[10];
+	char *filename, buf[1024], curr_date[10], curr_time[10];
 	int len, i;
 	time_t now;
-
-	strftime(date, 9, "%D", localtime(&now));
-	strftime(time, 9, "%R", localtime(&now));
+	time(&now);
+	strftime(curr_date, 9, "%D", localtime(&now));
+	strftime(curr_time, 9, "%R", localtime(&now));
 	
 	savestates_select_slot(slot);
 	
@@ -121,8 +121,8 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	//Save Header
 	gzwrite(f, statesmagic, 3); //Write magic "W64"
 	gzwrite(f, &savestates_version, sizeof(unsigned int));
-	gzwrite(f, date, 9); //Write date string in MM/DD/YY format
-	gzwrite(f, time, 6); //Write time string in HH:MM format
+	gzwrite(f, curr_date, 9); //Write date string in MM/DD/YY format
+	gzwrite(f, curr_time, 6); //Write time string in HH:MM format
 	gzwrite(f, fb_tex, FB_THUMB_SIZE);
 	//Save State
 	gzwrite(f, &rdram_register, sizeof(RDRAM_register));
