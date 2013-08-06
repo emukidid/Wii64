@@ -70,7 +70,7 @@ void MainInfoBar::drawComponent(Graphics& gfx)
 	//Write ROM Status Info
 	gfx.enableScissor(box_x + labelScissor, box_y, width - 2*labelScissor, height);
 	char buffer [51];
-	int text_y = 65;//100;
+	int text_y = 60;//100;
 	if(!hasLoadedROM)
 	{
 		IplFont::getInstance().drawInit(activeColor);

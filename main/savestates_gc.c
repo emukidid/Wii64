@@ -35,6 +35,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <gccore.h>
+#include <sys/stat.h>
 #include "savestates.h"
 #include "guifuncs.h"
 #include "rom.h"
@@ -52,7 +53,7 @@ char* statespath = "/wii64/saves/";
 void LoadingBar_showBar(float percent, const char* string);
 #define SAVE_STATE_MSG "Saving State .."
 #define LOAD_STATE_MSG "Loading State .."
-#define STATE_VERSION 1
+#define STATE_VERSION 2
 
 extern int *autoinc_save_slot;
 void pauseAudio(void);
@@ -93,12 +94,8 @@ int savestates_exists(int mode)
 void savestates_save(unsigned int slot, u8* fb_tex)
 { 
 	gzFile f;
-	char *filename, buf[1024], curr_date[10], curr_time[10];
+	char *filename, buf[1024];
 	int len, i;
-	time_t now;
-	time(&now);
-	strftime(curr_date, 9, "%D", localtime(&now));
-	strftime(curr_time, 9, "%R", localtime(&now));
 	
 	savestates_select_slot(slot);
 	
@@ -121,8 +118,6 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	//Save Header
 	gzwrite(f, statesmagic, 3); //Write magic "W64"
 	gzwrite(f, &savestates_version, sizeof(unsigned int));
-	gzwrite(f, curr_date, 9); //Write date string in MM/DD/YY format
-	gzwrite(f, curr_time, 6); //Write time string in HH:MM format
 	gzwrite(f, fb_tex, FB_THUMB_SIZE);
 	//Save State
 	gzwrite(f, &rdram_register, sizeof(RDRAM_register));
@@ -197,7 +192,8 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 	char *filename, statesmagic_read[3];
 //	int len, i;
 	unsigned int savestates_version_read=0;
-		
+	struct stat attrib;
+
 	savestates_select_slot(slot);
 
 	/* fix the filename to %s.st%d format */
@@ -208,6 +204,11 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 #else
 	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #endif
+
+	//get modified time from file attribute
+	stat(filename, &attrib);
+	strftime(date, 9, "%D", localtime(&(attrib.st_mtime)));//Write date string in MM/DD/YY format
+	strftime(time, 9, "%R", localtime(&(attrib.st_mtime)));//Write time string in HH:MM format
 	
 	f = gzopen(filename, "rb");
 	free(filename);
@@ -223,8 +224,6 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 		gzclose(f);
 		return -1;
 	}
-	gzread(f, date, 9); // date string in MM/DD/YY format
-	gzread(f, time, 6); // time string in HH:MM format
 	gzread(f, fb_tex, FB_THUMB_SIZE);
 	gzclose(f);
 	return 0;
@@ -233,7 +232,7 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 int savestates_load(unsigned int slot, u8* fb_tex)
 {
 	gzFile f = NULL;
-	char *filename, buf[1024], statesmagic_read[3], date[10], time[10];
+	char *filename, buf[1024], statesmagic_read[3];
 	int len, i;
 	unsigned int savestates_version_read;
 		
@@ -263,8 +262,6 @@ int savestates_load(unsigned int slot, u8* fb_tex)
 		gzclose(f);
 		return -1;
 	}
-	gzread(f, date, 9); // date string in MM/DD/YY format
-	gzread(f, time, 6); // time string in HH:MM format
 	gzread(f, fb_tex, FB_THUMB_SIZE);
 	//Load State
 	gzread(f, &rdram_register, sizeof(RDRAM_register));
