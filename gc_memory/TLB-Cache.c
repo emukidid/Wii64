@@ -113,14 +113,6 @@ void TLBCache_set_w(unsigned int page, unsigned int val){
   TLBCache_set(TLB_W_TYPE, page, val);
 }
 
-void TLBCache_dump_w(gzFile *f) {
-  // Code me.
-}
-
-void TLBCache_dump_r(gzFile *f) {
-  // Code me.
-}
-
 #endif
 
 
