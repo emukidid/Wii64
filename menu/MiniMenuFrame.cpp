@@ -471,7 +471,8 @@ void Func_MMPlayGame()
 	menu::Focus::getInstance().setFreezeAction(false);
 
 	menu::Gui::getInstance().gfx->clearEFB((GXColor){0, 0, 0, 0xFF}, 0x000000);
-
+	BOXART_DeInit();
+	
 	pauseRemovalThread();
 	resumeAudio();
 	resumeInput();

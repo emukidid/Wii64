@@ -124,6 +124,13 @@ void MiniInfoBar::drawComponent(Graphics& gfx)
 	gfx.drawImage(0, 410, 114, 160, 120, 0, 1, 0, 1);
 	gfx.setTEV(GX_PASSCLR);
 	
+	//draw boxart image
+	Resources::getInstance().getImage(Resources::IMAGE_BOXART)->activateImage(GX_TEXMAP0);
+	gfx.setTEV(GX_REPLACE);
+	gfx.enableBlending(true);
+	gfx.drawImage(0, 260, 140, BOXART_TEX_WD, BOXART_TEX_HT, 0, 1, 0, 1);
+	gfx.setTEV(GX_PASSCLR);
+	
 }
 
 void MiniInfoBar::updateTime(float deltaTime)

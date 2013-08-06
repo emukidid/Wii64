@@ -62,7 +62,8 @@ public:
 		IMAGE_CONTROLLER_WIIMOTE,
 		IMAGE_N64_CONTROLLER,
 		IMAGE_CURRENT_FB,
-		IMAGE_STATE_FB
+		IMAGE_STATE_FB,
+		IMAGE_BOXART
 	};
 
 private:
@@ -80,6 +81,8 @@ private:
 	Image *n64ControllerImage;
 	Image *currentFramebufferImage, *stateFramebufferImage;
 	u8	*currentFramebufferTexture, *stateFramebufferTexture;
+	Image *boxartImage;
+	u8	*boxartTexture;
 
 };
 

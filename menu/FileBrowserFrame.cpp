@@ -460,6 +460,8 @@ void fileBrowserFrame_LoadFile(int i)
 		    countrycodestring(ROM_HEADER->Country_code&0xFF, buffer2);
 			sprintf(buffer,"Country: %s\n",buffer2);
 			strcat(RomInfo,buffer);
+//			sprintf(buffer,"CRCs: %8X %8X\n",ROM_HEADER->CRC1,ROM_HEADER->CRC2);
+//			strcat(RomInfo,buffer);
 			switch (autoSaveLoaded)
 			{
 			case NATIVESAVEDEVICE_NONE:
@@ -517,6 +519,12 @@ void fileBrowserFrame_LoadFile(int i)
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
 		GX_InvalidateTexAll();
 		Func_MMRefreshStateInfo();
+		
+		//Load boxart:
+		BOXART_Init();
+		BOXART_LoadTexture(ROM_HEADER->CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART)->getTexture());
+		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART)->getTexture(), BOXART_TEX_SIZE);
+		GX_InvalidateTexAll();
 
 		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 		if(hasLoadedROM) Func_SetPlayGame();

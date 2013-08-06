@@ -30,6 +30,8 @@ OBJ		+= \
 		main/gc_dvd.o \
 		main/gczip.o \
 		main/timers.o \
+		main/boxart.o \
+		main/boxart_resource.o \
 		menu/MenuContext.o \
 		menu/MainFrame.o \
 		menu/MiniMenuFrame.o \
