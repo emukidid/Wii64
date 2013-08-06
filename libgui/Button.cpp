@@ -1,6 +1,6 @@
 /**
  * Wii64 - Button.cpp
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -49,7 +49,7 @@ Button::Button(int style, char** label, float x, float y, float width, float hei
 		  returnFunc(0)
 {
 						//Focus color			Inactive color		  Active color			Selected color		  Label color
-	GXColor colors[5] = {{255, 100, 100, 255}, {255, 255, 255,  70}, {255, 255, 255, 130}, {255, 255, 255, 255}, {255, 255, 255, 255}};
+	GXColor colors[5] = {{ 89,  89, 133, 190}, {255, 255, 255,  70}, { 65,  65,  65, 130}, {255, 255, 255, 255}, {255, 255, 255, 255}};
 
 	setType(TYPE_BUTTON);
 	switch(buttonStyle)

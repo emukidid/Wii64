@@ -54,20 +54,22 @@ void Func_MMLoadState();
 void Func_MMExitToLoader();
 void Func_MMSelectROM();
 void Func_MMAdvancedMenu();
+void Func_MMControls();
 void Func_MMPlayGame();
+void Func_MMControls();
 
-#define NUM_FRAME_BUTTONS 6
+#define NUM_FRAME_BUTTONS 7
 #define FRAME_BUTTONS miniMenuFrameButtons
 #define FRAME_STRINGS miniMenuFrameStrings
-#define NUM_FRAME_TEXTBOXES 3
+#define NUM_FRAME_TEXTBOXES 4
 #define FRAME_TEXTBOXES miniMenuFrameTextBoxes
 
 char FRAME_STRINGS[9][50] = //[16] =
-	{ "Reset ROM",
+	{ "Reset",
 	  "Save State",
-	  "Load State",
+	  "Load State 0",
 	  "Quit",
-	  "Select ROM",
+	  "New ROM",
 	  "Advanced",
 	  "(Home) Quit",
 	  "(B) Resume Game",
@@ -104,11 +106,12 @@ struct ButtonInfo
 } FRAME_BUTTONS[NUM_FRAME_BUTTONS] =
 { //	button	buttonStyle	buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc				returnFunc
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	240.0,	 60.0,	160.0,	56.0,	 4,	 4,	 1,	 2,	Func_MMResetROM,		Func_MMPlayGame }, // Reset ROM
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	 65.0,	240.0,	170.0,	56.0,	 0,	 3,	-1,	 2,	Func_MMSaveState,		Func_MMPlayGame }, // Save State
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	405.0,	240.0,	170.0,	56.0,	 0,	 5,	 1,	-1,	Func_MMLoadState,		Func_MMPlayGame }, // Load State
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	 50.0,	350.0,	150.0,	56.0,	 1,	-1,	-1,	 4,	Func_MMExitToLoader,	Func_MMPlayGame }, // Quit
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	240.0,	270.0,	160.0,	56.0,	 0,	-1,	 1,	 2,	Func_MMSelectROM,		Func_MMPlayGame }, // Select ROM
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	440.0,	350.0,	150.0,	56.0,	 2,	-1,	 4,	-1,	Func_MMAdvancedMenu,	Func_MMPlayGame }, // Advanced
+	{	NULL,	BTN_DEFAULT,NULL,	 			60.0,	103.0,	180.0,	185.0,	 0,	 3,	-1,	 4,	Func_MMSaveState,		Func_MMPlayGame }, // Save State
+	{	NULL,	BTN_DEFAULT,NULL,				400.0,	103.0,	180.0,	185.0,	 0,	 5,	 4,	-1,	Func_MMLoadState,		Func_MMPlayGame }, // Load State
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	 50.0,	350.0,	150.0,	56.0,	 1,	-1,	-1,	 6,	Func_MMExitToLoader,	Func_MMPlayGame }, // Quit
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	240.0,	270.0,	160.0,	56.0,	 0,	 6,	 1,	 2,	Func_MMSelectROM,		Func_MMPlayGame }, // Select ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	440.0,	350.0,	150.0,	56.0,	 2,	-1,	 6,	-1,	Func_MMAdvancedMenu,	Func_MMPlayGame }, // Advanced
+	{	NULL,	BTN_DEFAULT,NULL,				205.0,	330.0,	230.0,	84.0,	 4,	-1,	 3,	 5,	Func_MMControls,		Func_MMPlayGame }, // Controller Settings
 };
 
 struct TextBoxInfo
@@ -121,18 +124,15 @@ struct TextBoxInfo
 	bool			centered;
 } FRAME_TEXTBOXES[NUM_FRAME_TEXTBOXES] =
 { //	textBox	textBoxString		x		y		scale	centered
+	{	NULL,	FRAME_STRINGS[1],	150.0,	263.0,	 1.0,	true }, // Save State 
+	{	NULL,	FRAME_STRINGS[2],	490.0,	263.0,	 1.0,	true }, // Load State 
 	{	NULL,	FRAME_STRINGS[6],	200.0,	430.0,	 1.0,	true }, // (Home) Quit
 	{	NULL,	FRAME_STRINGS[7],	440.0,	430.0,	 1.0,	true }, // (B) Resume
-	{	NULL,	FRAME_STRINGS[8],	490.0,	320.0,	 1.0,	true }, // Save State Slot #
+//	{	NULL,	FRAME_STRINGS[8],	490.0,	320.0,	 1.0,	true }, // Save State Slot #
 };
 
 MiniMenuFrame::MiniMenuFrame()
 {
-	miniInfoBar = new menu::MiniInfoBar();
-	add(miniInfoBar);
-	inputStatusBar = new menu::InputStatusBar(215,340);
-	add(inputStatusBar);
-
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
 		FRAME_BUTTONS[i].button = new menu::Button(FRAME_BUTTONS[i].buttonStyle, &FRAME_BUTTONS[i].buttonString, 
 										FRAME_BUTTONS[i].x, FRAME_BUTTONS[i].y, 
@@ -160,7 +160,16 @@ MiniMenuFrame::MiniMenuFrame()
 										FRAME_TEXTBOXES[i].scale, FRAME_TEXTBOXES[i].centered);
 		add(FRAME_TEXTBOXES[i].textBox);
 	}
+	//Set color to white for State button labels
+	GXColor textColor = {255, 255, 255, 255};
+	FRAME_TEXTBOXES[0].textBox->setColor(&textColor);
+	FRAME_TEXTBOXES[1].textBox->setColor(&textColor);
 
+	miniInfoBar = new menu::MiniInfoBar();
+	add(miniInfoBar);
+	inputStatusBar = new menu::InputStatusBar(216,340);
+	add(inputStatusBar);
+	
 	setDefaultFocus(FRAME_BUTTONS[4].button);
 	setBackFunc(Func_MMPlayGame);
 	setEnabled(true);
@@ -321,6 +330,7 @@ void Func_MMRefreshStateInfo()
 {
 	savestates_select_slot(which_slot);
 	FRAME_STRINGS[8][5] = which_slot + '0';
+	FRAME_STRINGS[2][11] = which_slot + '0';
 	if(!hasLoadedROM)
 	{ //Clear State FB Image
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
@@ -410,6 +420,11 @@ void Func_MMAdvancedMenu()
 {
 	pMenuContext->setUseMiniMenu(false);
 	pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
+}
+
+void Func_MMControls()
+{
+	pMenuContext->setActiveFrame(MenuContext::FRAME_SETTINGS, SettingsFrame::SUBMENU_INPUT);
 }
 
 extern "C" {

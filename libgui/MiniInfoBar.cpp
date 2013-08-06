@@ -114,14 +114,14 @@ void MiniInfoBar::drawComponent(Graphics& gfx)
 	Resources::getInstance().getImage(Resources::IMAGE_CURRENT_FB)->activateImage(GX_TEXMAP0);
 	gfx.setTEV(GX_REPLACE);
 	gfx.enableBlending(true);
-	gfx.drawImage(0, 70, 110, 160, 120, 0, 1, 0, 1);
+	gfx.drawImage(0, 70, 114, 160, 120, 0, 1, 0, 1);
 	gfx.setTEV(GX_PASSCLR);
 	
 	//draw state FB thumbnail
 	Resources::getInstance().getImage(Resources::IMAGE_STATE_FB)->activateImage(GX_TEXMAP0);
 	gfx.setTEV(GX_REPLACE);
 	gfx.enableBlending(true);
-	gfx.drawImage(0, 410, 110, 160, 120, 0, 1, 0, 1);
+	gfx.drawImage(0, 410, 114, 160, 120, 0, 1, 0, 1);
 	gfx.setTEV(GX_PASSCLR);
 	
 }
