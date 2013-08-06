@@ -55,13 +55,11 @@ void LoadingBar_showBar(float percent, const char* string);
 #define LOAD_STATE_MSG "Loading State .."
 #define STATE_VERSION 2
 
-extern int *autoinc_save_slot;
-void pauseAudio(void);
-void resumeAudio(void);
-
 static unsigned int savestates_version = STATE_VERSION;
-extern BOOL hasLoadedROM;
 static unsigned int savestates_slot = 0;
+static int loadstate_queued = 0;
+static int loadstate_slot = 0;
+
 void savestates_select_slot(unsigned int s)
 {
 	if (s > 9) return;
@@ -148,18 +146,19 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	gzwrite(f, tlb_LUT_r, 0x100000);		
 	gzwrite(f, tlb_LUT_w, 0x100000);
 #else
-	//Traverse the TLB cache hash	and dump it
-	TLBCache_dump_r(f);
-	TLBCache_dump_w(f);
+	//Traverse the TLB cache hash and dump it
+	for(i = 0; i < 0x100000; i++) {
+		u32 entry = TLBCache_get_r(i);
+		gzwrite(f, &entry, 4);
+	}
+	for(i = 0; i < 0x100000; i++) {
+		u32 entry = TLBCache_get_w(i);
+		gzwrite(f, &entry, 4);
+	}
 #endif
 	LoadingBar_showBar(0.85f, SAVE_STATE_MSG);
 
-	gzwrite(f, &r4300.llbit, 4);
-	gzwrite(f, r4300.gpr, 32*8);
-	for (i=0; i<32; i++) gzwrite(f, r4300.reg_cop0+i, 8); // *8 for compatibility with old versions purpose
-	gzwrite(f, &r4300.lo, 8);
-	gzwrite(f, &r4300.hi, 8);
-	
+	gzwrite(f, &r4300, sizeof(r4300));
 	if ((Status & 0x04000000) == 0)
 	{   // FR bit == 0 means 32-bit (MIPS I) FGR mode
 		shuffle_fpr_data(0, 0x04000000);  // shuffle data into 64-bit register format for storage
@@ -171,12 +170,7 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 		gzwrite(f, r4300.fpr_data, 32*8);
 	}
 	
-	gzwrite(f, &r4300.fcr0, 4);
-	gzwrite(f, &r4300.fcr31, 4);
 	gzwrite(f, tlb_e, 32*sizeof(tlb));
-	gzwrite(f, &r4300.pc, 4);    //Dynarec should be ok with just this
-
-	gzwrite(f, &r4300.next_interrupt, 4);
 	gzwrite(f, &next_vi, 4);
 	gzwrite(f, &vi_field, 4);
 	
@@ -207,8 +201,10 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 
 	//get modified time from file attribute
 	stat(filename, &attrib);
-	strftime(date, 9, "%D", localtime(&(attrib.st_mtime)));//Write date string in MM/DD/YY format
-	strftime(time, 9, "%R", localtime(&(attrib.st_mtime)));//Write time string in HH:MM format
+	if(date)
+		strftime(date, 9, "%D", localtime(&(attrib.st_mtime)));//Write date string in MM/DD/YY format
+	if(time)
+		strftime(time, 9, "%R", localtime(&(attrib.st_mtime)));//Write time string in HH:MM format
 	
 	f = gzopen(filename, "rb");
 	free(filename);
@@ -229,7 +225,21 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 	return 0;
 }
 
-int savestates_load(unsigned int slot, u8* fb_tex)
+void savestates_queue_load(unsigned int slot) {
+	loadstate_queued = 1;
+	loadstate_slot = slot;
+}
+
+int savestates_queued_load() {
+	if(loadstate_queued) {
+		savestates_load(loadstate_slot);
+		loadstate_queued = 0;
+		return 1;
+	}
+	return 0;
+}
+
+int savestates_load(unsigned int slot)
 {
 	gzFile f = NULL;
 	char *filename, buf[1024], statesmagic_read[3];
@@ -262,7 +272,9 @@ int savestates_load(unsigned int slot, u8* fb_tex)
 		gzclose(f);
 		return -1;
 	}
-	gzread(f, fb_tex, FB_THUMB_SIZE);
+
+	//Skip image
+	gzseek(f, FB_THUMB_SIZE, SEEK_CUR);
 	//Load State
 	gzread(f, &rdram_register, sizeof(RDRAM_register));
 	gzread(f, &MI_register, sizeof(mips_register));
@@ -292,44 +304,25 @@ int savestates_load(unsigned int slot, u8* fb_tex)
 	gzread(f, tlb_LUT_w, 0x100000);
 #else
 	LoadingBar_showBar(0.5f, LOAD_STATE_MSG);
-	int numNodesWritten_r=0,numNodesWritten_w=0,cntr,tlbpage,tlbvalue;	
-	TLBCache_deinit();
-	TLBCache_init();
-	//Load number of them..
-	gzread(f, &numNodesWritten_r, 4);
-	for(cntr=0;cntr<numNodesWritten_r;cntr++)
-	{
-		gzread(f, &tlbpage, 4);
-		gzread(f, &tlbvalue, 4);
-		TLBCache_set_r(tlbpage,tlbvalue);
+	u32 entry = 0;
+	for(i = 0; i < 0x100000; i++) {
+		gzread(f, &entry, 4);
+		if(entry)
+			TLBCache_set_r(i, entry);
 	}
-	gzread(f, &numNodesWritten_w, 4);
-	for(cntr=0;cntr<numNodesWritten_w;cntr++)
-	{
-		gzread(f, &tlbpage, 4);
-		gzread(f, &tlbvalue, 4);
-		TLBCache_set_w(tlbpage,tlbvalue);
+	for(i = 0; i < 0x100000; i++) {
+		gzread(f, &entry, 4);
+		if(entry)
+			TLBCache_set_w(i, entry);
 	}
 #endif
 	LoadingBar_showBar(0.85f, LOAD_STATE_MSG);
-	gzread(f, &r4300.llbit, 4);
-	gzread(f, r4300.gpr, 32*8);
-	for (i=0; i<32; i++) 
-	{
-		gzread(f, r4300.reg_cop0+i, 4);
-		gzread(f, buf, 4); // for compatibility with old versions purpose
-	}
+	gzread(f, &r4300, sizeof(r4300));
 	set_fpr_pointers(Status);  // Status is r4300.reg_cop0[12]
-	gzread(f, &r4300.lo, 8);
-	gzread(f, &r4300.hi, 8);
 	gzread(f, r4300.fpr_data, 32*8);
 	if ((Status & 0x04000000) == 0)  // 32-bit FPR mode requires data shuffling because 64-bit layout is always stored in savestate file
 		shuffle_fpr_data(0x04000000, 0);
-	gzread(f, &r4300.fcr0, 4);
-	gzread(f, &r4300.fcr31, 4);
 	gzread(f, tlb_e, 32*sizeof(tlb));
-	gzread(f, &r4300.pc, 4);       //dynarec should be ok with just this
-	gzread(f, &r4300.next_interrupt, 4);
 	gzread(f, &next_vi, 4);
 	gzread(f, &vi_field, 4);
 	
@@ -344,5 +337,6 @@ int savestates_load(unsigned int slot, u8* fb_tex)
 	load_eventqueue_infos(buf);
 	gzclose(f);
 	LoadingBar_showBar(1.0f, LOAD_STATE_MSG);
+	r4300.stop = 0;
 	return 0; //success!
 }

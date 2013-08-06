@@ -325,6 +325,10 @@ int chk_status(int chk) {
 
 void gen_interupt()
 {
+  if(savestates_queued_load()) {
+	return;
+  }
+
   if (r4300.skip_jump) {
     if (q->count > Count || (Count - q->count) < 0x80000000) {
       r4300.next_interrupt = q->count;

@@ -366,8 +366,8 @@ void Func_LoadState()
   }
   else {
 //    savestates_load();
-	savestates_load(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture());
-	menu::MessageBox::getInstance().setMessage("State Loaded Successfully");
+	savestates_queue_load(which_slot);
+	menu::MessageBox::getInstance().setMessage("Game will resume from save state");
   }
 }
 

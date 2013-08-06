@@ -384,11 +384,12 @@ void Func_MMLoadState()
 		menu::MessageBox::getInstance().setMessage("Save doesn't exist");
 	}
 	else {
-		savestates_load(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture());
+		savestates_queue_load(which_slot);
+		savestates_load_header(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(),NULL,NULL);
 		memcpy(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), FB_THUMB_SIZE);
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
 		GX_InvalidateTexAll();
-		menu::MessageBox::getInstance().setMessage("State Loaded Successfully");
+		menu::MessageBox::getInstance().setMessage("Game will resume from save state");
 	}
 }
 

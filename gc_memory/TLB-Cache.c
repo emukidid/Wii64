@@ -43,11 +43,12 @@ static u32    tlb_block_type[TLB_NUM_BLOCKS];
 static u32    tlb_block_addr[TLB_NUM_BLOCKS];
 
 void TLBCache_init(void){
-	int i = 0;
+	int i = 0, j = 0;
 	for(i=0;i<TLB_NUM_BLOCKS;i++) {
-  	memset(&tlb_block[i][0], 0, CACHED_TLB_SIZE);
-  	tlb_block_type[i] = 0;
-  	tlb_block_addr[i] = 0;
+		for(j=0;j<CACHED_TLB_ENTRIES;j++)
+			tlb_block[i][j] = 0;
+		tlb_block_type[i] = 0;
+		tlb_block_addr[i] = 0;
 	}
 }
 

@@ -168,9 +168,9 @@ void Func_Credits()
 	char CreditsInfo[512] = "";
 #ifdef HW_RVL
   int iosversion = IOS_GetVersion();
-  sprintf(CreditsInfo,"Wii64 Beta 1.1 'Honey' - IOS %i\n",iosversion);
+  sprintf(CreditsInfo,"Wii64 Beta 1.2 - IOS %i\n",iosversion);
 #else
-	strcat(CreditsInfo,"Cube64 Beta 1.1 'Honey'\n");
+	strcat(CreditsInfo,"Cube64 Beta 1.2\n");
 #endif
 	strcat(CreditsInfo,"\n");
 	strcat(CreditsInfo,"Wii64 Team: www.emulatemii.com\n");
