@@ -43,7 +43,7 @@ void savestates_save(unsigned int slot, u8* fb_tex);
 int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time);
 int savestates_load(unsigned int slot);
 void savestates_queue_load(unsigned int slot);
-int  savestates_exists(int mode);
+int  savestates_exists(unsigned int slot, int mode);
 
 void savestates_select_slot(unsigned int s);
 void savestates_select_filename();

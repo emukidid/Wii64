@@ -364,7 +364,7 @@ void Func_MMSaveState()
 		if(!menu::MessageBox::getInstance().askMessage(question))
 			return;
 	}
-	if(!savestates_exists(SAVESTATE)) {
+	if(!savestates_exists(which_slot, SAVESTATE)) {
 		menu::MessageBox::getInstance().setMessage("Failed to create save state");
 	}
 	else {
@@ -390,7 +390,7 @@ void Func_MMLoadState()
 	}
 	else
 		return;
-	if(!savestates_exists(LOADSTATE)) {
+	if(!savestates_exists(which_slot, LOADSTATE)) {
 		menu::MessageBox::getInstance().setMessage("Save doesn't exist");
 	}
 	else {

@@ -48,6 +48,13 @@
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "wii64config.h"
 
+#ifdef USE_EXPANSION
+#define RDRAM_SIZE (0x800000)
+#else
+#define RDRAM_SIZE (0x400000)
+#endif
+#define CHUNK_SIZE (0x10000)
+
 char* statesmagic = "W64";
 char* statespath = "/wii64/saves/";
 void LoadingBar_showBar(float percent, const char* string);
@@ -59,28 +66,45 @@ static unsigned int savestates_version = STATE_VERSION;
 static unsigned int savestates_slot = 0;
 static int loadstate_queued = 0;
 static int loadstate_slot = 0;
+static char state_filename[1024];
 
 void savestates_select_slot(unsigned int s)
 {
 	if (s > 9) return;
 	savestates_slot = s;
 }
-	
-//returns 0 on file not existing
-int savestates_exists(int mode)
-{
-	gzFile f;
-	char *filename;
-	filename = malloc(1024);
+
+char *savestates_get_filename() {
+	memset(&state_filename[0], 0, 1024);
 #ifdef HW_RVL
-	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
+	sprintf(state_filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
 			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #else
-	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
+	sprintf(state_filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #endif
+	return &state_filename[0];
+}
 
-	f = gzopen(filename, (mode == SAVESTATE) ? "wb" : "rb");
-	free(filename);
+// Checks if the save state contains our magic and is of the right version number
+int savestates_check_valid(gzFile f) {
+	char statesmagic_read[3];
+	unsigned int savestates_version_read;
+	//Load Header
+	gzread(f, statesmagic_read, 3); //Read magic "W64"
+	gzread(f, &savestates_version_read, sizeof(unsigned int));
+	if (!((strncmp(statesmagic, statesmagic_read, 3)==0)&&(savestates_version==savestates_version_read)))
+	{
+		gzclose(f);
+		return 0;
+	}
+	return 1;
+}
+
+//returns 0 on file not existing
+int savestates_exists(unsigned int slot, int mode)
+{
+	savestates_select_slot(slot);
+	gzFile f = gzopen(savestates_get_filename(), (mode == SAVESTATE) ? "wb" : "rb");
    	
 	if(!f) {
 		return 0;
@@ -89,35 +113,72 @@ int savestates_exists(int mode)
 	return 1;
 }
 
+//queue a save state load to happen on next gen_interrupt()
+void savestates_queue_load(unsigned int slot) {
+	loadstate_queued = 1;
+	loadstate_slot = slot;
+}
+
+//actually kick off a save state load if we have one set (called from gen_interrupt())
+int savestates_queued_load() {
+	if(loadstate_queued) {
+		savestates_load(loadstate_slot);
+		loadstate_queued = 0;
+		return 1;
+	}
+	return 0;
+}
+
 void savestates_save(unsigned int slot, u8* fb_tex)
 { 
 	gzFile f;
-	char *filename, buf[1024];
+	char buf[1024];
 	int len, i;
+	float progress = 0.0f;
 	
 	savestates_select_slot(slot);
+	f = gzopen(savestates_get_filename(), "wb");
 	
-	/* fix the filename to %s.st%d format */
-	filename = malloc(1024);
-#ifdef HW_RVL
-	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
-			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
-#else
-	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
-#endif
-
-	f = gzopen(filename, "wb");
-	free(filename);
-   	
 	if(!f) {
 		return;
 	}
-	LoadingBar_showBar(0.0f, SAVE_STATE_MSG);
+	LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	
 	//Save Header
 	gzwrite(f, statesmagic, 3); //Write magic "W64"
 	gzwrite(f, &savestates_version, sizeof(unsigned int));
 	gzwrite(f, fb_tex, FB_THUMB_SIZE);
+	
 	//Save State
+	// RDRAM 0->50%
+	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
+	for(i = 0; i < RDRAM_SIZE; i+= CHUNK_SIZE) {
+		gzwrite(f, &rdram + i, CHUNK_SIZE);
+		progress += slice;
+		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	}
+
+	// TLB 50->90% (cache funcs are just wrapper macros for a non cache build)
+	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
+	int j = 0;
+	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
+		for(j = 0; j < CHUNK_SIZE; j++) {
+			u32 entry = TLBCache_get_r((i*CHUNK_SIZE) + j);
+			gzwrite(f, &entry, 4);
+		}
+		progress += slice;
+		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	}
+	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
+		for(j = 0; j < CHUNK_SIZE; j++) {
+			u32 entry = TLBCache_get_w((i*CHUNK_SIZE) + j);
+			gzwrite(f, &entry, 4);
+		}
+		progress += slice;
+		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	}
+
+	// Save registers (90->95%)
 	gzwrite(f, &rdram_register, sizeof(RDRAM_register));
 	gzwrite(f, &MI_register, sizeof(mips_register));
 	gzwrite(f, &pi_register, sizeof(PI_register));
@@ -129,35 +190,15 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	gzwrite(f, &ai_register, sizeof(AI_register));
 	gzwrite(f, &dpc_register, sizeof(DPC_register));
 	gzwrite(f, &dps_register, sizeof(DPS_register));
-	LoadingBar_showBar(0.10f, SAVE_STATE_MSG);
-#ifdef USE_EXPANSION
-	gzwrite(f, rdram, 0x800000);
-#else
-	gzwrite(f, rdram, 0x400000);
-#endif
-	LoadingBar_showBar(0.50f, SAVE_STATE_MSG);
+	progress += 0.05f;
+	LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	
+	// RSP, r4300 struct and interrupt queue (95%->100%)
 	gzwrite(f, SP_DMEM, 0x1000);
 	gzwrite(f, SP_IMEM, 0x1000);
 	gzwrite(f, PIF_RAM, 0x40);
-	
 	save_flashram_infos(buf);
 	gzwrite(f, buf, 24);
-#ifndef USE_TLB_CACHE
-	gzwrite(f, tlb_LUT_r, 0x100000);		
-	gzwrite(f, tlb_LUT_w, 0x100000);
-#else
-	//Traverse the TLB cache hash and dump it
-	for(i = 0; i < 0x100000; i++) {
-		u32 entry = TLBCache_get_r(i);
-		gzwrite(f, &entry, 4);
-	}
-	for(i = 0; i < 0x100000; i++) {
-		u32 entry = TLBCache_get_w(i);
-		gzwrite(f, &entry, 4);
-	}
-#endif
-	LoadingBar_showBar(0.85f, SAVE_STATE_MSG);
-
 	gzwrite(f, &r4300, sizeof(r4300));
 	if ((Status & 0x04000000) == 0)
 	{   // FR bit == 0 means 32-bit (MIPS I) FGR mode
@@ -169,7 +210,6 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	{
 		gzwrite(f, r4300.fpr_data, 32*8);
 	}
-	
 	gzwrite(f, tlb_e, 32*sizeof(tlb));
 	gzwrite(f, &next_vi, 4);
 	gzwrite(f, &vi_field, 4);
@@ -180,44 +220,24 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	LoadingBar_showBar(1.0f, SAVE_STATE_MSG);
 }
 
+//load a save state header (texture + datetime)
 int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time)
 {
 	gzFile f = NULL;
-	char *filename, statesmagic_read[3];
-//	int len, i;
-	unsigned int savestates_version_read=0;
 	struct stat attrib;
 
 	savestates_select_slot(slot);
 
-	/* fix the filename to %s.st%d format */
-	filename = malloc(1024);
-#ifdef HW_RVL
-	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
-			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
-#else
-	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
-#endif
-
 	//get modified time from file attribute
-	stat(filename, &attrib);
+	stat(savestates_get_filename(), &attrib);
 	if(date)
 		strftime(date, 9, "%D", localtime(&(attrib.st_mtime)));//Write date string in MM/DD/YY format
 	if(time)
 		strftime(time, 9, "%R", localtime(&(attrib.st_mtime)));//Write time string in HH:MM format
 	
-	f = gzopen(filename, "rb");
-	free(filename);
+	f = gzopen(savestates_get_filename(), "rb");
 	
-	if (!f) {
-		return -1;
-	}
-	//Load Header
-	gzread(f, statesmagic_read, 3); //Read magic "W64"
-	gzread(f, &savestates_version_read, sizeof(unsigned int));
-	if (!((strncmp(statesmagic, statesmagic_read, 3)==0)&&(savestates_version==savestates_version_read)))
-	{
-		gzclose(f);
+	if (!f || !savestates_check_valid(f)) {
 		return -1;
 	}
 	gzread(f, fb_tex, FB_THUMB_SIZE);
@@ -225,57 +245,57 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 	return 0;
 }
 
-void savestates_queue_load(unsigned int slot) {
-	loadstate_queued = 1;
-	loadstate_slot = slot;
-}
-
-int savestates_queued_load() {
-	if(loadstate_queued) {
-		savestates_load(loadstate_slot);
-		loadstate_queued = 0;
-		return 1;
-	}
-	return 0;
-}
-
 int savestates_load(unsigned int slot)
 {
 	gzFile f = NULL;
-	char *filename, buf[1024], statesmagic_read[3];
+	char buf[1024];
 	int len, i;
-	unsigned int savestates_version_read;
-		
+	float progress = 0.0f;
+	
 	savestates_select_slot(slot);
-
-	/* fix the filename to %s.st%d format */
-	filename = malloc(1024);
-#ifdef HW_RVL
-	sprintf(filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
-			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
-#else
-	sprintf(filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
-#endif
+	f = gzopen(savestates_get_filename(), "rb");
 	
-	f = gzopen(filename, "rb");
-	free(filename);
-	
-	if (!f) {
+	if (!f || !savestates_check_valid(f)) {
 		return -1;
 	}
-	LoadingBar_showBar(0.0f, LOAD_STATE_MSG);
-	//Load Header
-	gzread(f, statesmagic_read, 3); //Read magic "W64"
-	gzread(f, &savestates_version_read, sizeof(unsigned int));
-	if (!((strncmp(statesmagic, statesmagic_read, 3)==0)&&(savestates_version==savestates_version_read)))
-	{
-		gzclose(f);
-		return -1;
-	}
+	LoadingBar_showBar(progress, LOAD_STATE_MSG);
 
 	//Skip image
 	gzseek(f, FB_THUMB_SIZE, SEEK_CUR);
+	
 	//Load State
+	// RDRAM 0->50%
+	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
+	for(i = 0; i < RDRAM_SIZE; i+= CHUNK_SIZE) {
+		gzread(f, &rdram + i, CHUNK_SIZE);
+		progress += slice;
+		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	}
+	
+	// TLB 50->90% (cache funcs are just wrapper macros for a non cache build)
+	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
+	u32 j, entry;
+	TLBCache_init();
+	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
+		for(j = 0; j < CHUNK_SIZE; j++) {
+			gzread(f, &entry, 4);
+			if(entry)
+				TLBCache_set_r((i*CHUNK_SIZE) + j, entry);
+		}
+		progress += slice;
+		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	}
+	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
+		for(j = 0; j < CHUNK_SIZE; j++) {
+			gzread(f, &entry, 4);
+			if(entry)
+				TLBCache_set_w((i*CHUNK_SIZE) + j, entry);
+		}
+		progress += slice;
+		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	}
+
+	// Load registers (90->95%)
 	gzread(f, &rdram_register, sizeof(RDRAM_register));
 	gzread(f, &MI_register, sizeof(mips_register));
 	gzread(f, &pi_register, sizeof(PI_register));
@@ -287,36 +307,15 @@ int savestates_load(unsigned int slot)
 	gzread(f, &ai_register, sizeof(AI_register));
 	gzread(f, &dpc_register, sizeof(DPC_register));
 	gzread(f, &dps_register, sizeof(DPS_register));
-	LoadingBar_showBar(0.10f, LOAD_STATE_MSG);
-#ifdef USE_EXPANSION
-	gzread(f, rdram, 0x800000);
-#else
-	gzread(f, rdram, 0x400000);
-#endif
+	progress += 0.05f;
+	LoadingBar_showBar(progress, SAVE_STATE_MSG);
+
+	// RSP, r4300 struct and interrupt queue (95%->100%)
 	gzread(f, SP_DMEM, 0x1000);
 	gzread(f, SP_IMEM, 0x1000);
 	gzread(f, PIF_RAM, 0x40);
 	gzread(f, buf, 24);
 	load_flashram_infos(buf);
-	
-#ifndef USE_TLB_CACHE
-	gzread(f, tlb_LUT_r, 0x100000);
-	gzread(f, tlb_LUT_w, 0x100000);
-#else
-	LoadingBar_showBar(0.5f, LOAD_STATE_MSG);
-	u32 entry = 0;
-	for(i = 0; i < 0x100000; i++) {
-		gzread(f, &entry, 4);
-		if(entry)
-			TLBCache_set_r(i, entry);
-	}
-	for(i = 0; i < 0x100000; i++) {
-		gzread(f, &entry, 4);
-		if(entry)
-			TLBCache_set_w(i, entry);
-	}
-#endif
-	LoadingBar_showBar(0.85f, LOAD_STATE_MSG);
 	gzread(f, &r4300, sizeof(r4300));
 	set_fpr_pointers(Status);  // Status is r4300.reg_cop0[12]
 	gzread(f, r4300.fpr_data, 32*8);
