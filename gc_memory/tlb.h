@@ -53,6 +53,7 @@ typedef struct _tlb
    unsigned long start_odd;
    unsigned long end_odd;
    unsigned long phys_odd;
+   char pad;	// so we have 48 bytes
 } tlb;
 #ifndef USE_TLB_CACHE
 extern unsigned long *tlb_LUT_r;

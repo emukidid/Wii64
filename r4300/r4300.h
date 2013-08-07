@@ -55,7 +55,9 @@ typedef struct {
 	unsigned int  next_interrupt, cic_chip;	//944->952
 	unsigned long delay_slot, skip_jump;	//952->960
 	int           stop, llbit;				//960->968
-	tlb*          tlb_e; // [32]			//968->972
+	tlb	          tlb_e[32];				//968->2504
+	int			  vi_field;			//2504->2508
+	unsigned long next_vi;			//2508->2512
 } R4300;
 extern R4300 r4300;
 
@@ -74,7 +76,6 @@ extern precomp_block *blocks[0x100000], *actual;
 #endif
 
 extern unsigned long jump_target;
-extern tlb tlb_e[32];
 extern unsigned long dyna_interp;
 extern unsigned long long int debug_count;
 extern unsigned long dynacore;

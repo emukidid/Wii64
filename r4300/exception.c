@@ -103,10 +103,10 @@ void TLB_refill_exception(unsigned long address, int w)
       usual_handler = 1;
     }
     for (i=0; i<32; i++) {
-      if (address >= tlb_e[i].start_even && address <= tlb_e[i].end_even) {
+      if (address >= r4300.tlb_e[i].start_even && address <= r4300.tlb_e[i].end_even) {
         usual_handler = 1;
       }
-      if (address >= tlb_e[i].start_odd && address <= tlb_e[i].end_odd) {
+      if (address >= r4300.tlb_e[i].start_odd && address <= r4300.tlb_e[i].end_odd) {
         usual_handler = 1;
       }
     }

@@ -210,9 +210,6 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	{
 		gzwrite(f, r4300.fpr_data, 32*8);
 	}
-	gzwrite(f, tlb_e, 32*sizeof(tlb));
-	gzwrite(f, &next_vi, 4);
-	gzwrite(f, &vi_field, 4);
 	
 	len = save_eventqueue_infos(buf);
 	gzwrite(f, buf, len);
@@ -321,10 +318,7 @@ int savestates_load(unsigned int slot)
 	gzread(f, r4300.fpr_data, 32*8);
 	if ((Status & 0x04000000) == 0)  // 32-bit FPR mode requires data shuffling because 64-bit layout is always stored in savestate file
 		shuffle_fpr_data(0x04000000, 0);
-	gzread(f, tlb_e, 32*sizeof(tlb));
-	gzread(f, &next_vi, 4);
-	gzread(f, &vi_field, 4);
-	
+		
 	len = 0;
 	while(1)
 	{

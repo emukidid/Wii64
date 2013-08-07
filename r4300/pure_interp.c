@@ -77,8 +77,6 @@ void prefetch();
 
 /*static*/ void (*interp_ops[64])(void);
 
-extern unsigned long next_vi;
-
 static void NI()
 {
    printf("NI:%x\n", (unsigned int)op);
@@ -823,14 +821,14 @@ static void TLBR()
    //DEBUG_stats(14, "TLBR", STAT_TYPE_ACCUM, 1);
    int index;
    index = Index & 0x1F;
-   PageMask = tlb_e[index].mask << 13;
-   EntryHi = ((tlb_e[index].vpn2 << 13) | tlb_e[index].asid);
-   EntryLo0 = (tlb_e[index].pfn_even << 6) | (tlb_e[index].c_even << 3)
-     | (tlb_e[index].d_even << 2) | (tlb_e[index].v_even << 1)
-       | tlb_e[index].g;
-   EntryLo1 = (tlb_e[index].pfn_odd << 6) | (tlb_e[index].c_odd << 3)
-     | (tlb_e[index].d_odd << 2) | (tlb_e[index].v_odd << 1)
-       | tlb_e[index].g;
+   PageMask = r4300.tlb_e[index].mask << 13;
+   EntryHi = ((r4300.tlb_e[index].vpn2 << 13) | r4300.tlb_e[index].asid);
+   EntryLo0 = (r4300.tlb_e[index].pfn_even << 6) | (r4300.tlb_e[index].c_even << 3)
+     | (r4300.tlb_e[index].d_even << 2) | (r4300.tlb_e[index].v_even << 1)
+       | r4300.tlb_e[index].g;
+   EntryLo1 = (r4300.tlb_e[index].pfn_odd << 6) | (r4300.tlb_e[index].c_odd << 3)
+     | (r4300.tlb_e[index].d_odd << 2) | (r4300.tlb_e[index].v_odd << 1)
+       | r4300.tlb_e[index].g;
 	//print_gecko("TLBR index %i PageMask %08X EntryHi %08X EntryLo0 %08X EntryLo1 %08X\r\n",index,PageMask,EntryHi,EntryLo0,EntryLo1);
    r4300.pc+=4;
 }
@@ -892,9 +890,9 @@ static void TLBW(unsigned long tlbIdx) {
 
 	unsigned int i;
 
-	if (tlb_e[tlbIdx].v_even)
+	if (r4300.tlb_e[tlbIdx].v_even)
 	{
-		for (i=tlb_e[tlbIdx].start_even; i<tlb_e[tlbIdx].end_even; i+=0x1000)
+		for (i=r4300.tlb_e[tlbIdx].start_even; i<r4300.tlb_e[tlbIdx].end_even; i+=0x1000)
 		{
 			tlb_adler_invalidation_pt1(i>>12);
 #ifdef USE_TLB_CACHE
@@ -903,17 +901,17 @@ static void TLBW(unsigned long tlbIdx) {
 			tlb_LUT_r[i>>12] = 0;
 #endif
 		}
-		if (tlb_e[tlbIdx].d_even)
-			for (i=tlb_e[tlbIdx].start_even; i<tlb_e[tlbIdx].end_even; i+=0x1000)
+		if (r4300.tlb_e[tlbIdx].d_even)
+			for (i=r4300.tlb_e[tlbIdx].start_even; i<r4300.tlb_e[tlbIdx].end_even; i+=0x1000)
 #ifdef USE_TLB_CACHE
 				TLBCache_set_w(i>>12, 0);
 #else
 				tlb_LUT_w[i>>12] = 0;
 #endif
 	}
-	if (tlb_e[tlbIdx].v_odd)
+	if (r4300.tlb_e[tlbIdx].v_odd)
 	{
-		for (i=tlb_e[tlbIdx].start_odd; i<tlb_e[tlbIdx].end_odd; i+=0x1000)
+		for (i=r4300.tlb_e[tlbIdx].start_odd; i<r4300.tlb_e[tlbIdx].end_odd; i+=0x1000)
 		{
 			tlb_adler_invalidation_pt1(i>>12);
 #ifdef USE_TLB_CACHE
@@ -922,132 +920,132 @@ static void TLBW(unsigned long tlbIdx) {
 			tlb_LUT_r[i>>12] = 0;
 #endif
 		}
-		if (tlb_e[tlbIdx].d_odd)
-			for (i=tlb_e[tlbIdx].start_odd; i<tlb_e[tlbIdx].end_odd; i+=0x1000)
+		if (r4300.tlb_e[tlbIdx].d_odd)
+			for (i=r4300.tlb_e[tlbIdx].start_odd; i<r4300.tlb_e[tlbIdx].end_odd; i+=0x1000)
 #ifdef USE_TLB_CACHE
 				TLBCache_set_w(i>>12, 0);
 #else
 				tlb_LUT_w[i>>12] = 0;
 #endif
 	}
-	tlb_e[tlbIdx].g = (EntryLo0 & EntryLo1 & 1);
-	tlb_e[tlbIdx].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
-	tlb_e[tlbIdx].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
-	tlb_e[tlbIdx].c_even = (EntryLo0 & 0x38) >> 3;
-	tlb_e[tlbIdx].c_odd = (EntryLo1 & 0x38) >> 3;
-	tlb_e[tlbIdx].d_even = (EntryLo0 & 0x4) >> 2;
-	tlb_e[tlbIdx].d_odd = (EntryLo1 & 0x4) >> 2;
-	tlb_e[tlbIdx].v_even = (EntryLo0 & 0x2) >> 1;
-	tlb_e[tlbIdx].v_odd = (EntryLo1 & 0x2) >> 1;
-	tlb_e[tlbIdx].asid = (EntryHi & 0xFF);
-	tlb_e[tlbIdx].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
-	//tlb_e[tlbIdx].r = (EntryHi & 0xC000000000000000LL) >> 62;
-	tlb_e[tlbIdx].mask = (PageMask & 0x1FFE000) >> 13;
+	r4300.tlb_e[tlbIdx].g = (EntryLo0 & EntryLo1 & 1);
+	r4300.tlb_e[tlbIdx].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
+	r4300.tlb_e[tlbIdx].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
+	r4300.tlb_e[tlbIdx].c_even = (EntryLo0 & 0x38) >> 3;
+	r4300.tlb_e[tlbIdx].c_odd = (EntryLo1 & 0x38) >> 3;
+	r4300.tlb_e[tlbIdx].d_even = (EntryLo0 & 0x4) >> 2;
+	r4300.tlb_e[tlbIdx].d_odd = (EntryLo1 & 0x4) >> 2;
+	r4300.tlb_e[tlbIdx].v_even = (EntryLo0 & 0x2) >> 1;
+	r4300.tlb_e[tlbIdx].v_odd = (EntryLo1 & 0x2) >> 1;
+	r4300.tlb_e[tlbIdx].asid = (EntryHi & 0xFF);
+	r4300.tlb_e[tlbIdx].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
+	//r4300.tlb_e[tlbIdx].r = (EntryHi & 0xC000000000000000LL) >> 62;
+	r4300.tlb_e[tlbIdx].mask = (PageMask & 0x1FFE000) >> 13;
 
-	tlb_e[tlbIdx].start_even = tlb_e[tlbIdx].vpn2 << 13;
-	tlb_e[tlbIdx].end_even = tlb_e[tlbIdx].start_even+
-		(tlb_e[tlbIdx].mask << 12) + 0xFFF;
-	tlb_e[tlbIdx].phys_even = tlb_e[tlbIdx].pfn_even << 12;
+	r4300.tlb_e[tlbIdx].start_even = r4300.tlb_e[tlbIdx].vpn2 << 13;
+	r4300.tlb_e[tlbIdx].end_even = r4300.tlb_e[tlbIdx].start_even+
+		(r4300.tlb_e[tlbIdx].mask << 12) + 0xFFF;
+	r4300.tlb_e[tlbIdx].phys_even = r4300.tlb_e[tlbIdx].pfn_even << 12;
 
-	// print_gecko("tlb_e[%i] entry created!\r\n",tlbIdx);
-	// print_gecko("tlb_e[%i].g\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].g		);
-	// print_gecko("tlb_e[%i].pfn_even\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].pfn_even);
-	// print_gecko("tlb_e[%i].pfn_odd\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].pfn_odd );
-	// print_gecko("tlb_e[%i].c_even\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].c_even  );
-	// print_gecko("tlb_e[%i].c_odd\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].c_odd   );
-	// print_gecko("tlb_e[%i].d_even\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].d_even  );
-	// print_gecko("tlb_e[%i].d_odd\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].d_odd   );
-	// print_gecko("tlb_e[%i].v_even\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].v_even  );
-	// print_gecko("tlb_e[%i].v_odd\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].v_odd   );
-	// print_gecko("tlb_e[%i].asid\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].asid    );
-	// print_gecko("tlb_e[%i].vpn2\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].vpn2    );
-	// print_gecko("tlb_e[%i].mask\t\t%08X\r\n",tlbIdx, tlb_e[tlbIdx].mask    );
+	// print_gecko("r4300.tlb_e[%i] entry created!\r\n",tlbIdx);
+	// print_gecko("r4300.tlb_e[%i].g\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].g		);
+	// print_gecko("r4300.tlb_e[%i].pfn_even\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].pfn_even);
+	// print_gecko("r4300.tlb_e[%i].pfn_odd\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].pfn_odd );
+	// print_gecko("r4300.tlb_e[%i].c_even\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].c_even  );
+	// print_gecko("r4300.tlb_e[%i].c_odd\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].c_odd   );
+	// print_gecko("r4300.tlb_e[%i].d_even\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].d_even  );
+	// print_gecko("r4300.tlb_e[%i].d_odd\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].d_odd   );
+	// print_gecko("r4300.tlb_e[%i].v_even\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].v_even  );
+	// print_gecko("r4300.tlb_e[%i].v_odd\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].v_odd   );
+	// print_gecko("r4300.tlb_e[%i].asid\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].asid    );
+	// print_gecko("r4300.tlb_e[%i].vpn2\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].vpn2    );
+	// print_gecko("r4300.tlb_e[%i].mask\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].mask    );
 	
-	// print_gecko("tlb_e[%i].start_even\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].start_even);
-	// print_gecko("tlb_e[%i].end_even\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].end_even);
-	// print_gecko("tlb_e[%i].phys_even\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].phys_even);
+	// print_gecko("r4300.tlb_e[%i].start_even\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].start_even);
+	// print_gecko("r4300.tlb_e[%i].end_even\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].end_even);
+	// print_gecko("r4300.tlb_e[%i].phys_even\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].phys_even);
 	
-	if (tlb_e[tlbIdx].v_even)
+	if (r4300.tlb_e[tlbIdx].v_even)
 	{
-		if (tlb_e[tlbIdx].start_even < tlb_e[tlbIdx].end_even &&
-				!(tlb_e[tlbIdx].start_even >= 0x80000000 &&
-					tlb_e[tlbIdx].end_even < 0xC0000000) &&
-				tlb_e[tlbIdx].phys_even < 0x20000000)
+		if (r4300.tlb_e[tlbIdx].start_even < r4300.tlb_e[tlbIdx].end_even &&
+				!(r4300.tlb_e[tlbIdx].start_even >= 0x80000000 &&
+					r4300.tlb_e[tlbIdx].end_even < 0xC0000000) &&
+				r4300.tlb_e[tlbIdx].phys_even < 0x20000000)
 		{
-			for (i=tlb_e[tlbIdx].start_even;i<tlb_e[tlbIdx].end_even;i+=0x1000)
+			for (i=r4300.tlb_e[tlbIdx].start_even;i<r4300.tlb_e[tlbIdx].end_even;i+=0x1000)
 			{
 #ifdef USE_TLB_CACHE
 				TLBCache_set_r(i>>12, 0x80000000 |
-						(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF)));
+						(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF)));
 #else
 				tlb_LUT_r[i>>12] = 0x80000000 |
-					(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF));
+					(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF));
 #endif
 				// print_gecko("SET (v_even) tlb_LUT_r[%08X] = %08X\r\n", i>>12, tlb_LUT_r[i>>12]);
 			}
-			if (tlb_e[tlbIdx].d_even)
+			if (r4300.tlb_e[tlbIdx].d_even)
 			{
-				for (i=tlb_e[tlbIdx].start_even;i<tlb_e[tlbIdx].end_even;i+=0x1000) 
+				for (i=r4300.tlb_e[tlbIdx].start_even;i<r4300.tlb_e[tlbIdx].end_even;i+=0x1000) 
 				{
 #ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, 0x80000000 |
-							(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF)));
+							(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF)));
 #else
 					tlb_LUT_w[i>>12] = 0x80000000 |
-						(tlb_e[tlbIdx].phys_even + (i - tlb_e[tlbIdx].start_even + 0xFFF));
+						(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF));
 #endif
 					// print_gecko("SET (d_even) tlb_LUT_w[%08X] = %08X\r\n", i>>12, tlb_LUT_w[i>>12]);
 				}
 			}
 		}
-		for (i=tlb_e[tlbIdx].start_even>>12; i<=tlb_e[tlbIdx].end_even>>12; i++)
+		for (i=r4300.tlb_e[tlbIdx].start_even>>12; i<=r4300.tlb_e[tlbIdx].end_even>>12; i++)
 		{
 			tlb_adler_invalidation_pt2(i);
 		}
 	}
 
-	tlb_e[tlbIdx].start_odd = tlb_e[tlbIdx].end_even+1;
-	tlb_e[tlbIdx].end_odd = tlb_e[tlbIdx].start_odd+
-		(tlb_e[tlbIdx].mask << 12) + 0xFFF;
-	tlb_e[tlbIdx].phys_odd = tlb_e[tlbIdx].pfn_odd << 12;
-	// print_gecko("tlb_e[%i].start_odd\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].start_odd);
-	// print_gecko("tlb_e[%i].end_odd\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].end_odd);
-	// print_gecko("tlb_e[%i].phys_odd\t%08X\r\n", tlbIdx, tlb_e[tlbIdx].phys_odd);
+	r4300.tlb_e[tlbIdx].start_odd = r4300.tlb_e[tlbIdx].end_even+1;
+	r4300.tlb_e[tlbIdx].end_odd = r4300.tlb_e[tlbIdx].start_odd+
+		(r4300.tlb_e[tlbIdx].mask << 12) + 0xFFF;
+	r4300.tlb_e[tlbIdx].phys_odd = r4300.tlb_e[tlbIdx].pfn_odd << 12;
+	// print_gecko("r4300.tlb_e[%i].start_odd\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].start_odd);
+	// print_gecko("r4300.tlb_e[%i].end_odd\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].end_odd);
+	// print_gecko("r4300.tlb_e[%i].phys_odd\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].phys_odd);
 
-	if (tlb_e[tlbIdx].v_odd)
+	if (r4300.tlb_e[tlbIdx].v_odd)
 	{
-		if (tlb_e[tlbIdx].start_odd < tlb_e[tlbIdx].end_odd &&
-				!(tlb_e[tlbIdx].start_odd >= 0x80000000 &&
-					tlb_e[tlbIdx].end_odd < 0xC0000000) &&
-				tlb_e[tlbIdx].phys_odd < 0x20000000)
+		if (r4300.tlb_e[tlbIdx].start_odd < r4300.tlb_e[tlbIdx].end_odd &&
+				!(r4300.tlb_e[tlbIdx].start_odd >= 0x80000000 &&
+					r4300.tlb_e[tlbIdx].end_odd < 0xC0000000) &&
+				r4300.tlb_e[tlbIdx].phys_odd < 0x20000000)
 		{
-			for (i=tlb_e[tlbIdx].start_odd;i<tlb_e[tlbIdx].end_odd;i+=0x1000)
+			for (i=r4300.tlb_e[tlbIdx].start_odd;i<r4300.tlb_e[tlbIdx].end_odd;i+=0x1000)
 			{
 #ifdef USE_TLB_CACHE
 				TLBCache_set_r(i>>12, 0x80000000 |
-						(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF)));
+						(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF)));
 #else
 				tlb_LUT_r[i>>12] = 0x80000000 |
-					(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF));
+					(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF));
 #endif
 				// print_gecko("SET (v_odd) tlb_LUT_r[%08X] = %08X\r\n", i>>12, tlb_LUT_r[i>>12]);
 			}
-			if (tlb_e[tlbIdx].d_odd)
+			if (r4300.tlb_e[tlbIdx].d_odd)
 			{
-				for (i=tlb_e[tlbIdx].start_odd;i<tlb_e[tlbIdx].end_odd;i+=0x1000)
+				for (i=r4300.tlb_e[tlbIdx].start_odd;i<r4300.tlb_e[tlbIdx].end_odd;i+=0x1000)
 				{
 #ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, 0x80000000 |
-							(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF)));
+							(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF)));
 #else
 					tlb_LUT_w[i>>12] = 0x80000000 |
-						(tlb_e[tlbIdx].phys_odd + (i - tlb_e[tlbIdx].start_odd + 0xFFF));
+						(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF));
 #endif
 					// print_gecko("SET (d_odd) tlb_LUT_w[%08X] = %08X\r\n", i>>12, tlb_LUT_w[i>>12]);
 				}
 			}
 		}
-		for (i=tlb_e[tlbIdx].start_odd>>12; i<=tlb_e[tlbIdx].end_odd>>12; i++)
+		for (i=r4300.tlb_e[tlbIdx].start_odd>>12; i<=r4300.tlb_e[tlbIdx].end_odd>>12; i++)
 		{
 			tlb_adler_invalidation_pt2(i);
 		}
@@ -1078,10 +1076,10 @@ static void TLBP()
    Index |= 0x80000000;
    for (i=0; i<32; i++)
      {
-	if (((tlb_e[i].vpn2 & (~tlb_e[i].mask)) ==
-	     (((EntryHi & 0xFFFFE000) >> 13) & (~tlb_e[i].mask))) &&
-	    ((tlb_e[i].g) ||
-	     (tlb_e[i].asid == (EntryHi & 0xFF))))
+	if (((r4300.tlb_e[i].vpn2 & (~r4300.tlb_e[i].mask)) ==
+	     (((EntryHi & 0xFFFFE000) >> 13) & (~r4300.tlb_e[i].mask))) &&
+	    ((r4300.tlb_e[i].g) ||
+	     (r4300.tlb_e[i].asid == (EntryHi & 0xFF))))
 	  {
 	     Index = i;
 	     break;

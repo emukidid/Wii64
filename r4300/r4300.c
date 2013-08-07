@@ -50,7 +50,6 @@ R4300 r4300;
 unsigned long i, dynacore = 0, interpcore = 0;
 int no_audio_delay = 0;
 int no_compiled_jump = 0;
-tlb tlb_e[32];
 unsigned long dyna_interp = 0;
 unsigned long long int debug_count = 0;
 precomp_instr *PC = NULL;
@@ -291,29 +290,28 @@ void cpu_init(void){
 	r4300.fpr_data[i]=0;
 
 	// --------------tlb------------------------
-	tlb_e[i].mask=0;
-	tlb_e[i].vpn2=0;
-	tlb_e[i].g=0;
-	tlb_e[i].asid=0;
-	tlb_e[i].pfn_even=0;
-	tlb_e[i].c_even=0;
-	tlb_e[i].d_even=0;
-	tlb_e[i].v_even=0;
-	tlb_e[i].pfn_odd=0;
-	tlb_e[i].c_odd=0;
-	tlb_e[i].d_odd=0;
-	tlb_e[i].v_odd=0;
-	tlb_e[i].r=0;
-	//tlb_e[i].check_parity_mask=0x1000;
+	r4300.tlb_e[i].mask=0;
+	r4300.tlb_e[i].vpn2=0;
+	r4300.tlb_e[i].g=0;
+	r4300.tlb_e[i].asid=0;
+	r4300.tlb_e[i].pfn_even=0;
+	r4300.tlb_e[i].c_even=0;
+	r4300.tlb_e[i].d_even=0;
+	r4300.tlb_e[i].v_even=0;
+	r4300.tlb_e[i].pfn_odd=0;
+	r4300.tlb_e[i].c_odd=0;
+	r4300.tlb_e[i].d_odd=0;
+	r4300.tlb_e[i].v_odd=0;
+	r4300.tlb_e[i].r=0;
+	//r4300.tlb_e[i].check_parity_mask=0x1000;
 
-	tlb_e[i].start_even=0;
-	tlb_e[i].end_even=0;
-	tlb_e[i].phys_even=0;
-	tlb_e[i].start_odd=0;
-	tlb_e[i].end_odd=0;
-	tlb_e[i].phys_odd=0;
+	r4300.tlb_e[i].start_even=0;
+	r4300.tlb_e[i].end_even=0;
+	r4300.tlb_e[i].phys_even=0;
+	r4300.tlb_e[i].start_odd=0;
+	r4300.tlb_e[i].end_odd=0;
+	r4300.tlb_e[i].phys_odd=0;
      }
-   r4300.tlb_e=tlb_e;
    
 #ifndef USE_TLB_CACHE
    for (i=0; i<0x100000; i++)

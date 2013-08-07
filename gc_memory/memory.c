@@ -1854,8 +1854,8 @@ unsigned long long int read_vi(unsigned long address, unsigned long long int dat
 	{
 		case 0x10:
 			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current&(~1))|vi_field;
+			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
+			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
 	return *(readvi[GET_LOW_ADDR(address)]);
@@ -1870,8 +1870,8 @@ unsigned long long int read_vib(unsigned long address, unsigned long long int da
 		case 0x12:
 		case 0x13:
 			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current&(~1))|vi_field;
+			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
+			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
 	return *((unsigned char*)readvi[GET_LOW_ADDR(address) & 0xfffc]+ ((GET_LOW_ADDR(address)&3)^S8) );
@@ -1884,8 +1884,8 @@ unsigned long long int read_vih(unsigned long address, unsigned long long int da
 		case 0x10:
 		case 0x12:
 			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current&(~1))|vi_field;
+			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
+			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
 	return *((unsigned short*)((unsigned char*)readvi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
@@ -1897,8 +1897,8 @@ unsigned long long int read_vid(unsigned long address, unsigned long long int da
 	{
 		case 0x10:
 			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current&(~1))|vi_field;
+			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
+			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
 	return ((unsigned long long int)(*readvi[GET_LOW_ADDR(address)])<<32) | *readvi[GET_LOW_ADDR(address)+4];
