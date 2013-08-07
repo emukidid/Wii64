@@ -429,7 +429,7 @@ PowerPC_instr Instruction(int opcode, ...);
 
 // Let's make this easier: define a macro for each instruction
 
-#define _B(ppc,dst,aa,lk) \
+#define __B(ppc,dst,aa,lk) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_B); \
 	  PPC_SET_LI    (ppc, (dst)); \

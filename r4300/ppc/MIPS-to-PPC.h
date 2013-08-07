@@ -62,7 +62,7 @@ void start_new_mapping(void);
 int convert(void);
 
 #define GEN_B(dst,aa,lk) \
-{ PowerPC_instr ppc; _B(ppc,dst,aa,lk); set_next_dst(ppc); }
+{ PowerPC_instr ppc; __B(ppc,dst,aa,lk); set_next_dst(ppc); }
 #define GEN_MTCTR(rs) \
 { PowerPC_instr ppc; _MTCTR(ppc,rs); set_next_dst(ppc); }
 #define GEN_MFCTR(rd) \

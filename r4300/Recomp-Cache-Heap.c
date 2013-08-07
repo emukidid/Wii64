@@ -303,7 +303,7 @@ void RecompCache_Link(PowerPC_func* src_func, PowerPC_instr* src_instr,
 	// Actually link the funcs
 	_LIS(*(src_instr-10), DYNAREG_FUNC, (unsigned int)dst_func>>16);
 	_ORI(*(src_instr-9), DYNAREG_FUNC,DYNAREG_FUNC, (unsigned int)dst_func);
-	_B(*src_instr, (PowerPC_instr*)dst_instr-src_instr, 0, 0);
+	__B(*src_instr, (PowerPC_instr*)dst_instr-src_instr, 0, 0);
 	DCFlushRange(src_instr-10, 11*sizeof(PowerPC_instr));
 	ICInvalidateRange(src_instr-10, 11*sizeof(PowerPC_instr));
 	
