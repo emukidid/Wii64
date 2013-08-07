@@ -1,9 +1,11 @@
 /**
- * Mupen64 - flashram.c
+ * Mupen64 - flashRAMInfo.c
  * Copyright (C) 2002 Hacktarux
+ * Copyright (C) 2007, 2013 emu_kidid
  *
  * Mupen64 homepage: http://mupen64.emulation64.com
  * email address: hacktarux@yahoo.fr
+ *                emukidid@gmail.com
  *
  * If you want to contribute to the project please contact
  * me first (maybe someone is already making what you are
@@ -41,24 +43,9 @@
 #include "../r4300/r4300.h"
 #include "../main/guifuncs.h"
 #include "../fileBrowser/fileBrowser.h"
-
-
-#include <ogc/card.h>
+#include "flashram.h"
 #include "Saves.h"
 
-int use_flashram;
-
-typedef enum flashram_mode
-{
-   NOPES_MODE = 0,
-   ERASE_MODE,
-   WRITE_MODE,
-   READ_MODE,
-   STATUS_MODE
-} Flashram_mode;
-
-static int mode;
-static unsigned long long status;
 #ifdef HW_RVL
 #include "MEM2.h"
 #else
@@ -66,9 +53,8 @@ static unsigned long long status;
 #endif
 static unsigned char *flashram = (unsigned char*)(FLASHRAM_LO);
 
-static unsigned long erase_offset, write_pointer;
-
 BOOL flashramWritten = FALSE;
+_FlashRAMInfo flashRAMInfo;
 
 int loadFlashram(fileBrowser_file* savepath){
 	int i, result = 0;
@@ -116,28 +102,10 @@ int deleteFlashram(fileBrowser_file* savepath){
 	return saveFile_deleteFile(&saveFile);
 }
 
-void save_flashram_infos(char *buf)
-{
-   memcpy(buf+0 , &use_flashram , 4);
-   memcpy(buf+4 , &mode         , 4);
-   memcpy(buf+8 , &status       , 8);
-   memcpy(buf+16, &erase_offset , 4);
-   memcpy(buf+20, &write_pointer, 4);
-}
-
-void load_flashram_infos(char *buf)
-{
-   memcpy(&use_flashram , buf+0 , 4);
-   memcpy(&mode         , buf+4 , 4);
-   memcpy(&status       , buf+8 , 8);
-   memcpy(&erase_offset , buf+16, 4);
-   memcpy(&write_pointer, buf+20, 4);
-}
-
 void init_flashram()
 {
-   mode = NOPES_MODE;
-   status = 0;
+   flashRAMInfo.mode = NOPES_MODE;
+   flashRAMInfo.status = 0;
 }
 
 void reset_flashram() {
@@ -146,7 +114,7 @@ void reset_flashram() {
 
 unsigned long flashram_status()
 {
-   return (status >> 32);
+   return (flashRAMInfo.status >> 32);
 }
 
 void flashram_command(unsigned long command)
@@ -154,21 +122,21 @@ void flashram_command(unsigned long command)
    switch(command & 0xff000000)
      {
       case 0x4b000000:
-	erase_offset = (command & 0xffff) * 128;
+	flashRAMInfo.erase_offset = (command & 0xffff) * 128;
 	break;
       case 0x78000000:
-	mode = ERASE_MODE;
-	status = 0x1111800800c20000LL;
+	flashRAMInfo.mode = ERASE_MODE;
+	flashRAMInfo.status = 0x1111800800c20000LL;
 	break;
       case 0xa5000000:
-	erase_offset = (command & 0xffff) * 128;
-	status = 0x1111800400c20000LL;
+	flashRAMInfo.erase_offset = (command & 0xffff) * 128;
+	flashRAMInfo.status = 0x1111800400c20000LL;
 	break;
       case 0xb4000000:
-	mode = WRITE_MODE;
+	flashRAMInfo.mode = WRITE_MODE;
 	break;
       case 0xd2000000:  // execute
-	switch (mode)
+	switch (flashRAMInfo.mode)
 	  {
 	   case NOPES_MODE:
 	     break;
@@ -177,7 +145,7 @@ void flashram_command(unsigned long command)
 		  int i;
 		  flashramWritten = TRUE;
 
-		  for (i=erase_offset; i<(erase_offset+128); i++)
+		  for (i=flashRAMInfo.erase_offset; i<(flashRAMInfo.erase_offset+128); i++)
 		    flashram[i^S8] = 0xff;
 
 	       }
@@ -188,26 +156,26 @@ void flashram_command(unsigned long command)
 		  		flashramWritten = TRUE;
 
 		  for (i=0; i<128; i++)
-		    flashram[(erase_offset+i)^S8]=
-		    ((unsigned char*)rdram)[(write_pointer+i)^S8];
+		    flashram[(flashRAMInfo.erase_offset+i)^S8]=
+		    ((unsigned char*)rdram)[(flashRAMInfo.write_pointer+i)^S8];
 
 	       }
 	     break;
 	   case STATUS_MODE:
 	     break;
 	   default:
-	     printf("unknown flashram command with mode:%x\n", (int)mode);
+	     printf("unknown flashram command with flashRAMInfo.mode:%x\n", (int)flashRAMInfo.mode);
 	     r4300.stop=1;
 	  }
-	mode = NOPES_MODE;
+	flashRAMInfo.mode = NOPES_MODE;
 	break;
       case 0xe1000000:
-	mode = STATUS_MODE;
-	status = 0x1111800100c20000LL;
+	flashRAMInfo.mode = STATUS_MODE;
+	flashRAMInfo.status = 0x1111800100c20000LL;
 	break;
       case 0xf0000000:
-	mode = READ_MODE;
-	status = 0x11118004f0000000LL;
+	flashRAMInfo.mode = READ_MODE;
+	flashRAMInfo.status = 0x11118004f0000000LL;
 	break;
       default:
 	printf("unknown flashram command:%x\n", (int)command);
@@ -219,11 +187,11 @@ void dma_read_flashram()
 {
    int i;
 
-   switch(mode)
+   switch(flashRAMInfo.mode)
      {
       case STATUS_MODE:
-	rdram[pi_register.pi_dram_addr_reg/4] = (unsigned long)(status >> 32);
-	rdram[pi_register.pi_dram_addr_reg/4+1] = (unsigned long)(status);
+	rdram[pi_register.pi_dram_addr_reg/4] = (unsigned long)(flashRAMInfo.status >> 32);
+	rdram[pi_register.pi_dram_addr_reg/4+1] = (unsigned long)(flashRAMInfo.status);
 	break;
       case READ_MODE:
 
@@ -232,20 +200,20 @@ void dma_read_flashram()
 	  flashram[(((pi_register.pi_cart_addr_reg-0x08000000)&0xFFFF)*2+i)^S8];
 	break;
       default:
-	printf("unknown dma_read_flashram:%x\n", mode);
+	printf("unknown dma_read_flashram:%x\n", flashRAMInfo.mode);
 	r4300.stop=1;
      }
 }
 
 void dma_write_flashram()
 {
-   switch(mode)
+   switch(flashRAMInfo.mode)
      {
       case WRITE_MODE:
-	write_pointer = pi_register.pi_dram_addr_reg;
+	flashRAMInfo.write_pointer = pi_register.pi_dram_addr_reg;
 	break;
       default:
-	printf("unknown dma_read_flashram:%x\n", mode);
+	printf("unknown dma_read_flashram:%x\n", flashRAMInfo.mode);
 	r4300.stop=1;
      }
 }

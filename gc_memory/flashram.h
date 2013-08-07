@@ -27,7 +27,23 @@
  *
 **/
 
-extern int use_flashram;
+typedef enum flashram_mode
+{
+   NOPES_MODE = 0,
+   ERASE_MODE,
+   WRITE_MODE,
+   READ_MODE,
+   STATUS_MODE
+} Flashram_mode;
+
+typedef struct {
+	int use_flashram;
+	int mode;
+	unsigned long long status;
+	unsigned long erase_offset;
+	unsigned long write_pointer;
+} _FlashRAMInfo;
+extern _FlashRAMInfo flashRAMInfo;
 
 
 void init_flashram();
@@ -37,5 +53,3 @@ unsigned long flashram_status();
 void dma_read_flashram();
 void dma_write_flashram();
 
-void save_flashram_infos(char *buf);
-void load_flashram_infos(char *buf);

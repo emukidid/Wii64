@@ -26,16 +26,6 @@
 
 #include "../fileBrowser/fileBrowser.h"
 
-/*
-extern char saveEnabled;
-extern int  savetype;
-extern char savepath[];
-
-#define SELECTION_SLOT_A    0
-#define SELECTION_SLOT_B    1
-#define SELECTION_TYPE_SD   2
-#define SELECTION_TYPE_MEM  0*/
-
 // Return 0 if load/save fails, 1 otherwise
 
 int loadEeprom(fileBrowser_file* savepath);

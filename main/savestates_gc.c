@@ -1,7 +1,7 @@
 /**
  * Mupen64 - savestates.c
  * Copyright (C) 2002 Hacktarux
- * Copyright (C) 2008, 2009 emu_kidid
+ * Copyright (C) 2008, 2009, 2013 emu_kidid
  * Copyright (C) 2013 sepp256
  *
  * Mupen64 homepage: http://mupen64.emulation64.com
@@ -200,8 +200,7 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	gzwrite(f, SP_DMEM, 0x1000);
 	gzwrite(f, SP_IMEM, 0x1000);
 	gzwrite(f, PIF_RAM, 0x40);
-	save_flashram_infos(buf);
-	gzwrite(f, buf, 24);
+	gzwrite(f, &flashRAMInfo, sizeof(_FlashRAMInfo));
 	gzwrite(f, &r4300, sizeof(r4300));
 	if ((Status & 0x04000000) == 0)
 	{   // FR bit == 0 means 32-bit (MIPS I) FGR mode
@@ -265,7 +264,6 @@ int savestates_load(unsigned int slot)
 	
 	//Load State
 	// RDRAM 0->50%
-	//memset(&rdram, 0, RDRAM_SIZE);
 	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
 	unsigned char* ramPtr = (unsigned char*)&rdram[0];
 	for(i = 0; i < RDRAM_SIZE; i+= CHUNK_SIZE) {
@@ -321,8 +319,7 @@ int savestates_load(unsigned int slot)
 	gzread(f, SP_DMEM, 0x1000);
 	gzread(f, SP_IMEM, 0x1000);
 	gzread(f, PIF_RAM, 0x40);
-	gzread(f, buf, 24);
-	load_flashram_infos(buf);
+	gzread(f, &flashRAMInfo, sizeof(_FlashRAMInfo));
 	gzread(f, &r4300, sizeof(r4300));
 	set_fpr_pointers(Status);  // Status is r4300.reg_cop0[12]
 	gzread(f, r4300.fpr_data, 32*8);

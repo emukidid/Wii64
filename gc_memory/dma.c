@@ -1,9 +1,11 @@
 /**
  * Mupen64 - dma.c
  * Copyright (C) 2002 Hacktarux
+ * Copyright (C) 2007, 2013 emu_kidid
  *
  * Mupen64 homepage: http://mupen64.emulation64.com
  * email address: hacktarux@yahoo.fr
+ *                emukidid@gmail.com
  *
  * If you want to contribute to the project please contact
  * me first (maybe someone is already making what you are
@@ -116,13 +118,13 @@ void dma_pi_read()
 {
 	if (pi_register.pi_cart_addr_reg >= 0x08000000 && pi_register.pi_cart_addr_reg < 0x08010000)
 	{
-		if (use_flashram != 1)
+		if (flashRAMInfo.use_flashram != 1)
 		{
 			sramWritten = TRUE;
 			memcpy(	&sram[((pi_register.pi_cart_addr_reg-0x08000000))^S8],
 					&rdramb[(pi_register.pi_dram_addr_reg)^S8],
 					(pi_register.pi_rd_len_reg & 0xFFFFFF)+1);
-			use_flashram = -1;
+			flashRAMInfo.use_flashram = -1;
 	}
 	else
 		dma_write_flashram();
@@ -145,12 +147,12 @@ void dma_pi_write()
 	{
 		if (pi_register.pi_cart_addr_reg >= 0x08000000 && pi_register.pi_cart_addr_reg < 0x08010000)
 		{
-			if (use_flashram != 1)
+			if (flashRAMInfo.use_flashram != 1)
 			{
 				memcpy(	&rdramb[(pi_register.pi_dram_addr_reg)^S8],
 						&sram[(((pi_register.pi_cart_addr_reg-0x08000000)&0xFFFF))^S8],
 						(pi_register.pi_wr_len_reg & 0xFFFFFF)+1);
-				use_flashram = -1;
+				flashRAMInfo.use_flashram = -1;
 			}
 			else
 				dma_read_flashram();

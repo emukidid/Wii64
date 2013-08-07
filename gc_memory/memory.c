@@ -490,7 +490,7 @@ int init_memory()
 		rwmem[0xb000+i] = rw_nothing;
 	}
 
-	use_flashram = 0;
+	flashRAMInfo.use_flashram = 0;
 	init_flashram();
 
 	frameBufferInfos[0].addr = 0;
@@ -2884,9 +2884,9 @@ unsigned long long int write_sid(unsigned long address, unsigned long long int d
 
 unsigned long long int read_flashram_status(unsigned long address, unsigned long long int data)
 {
-	if (likely(use_flashram != -1 && GET_LOW_ADDR(address) == 0))
+	if (likely(flashRAMInfo.use_flashram != -1 && GET_LOW_ADDR(address) == 0))
 	{
-		use_flashram = 1;
+		flashRAMInfo.use_flashram = 1;
 		return flashram_status();
 	}
 	else
@@ -2934,10 +2934,10 @@ unsigned long long int write_flashram_dummyd(unsigned long address, unsigned lon
 
 unsigned long long int write_flashram_command(unsigned long address, unsigned long long int data)
 {
-	if (likely(use_flashram != -1 && GET_LOW_ADDR(address) == 0))
+	if (likely(flashRAMInfo.use_flashram != -1 && GET_LOW_ADDR(address) == 0))
 	{
 		flashram_command((unsigned long)data);
-		use_flashram = 1;
+		flashRAMInfo.use_flashram = 1;
 	}
 	else
 		printf("unknown write in write_flashram_command\n");
