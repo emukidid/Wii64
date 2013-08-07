@@ -152,11 +152,14 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	//Save State
 	// RDRAM 0->50%
 	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
+	unsigned char* ramPtr = (unsigned char*)&rdram[0];
 	for(i = 0; i < RDRAM_SIZE; i+= CHUNK_SIZE) {
-		gzwrite(f, &rdram + i, CHUNK_SIZE);
+		gzwrite(f, ramPtr, CHUNK_SIZE);
+		ramPtr+=CHUNK_SIZE;
 		progress += slice;
 		LoadingBar_showBar(progress, SAVE_STATE_MSG);
 	}
+	//print_gecko("adler of RDRAM %08X\r\n",adler32(0, (Bytef *)&rdram[0], RDRAM_SIZE));
 
 	// TLB 50->90% (cache funcs are just wrapper macros for a non cache build)
 	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
@@ -256,40 +259,47 @@ int savestates_load(unsigned int slot)
 		return -1;
 	}
 	LoadingBar_showBar(progress, LOAD_STATE_MSG);
-
+	
 	//Skip image
 	gzseek(f, FB_THUMB_SIZE, SEEK_CUR);
 	
 	//Load State
 	// RDRAM 0->50%
+	//memset(&rdram, 0, RDRAM_SIZE);
 	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
+	unsigned char* ramPtr = (unsigned char*)&rdram[0];
 	for(i = 0; i < RDRAM_SIZE; i+= CHUNK_SIZE) {
-		gzread(f, &rdram + i, CHUNK_SIZE);
+		gzread(f, ramPtr, CHUNK_SIZE);
+		ramPtr+=CHUNK_SIZE;
 		progress += slice;
-		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+		LoadingBar_showBar(progress, LOAD_STATE_MSG);
 	}
+	//print_gecko("adler of RDRAM %08X\r\n",adler32(0, (Bytef *)&rdram[0], RDRAM_SIZE));
 	
 	// TLB 50->90% (cache funcs are just wrapper macros for a non cache build)
 	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
 	u32 j, entry;
+
 	TLBCache_init();
 	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
 		for(j = 0; j < CHUNK_SIZE; j++) {
 			gzread(f, &entry, 4);
-			if(entry)
+			if(entry) {
 				TLBCache_set_r((i*CHUNK_SIZE) + j, entry);
+			}
 		}
 		progress += slice;
-		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+		LoadingBar_showBar(progress, LOAD_STATE_MSG);
 	}
 	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
 		for(j = 0; j < CHUNK_SIZE; j++) {
 			gzread(f, &entry, 4);
-			if(entry)
+			if(entry) {
 				TLBCache_set_w((i*CHUNK_SIZE) + j, entry);
+			}
 		}
 		progress += slice;
-		LoadingBar_showBar(progress, SAVE_STATE_MSG);
+		LoadingBar_showBar(progress, LOAD_STATE_MSG);
 	}
 
 	// Load registers (90->95%)
@@ -305,7 +315,7 @@ int savestates_load(unsigned int slot)
 	gzread(f, &dpc_register, sizeof(DPC_register));
 	gzread(f, &dps_register, sizeof(DPS_register));
 	progress += 0.05f;
-	LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	LoadingBar_showBar(progress, LOAD_STATE_MSG);
 
 	// RSP, r4300 struct and interrupt queue (95%->100%)
 	gzread(f, SP_DMEM, 0x1000);
@@ -329,7 +339,8 @@ int savestates_load(unsigned int slot)
 	}
 	load_eventqueue_infos(buf);
 	gzclose(f);
-	LoadingBar_showBar(1.0f, LOAD_STATE_MSG);
+
 	r4300.stop = 0;
+	LoadingBar_showBar(1.0f, LOAD_STATE_MSG);
 	return 0; //success!
 }
