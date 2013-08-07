@@ -1,6 +1,6 @@
 /**
  * Wii64 - IPLFont.cpp
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -292,6 +292,8 @@ void IplFont::setColor(GXColor* fontColorPtr)
 
 void IplFont::drawString(int x, int y, char *string, float scale, bool centered)
 {
+	if(!string)
+		return;
 	if(centered)
 	{
 		int strWidth = 0;
@@ -344,6 +346,8 @@ void IplFont::drawString(int x, int y, char *string, float scale, bool centered)
 
 int IplFont::drawStringWrap(int x, int y, char *string, float scale, bool centered, int maxWidth, int lineSpacing)
 {
+	if(!string)
+		return 1;
 	int numLines = 0;
 	int stringWidth = 0;
 	int tokenWidth = 0;
@@ -423,6 +427,8 @@ int IplFont::drawStringWrap(int x, int y, char *string, float scale, bool center
 
 void IplFont::drawStringAtOrigin(char *string, float scale)
 {
+	if(!string)
+		return;
 	int x0, y0, x = 0;
 	char* string_work = string;
 	while(*string_work)
@@ -438,6 +444,8 @@ void IplFont::drawStringAtOrigin(char *string, float scale)
 
 int IplFont::getStringWidth(char *string, float scale)
 {
+	if(!string)
+		return 0;
 	int strWidth = 0;
 	char* string_work = string;
 	while(*string_work)
