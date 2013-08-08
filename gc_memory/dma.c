@@ -54,10 +54,11 @@
 #include "Saves.h"
 
 #ifdef USE_EXPANSION
-	#define MEMMASK 0x7FFFFF
+	#define MEM_SIZE (0x800000)
 #else
-	#define MEMMASK 0x3FFFFF
+	#define MEM_SIZE (0x400000)
 #endif
+#define MEMMASK		(MEM_SIZE-1)
 
 #ifdef HW_RVL
 #include "MEM2.h"
@@ -200,6 +201,8 @@ void dma_pi_write()
 	*/
 	ROMCache_read(((unsigned char*)rdram + ((unsigned int)(pi_register.pi_dram_addr_reg)^S8)), 
 				  ((pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFF)^S8, dma_length);
+	
+	// Dynarec, invalidate any code we wrote over.
 	if(!interpcore)
 	{
 		for (i=0; i<dma_length; i++)
@@ -225,25 +228,11 @@ void dma_pi_write()
     // (This is just a convenient way to run this code once at the beginning)
 	if (pi_register.pi_cart_addr_reg == 0x10001000)
 	{
-		switch(r4300.cic_chip)
-		{
-			case 1:
-			case 2:
-			case 3:
-			case 6:
-#ifdef USE_EXPANSION
-				rdram[0x318/4] = 0x800000;
-#else
-				rdram[0x318/4] = 0x400000;
-#endif
-			break;
-			case 5:
-#ifdef USE_EXPANSION
-				rdram[0x3F0/4] = 0x800000;
-#else
-				rdram[0x3F0/4] = 0x400000;
-#endif
-			break;
+		if(r4300.cic_chip == 5) {
+			rdram[0x3F0/4] = MEM_SIZE;
+		}
+		else {
+			rdram[0x318/4] = MEM_SIZE;
 		}
 	}
 
