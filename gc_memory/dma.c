@@ -143,9 +143,10 @@ void dma_pi_write()
 	unsigned long dma_length;
 	int i;
 
-	// SRAM or FlashRam Read DMA
-	if (pi_register.pi_cart_addr_reg < 0x10000000)
+	// Non Cart region DMA
+	if (pi_register.pi_cart_addr_reg < 0x10000000 || pi_register.pi_cart_addr_reg >= 0x1fc00000)
 	{
+		// SRAM or FlashRam Read DMA
 		if (pi_register.pi_cart_addr_reg >= 0x08000000 && pi_register.pi_cart_addr_reg < 0x08010000)
 		{
 			if (flashRAMInfo.use_flashram != 1)
@@ -158,28 +159,24 @@ void dma_pi_write()
 			else
 				dma_read_flashram();
 		}
-		else if (pi_register.pi_cart_addr_reg >= 0x06000000 && pi_register.pi_cart_addr_reg < 0x08000000)
-		{	// What lies here?
+		// 64DD IPL region
+		else if (pi_register.pi_cart_addr_reg >= 0x06000000 && pi_register.pi_cart_addr_reg < 0x08000000) 
+		{
 		}
-//	else
-//	  printf("unknown dma write:%x\n", (int)pi_register.pi_cart_addr_reg);
+		// Stops Paper Mario from reading beyond cart region
+		else if (pi_register.pi_cart_addr_reg >= 0x1fc00000) 
+		{
+		}
 
 		pi_register.read_pi_status_reg |= 1;
 		update_count();
 		add_interupt_event(PI_INT, /*pi_register.pi_wr_len_reg*/0x1000);
-
 		return;
 	}
 
-	if (pi_register.pi_cart_addr_reg >= 0x1fc00000) // for paper mario
-	{
-		pi_register.read_pi_status_reg |= 1;
-		update_count();
-		add_interupt_event(PI_INT, 0x1000);
-		return;
-	}
-
-	// Don't DMA past the end of the ROM nor past the end of MEM
+	// Cart DMA: Don't DMA past the end of the ROM nor past the end of MEM
+	// Not that it matters, but actual N64 hardware will repeat pi_dram_addr_reg>>16 
+	// over the unmapped ROM region past the end of ROM, which we don't do.
 	dma_length = (pi_register.pi_wr_len_reg & 0xFFFFFF)+1;
 	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFF;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
@@ -194,7 +191,7 @@ void dma_pi_write()
 		return;
 	}
 
-	/* DMA transfer 
+	/* DMA transfer
 		from cart address: ((pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFF)^S8
 		to RDRAM address: ((unsigned int)(pi_register.pi_dram_addr_reg)^S8)
 		of length:	length
