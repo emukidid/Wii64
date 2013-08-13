@@ -81,7 +81,6 @@ void BOXART_LoadTexture(u32 CRC, char *buffer)
 	// if we didn't find it, then return the default image
 	if(!found)
 	{
-		fseek(boxartFile,MAX_HEADER_SIZE,SEEK_SET);
-		fread(buffer, 1, BOXART_TEX_SIZE, boxartFile);
+		memcpy(buffer,&missBoxArt,BOXART_TEX_SIZE);
 	}
 }
