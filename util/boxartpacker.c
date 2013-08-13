@@ -40,16 +40,16 @@ int do_ls(char []);
 	The image is then vertically flipped too.
 */
 // Sizes
-#define BOXART_HEIGHT 120
-#define BOXART_BACK_WIDTH 84
-#define BOXART_FRONT_WIDTH 84
-#define BOXART_SPINE_WIDTH 24
-#define BOXART_TOTAL_WIDTH (BOXART_BACK_WIDTH+BOXART_FRONT_WIDTH+BOXART_SPINE_WIDTH)
+#define BOXART_WIDTH 120
+#define BOXART_BACK_HEIGHT 84
+#define BOXART_FRONT_HEIGHT 84
+#define BOXART_SPINE_HEIGHT 24
+#define BOXART_TOTAL_HEIGHT (BOXART_BACK_HEIGHT+BOXART_FRONT_HEIGHT+BOXART_SPINE_HEIGHT)
 
 #define BPP 2
-#define RGB565_SIZE ((BOXART_TOTAL_WIDTH * BOXART_HEIGHT) * BPP)	/*46080*/
-#define TEX_SIZE ((BOXART_TOTAL_WIDTH * BOXART_HEIGHT) * BPP)		/*46080*/
-#define RGB888_SIZE ((BOXART_TOTAL_WIDTH * BOXART_HEIGHT) * 3)		/*69120*/
+#define RGB565_SIZE ((BOXART_WIDTH * BOXART_TOTAL_HEIGHT) * BPP)	/*46080*/
+#define TEX_SIZE ((BOXART_WIDTH * BOXART_TOTAL_HEIGHT) * BPP)		/*46080*/
+#define RGB888_SIZE ((BOXART_WIDTH * BOXART_TOTAL_HEIGHT) * 3)		/*69120*/
 #define FIRST_TEX_LOCATION 0x2000
 
 /* global variable(s) */
@@ -154,15 +154,15 @@ void add_file(char *filename)
 	
 	//RGB888 r[8] g[8] b[8]
 	//RGB565 r[5] g[6] b[5]
-	for(m = 0; m < BOXART_HEIGHT; m+=4)
+	for(m = 0; m < BOXART_TOTAL_HEIGHT; m+=4)
 	{
-		for(n = 0; n < BOXART_TOTAL_WIDTH; n+=4)
+		for(n = 0; n < BOXART_WIDTH; n+=4)
 		{
 			for(j = 0; j < 4; j++)
 			{
 				for(k = 0; k < 4; k++)
 				{
-					i = 3*( BOXART_TOTAL_WIDTH*(m+j) + (n+k) );
+					i = 3*( BOXART_WIDTH*(m+j) + (n+k) );
 					unsigned short rgb565_temp = ((rgb_888data[i+2])>>3)<<11 | ((rgb_888data[i+1])>>2)<<5 | ((rgb_888data[i])>>3);
 					//fwrite(&rgb565_temp,1,2,fout);	//for PC
 					// when writing for GC/Wii use this..
