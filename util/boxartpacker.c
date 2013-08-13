@@ -133,7 +133,7 @@ void add_file(char *filename)
 	if(strlen(filename)<12)	//eliminate thumbs.db and other crap..
 		return;
 	
-	int i,j,k,m,n;
+	int i,j,k,m,n,y;
 	unsigned char  *rgb_888data;
 	FILE  *rgb_888file = fopen(filename, "rb");
 	
@@ -162,7 +162,8 @@ void add_file(char *filename)
 			{
 				for(k = 0; k < 4; k++)
 				{
-					i = 3*( BOXART_WIDTH*(m+j) + (n+k) );
+					y = BOXART_TOTAL_HEIGHT-(m+j); //TEX is vertically flipped from BMP image
+					i = 3*( BOXART_WIDTH*y + (n+k) );
 					unsigned short rgb565_temp = ((rgb_888data[i+2])>>3)<<11 | ((rgb_888data[i+1])>>2)<<5 | ((rgb_888data[i])>>3);
 					//fwrite(&rgb565_temp,1,2,fout);	//for PC
 					// when writing for GC/Wii use this..
