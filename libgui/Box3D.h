@@ -1,6 +1,6 @@
 /**
- * Wii64 - Gui.h
- * Copyright (C) 2009 sepp256
+ * Wii64 - Box3D.h
+ * Copyright (C) 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -18,39 +18,38 @@
  *
 **/
 
-#ifndef GUI_H
-#define GUI_H
+#ifndef BOX3D_H
+#define BOX3D_H
 
-#include "GuiTypes.h"
-#include "Frame.h"
-#include "Logo.h"
-#include "Box3D.h"
-#include "GraphicsGX.h"
+//#include "GuiTypes.h"
+#include "Component.h"
 
 namespace menu {
 
-class Gui
+class Box3D : public Component
 {
 public:
-	void setVmode(GXRModeObj *rmode);
-	void addFrame(Frame* frame);
-	void removeFrame(Frame* frame);
-	void draw();
-	void drawBackground();
-	static Gui& getInstance()
+	Box3D();
+	~Box3D();
+	void setLocation(float x, float y, float z);
+	void setSize(float size);
+	void setMode(int mode);
+	void updateTime(float deltaTime);
+	void drawComponent(Graphics& gfx);
+/*	enum LogoMode
 	{
-		static Gui obj;
-		return obj;
-	}
-	Graphics *gfx;
-	Logo* menuLogo;
-	Box3D* menuBox3D;
+		LOGO_N=0,
+		LOGO_M,
+		LOGO_W
+	};*/
 
 private:
-	Gui();
-	~Gui();
-	FrameList frameList;
-	char fade;
+	void drawQuad(u8 v0, u8 v1, u8 v2, u8 v3, u8 st0, u8 st1, u8 st2, u8 st3, u8 c, u8 n);
+	void drawLine(u8 v0, u8 v1, u8 c);
+	int logoMode;
+	float x, y, z, size;
+	float rotateAuto, rotateX, rotateY;
+
 };
 
 } //namespace menu 

@@ -43,10 +43,14 @@ Gui::Gui()
 	menuLogo = new Logo();
 	menuLogo->setLocation(570.0, 70.0, -150.0);
 	menuLogo->setVisible(true);
+	menuBox3D = new Box3D();
+	menuBox3D->setLocation(320.0, 240.0, -150.0);
+	menuBox3D->setVisible(true);
 }
 
 Gui::~Gui()
 {
+	delete menuBox3D;
 	delete menuLogo;
 	delete gfx;
 }
@@ -86,6 +90,7 @@ void Gui::draw()
 	}
 //	menuLogo->drawComponent(*gfx);
 	menuLogo->draw(*gfx);
+//	menuBox3D->draw(*gfx);
 	if (MessageBox::getInstance().getActive()) MessageBox::getInstance().drawMessageBox(*gfx);
 	if (LoadingBar::getInstance().getActive()) LoadingBar::getInstance().drawLoadingBar(*gfx);
 	Cursor::getInstance().drawCursor(*gfx);

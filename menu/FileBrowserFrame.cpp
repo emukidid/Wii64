@@ -522,8 +522,8 @@ void fileBrowserFrame_LoadFile(int i)
 		
 		//Load boxart:
 		BOXART_Init();
-		BOXART_LoadTexture(ROM_HEADER->CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART)->getTexture());
-		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART)->getTexture(), BOXART_TEX_SIZE);
+		BOXART_LoadTexture(ROM_HEADER->CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture());
+		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture(), BOXART_TEX_SIZE);
 		GX_InvalidateTexAll();
 
 		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);

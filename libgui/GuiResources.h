@@ -63,7 +63,9 @@ public:
 		IMAGE_N64_CONTROLLER,
 		IMAGE_CURRENT_FB,
 		IMAGE_STATE_FB,
-		IMAGE_BOXART
+		IMAGE_BOXART_FRONT,
+		IMAGE_BOXART_SPINE,
+		IMAGE_BOXART_BACK
 	};
 
 private:
@@ -81,7 +83,7 @@ private:
 	Image *n64ControllerImage;
 	Image *currentFramebufferImage, *stateFramebufferImage;
 	u8	*currentFramebufferTexture, *stateFramebufferTexture;
-	Image *boxartImage;
+	Image *boxartFrontImage, *boxartSpineImage, *boxartBackImage;
 	u8	*boxartTexture;
 
 };

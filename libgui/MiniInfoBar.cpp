@@ -19,6 +19,7 @@
 **/
 
 #include "MiniInfoBar.h"
+#include "Gui.h"
 #include "GuiResources.h"
 #include "GraphicsGX.h"
 #include "IPLFont.h"
@@ -125,12 +126,16 @@ void MiniInfoBar::drawComponent(Graphics& gfx)
 	gfx.setTEV(GX_PASSCLR);
 	
 	//draw boxart image
-	Resources::getInstance().getImage(Resources::IMAGE_BOXART)->activateImage(GX_TEXMAP0);
+/*	Resources::getInstance().getImage(Resources::IMAGE_BOXART_FRONT)->activateImage(GX_TEXMAP0);
 	gfx.setTEV(GX_REPLACE);
 	gfx.enableBlending(true);
-	gfx.drawImage(0, 260, 140, BOXART_TEX_WD, BOXART_TEX_HT, 0, 1, 0, 1);
-	gfx.setTEV(GX_PASSCLR);
+	gfx.drawImage(0, 260, 140, BOXART_TEX_WD, BOXART_TEX_FRONT_HT, 0, 1, 0, 1);
+	gfx.setTEV(GX_PASSCLR);*/
 	
+	menu::Gui::getInstance().menuBox3D->setLocation(320.0, 180.0, -150.0);
+	menu::Gui::getInstance().menuBox3D->setVisible(true);
+	menu::Gui::getInstance().menuBox3D->draw(gfx);
+
 }
 
 void MiniInfoBar::updateTime(float deltaTime)

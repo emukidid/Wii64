@@ -69,7 +69,12 @@ Resources::Resources()
 	boxartTexture = (u8*) memalign(32, BOXART_TEX_SIZE);
 	memset(boxartTexture, 0x00, BOXART_TEX_SIZE);
 	DCFlushRange(boxartTexture, BOXART_TEX_SIZE);
-	boxartImage = new Image(boxartTexture, BOXART_TEX_WD, BOXART_TEX_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	boxartFrontImage = new Image(boxartTexture, 
+								BOXART_TEX_WD, BOXART_TEX_FRONT_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	boxartSpineImage = new Image(boxartTexture+BOXART_TEX_FRONT_SIZE, 
+								BOXART_TEX_WD, BOXART_TEX_SPINE_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	boxartBackImage = new Image(boxartTexture+BOXART_TEX_FRONT_SIZE+BOXART_TEX_SPINE_SIZE,
+								BOXART_TEX_WD, BOXART_TEX_FRONT_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
 }
 
 Resources::~Resources()
@@ -92,7 +97,9 @@ Resources::~Resources()
 	delete n64ControllerImage;
 	delete currentFramebufferImage;
 	delete stateFramebufferImage;
-	delete boxartImage;
+	delete boxartFrontImage;
+	delete boxartSpineImage;
+	delete boxartBackImage;
 	free(currentFramebufferTexture);
 	free(stateFramebufferTexture);
 	free(boxartTexture);
@@ -157,8 +164,14 @@ Image* Resources::getImage(int image)
 	case IMAGE_STATE_FB:
 		returnImage = stateFramebufferImage;
 		break;
-	case IMAGE_BOXART:
-		returnImage = boxartImage;
+	case IMAGE_BOXART_FRONT:
+		returnImage = boxartFrontImage;
+		break;
+	case IMAGE_BOXART_SPINE:
+		returnImage = boxartSpineImage;
+		break;
+	case IMAGE_BOXART_BACK:
+		returnImage = boxartBackImage;
 		break;
 	}
 	return returnImage;

@@ -46,6 +46,7 @@ OBJ		+= \
 		menu/SettingsFrame.o\
 		menu/SelectCPUFrame.o\
 		menu/MenuResources.o \
+		libgui/Box3D.o \
 		libgui/Button.o \
 		libgui/Component.o \
 		libgui/CursorManager.o \
