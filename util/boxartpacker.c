@@ -162,7 +162,7 @@ void add_file(char *filename)
 			{
 				for(k = 0; k < 4; k++)
 				{
-					y = BOXART_TOTAL_HEIGHT-(m+j); //TEX is vertically flipped from BMP image
+					y = BOXART_TOTAL_HEIGHT-1-(m+j); //TEX is vertically flipped from BMP image
 					i = 3*( BOXART_WIDTH*y + (n+k) );
 					unsigned short rgb565_temp = ((rgb_888data[i+2])>>3)<<11 | ((rgb_888data[i+1])>>2)<<5 | ((rgb_888data[i])>>3);
 					//fwrite(&rgb565_temp,1,2,fout);	//for PC
