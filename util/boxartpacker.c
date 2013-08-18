@@ -87,9 +87,6 @@ void process_file(char *filename)
 	char temp_str[255],temp_filename[255];
 	unsigned int temp_crc=0,temp_location=0;
 	
-	if(strlen(filename)<12)	//eliminate thumbs.db and other crap..
-		return;
-
 	strncpy(temp_filename,filename,255);
 	printf("File: %s\n",temp_filename);
 	
@@ -241,7 +238,7 @@ int main()
 	printf("Padding header with %i bytes\n",buffer_amount);
 	while(buffer_amount>0)
 	{
-		fputc(0x00, fout);
+		fputc(0xFF, fout);
 		buffer_amount--;
 	}
 	fflush(fout);
@@ -273,8 +270,11 @@ int do_ls( char dirname[] )
 		stat(direntp->d_name, &fileInfo);
 		//if we don't have a directory, add the filename to the array
 		if(!S_ISDIR(fileInfo.st_mode)) {
-			strcpy(filesArray[filesCount],direntp->d_name);
-			filesCount++;
+			if(!strcmp(&direntp->d_name[strlen(direntp->d_name)-4], ".bmp")) 
+			{
+				strcpy(filesArray[filesCount],direntp->d_name);
+				filesCount++;
+			}
 		}
 	}
 	closedir(dir_ptr); //close it
