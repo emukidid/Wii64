@@ -100,7 +100,7 @@ static inline char* getAlignedName(char* name){
 	} else return name;
 }
 
-int fileBrowser_WiiFS_readDir(fileBrowser_file* file, fileBrowser_file** dir){
+int fileBrowser_WiiFS_readDir(fileBrowser_file* file, fileBrowser_file** dir, int recursive, int n64only){
 	static char dirents[32*(8+1+3+1)] __attribute__((aligned(32)));
 	unsigned int numDirents = 32;
 	// Call the corresponding ISFS function

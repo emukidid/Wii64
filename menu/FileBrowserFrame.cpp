@@ -331,7 +331,7 @@ void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir)
 	if(dir_entries){ free(dir_entries); dir_entries = NULL; }
 	
 	// Read the directories and return on error
-	num_entries = romFile_readDir(dir, &dir_entries);
+	num_entries = romFile_readDir(dir, &dir_entries, 1, 1);
 	if(num_entries <= 0)
 	{ 
 		if(dir_entries) { free(dir_entries); dir_entries = NULL; } 

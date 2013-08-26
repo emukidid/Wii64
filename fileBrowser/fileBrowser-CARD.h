@@ -1,6 +1,6 @@
 /**
  * Wii64 - fileBrowser-CARD.h
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2013 emu_kidid
  * 
  * fileBrowser module for Nintendo Gamecube Memory Cards
  *
@@ -31,7 +31,7 @@ extern fileBrowser_file topLevel_CARD_SlotB;
 #define saveDir_CARD_SlotA topLevel_CARD_SlotA
 #define saveDir_CARD_SlotB topLevel_CARD_SlotB
 
-int fileBrowser_CARD_readDir(fileBrowser_file*, fileBrowser_file**);
+int fileBrowser_CARD_readDir(fileBrowser_file*, fileBrowser_file**, int, int);
 int fileBrowser_CARD_readFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_CARD_writeFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_CARD_deleteFile(fileBrowser_file*);

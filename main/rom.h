@@ -58,7 +58,7 @@ typedef struct _rom_header
    unsigned long Manufacturer_ID;
    unsigned short Cartridge_ID;
    unsigned short Country_code;
-   unsigned long Boot_Code[1008];
+   //unsigned long Boot_Code[1008];
 } rom_header;
 extern rom_header *ROM_HEADER;
 

@@ -58,7 +58,7 @@ extern int (*romFile_init)(fileBrowser_file*);
 
 /* readDir functions should return the number of directory entries
      or an error of the given file pointer and fill out the file array */
-extern int (*romFile_readDir)(fileBrowser_file*, fileBrowser_file**);
+extern int (*romFile_readDir)(fileBrowser_file*, fileBrowser_file**, int, int);
 
 /* readFile returns the status of the read and reads if it can
      arguments: file*, buffer, length */

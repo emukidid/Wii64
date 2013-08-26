@@ -1,7 +1,7 @@
 /**
  * Wii64 - fileBrowser-libfat.h
  * Copyright (C) 2007, 2008, 2009 Mike Slegeir
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2013 emu_kidid
  * 
  * fileBrowser for any devices using libfat
  *
@@ -31,7 +31,7 @@ extern fileBrowser_file topLevel_libfat_USB;      //Wii only, USB
 extern fileBrowser_file saveDir_libfat_Default;   //GC SD Slots & Wii Front SD Slot
 extern fileBrowser_file saveDir_libfat_USB;       //Wii only, USB
 
-int fileBrowser_libfat_readDir(fileBrowser_file*, fileBrowser_file**);
+int fileBrowser_libfat_readDir(fileBrowser_file*, fileBrowser_file**, int, int);
 int fileBrowser_libfat_readFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_libfat_writeFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_libfat_deleteFile(fileBrowser_file* f);

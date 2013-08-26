@@ -29,7 +29,7 @@
 extern fileBrowser_file topLevel_WiiFS;
 extern fileBrowser_file saveDir_WiiFS;
 
-int fileBrowser_WiiFS_readDir(fileBrowser_file*, fileBrowser_file**);
+int fileBrowser_WiiFS_readDir(fileBrowser_file*, fileBrowser_file**, int, int);
 int fileBrowser_WiiFS_readFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_WiiFS_writeFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_WiiFS_seekFile(fileBrowser_file*, unsigned int, unsigned int);

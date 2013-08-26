@@ -1,6 +1,6 @@
 /**
  * Wii64 - fileBrowser-CARD.c
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2013 emu_kidid
  * 
  * fileBrowser module for Nintendo Gamecube Memory Cards
  *
@@ -63,7 +63,7 @@ int mount_card(int slot) {
 	return Slot_error;
 }
 
-int fileBrowser_CARD_readDir(fileBrowser_file* file, fileBrowser_file** dir){
+int fileBrowser_CARD_readDir(fileBrowser_file* file, fileBrowser_file** dir, int recursive, int n64only){
   return 0; /* Not required, use IPL to delete/copy files */
 }
 

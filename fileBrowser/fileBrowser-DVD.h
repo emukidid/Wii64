@@ -1,6 +1,6 @@
 /**
  * Wii64 - fileBrowser-DVD.h
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2013 emu_kidid
  * 
  * fileBrowser module for ISO9660 DVD Discs
  *
@@ -28,7 +28,7 @@
 
 extern fileBrowser_file topLevel_DVD;
 
-int fileBrowser_DVD_readDir(fileBrowser_file*, fileBrowser_file**);
+int fileBrowser_DVD_readDir(fileBrowser_file*, fileBrowser_file**, int, int);
 int fileBrowser_DVD_readFile(fileBrowser_file*, void*, unsigned int);
 int fileBrowser_DVD_seekFile(fileBrowser_file*, unsigned int, unsigned int);
 int fileBrowser_DVD_init(fileBrowser_file* file);

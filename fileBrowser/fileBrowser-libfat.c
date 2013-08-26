@@ -1,7 +1,7 @@
 /**
  * Wii64 - fileBrowser-libfat.c
  * Copyright (C) 2007, 2008, 2009 Mike Slegeir
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2013 emu_kidid
  * 
  * fileBrowser for any devices using libfat
  *
@@ -32,6 +32,7 @@
 #include "fileBrowser.h"
 #include <sdcard/gcsd.h>
 #include "../r4300/r4300.h"
+#include "../main/ROM-Cache.h"
 
 extern BOOL hasLoadedROM;
 extern int stop;
@@ -50,6 +51,7 @@ const DISC_INTERFACE* cardb = &__io_gcsdb;
 #define FRONTSD 1
 #define CARD_A  2
 #define CARD_B  3
+#ifdef HW_RVL
 static lwp_t removalThread = LWP_THREAD_NULL;
 static int rThreadRunning = 0;
 static int rThreadCreated = 0;
@@ -57,6 +59,9 @@ static char sdMounted  = 0;
 static char sdNeedsUnmount  = 0;
 static char usbMounted = 0;
 static char usbNeedsUnmount = 0;
+#else
+static char sdMounted  = 0;
+#endif
 
 fileBrowser_file topLevel_libfat_Default =
 	{ "sd:/wii64/roms", // file name
@@ -112,11 +117,11 @@ void pauseRemovalThread()
 #endif
 }
 
+#ifdef HW_RVL
 static int devsleep = 1*1000*1000;
 
 static void *removalCallback (void *arg)
 {
-#ifdef HW_RVL
   while(devsleep > 0)
   {
     if(!rThreadRunning)
@@ -151,9 +156,9 @@ static void *removalCallback (void *arg)
       devsleep -= THREAD_SLEEP;
     }
   }
-#endif
   return NULL;
 }
+#endif
 
 void InitRemovalThread()
 {
@@ -163,8 +168,8 @@ void InitRemovalThread()
 #endif
 }
 
-
-int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir){
+static int num_entries = 0;
+int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir, int recursive, int n64only){
   
 	pauseRemovalThread();
 	
@@ -172,25 +177,51 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir){
 	if(!dp) return FILE_BROWSER_ERROR;
 	struct dirent *entry;
 	struct stat fstat;
+	fileBrowser_file *direntry = malloc(sizeof(fileBrowser_file));
+	rom_header *hdr = memalign(32, sizeof(rom_header));
 	
-	// Set everything up to read
-	int num_entries = 2, i = 0;
-	*dir = malloc( num_entries * sizeof(fileBrowser_file) );
 	// Read each entry of the directory
-	while( (entry = readdir(dp)) != NULL ){
-		// Make sure we have room for this one
-		if(i == num_entries){
-			++num_entries;
-			*dir = realloc( *dir, num_entries * sizeof(fileBrowser_file) ); 
+	while( (entry = readdir(dp)) != NULL ) {
+		// Create a temporary entry for this directory entry.
+		memset(direntry, 0, sizeof(fileBrowser_file));
+		sprintf(direntry->name, "%s/%s", file->name, entry->d_name);
+		stat(direntry->name,&fstat);
+		direntry->offset = 0;
+		direntry->size   = fstat.st_size;
+		direntry->attr   = (fstat.st_mode & _IFDIR) ?
+							FILE_BROWSER_ATTR_DIR : 0;
+		
+		// If recursive, search all directories
+		if(recursive && (direntry->attr == FILE_BROWSER_ATTR_DIR)) {
+			if(entry->d_name[0] == '.') continue;	// hide/do not browse these directories.
+			//print_gecko("Entering directory: %s\r\n", direntry->name);
+			fileBrowser_libfat_readDir(direntry, dir, recursive, n64only);
 		}
-		sprintf((*dir)[i].name, "%s/%s", file->name, entry->d_name);
-		stat((*dir)[i].name,&fstat);
-		(*dir)[i].offset = 0;
-		(*dir)[i].size   = fstat.st_size;
-		(*dir)[i].attr   = (fstat.st_mode & _IFDIR) ?
-		                     FILE_BROWSER_ATTR_DIR : 0;
-		++i;
+		else {
+			if(*dir == NULL) {
+				*dir = malloc( sizeof(fileBrowser_file) );
+				num_entries = 0;
+			}
+			else {
+				//print_gecko("Size of *dir = %i\r\n", num_entries);
+				*dir = realloc( *dir, ((num_entries)+1) * sizeof(fileBrowser_file) ); 
+			}
+			if(n64only) {
+				if(fileBrowser_libfat_readFile(direntry, hdr, sizeof(rom_header)) == sizeof(rom_header)) {
+					if(init_byte_swap(*(u32*)hdr) == BYTE_SWAP_BAD)
+						continue;
+				}
+			}
+			
+			memcpy(&(*dir)[num_entries], direntry, sizeof(fileBrowser_file));
+			//print_gecko("Adding file: %s\r\n", (*dir)[num_entries].name);
+			++num_entries;
+		}
 	}
+	if(direntry)
+		free(direntry);
+	if(hdr)
+		free(hdr);
 	
 	closedir(dp);
 	continueRemovalThread();
@@ -242,10 +273,10 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 
 	int res = 0;
 
+#ifdef HW_RVL
  	if(!rThreadCreated) {
 	 	InitRemovalThread();
  	}
-#ifdef HW_RVL
 	pauseRemovalThread();
   	if(f->name[0] == 's') {      //SD
     	if(!sdMounted) {
