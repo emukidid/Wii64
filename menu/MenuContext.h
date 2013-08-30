@@ -26,6 +26,7 @@
 #include "../libgui/InputManager.h"
 #include "MainFrame.h"
 #include "MiniMenuFrame.h"
+#include "SelectRomFrame.h"
 #include "LoadRomFrame.h"
 #include "FileBrowserFrame.h"
 #include "CurrentRomFrame.h"
@@ -52,6 +53,7 @@ public:
 	enum FrameIndices
 	{
 		FRAME_MAIN=1,
+		FRAME_SELECTROM,
 		FRAME_LOADROM,
 		FRAME_FILEBROWSER,
 		FRAME_CURRENTROM,
@@ -70,6 +72,7 @@ private:
 	menu::Frame *currentActiveFrame;
 	MainFrame *mainFrame;
 	MiniMenuFrame *miniMenuFrame;
+	SelectRomFrame *selectRomFrame;
 	LoadRomFrame *loadRomFrame;
 	FileBrowserFrame *fileBrowserFrame;
 	CurrentRomFrame *currentRomFrame;

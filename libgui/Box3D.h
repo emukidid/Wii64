@@ -32,8 +32,10 @@ public:
 	Box3D();
 	~Box3D();
 	void setLocation(float x, float y, float z);
+	void setEnableRotate(bool enable);
 	void setSize(float size);
 	void setMode(int mode);
+	void setTexture(u8* texture);
 	void updateTime(float deltaTime);
 	void drawComponent(Graphics& gfx);
 /*	enum LogoMode
@@ -49,6 +51,9 @@ private:
 	int logoMode;
 	float x, y, z, size;
 	float rotateAuto, rotateX, rotateY;
+	bool enableRotate;
+	Image *activeBoxartFrontImage, *activeBoxartSpineImage, *activeBoxartBackImage;
+	Image *customBoxartFrontImage, *customBoxartSpineImage, *customBoxartBackImage;
 
 };
 

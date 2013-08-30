@@ -5,7 +5,7 @@ CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
 LTO			 = #-flto  Uncomment to use link-time optimization
-DEBUG_FLAGS += #-DDEBUGON #-DSHOW_DEBUG #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
+DEBUG_FLAGS += -DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
 FEATURES	+= #-DUSE_EXPANSION #-DUSE_TLB_CACHE #-DUSE_ROM_CACHE_L1 #-DEMBEDDED_FONTS
 
 MACHDEP		+= -mcpu=750 -meabi -mhard-float 
@@ -35,6 +35,7 @@ OBJ		+= \
 		menu/MenuContext.o \
 		menu/MainFrame.o \
 		menu/MiniMenuFrame.o \
+		menu/SelectRomFrame.o \
 		menu/LoadRomFrame.o \
 		menu/FileBrowserFrame.o \
 		menu/ConfigureButtonsFrame.o\

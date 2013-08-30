@@ -28,6 +28,7 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 		: currentActiveFrame(0),
 		  mainFrame(0),
 		  miniMenuFrame(0),
+		  selectRomFrame(0),
 		  loadRomFrame(0),
 		  fileBrowserFrame(0),
 		  currentRomFrame(0),
@@ -46,6 +47,7 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 
 	mainFrame = new MainFrame();
 	miniMenuFrame = new MiniMenuFrame();
+	selectRomFrame = new SelectRomFrame();
 	loadRomFrame = new LoadRomFrame();
 	fileBrowserFrame = new FileBrowserFrame();
 	currentRomFrame = new CurrentRomFrame();
@@ -59,6 +61,7 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 
 	menu::Gui::getInstance().addFrame(mainFrame);
 	menu::Gui::getInstance().addFrame(miniMenuFrame);
+	menu::Gui::getInstance().addFrame(selectRomFrame);
 	menu::Gui::getInstance().addFrame(loadRomFrame);
 	menu::Gui::getInstance().addFrame(fileBrowserFrame);
 	menu::Gui::getInstance().addFrame(currentRomFrame);
@@ -86,6 +89,7 @@ MenuContext::~MenuContext()
 	delete currentRomFrame;
 	delete fileBrowserFrame;
 	delete loadRomFrame;
+	delete selectRomFrame;
 	delete miniMenuFrame;
 	delete mainFrame;
 	pMenuContext = NULL;
@@ -120,6 +124,9 @@ void MenuContext::setActiveFrame(int frameIndex)
 			currentActiveFrame = miniMenuFrame;
 		else
 			currentActiveFrame = mainFrame;
+		break;
+	case FRAME_SELECTROM:
+		currentActiveFrame = selectRomFrame;
 		break;
 	case FRAME_LOADROM:
 		currentActiveFrame = loadRomFrame;
@@ -173,6 +180,9 @@ menu::Frame* MenuContext::getFrame(int frameIndex)
 	switch(frameIndex) {
 	case FRAME_MAIN:
 		pFrame = mainFrame;
+		break;
+	case FRAME_SELECTROM:
+		pFrame = selectRomFrame;
 		break;
 	case FRAME_LOADROM:
 		pFrame = loadRomFrame;

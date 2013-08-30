@@ -28,10 +28,10 @@
 namespace menu {
 
 #define BOX3D_X1 30
-//#define BOX3D_Y1 22 //88/4
-//#define BOX3D_Z1 4 //16/4
-#define BOX3D_Y1 21
-#define BOX3D_Z1 6
+#define BOX3D_Y1 22 //88/4
+#define BOX3D_Z1 4 //16/4
+//#define BOX3D_Y1 21
+//#define BOX3D_Z1 6
 
 // 'Box3D' vertex data
 s8 Box3D_verts[] ATTRIBUTE_ALIGN (32) =
@@ -85,7 +85,14 @@ Box3D::Box3D()
 		  size(2),
 		  rotateAuto(0),
 		  rotateX(0),
-		  rotateY(0)
+		  rotateY(0),
+		  enableRotate(true),
+		  activeBoxartFrontImage(0),
+		  activeBoxartSpineImage(0),
+		  activeBoxartBackImage(0),
+		  customBoxartFrontImage(0),
+		  customBoxartSpineImage(0),
+		  customBoxartBackImage(0)
 {
 	setVisible(false);
 //	srand ( gettick() );
@@ -94,6 +101,9 @@ Box3D::Box3D()
 
 Box3D::~Box3D()
 {
+	if(customBoxartFrontImage) 	delete customBoxartFrontImage;
+	if(customBoxartSpineImage) 	delete customBoxartSpineImage;
+	if(customBoxartBackImage) 	delete customBoxartBackImage;
 }
 
 void Box3D::setLocation(float newX, float newY, float newZ)
@@ -101,6 +111,11 @@ void Box3D::setLocation(float newX, float newY, float newZ)
 	x = newX;
 	y = newY;
 	z = newZ;
+}
+
+void Box3D::setEnableRotate(bool enable)
+{
+	enableRotate = enable;
 }
 
 void Box3D::setSize(float newSize)
@@ -111,6 +126,33 @@ void Box3D::setSize(float newSize)
 void Box3D::setMode(int mode)
 {
 	logoMode = mode;
+}
+
+void Box3D::setTexture(u8* texture)
+{
+	if(customBoxartFrontImage) 	delete customBoxartFrontImage;
+	if(customBoxartSpineImage) 	delete customBoxartSpineImage;
+	if(customBoxartBackImage) 	delete customBoxartBackImage;
+	
+	if(texture)
+	{
+		customBoxartFrontImage = new Image(texture, 
+									BOXART_TEX_WD, BOXART_TEX_FRONT_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+		customBoxartSpineImage = new Image(texture+BOXART_TEX_FRONT_SIZE, 
+									BOXART_TEX_WD, BOXART_TEX_SPINE_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+		customBoxartBackImage = new Image(texture+BOXART_TEX_FRONT_SIZE+BOXART_TEX_SPINE_SIZE,
+									BOXART_TEX_WD, BOXART_TEX_FRONT_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+		activeBoxartFrontImage = customBoxartFrontImage;
+		activeBoxartSpineImage = customBoxartSpineImage;
+		activeBoxartBackImage  = customBoxartBackImage;
+	} 
+	else
+	{
+		activeBoxartFrontImage = Resources::getInstance().getImage(Resources::IMAGE_BOXART_FRONT);
+		activeBoxartSpineImage = Resources::getInstance().getImage(Resources::IMAGE_BOXART_SPINE);
+		activeBoxartBackImage  = Resources::getInstance().getImage(Resources::IMAGE_BOXART_BACK);
+	}
+	GX_InvalidateTexAll();
 }
 
 void Box3D::updateTime(float deltaTime)
@@ -141,8 +183,11 @@ void Box3D::drawComponent(Graphics& gfx)
 	stickY = PAD_SubStickY(0);
 //	if(stickX > 18 || stickX < -18) rotateX += stickX/32;
 //	if(stickY > 18 || stickY < -18) rotateY += stickY/32;
-	rotateX += stickX/32;
-	rotateY += stickY/32;
+	if(enableRotate)
+	{
+		rotateX += stickX/32;
+		rotateY += stickY/32;
+	}
 
 	if (!isVisible())
 		return;
@@ -154,12 +199,15 @@ void Box3D::drawComponent(Graphics& gfx)
 //		guMtxConcat (m, tmp, m);
 		guMtxRotAxisDeg (tmp, &axisX, 180);			//flip rightside-up
 		guMtxConcat (m, tmp, m);
-		guMtxRotAxisDeg (tmp, &axisX, -rotateY);
-		guMtxConcat (m, tmp, m);
-		guMtxRotAxisDeg (tmp, &axisY, rotateX);
-		guMtxConcat (m, tmp, m);
-		guMtxRotAxisDeg (tmp, &axisY, -rotateAuto);		//slowly rotate logo
-		guMtxConcat (m, tmp, m);
+		if(enableRotate)
+		{
+			guMtxRotAxisDeg (tmp, &axisX, -rotateY);
+			guMtxConcat (m, tmp, m);
+			guMtxRotAxisDeg (tmp, &axisY, rotateX);
+			guMtxConcat (m, tmp, m);
+			guMtxRotAxisDeg (tmp, &axisY, -rotateAuto);		//slowly rotate logo
+			guMtxConcat (m, tmp, m);
+		}
 		guMtxScale (tmp, size, size, size);
 		guMtxConcat (m, tmp, m);
 	}
@@ -181,9 +229,10 @@ void Box3D::drawComponent(Graphics& gfx)
 	u32 theta = 180;
 	u32 phi = 0;
 //	GXColor litcol = (GXColor){ 0xD0, 0xD0, 0xD0, 0xFF }; // Light color 1
-	GXColor litcol = (GXColor){ 0xFF, 0xFF, 0xFF, 0xFF }; // Light color 1
+	GXColor litcol = (GXColor){ 0xBF, 0xBF, 0xBF, 0xFF }; // Light color 1
 	GXColor ambcol = (GXColor){ 0x40, 0x40, 0x40, 0xFF }; // Ambient 1
-	GXColor matcol = (GXColor){ 0x80, 0x80, 0x80, 0xFF };  // Material 1
+//	GXColor matcol = (GXColor){ 0x80, 0x80, 0x80, 0xFF };  // Material 1
+	GXColor matcol = (GXColor){ 0xFF, 0xFF, 0xFF, 0xFF };  // Material 1
 	
 	guVector lpos;
 	f32 _theta,_phi;
@@ -202,7 +251,7 @@ void Box3D::drawComponent(Graphics& gfx)
 	
 	// set number of rasterized color channels
 	GX_SetNumChans(1);
-	GX_SetChanCtrl(GX_COLOR0A0,GX_ENABLE,GX_SRC_REG,GX_SRC_VTX,GX_LIGHT0,GX_DF_CLAMP,GX_AF_NONE);
+	GX_SetChanCtrl(GX_COLOR0A0,GX_ENABLE,GX_SRC_REG,GX_SRC_REG,GX_LIGHT0,GX_DF_CLAMP,GX_AF_NONE);
 	GX_SetChanAmbColor(GX_COLOR0A0,ambcol);
 	GX_SetChanMatColor(GX_COLOR0A0,matcol);
 	
@@ -211,19 +260,16 @@ void Box3D::drawComponent(Graphics& gfx)
 	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
 	GX_SetVtxDesc (GX_VA_POS, GX_INDEX8);
 	GX_SetVtxDesc (GX_VA_NRM, GX_INDEX8);
-	GX_SetVtxDesc (GX_VA_CLR0, GX_INDEX8);
 	GX_SetVtxDesc (GX_VA_TEX0, GX_INDEX8);
 	
 	// setup the vertex attribute table
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_S8, 0);
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_NRM, GX_NRM_XYZ, GX_S8, 0);
-	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
 	GX_SetVtxAttrFmt (GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
 	
 	// set the array stride
 	GX_SetArray (GX_VA_POS, Box3D_verts, 3 * sizeof (s8));
 	GX_SetArray (GX_VA_NRM, Box3D_norms, 3 * sizeof (s8));
-	GX_SetArray (GX_VA_CLR0, Box3D_colors, 4 * sizeof (u8));
 	GX_SetArray (GX_VA_TEX0, Box3D_texcoords, 2 * sizeof (u8));
 	
 //	GX_SetNumChans (1); //2nd channel needed for lightings
@@ -232,17 +278,20 @@ void Box3D::drawComponent(Graphics& gfx)
 	GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
 	gfx.enableBlending(true);
 
-	Resources::getInstance().getImage(Resources::IMAGE_BOXART_FRONT)->activateImage(GX_TEXMAP0);
+//	Resources::getInstance().getImage(Resources::IMAGE_BOXART_FRONT)->activateImage(GX_TEXMAP0);
+	activeBoxartFrontImage->activateImage(GX_TEXMAP0);
 	GX_Begin (GX_QUADS, GX_VTXFMT0, 4);  //1 quads, so 4 verts
 	drawQuad ( 0, 3, 2, 1, 3, 0, 1, 2, selColor, 0); //Front Side
 	GX_End ();
 
-	Resources::getInstance().getImage(Resources::IMAGE_BOXART_BACK)->activateImage(GX_TEXMAP0);
+//	Resources::getInstance().getImage(Resources::IMAGE_BOXART_BACK)->activateImage(GX_TEXMAP0);
+	activeBoxartBackImage->activateImage(GX_TEXMAP0);
 	GX_Begin (GX_QUADS, GX_VTXFMT0, 4);  //1 quads, so 4 verts
 	drawQuad ( 5, 6, 7, 4, 1, 2, 3, 0, selColor, 1); //Back Side
 	GX_End ();
 
-	Resources::getInstance().getImage(Resources::IMAGE_BOXART_SPINE)->activateImage(GX_TEXMAP0);
+//	Resources::getInstance().getImage(Resources::IMAGE_BOXART_SPINE)->activateImage(GX_TEXMAP0);
+	activeBoxartSpineImage->activateImage(GX_TEXMAP0);
 	GX_Begin (GX_QUADS, GX_VTXFMT0, 8);  //2 quads, so 8 verts
 	drawQuad ( 4, 0, 1, 5, 3, 0, 1, 2, selColor, 3); //Bottom Side
 	drawQuad ( 3, 7, 6, 2, 3, 0, 1, 2, selColor, 2); //Top Side
@@ -267,19 +316,15 @@ void Box3D::drawQuad(u8 v0, u8 v1, u8 v2, u8 v3, u8 st0, u8 st1, u8 st2, u8 st3,
 	GX_Position1x8 (v0);
 	GX_Normal1x8 (n);
 	// one 8bit color idx
-	GX_Color1x8 (c);
 	GX_TexCoord1x8 (st0);
 	GX_Position1x8 (v1);
 	GX_Normal1x8 (n);
-	GX_Color1x8 (c);
 	GX_TexCoord1x8 (st1);
 	GX_Position1x8 (v2);
 	GX_Normal1x8 (n);
-	GX_Color1x8 (c);
 	GX_TexCoord1x8 (st2);
 	GX_Position1x8 (v3);
 	GX_Normal1x8 (n);
-	GX_Color1x8 (c);
 	GX_TexCoord1x8 (st3);
 }
 

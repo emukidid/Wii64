@@ -19,6 +19,7 @@
 **/
 
 #include "Button.h"
+#include "Gui.h"
 #include "GuiResources.h"
 #include "GraphicsGX.h"
 #include "IPLFont.h"
@@ -46,7 +47,8 @@ Button::Button(int style, char** label, float x, float y, float width, float hei
 		  height(height),
 		  fontSize(1.0),
 		  clickedFunc(0),
-		  returnFunc(0)
+		  returnFunc(0),
+		  boxTexture(0)
 {
 						//Focus color			Inactive color		  Active color			Selected color		  Label color
 	GXColor colors[5] = {{ 89,  89, 133, 190}, {255, 255, 255,  70}, { 65,  65,  65, 130}, {255, 255, 255, 255}, {255, 255, 255, 255}};
@@ -164,6 +166,11 @@ void Button::setSelectedFocusImage(Image *image)
 	selectedFocusImage = image;
 }
 
+void Button::setBoxTexture(u8* texture)
+{
+	boxTexture = texture;
+}
+
 #define SCROLL_PERIOD 4.0f
 
 void Button::drawComponent(Graphics& gfx)
@@ -237,6 +244,24 @@ void Button::drawComponent(Graphics& gfx)
 		}
 		gfx.drawImage(0, x, y, width/2, height, 0.0, width/8.0, 0.0, 1.0);
 		gfx.drawImage(0, x+width/2, y, width/2, height, width/8.0, 0.0, 0.0, 1.0);
+		break;
+	case BUTTON_BOX3D:
+		//TODO
+		
+		if (getFocus())	
+		{
+			menu::Gui::getInstance().menuBox3D->setSize(2.0);
+			menu::Gui::getInstance().menuBox3D->setEnableRotate(true);
+		}
+		else
+		{
+			menu::Gui::getInstance().menuBox3D->setSize(1.6);
+			menu::Gui::getInstance().menuBox3D->setEnableRotate(false);
+		}
+		menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -150.0);
+		menu::Gui::getInstance().menuBox3D->setTexture(boxTexture);
+		menu::Gui::getInstance().menuBox3D->setVisible(true);
+		menu::Gui::getInstance().menuBox3D->draw(gfx);
 		break;
 	}
 

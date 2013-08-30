@@ -1,6 +1,6 @@
 /**
  * Wii64 - Button.h
- * Copyright (C) 2009 sepp256
+ * Copyright (C) 2009, 2013 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -27,6 +27,7 @@
 #define BTN_DEFAULT menu::Button::BUTTON_DEFAULT
 #define BTN_A_NRM menu::Button::BUTTON_STYLEA_NORMAL
 #define BTN_A_SEL menu::Button::BUTTON_STYLEA_SELECT
+#define BTN_BOX3D menu::Button::BUTTON_BOX3D
 
 typedef void (*ButtonFunc)( void );
 
@@ -52,6 +53,7 @@ public:
 	void setFocusImage(Image *image);
 	void setSelectedImage(Image *image);
 	void setSelectedFocusImage(Image *image);
+	void setBoxTexture(u8* texture);
 	void updateTime(float deltaTime);
 	void drawComponent(Graphics& gfx);
 	Component* updateFocus(int direction, int buttonsPressed);
@@ -69,7 +71,8 @@ public:
 	{
 		BUTTON_DEFAULT=0,
 		BUTTON_STYLEA_NORMAL,
-		BUTTON_STYLEA_SELECT
+		BUTTON_STYLEA_SELECT,
+		BUTTON_BOX3D
 	};
 
 private:
@@ -84,6 +87,7 @@ private:
 	float x, y, width, height, fontSize;
 	GXColor	focusColor, inactiveColor, activeColor, selectedColor, labelColor;
 	ButtonFunc clickedFunc, returnFunc;
+	u8*	boxTexture;
 
 };
 

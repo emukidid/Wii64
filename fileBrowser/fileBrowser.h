@@ -64,6 +64,10 @@ extern int (*romFile_readDir)(fileBrowser_file*, fileBrowser_file**, int, int);
      arguments: file*, buffer, length */
 extern int (*romFile_readFile)(fileBrowser_file*, void*, unsigned int);
 
+/* readHeader returns the status of the read, reads if it can, and closes file
+     arguments: file*, buffer, length */
+extern int (*romFile_readHeader)(fileBrowser_file*, void*, unsigned int);
+
 /* seekFile returns the status of the seek and seeks if it can
      arguments: file*, offset, seek type */
 extern int (*romFile_seekFile)(fileBrowser_file*, unsigned int, unsigned int);

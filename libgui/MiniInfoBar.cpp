@@ -133,6 +133,9 @@ void MiniInfoBar::drawComponent(Graphics& gfx)
 	gfx.setTEV(GX_PASSCLR);*/
 	
 	menu::Gui::getInstance().menuBox3D->setLocation(320.0, 180.0, -150.0);
+	menu::Gui::getInstance().menuBox3D->setEnableRotate(true);
+	menu::Gui::getInstance().menuBox3D->setSize(2.0);
+	menu::Gui::getInstance().menuBox3D->setTexture(NULL);
 	menu::Gui::getInstance().menuBox3D->setVisible(true);
 	menu::Gui::getInstance().menuBox3D->draw(gfx);
 

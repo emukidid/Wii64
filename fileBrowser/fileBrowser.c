@@ -32,6 +32,7 @@ fileBrowser_file* saveFile_dir;
 int (*romFile_init)(fileBrowser_file*) = NULL;
 int (*romFile_readDir)(fileBrowser_file*, fileBrowser_file**, int, int) = NULL;
 int (*romFile_readFile)(fileBrowser_file*, void*, unsigned int) = NULL;
+int (*romFile_readHeader)(fileBrowser_file*, void*, unsigned int) = NULL;
 int (*romFile_seekFile)(fileBrowser_file*, unsigned int, unsigned int) = NULL;
 int (*romFile_deinit)(fileBrowser_file*) = NULL;
 
