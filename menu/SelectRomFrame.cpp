@@ -1,9 +1,11 @@
 /**
  * Wii64 - SelectRomFrame.cpp
  * Copyright (C) 2009, 2010, 2013 sepp256
+ * Copyright (C) 2013 emu_kidid
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
+ *                emukidid@gmail.com
  *
  *
  * This program is free software; you can redistribute it and/
@@ -197,9 +199,11 @@ SelectRomFrame::~SelectRomFrame()
 }
 
 static fileBrowser_file* dir_entries;
+static rom_header* 		rom_headers;
 static int				num_entries;
 static int				current_page;
 static int				max_page;
+extern rom_header 		*ROM_HEADER;
 
 void selectRomFrame_OpenDirectory(fileBrowser_file* dir);
 void selectRomFrame_Error(fileBrowser_file* dir, int error_code);
@@ -429,7 +433,8 @@ void Func_ReturnFromSelectRomFrame()
 		fileTextures[i] = NULL;
 	}
 	if(dir_entries){ free(dir_entries); dir_entries = NULL; }
-	
+	if(rom_headers){ free(rom_headers); rom_headers = NULL; }
+		
 	pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 }
 
@@ -499,7 +504,8 @@ void selectRomFrame_OpenDirectory(fileBrowser_file* dir)
 	// Free the old menu stuff
 //	if(menu_items){  free(menu_items);  menu_items  = NULL; }
 	if(dir_entries){ free(dir_entries); dir_entries = NULL; }
-	
+	if(rom_headers){ free(rom_headers); rom_headers = NULL; }
+		
 	// Read the directories and return on error
 	num_entries = romFile_readDir(dir, &dir_entries, 1, 1);
 	if(num_entries <= 0)
@@ -511,6 +517,15 @@ void selectRomFrame_OpenDirectory(fileBrowser_file* dir)
 	
 	// Sort the listing
 	qsort(dir_entries, num_entries, sizeof(fileBrowser_file), dir_comparator);
+	// Read all headers
+	rom_headers = (rom_header*) malloc(sizeof(rom_header)*num_entries);
+	for(int i = 0; i < num_entries; i++) {
+		fileBrowser_file f;
+		memcpy(&f, &dir_entries[i+(current_page*NUM_FILE_SLOTS)], sizeof(fileBrowser_file));
+		romFile_seekFile(&f, 0, FILE_BROWSER_SEEK_SET);
+		if(romFile_readHeader(&f, &rom_headers[i], sizeof(rom_header))!=sizeof(rom_header))
+			break;	// give up on the first read error
+	}
 
 	current_page = 0;
 	max_page = (int)ceil((float)num_entries/NUM_FILE_SLOTS);
@@ -550,10 +565,6 @@ void selectRomFrame_Error(fileBrowser_file* dir, int error_code)
 	Func_ReturnFromSelectRomFrame();
 }
 
-
-static rom_header pageRomHeaders[NUM_FILE_SLOTS];
-extern rom_header *ROM_HEADER;
-
 void selectRomFrame_FillPage()
 {
 
@@ -580,21 +591,15 @@ void selectRomFrame_FillPage()
 			//TODO: Load boxart for button
 			if(dir_entries[i+(current_page*NUM_FILE_SLOTS)].attr & FILE_BROWSER_ATTR_DIR)
 			{
-				memset(&pageRomHeaders[i], 0x00, sizeof(rom_header));
+				memset(&rom_headers[i+(current_page*NUM_FILE_SLOTS)], 0x00, sizeof(rom_header));
 				memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 			}
 			else
 			{
-				//load header
-				u32 bytes_read;
-				fileBrowser_file f;
-				memcpy(&f, &dir_entries[i+(current_page*NUM_FILE_SLOTS)], sizeof(fileBrowser_file));
-				f.offset = 0;
-				bytes_read = romFile_readHeader(&f, &pageRomHeaders[i], sizeof(rom_header));
 				//load boxart
 				BOXART_Init();
-				BOXART_LoadTexture(pageRomHeaders[i].CRC1,(char*) fileTextures[i]);
+				BOXART_LoadTexture(rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1,(char*) fileTextures[i]);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 //				GX_InvalidateTexAll();
 
@@ -602,14 +607,14 @@ void selectRomFrame_FillPage()
 				sprintf(feedback_string,"Read %i bytes for header in \n\"%s\"\n\"%s\"\nCRC = %x\nheader = %x",
 						bytes_read, &dir_entries[i+(current_page*NUM_FILE_SLOTS)].name[0],
 						&f.name[0],
-						pageRomHeaders[i].CRC1,&pageRomHeaders[i]);
+						rom_headers[i].CRC1,&rom_headers[i]);
 				menu::MessageBox::getInstance().setMessage(feedback_string);*/
 			}
 		}
 		else
 		{
 			FRAME_BUTTONS[btn_ind].buttonString = FRAME_STRINGS[5];
-			memset(&pageRomHeaders[i], 0x00, sizeof(rom_header));
+			memset(&rom_headers[i+(current_page*NUM_FILE_SLOTS)], 0x00, sizeof(rom_header));
 			memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
 			DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 		}

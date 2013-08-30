@@ -207,10 +207,9 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir, i
 				*dir = realloc( *dir, ((num_entries)+1) * sizeof(fileBrowser_file) ); 
 			}
 			if(n64only) {
-				if(fileBrowser_libfat_readFile(direntry, hdr, sizeof(rom_header)) == sizeof(rom_header)) {
-					if(init_byte_swap(*(u32*)hdr) == BYTE_SWAP_BAD)
-						continue;
-				}
+				if(!(strcasestr(direntry->name,".v64") || strcasestr(direntry->name,".z64")) ||
+					 strcasestr(direntry->name,".n64") || strcasestr(direntry->name,".bin"))
+					continue;
 			}
 			
 			memcpy(&(*dir)[num_entries], direntry, sizeof(fileBrowser_file));
