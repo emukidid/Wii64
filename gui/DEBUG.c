@@ -5,6 +5,7 @@
 #include <ogc/system.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <fat.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,6 +14,20 @@
 #include "TEXT.h"
 
 char printToSD;
+
+void print_gecko(const char* fmt, ...)
+{
+	if(usb_isgeckoalive(1)) {
+		char tempstr[2048];
+		va_list arglist;
+		va_start(arglist, fmt);
+		vsprintf(tempstr, fmt, arglist);
+		va_end(arglist);
+		// write out over usb gecko ;)
+		usb_sendbuffer_safe(1,tempstr,strlen(tempstr));
+	}
+}
+
 #ifdef SHOW_DEBUG
 
 char txtbuffer[1024];

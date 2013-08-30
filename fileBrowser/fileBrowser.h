@@ -1,7 +1,7 @@
 /**
  * Wii64 - fileBrowser.h
  * Copyright (C) 2007, 2008, 2009 Mike Slegeir
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2013 emu_kidid
  * 
  * Standard protoypes for accessing files from anywhere
  *

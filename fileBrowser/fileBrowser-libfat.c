@@ -175,13 +175,15 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir, i
 	
 	DIR* dp = opendir( file->name );
 	if(!dp) return FILE_BROWSER_ERROR;
-	struct dirent *entry;
 	struct stat fstat;
 	fileBrowser_file *direntry = malloc(sizeof(fileBrowser_file));
-	rom_header *hdr = memalign(32, sizeof(rom_header));
 	
 	// Read each entry of the directory
-	while( (entry = readdir(dp)) != NULL ) {
+	while(1) {
+		struct dirent *entry = readdir(dp);
+		if(!entry)
+			break;
+	
 		// Create a temporary entry for this directory entry.
 		memset(direntry, 0, sizeof(fileBrowser_file));
 		sprintf(direntry->name, "%s/%s", file->name, entry->d_name);
@@ -214,13 +216,11 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir, i
 			
 			memcpy(&(*dir)[num_entries], direntry, sizeof(fileBrowser_file));
 			//print_gecko("Adding file: %s\r\n", (*dir)[num_entries].name);
-			++num_entries;
+			num_entries++;
 		}
 	}
 	if(direntry)
 		free(direntry);
-	if(hdr)
-		free(hdr);
 	
 	closedir(dp);
 	continueRemovalThread();

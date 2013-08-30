@@ -137,6 +137,11 @@ struct TextBoxInfo
 	{	NULL,	FRAME_STRINGS[6],	500.0,	440.0,	 1.0,	true }, // Page XX of XX
 };
 
+extern "C" {
+	#include <stdarg.h>
+	void print_gecko(const char* fmt, ...);
+}
+
 SelectRomFrame::SelectRomFrame()
 		: activeSubmenu(SUBMENU_SD)
 {
@@ -517,14 +522,19 @@ void selectRomFrame_OpenDirectory(fileBrowser_file* dir)
 	
 	// Sort the listing
 	qsort(dir_entries, num_entries, sizeof(fileBrowser_file), dir_comparator);
+	
 	// Read all headers
 	rom_headers = (rom_header*) malloc(sizeof(rom_header)*num_entries);
 	for(int i = 0; i < num_entries; i++) {
 		fileBrowser_file f;
-		memcpy(&f, &dir_entries[i+(current_page*NUM_FILE_SLOTS)], sizeof(fileBrowser_file));
+		memcpy(&f, &dir_entries[i], sizeof(fileBrowser_file));
+		//print_gecko("reading header %s\r\n",&f.name[0]);
 		romFile_seekFile(&f, 0, FILE_BROWSER_SEEK_SET);
-		if(romFile_readHeader(&f, &rom_headers[i], sizeof(rom_header))!=sizeof(rom_header))
+		if(romFile_readHeader(&f, &rom_headers[i], sizeof(rom_header))!=sizeof(rom_header)) {
 			break;	// give up on the first read error
+		}
+		byte_swap((char*)&rom_headers[i], sizeof(rom_header), init_byte_swap(*(u32*)&rom_headers[i]));
+		//print_gecko("header CRC %08X\r\n",rom_headers[i].CRC1);
 	}
 
 	current_page = 0;
@@ -591,24 +601,17 @@ void selectRomFrame_FillPage()
 			//TODO: Load boxart for button
 			if(dir_entries[i+(current_page*NUM_FILE_SLOTS)].attr & FILE_BROWSER_ATTR_DIR)
 			{
-				memset(&rom_headers[i+(current_page*NUM_FILE_SLOTS)], 0x00, sizeof(rom_header));
 				memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 			}
 			else
 			{
+				//print_gecko("Loading Boxart for %s with CRC: %08X\r\n",&rom_headers[i+(current_page*NUM_FILE_SLOTS)].nom,
+				//			rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1);
 				//load boxart
 				BOXART_Init();
 				BOXART_LoadTexture(rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1,(char*) fileTextures[i]);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
-//				GX_InvalidateTexAll();
-
-/*				char feedback_string[256];
-				sprintf(feedback_string,"Read %i bytes for header in \n\"%s\"\n\"%s\"\nCRC = %x\nheader = %x",
-						bytes_read, &dir_entries[i+(current_page*NUM_FILE_SLOTS)].name[0],
-						&f.name[0],
-						rom_headers[i].CRC1,&rom_headers[i]);
-				menu::MessageBox::getInstance().setMessage(feedback_string);*/
 			}
 		}
 		else

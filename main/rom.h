@@ -70,7 +70,13 @@ typedef struct _rom_settings
 } rom_settings;
 extern rom_settings ROM_SETTINGS;
 
+/* Byteswapping stuff */
+#define BYTE_SWAP_BAD -1
+#define BYTE_SWAP_NONE 0
+#define BYTE_SWAP_HALF 1
+#define BYTE_SWAP_BYTE 2
 int init_byte_swap(unsigned int magicWord);
+void byte_swap(char* buffer, unsigned int length, int byte_swap_type);
 
 void countrycodestring(unsigned short countrycode, char *string);
 char *saveregionstr();

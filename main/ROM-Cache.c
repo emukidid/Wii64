@@ -71,6 +71,8 @@ static int   ROMBlocksLRU[NUM_BLOCKS];
 static fileBrowser_file* ROMFile;
 static char readBefore = 0;
 
+static int byte_swap_type = 0;
+
 extern void showLoadProgress(float);
 extern void pauseAudio(void);
 extern void resumeAudio(void);
@@ -112,7 +114,7 @@ void* ROMCache_pointer(u32 rom_offset){
 #ifdef PROFILE
 		end_section(ROMREAD_SECTION);
 #endif
-		return ROMCACHE_LO + rom_offset;
+		return (void*)(ROMCACHE_LO + rom_offset);
 	}
 }
 
@@ -124,7 +126,7 @@ static void ROMCache_load_block(char* dst, u32 rom_offset){
 	romFile_seekFile(ROMFile, rom_offset, FILE_BROWSER_SEEK_SET);
 	while(offset < BLOCK_SIZE){
 		bytes_read = romFile_readFile(ROMFile, dst + offset, LOAD_SIZE);
-		byte_swap(dst + offset, bytes_read);
+		byte_swap(dst + offset, bytes_read, byte_swap_type);
 		offset += bytes_read;
 		
 		if(!loads_til_update--){
@@ -180,7 +182,7 @@ void ROMCache_read(u8* dest, u32 offset, u32 length){
 			++block; length2 -= length; offset2 = 0; dest += length; offset += length;
 		}
 	} else {
-		memcpy(dest, ROMCACHE_LO + offset, length);
+		memcpy(dest, (void*)(ROMCACHE_LO + offset), length);
 	}
 #ifdef PROFILE
 	end_section(ROMREAD_SECTION);
@@ -206,7 +208,7 @@ int ROMCache_load(fileBrowser_file* f){
 	int bytes_read;
 	u32 sizeToLoad = MIN(ROMCACHE_SIZE, ROMSize);
 	while(offset < sizeToLoad){
-		bytes_read = romFile_readFile(ROMFile, ROMCACHE_LO + offset, LOAD_SIZE);
+		bytes_read = romFile_readFile(ROMFile, (void*)(ROMCACHE_LO + offset), LOAD_SIZE);
 		
 		if(bytes_read < 0){		// Read fail!
 
@@ -216,14 +218,15 @@ int ROMCache_load(fileBrowser_file* f){
 		//initialize byteswapping if it isn't already
 		if(!readBefore)
 		{
- 			if(init_byte_swap(*(unsigned int*)ROMCACHE_LO) == BYTE_SWAP_BAD) {
+			byte_swap_type = init_byte_swap(*(unsigned int*)ROMCACHE_LO);
+ 			if(byte_swap_type == BYTE_SWAP_BAD) {
  			  romFile_deinit(ROMFile);
  			  return -2;
 		  }
  			readBefore = 1;
 		}
 		//byteswap
-		byte_swap(ROMCACHE_LO + offset, bytes_read);
+		byte_swap((char*)(ROMCACHE_LO + offset), bytes_read, byte_swap_type);
 		
 		offset += bytes_read;
 		
@@ -240,7 +243,7 @@ int ROMCache_load(fileBrowser_file* f){
 	if(ROMTooBig){ // Set block pointers if we need to
 		int i;
 		for(i=0; i<ROMCACHE_SIZE/BLOCK_SIZE; ++i)
-			ROMBlocks[i] = ROMCACHE_LO + i*BLOCK_SIZE;
+			ROMBlocks[i] = (void*)(ROMCACHE_LO + (i*BLOCK_SIZE));
 		for(; i<ROMSize/BLOCK_SIZE; ++i)
 			ROMBlocks[i] = 0;
 		for(i=0; i<ROMSize/BLOCK_SIZE; ++i)

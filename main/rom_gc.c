@@ -45,7 +45,6 @@
 
 static fileBrowser_file* rom_file;
 int rom_length;
-int ROM_byte_swap;
 rom_header* ROM_HEADER = NULL;
 rom_settings ROM_SETTINGS;
 
@@ -62,20 +61,29 @@ void stripInvalidChars(char *str) {
 int init_byte_swap(u32 magicWord){
 
 	switch(magicWord){
-	case 0x37804012:					//37804012 aka byteswapped
-		ROM_byte_swap = BYTE_SWAP_BYTE;
-		break;
-	case 0x40123780:					//40123780 aka little endian, aka halfswapped
-		ROM_byte_swap = BYTE_SWAP_HALF;
-		break;
-	case 0x80371240:
-		ROM_byte_swap = BYTE_SWAP_NONE;
-		break;
-	default:
-		ROM_byte_swap = BYTE_SWAP_BAD;
-		break;
+		case 0x37804012:					//37804012 aka byteswapped
+			return BYTE_SWAP_BYTE;
+		case 0x40123780:					//40123780 aka little endian, aka halfswapped
+			return BYTE_SWAP_HALF;
+		case 0x80371240:
+			return BYTE_SWAP_NONE;
 	}
-	return ROM_byte_swap;
+	return BYTE_SWAP_BAD;
+}
+
+void byte_swap(char* buffer, unsigned int length, int byte_swap_type) {
+	if(byte_swap_type == BYTE_SWAP_NONE || byte_swap_type == BYTE_SWAP_BAD)
+		return;
+
+	int i = 0;
+	
+	if(byte_swap_type == BYTE_SWAP_HALF){	//aka little endian (40123780) vs (80371240)
+		for(i=0; i<length; i+=4)
+			*(u32 *)(buffer + i) = __lwbrx(buffer, i);
+	} else if(byte_swap_type == BYTE_SWAP_BYTE){	// (37804012) vs (80371240)
+		for(i=0; i<length; i+=2)
+			*(u16 *)(buffer + i) = __lhbrx(buffer, i);
+	}
 }
 
 #define TOTAL_NUM_16KBIT 44
@@ -140,21 +148,6 @@ int isROMEEPROM16k()
       return 1;
   }
   return 0;
-}
-
-void byte_swap(char* buffer, unsigned int length){
-	if(ROM_byte_swap == BYTE_SWAP_NONE || ROM_byte_swap == BYTE_SWAP_BAD)
-		return;
-
-	int i = 0;
-	
-	if(ROM_byte_swap == BYTE_SWAP_HALF){	//aka little endian (40123780) vs (80371240)
-		for(i=0; i<length; i+=4)
-			*(u32 *)(buffer + i) = __lwbrx(buffer, i);
-	} else if(ROM_byte_swap == BYTE_SWAP_BYTE){	// (37804012) vs (80371240)
-		for(i=0; i<length; i+=2)
-			*(u16 *)(buffer + i) = __lhbrx(buffer, i);
-	}
 }
 
 /* Loads the ROM into the ROM cache */

@@ -26,8 +26,8 @@
  * USA.
  *
 **/
-#ifdef COMPARE_CORE
 
+#ifdef COMPARE_CORE
 #include <sys/stat.h>
 #include <stdarg.h>
 #include "r4300.h"

@@ -38,14 +38,6 @@ int ROMCache_load(fileBrowser_file* file);
 // WARNING: Not necessarily valid after another ROMCache call
 void* ROMCache_pointer(u32 rom_offset);
 
-/* Byteswapping stuff */
-extern int ROM_byte_swap;
-void byte_swap(char* buffer, unsigned int length);
-#define BYTE_SWAP_BAD -1
-#define BYTE_SWAP_NONE 0
-#define BYTE_SWAP_HALF 1
-#define BYTE_SWAP_BYTE 2
-
 #define ROM_CACHE_ERROR_READ  -1
 #define ROM_CACHE_INVALID_ROM -2
 
