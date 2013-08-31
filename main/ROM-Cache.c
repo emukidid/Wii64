@@ -2,6 +2,7 @@
  * Wii64 - ROM-Cache.c (Wii/GC ROM Cache)
  * Copyright (C) 2007, 2008, 2009 Mike Slegeir
  * Copyright (C) 2007, 2008, 2009, 2012 emu_kidid
+ * Copyright (C) 2013 sepp256
  * 
  * This is how the ROM should be accessed, this way the ROM doesn't waste RAM
  *
@@ -68,7 +69,7 @@ static u32   ROMSize;
 static int   ROMTooBig;
 static char* ROMBlocks[NUM_BLOCKS];
 static int   ROMBlocksLRU[NUM_BLOCKS];
-static fileBrowser_file* ROMFile;
+static fileBrowser_file ROMFile;
 static char readBefore = 0;
 
 static int byte_swap_type = 0;
@@ -85,8 +86,9 @@ void DUMMY_draw() { }
 static void ensure_block(u32 block);
 
 void ROMCache_init(fileBrowser_file* f){
-  readBefore = 0; //de-init byteswapping
-  ROMFile = f;
+	readBefore = 0; //de-init byteswapping
+//  ROMFile = f;
+	memcpy(&ROMFile, f, sizeof(fileBrowser_file));
 	ROMSize = f->size;
 	ROMTooBig = ROMSize > ROMCACHE_SIZE;
 
@@ -123,9 +125,9 @@ static void ROMCache_load_block(char* dst, u32 rom_offset){
     pauseAudio();
 	showLoadProgress( 1.0f );
 	u32 offset = 0, bytes_read, loads_til_update = 0;
-	romFile_seekFile(ROMFile, rom_offset, FILE_BROWSER_SEEK_SET);
+	romFile_seekFile(&ROMFile, rom_offset, FILE_BROWSER_SEEK_SET);
 	while(offset < BLOCK_SIZE){
-		bytes_read = romFile_readFile(ROMFile, dst + offset, LOAD_SIZE);
+		bytes_read = romFile_readFile(&ROMFile, dst + offset, LOAD_SIZE);
 		byte_swap(dst + offset, bytes_read, byte_swap_type);
 		offset += bytes_read;
 		
@@ -202,13 +204,13 @@ int ROMCache_load(fileBrowser_file* f){
 #endif
 	PRINT(txt);
 
-	romFile_seekFile(ROMFile, 0, FILE_BROWSER_SEEK_SET);
+	romFile_seekFile(&ROMFile, 0, FILE_BROWSER_SEEK_SET);
 	
 	u32 offset = 0,loads_til_update = 0;
 	int bytes_read;
 	u32 sizeToLoad = MIN(ROMCACHE_SIZE, ROMSize);
 	while(offset < sizeToLoad){
-		bytes_read = romFile_readFile(ROMFile, (void*)(ROMCACHE_LO + offset), LOAD_SIZE);
+		bytes_read = romFile_readFile(&ROMFile, (void*)(ROMCACHE_LO + offset), LOAD_SIZE);
 		
 		if(bytes_read < 0){		// Read fail!
 
@@ -220,7 +222,7 @@ int ROMCache_load(fileBrowser_file* f){
 		{
 			byte_swap_type = init_byte_swap(*(unsigned int*)ROMCACHE_LO);
  			if(byte_swap_type == BYTE_SWAP_BAD) {
- 			  romFile_deinit(ROMFile);
+ 			  romFile_deinit(&ROMFile);
  			  return -2;
 		  }
  			readBefore = 1;

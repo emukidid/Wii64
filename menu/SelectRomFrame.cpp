@@ -83,6 +83,12 @@ static char FRAME_STRINGS[7][14] =
 	  "Page XX of XX"};
 
 static u8* fileTextures[NUM_FILE_SLOTS];
+static fileBrowser_file* dir_entries;
+static rom_header* 		rom_headers;
+static int				num_entries;
+static int				current_page;
+static int				max_page;
+extern rom_header 		*ROM_HEADER;
 
 struct ButtonInfo
 {
@@ -188,6 +194,8 @@ SelectRomFrame::SelectRomFrame()
 
 	for (int i = 0; i<NUM_FILE_SLOTS; i++)
 		fileTextures[i] = NULL;
+	dir_entries = NULL;
+	rom_headers = NULL;
 	
 }
 
@@ -202,13 +210,6 @@ SelectRomFrame::~SelectRomFrame()
 	}
 
 }
-
-static fileBrowser_file* dir_entries;
-static rom_header* 		rom_headers;
-static int				num_entries;
-static int				current_page;
-static int				max_page;
-extern rom_header 		*ROM_HEADER;
 
 void selectRomFrame_OpenDirectory(fileBrowser_file* dir);
 void selectRomFrame_Error(fileBrowser_file* dir, int error_code);
@@ -612,6 +613,13 @@ void selectRomFrame_FillPage()
 				BOXART_Init();
 				BOXART_LoadTexture(rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1,(char*) fileTextures[i]);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
+
+/*				char feedback_string[256];
+				sprintf(feedback_string,"Read %i bytes for header in \n\"%s\"\n\"%s\"\nCRC = %x\nheader = %x",
+						bytes_read, &dir_entries[i+(current_page*NUM_FILE_SLOTS)].name[0],
+						&f.name[0],
+						rom_headers[i].CRC1,&rom_headers[i]);
+				menu::MessageBox::getInstance().setMessage(feedback_string);*/
 			}
 		}
 		else
@@ -655,7 +663,12 @@ void selectRomFrame_LoadFile(int i)
 		menu::Focus::getInstance().clearPrimaryFocus();
 	} else {
 		// We must select this file
-		int ret = loadROM( &dir_entries[i] );
+		fileBrowser_file f;
+		memcpy(&f, &dir_entries[i], sizeof(fileBrowser_file));
+		//Clear memory from frame
+		Func_ReturnFromSelectRomFrame();
+
+		int ret = loadROM( &f );
 		
 		if(!ret){	// If the read succeeded.
 			strcpy(feedback_string, "Loaded ");
@@ -743,6 +756,6 @@ void selectRomFrame_LoadFile(int i)
 
 //		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 		if(hasLoadedROM) Func_SetPlayGame();
-		Func_ReturnFromSelectRomFrame();
+//		Func_ReturnFromSelectRomFrame();
 	}
 }
