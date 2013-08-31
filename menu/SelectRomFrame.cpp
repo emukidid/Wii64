@@ -617,7 +617,6 @@ void selectRomFrame_FillPage()
 		else
 		{
 			FRAME_BUTTONS[btn_ind].buttonString = FRAME_STRINGS[5];
-			memset(&rom_headers[i+(current_page*NUM_FILE_SLOTS)], 0x00, sizeof(rom_header));
 			memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
 			DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 		}
