@@ -130,9 +130,9 @@ void Box3D::setMode(int mode)
 
 void Box3D::setTexture(u8* texture)
 {
-	if(customBoxartFrontImage) 	delete customBoxartFrontImage;
-	if(customBoxartSpineImage) 	delete customBoxartSpineImage;
-	if(customBoxartBackImage) 	delete customBoxartBackImage;
+	if(customBoxartFrontImage)	{ delete customBoxartFrontImage; customBoxartFrontImage = NULL; }
+	if(customBoxartSpineImage) 	{ delete customBoxartSpineImage; customBoxartSpineImage = NULL; }
+	if(customBoxartBackImage) 	{ delete customBoxartBackImage;  customBoxartBackImage = NULL;  }
 	
 	if(texture)
 	{

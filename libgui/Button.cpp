@@ -246,19 +246,18 @@ void Button::drawComponent(Graphics& gfx)
 		gfx.drawImage(0, x+width/2, y, width/2, height, width/8.0, 0.0, 0.0, 1.0);
 		break;
 	case BUTTON_BOX3D:
-		//TODO
-		
 		if (getFocus())	
 		{
 			menu::Gui::getInstance().menuBox3D->setSize(2.0);
 			menu::Gui::getInstance().menuBox3D->setEnableRotate(true);
+			menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -150.0);
 		}
 		else
 		{
 			menu::Gui::getInstance().menuBox3D->setSize(1.6);
 			menu::Gui::getInstance().menuBox3D->setEnableRotate(false);
+			menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -100.0);
 		}
-		menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -150.0);
 		menu::Gui::getInstance().menuBox3D->setTexture(boxTexture);
 		menu::Gui::getInstance().menuBox3D->setVisible(true);
 		menu::Gui::getInstance().menuBox3D->draw(gfx);

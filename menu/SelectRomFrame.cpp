@@ -589,7 +589,7 @@ void selectRomFrame_FillPage()
 	for (int i = 0; i < NUM_FILE_SLOTS; i++)
 	{
 		int btn_ind = i+5;
-		if(fileTextures[i]==NULL)
+		if(!fileTextures[i])
 			fileTextures[i] = (u8*) memalign(32, BOXART_TEX_SIZE);
 		FRAME_BUTTONS[btn_ind].button->setBoxTexture(fileTextures[i]);
 		if ((current_page*NUM_FILE_SLOTS) + i < num_entries)
@@ -613,13 +613,6 @@ void selectRomFrame_FillPage()
 				BOXART_Init();
 				BOXART_LoadTexture(rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1,(char*) fileTextures[i]);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
-
-/*				char feedback_string[256];
-				sprintf(feedback_string,"Read %i bytes for header in \n\"%s\"\n\"%s\"\nCRC = %x\nheader = %x",
-						bytes_read, &dir_entries[i+(current_page*NUM_FILE_SLOTS)].name[0],
-						&f.name[0],
-						rom_headers[i].CRC1,&rom_headers[i]);
-				menu::MessageBox::getInstance().setMessage(feedback_string);*/
 			}
 		}
 		else
@@ -672,7 +665,7 @@ void selectRomFrame_LoadFile(int i)
 		
 		if(!ret){	// If the read succeeded.
 			strcpy(feedback_string, "Loaded ");
-			strncat(feedback_string, filenameFromAbsPath(dir_entries[i].name), 36-7);
+			strncat(feedback_string, filenameFromAbsPath(f.name), 36-7);
 
 			char RomInfo[512] = "";
 			char buffer [50];

@@ -69,7 +69,7 @@ void BOXART_LoadTexture(u32 CRC, char *buffer)
 	}
 		
 	int i = 0,found = 0;
-	for(i = 0; i < (MAX_HEADER_SIZE); i+=2)
+	for(i = 0; i < (MAX_HEADER_SIZE/4); i+=2)
 	{
 		if(boxartHeader[i] == CRC)
 		{
