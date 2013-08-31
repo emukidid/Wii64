@@ -87,6 +87,7 @@ Box3D::Box3D()
 		  rotateX(0),
 		  rotateY(0),
 		  enableRotate(true),
+		  transparency(255),
 		  activeBoxartFrontImage(0),
 		  activeBoxartSpineImage(0),
 		  activeBoxartBackImage(0),
@@ -153,6 +154,11 @@ void Box3D::setTexture(u8* texture)
 		activeBoxartBackImage  = Resources::getInstance().getImage(Resources::IMAGE_BOXART_BACK);
 	}
 	GX_InvalidateTexAll();
+}
+
+void Box3D::setTransparency(u8 color)
+{
+	transparency = color;
 }
 
 void Box3D::updateTime(float deltaTime)
@@ -232,7 +238,7 @@ void Box3D::drawComponent(Graphics& gfx)
 	GXColor litcol = (GXColor){ 0xBF, 0xBF, 0xBF, 0xFF }; // Light color 1
 	GXColor ambcol = (GXColor){ 0x40, 0x40, 0x40, 0xFF }; // Ambient 1
 //	GXColor matcol = (GXColor){ 0x80, 0x80, 0x80, 0xFF };  // Material 1
-	GXColor matcol = (GXColor){ 0xFF, 0xFF, 0xFF, 0xFF };  // Material 1
+	GXColor matcol = (GXColor){ 0xFF, 0xFF, 0xFF, transparency };  // Material 1
 	
 	guVector lpos;
 	f32 _theta,_phi;

@@ -70,7 +70,7 @@ void Func_SR_Select16();
 #define NUM_FILE_SLOTS 16
 #define FRAME_BUTTONS selectRomFrameButtons
 #define FRAME_STRINGS selectRomFrameStrings
-#define NUM_FRAME_TEXTBOXES 1
+#define NUM_FRAME_TEXTBOXES 2
 #define FRAME_TEXTBOXES selectRomFrameTextBoxes
 
 static char FRAME_STRINGS[7][14] =
@@ -110,24 +110,24 @@ struct ButtonInfo
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[0],	120.0,	 40.0,	 70.0,	40.0,	-1,	 5,	-1,	 1,	Func_SR_SD,			Func_ReturnFromSelectRomFrame }, // SD
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[1],	220.0,	 40.0,	 70.0,	40.0,	-1,	 6,	 0,	 2,	Func_SR_DVD,		Func_ReturnFromSelectRomFrame }, // DVD
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[2],	320.0,	 40.0,	 70.0,	40.0,	-1,	 7,	 1,	-1,	Func_SR_USB,		Func_ReturnFromSelectRomFrame }, // USB
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	 35.0,	220.0,	 70.0,	40.0,	-1,	-1,	-1,	 5,	Func_SR_PrevPage,	Func_ReturnFromSelectRomFrame }, // Prev
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	535.0,	220.0,	 70.0,	40.0,	-1,	-1,	 8,	-1,	Func_SR_NextPage,	Func_ReturnFromSelectRomFrame }, // Next
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	100.0,	100.0,	80.0,	 0,	 9,	 3,	 6,	Func_SR_Select1,	Func_ReturnFromSelectRomFrame }, // File Button 1
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	100.0,	100.0,	80.0,	 1,	10,	 5,	 7,	Func_SR_Select2,	Func_ReturnFromSelectRomFrame }, // File Button 2
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	100.0,	100.0,	80.0,	 2,	11,	 6,	 8,	Func_SR_Select3,	Func_ReturnFromSelectRomFrame }, // File Button 3
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	100.0,	100.0,	80.0,	 2,	12,	 7,	 4,	Func_SR_Select4,	Func_ReturnFromSelectRomFrame }, // File Button 4
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	180.0,	100.0,	80.0,	 5,	13,	 3,	10,	Func_SR_Select5,	Func_ReturnFromSelectRomFrame }, // File Button 5
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	180.0,	100.0,	80.0,	 6,	14,	 9,	11,	Func_SR_Select6,	Func_ReturnFromSelectRomFrame }, // File Button 6
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	180.0,	100.0,	80.0,	 7,	15,	10,	12,	Func_SR_Select7,	Func_ReturnFromSelectRomFrame }, // File Button 7
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	180.0,	100.0,	80.0,	 8,	16,	11,	 4,	Func_SR_Select8,	Func_ReturnFromSelectRomFrame }, // File Button 8
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	260.0,	100.0,	80.0,	 9,	17,	 3,	14,	Func_SR_Select9,	Func_ReturnFromSelectRomFrame }, // File Button 9
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	260.0,	100.0,	80.0,	10,	18,	13,	15,	Func_SR_Select10,	Func_ReturnFromSelectRomFrame }, // File Button 10
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	260.0,	100.0,	80.0,	11,	19,	14,	16,	Func_SR_Select11,	Func_ReturnFromSelectRomFrame }, // File Button 11
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	260.0,	100.0,	80.0,	12,	20,	15,	 4,	Func_SR_Select12,	Func_ReturnFromSelectRomFrame }, // File Button 12
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	340.0,	100.0,	80.0,	13,	-1,	 3,	18,	Func_SR_Select13,	Func_ReturnFromSelectRomFrame }, // File Button 13
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	340.0,	100.0,	80.0,	14,	-1,	17,	19,	Func_SR_Select14,	Func_ReturnFromSelectRomFrame }, // File Button 14
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	340.0,	100.0,	80.0,	15,	-1,	18,	20,	Func_SR_Select15,	Func_ReturnFromSelectRomFrame }, // File Button 15
-	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	340.0,	100.0,	80.0,	16,	-1,	19,	 4,	Func_SR_Select16,	Func_ReturnFromSelectRomFrame }, // File Button 16
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	 35.0,	215.0,	 70.0,	40.0,	-1,	-1,	-1,	 5,	Func_SR_PrevPage,	Func_ReturnFromSelectRomFrame }, // Prev
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	535.0,	215.0,	 70.0,	40.0,	-1,	-1,	 8,	-1,	Func_SR_NextPage,	Func_ReturnFromSelectRomFrame }, // Next
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	 90.0,	100.0,	80.0,	 0,	 9,	 3,	 6,	Func_SR_Select1,	Func_ReturnFromSelectRomFrame }, // File Button 1
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	 90.0,	100.0,	80.0,	 1,	10,	 5,	 7,	Func_SR_Select2,	Func_ReturnFromSelectRomFrame }, // File Button 2
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	 90.0,	100.0,	80.0,	 2,	11,	 6,	 8,	Func_SR_Select3,	Func_ReturnFromSelectRomFrame }, // File Button 3
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	 90.0,	100.0,	80.0,	 2,	12,	 7,	 4,	Func_SR_Select4,	Func_ReturnFromSelectRomFrame }, // File Button 4
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	165.0,	100.0,	80.0,	 5,	13,	 3,	10,	Func_SR_Select5,	Func_ReturnFromSelectRomFrame }, // File Button 5
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	165.0,	100.0,	80.0,	 6,	14,	 9,	11,	Func_SR_Select6,	Func_ReturnFromSelectRomFrame }, // File Button 6
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	165.0,	100.0,	80.0,	 7,	15,	10,	12,	Func_SR_Select7,	Func_ReturnFromSelectRomFrame }, // File Button 7
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	165.0,	100.0,	80.0,	 8,	16,	11,	 4,	Func_SR_Select8,	Func_ReturnFromSelectRomFrame }, // File Button 8
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	240.0,	100.0,	80.0,	 9,	17,	 3,	14,	Func_SR_Select9,	Func_ReturnFromSelectRomFrame }, // File Button 9
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	240.0,	100.0,	80.0,	10,	18,	13,	15,	Func_SR_Select10,	Func_ReturnFromSelectRomFrame }, // File Button 10
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	240.0,	100.0,	80.0,	11,	19,	14,	16,	Func_SR_Select11,	Func_ReturnFromSelectRomFrame }, // File Button 11
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	240.0,	100.0,	80.0,	12,	20,	15,	 4,	Func_SR_Select12,	Func_ReturnFromSelectRomFrame }, // File Button 12
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	315.0,	100.0,	80.0,	13,	-1,	 3,	18,	Func_SR_Select13,	Func_ReturnFromSelectRomFrame }, // File Button 13
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	220.0,	315.0,	100.0,	80.0,	14,	-1,	17,	19,	Func_SR_Select14,	Func_ReturnFromSelectRomFrame }, // File Button 14
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	320.0,	315.0,	100.0,	80.0,	15,	-1,	18,	20,	Func_SR_Select15,	Func_ReturnFromSelectRomFrame }, // File Button 15
+	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	420.0,	315.0,	100.0,	80.0,	16,	-1,	19,	 4,	Func_SR_Select16,	Func_ReturnFromSelectRomFrame }, // File Button 16
 };
 
 struct TextBoxInfo
@@ -141,6 +141,7 @@ struct TextBoxInfo
 } FRAME_TEXTBOXES[NUM_FRAME_TEXTBOXES] =
 { //	textBox	textBoxString		x		y		scale	centered
 	{	NULL,	FRAME_STRINGS[6],	500.0,	440.0,	 1.0,	true }, // Page XX of XX
+	{	NULL,	FRAME_STRINGS[5],	320.0,	410.0,	 1.0,	true }, // Rom file name
 };
 
 extern "C" {
@@ -188,7 +189,7 @@ SelectRomFrame::SelectRomFrame()
 //	GXColor textColor = {255, 255, 255, 255};
 //	FRAME_TEXTBOXES[0].textBox->setColor(&textColor);
 	
-	setDefaultFocus(FRAME_BUTTONS[2].button);
+	setDefaultFocus(FRAME_BUTTONS[5].button);
 	setBackFunc(Func_ReturnFromSelectRomFrame);
 	setEnabled(true);
 
@@ -293,6 +294,21 @@ void SelectRomFrame::activateSubmenu(int submenu)
 	}
 }
 
+static char* filenameFromAbsPath(char* absPath)
+{
+	char* filename = absPath;
+	// Here we want to extract from the absolute path
+	//   just the filename
+	// First we move the pointer all the way to the end
+	//   of the the string so we can work our way back
+	while( *filename ) ++filename;
+	// Now, just move it back to the last '/' or the start
+	//   of the string
+	while( filename != absPath && (*(filename-1) != '\\' && *(filename-1) != '/'))
+		--filename;
+	return filename;
+}
+
 void SelectRomFrame::drawChildren(menu::Graphics &gfx)
 {
 	if(isVisible())
@@ -389,6 +405,16 @@ void SelectRomFrame::drawChildren(menu::Graphics &gfx)
 #endif //HW_RVL
 		}
 
+		FRAME_TEXTBOXES[1].textBoxString = FRAME_STRINGS[5];
+		for (int i = 0; i < NUM_FILE_SLOTS; i++)
+		{
+			int btn_ind = i+5;
+			if (FRAME_BUTTONS[btn_ind].button->getFocus())
+			{
+				FRAME_TEXTBOXES[1].textBoxString = filenameFromAbsPath(dir_entries[i+(current_page*NUM_FILE_SLOTS)].name);
+			}
+		}
+		
 		//Draw buttons
 		menu::ComponentList::const_iterator iteration;
 		for (iteration = componentList.begin(); iteration != componentList.end(); iteration++)
@@ -475,21 +501,6 @@ void Func_SR_Select14() { selectRomFrame_LoadFile((current_page*NUM_FILE_SLOTS) 
 void Func_SR_Select15() { selectRomFrame_LoadFile((current_page*NUM_FILE_SLOTS) + 14); }
 
 void Func_SR_Select16() { selectRomFrame_LoadFile((current_page*NUM_FILE_SLOTS) + 15); }
-
-static char* filenameFromAbsPath(char* absPath)
-{
-	char* filename = absPath;
-	// Here we want to extract from the absolute path
-	//   just the filename
-	// First we move the pointer all the way to the end
-	//   of the the string so we can work our way back
-	while( *filename ) ++filename;
-	// Now, just move it back to the last '/' or the start
-	//   of the string
-	while( filename != absPath && (*(filename-1) != '\\' && *(filename-1) != '/'))
-		--filename;
-	return filename;
-}
 
 int loadROM(fileBrowser_file*);
 
@@ -578,13 +589,6 @@ void selectRomFrame_Error(fileBrowser_file* dir, int error_code)
 
 void selectRomFrame_FillPage()
 {
-
-	//disable all buttons
-/*	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
-	{
-		FRAME_BUTTONS[i].button->setActive(false);
-		FRAME_BUTTONS[i].button->setLabelColor((GXColor) {255,255,255,255});
-	}*/
 	//set entries according to page
 	for (int i = 0; i < NUM_FILE_SLOTS; i++)
 	{
@@ -594,19 +598,15 @@ void selectRomFrame_FillPage()
 		FRAME_BUTTONS[btn_ind].button->setBoxTexture(fileTextures[i]);
 		if ((current_page*NUM_FILE_SLOTS) + i < num_entries)
 		{
-			FRAME_BUTTONS[btn_ind].buttonString = filenameFromAbsPath(dir_entries[i+(current_page*NUM_FILE_SLOTS)].name);
-			FRAME_BUTTONS[btn_ind].button->setClicked(FRAME_BUTTONS[btn_ind].clickedFunc);
-			FRAME_BUTTONS[btn_ind].button->setActive(true);
-			if(dir_entries[i+(current_page*NUM_FILE_SLOTS)].attr & FILE_BROWSER_ATTR_DIR)
-				FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,50,50,255});
-			//TODO: Load boxart for button
 			if(dir_entries[i+(current_page*NUM_FILE_SLOTS)].attr & FILE_BROWSER_ATTR_DIR)
 			{
+				FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,50,50,255});
 				memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 			}
 			else
 			{
+				FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,255,255,255});
 				//print_gecko("Loading Boxart for %s with CRC: %08X\r\n",&rom_headers[i+(current_page*NUM_FILE_SLOTS)].nom,
 				//			rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1);
 				//load boxart
@@ -617,7 +617,7 @@ void selectRomFrame_FillPage()
 		}
 		else
 		{
-			FRAME_BUTTONS[btn_ind].buttonString = FRAME_STRINGS[5];
+			FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,255,255,128});
 			memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
 			DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 		}
@@ -626,10 +626,12 @@ void selectRomFrame_FillPage()
 
 	//activate next/prev buttons
 	if (current_page > 0) FRAME_BUTTONS[3].button->setActive(true);
+	else				  FRAME_BUTTONS[3].button->setActive(false);
 	if (current_page+1 < max_page) FRAME_BUTTONS[4].button->setActive(true);
+	else						   FRAME_BUTTONS[4].button->setActive(false);
 
 	//Fill in page number
-	sprintf(FRAME_STRINGS[6],"Page %2i of %2i",current_page+1,max_page);
+	snprintf(FRAME_STRINGS[6],14,"Page %i of %i",current_page+1,max_page);
 }
 
 extern BOOL hasLoadedROM;
@@ -640,9 +642,6 @@ void Func_MMRefreshStateInfo();
 
 void selectRomFrame_LoadFile(int i)
 {
-//	if (romFile_deinit) romFile_deinit( romFile_topLevel );
-//	romFile_init( romFile_topLevel );
-
 	if (i >= num_entries)
 		return;
 	char feedback_string[256];
@@ -663,7 +662,28 @@ void selectRomFrame_LoadFile(int i)
 
 		int ret = loadROM( &f );
 		
+		//Clear FB images
+		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
+		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
+		Func_MMRefreshStateInfo();
+
+		if(hasLoadedROM) 
+		{
+			Func_SetPlayGame();
+			//Load boxart:
+			BOXART_Init();
+			BOXART_LoadTexture(ROM_HEADER->CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture());
+			GX_InvalidateTexAll();
+		}
+		else //ClearBoxArt
+		{
+			memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture(), 0x00, BOXART_TEX_SIZE);
+		}
+		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture(), BOXART_TEX_SIZE);
+		GX_InvalidateTexAll();
+		
 		if(!ret){	// If the read succeeded.
+
 			strcpy(feedback_string, "Loaded ");
 			strncat(feedback_string, filenameFromAbsPath(f.name), 36-7);
 
@@ -720,35 +740,5 @@ void selectRomFrame_LoadFile(int i)
 
 			menu::MessageBox::getInstance().setMessage(feedback_string);
 		}
-
-/*		//disable all buttons
-		for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
-			FRAME_BUTTONS[i].button->setActive(false);
-		//set first entry to report 'success'/'error' and return to main menu
-		FRAME_BUTTONS[2].buttonString = feedback_string;
-		FRAME_BUTTONS[2].button->setClicked(Func_ReturnFromFileBrowserFrame);
-		FRAME_BUTTONS[2].button->setActive(true);
-		FRAME_BUTTONS[2].button->setNextFocus(menu::Focus::DIRECTION_UP, NULL);
-		FRAME_BUTTONS[2].button->setNextFocus(menu::Focus::DIRECTION_DOWN, NULL);
-		for (int i = 1; i<NUM_FILE_SLOTS; i++)
-			FRAME_BUTTONS[i+2].buttonString = FRAME_STRINGS[2];
-		pMenuContext->getFrame(MenuContext::FRAME_FILEBROWSER)->setDefaultFocus(FRAME_BUTTONS[2].button);
-		menu::Focus::getInstance().clearPrimaryFocus();*/
-
-		//Clear FB images
-		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
-		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
-		GX_InvalidateTexAll();
-		Func_MMRefreshStateInfo();
-		
-		//Load boxart:
-		BOXART_Init();
-		BOXART_LoadTexture(ROM_HEADER->CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture());
-		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture(), BOXART_TEX_SIZE);
-		GX_InvalidateTexAll();
-
-//		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
-		if(hasLoadedROM) Func_SetPlayGame();
-//		Func_ReturnFromSelectRomFrame();
 	}
 }

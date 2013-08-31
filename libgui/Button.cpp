@@ -259,6 +259,7 @@ void Button::drawComponent(Graphics& gfx)
 			menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -100.0);
 		}
 		menu::Gui::getInstance().menuBox3D->setTexture(boxTexture);
+		menu::Gui::getInstance().menuBox3D->setTransparency(labelColor.a);
 		menu::Gui::getInstance().menuBox3D->setVisible(true);
 		menu::Gui::getInstance().menuBox3D->draw(gfx);
 		break;

@@ -36,6 +36,7 @@ public:
 	void setSize(float size);
 	void setMode(int mode);
 	void setTexture(u8* texture);
+	void setTransparency(u8 color);
 	void updateTime(float deltaTime);
 	void drawComponent(Graphics& gfx);
 /*	enum LogoMode
@@ -52,6 +53,7 @@ private:
 	float x, y, z, size;
 	float rotateAuto, rotateX, rotateY;
 	bool enableRotate;
+	u8 transparency;
 	Image *activeBoxartFrontImage, *activeBoxartSpineImage, *activeBoxartBackImage;
 	Image *customBoxartFrontImage, *customBoxartSpineImage, *customBoxartBackImage;
 
