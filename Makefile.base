@@ -27,7 +27,6 @@ OBJ		+= \
 		main/rom_gc.o \
 		main/ROM-Cache.o \
 		main/main_gc-menu2.o \
-		main/gc_dvd.o \
 		main/gczip.o \
 		main/timers.o \
 		main/boxart.o \
@@ -67,6 +66,7 @@ OBJ		+= \
 		libgui/MiniInfoBar.o \
 		libgui/resources.o \
 		libgui/TextBox.o \
+		fileBrowser/gc_dvd.o \
 		fileBrowser/fileBrowser-DVD.o \
 		fileBrowser/fileBrowser-CARD.o \
 		fileBrowser/fileBrowser-libfat.o \

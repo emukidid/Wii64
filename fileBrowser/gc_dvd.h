@@ -45,20 +45,15 @@ typedef struct
 	int sector, size;
 } file_entry; 
 
-typedef struct
-{
-	file_entry file[MAXIMUM_ENTRIES_PER_DIR];
-} file_entries; 
-
-extern file_entries *DVDToc;
-
 int init_dvd();
+void dvd_reset();
+void dvd_enable_patches();
 void dvd_motor_off();
 unsigned int dvd_get_error(void);
-int dvd_read_directoryentries(uint64_t offset, int size);
-void read_directory(int sector, int len);
-int read_safe(void* dst, uint64_t offset, int len);
-int read_direntry(unsigned char* direntry);
+int dvd_read_directoryentries(uint64_t offset, int size, file_entry **DVDToc);
+int read_directory(int sector, int len, file_entry **DVDToc);
+int DVD_Read(void* dst, uint64_t offset, int len);
+int read_direntry(unsigned char* direntry, file_entry *DVDEntry, int *added);
 int read_sector(void* buffer, uint32_t sector);
 int dvd_read(void* dst,unsigned int len, unsigned int offset);
 int dvd_read_id();

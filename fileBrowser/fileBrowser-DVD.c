@@ -27,7 +27,7 @@
 #include <ogc/dvd.h>
 #include <ogc/machine/processor.h>
 #include "fileBrowser.h"
-#include "../main/gc_dvd.h"
+#include "gc_dvd.h"
 
 /* DVD Globals */
 int dvd_init = 0;
@@ -43,19 +43,18 @@ fileBrowser_file topLevel_DVD =
 	  0,         // size
 	  FILE_BROWSER_ATTR_DIR
 	};
- 
+
+static int num_entries = 0;
 int fileBrowser_DVD_readDir(fileBrowser_file* ffile, fileBrowser_file** dir, int recursive, int n64only){	
-  
-  int num_entries = 0, ret = 0;
-  
-  if(dvd_get_error() || !dvd_init) { //if some error
-    ret = init_dvd();
-    if(ret) {    //try init
-      return ret; //fail
-    }
-    dvd_init = 1;
-  } 
 	
+	if(dvd_get_error() || !dvd_init) { //if some error
+		int ret = init_dvd();
+		if(ret) {    //try init
+			return ret; //fail
+		}
+		dvd_init = 1;
+	}
+
 	if (!memcmp((void*)0x80000000, "D43U01", 6)) { //OoT+MQ bonus disc support.
 		num_entries = 2;
 		*dir = malloc( num_entries * sizeof(fileBrowser_file) );
@@ -101,34 +100,64 @@ int fileBrowser_DVD_readDir(fileBrowser_file* ffile, fileBrowser_file** dir, int
 		(*dir)[1].attr	 = 0;
 		return num_entries;
 	}
-	
+
+	file_entry *DVDToc = NULL;
+
 	// Call the corresponding DVD function
-	num_entries = dvd_read_directoryentries(ffile->discoffset,ffile->size);
-	
+	int dvd_entries = dvd_read_directoryentries(ffile->discoffset,ffile->size, &DVDToc);
+
 	// If it was not successful, just return the error
-	if(num_entries <= 0) return FILE_BROWSER_ERROR;
-	
+	if(dvd_entries <= 0) return FILE_BROWSER_ERROR;
+
+	// Temp entry
+	fileBrowser_file *direntry = malloc(sizeof(fileBrowser_file));
 	// Convert the DVD "file" data to fileBrowser_files
-	*dir = malloc( num_entries * sizeof(fileBrowser_file) );
 	int i;
-	for(i=0; i<num_entries; ++i){
-		strcpy( (*dir)[i].name, DVDToc->file[i].name );
-		(*dir)[i].discoffset = (uint64_t)(((uint64_t)DVDToc->file[i].sector)*2048);
-		(*dir)[i].offset = 0;
-		(*dir)[i].size   = DVDToc->file[i].size;
-		(*dir)[i].attr	 = 0;
-		if(DVDToc->file[i].flags == 2)//on DVD, 2 is a dir
-			(*dir)[i].attr   = FILE_BROWSER_ATTR_DIR; 
-		if((*dir)[i].name[strlen((*dir)[i].name)-1] == '/' )
-			(*dir)[i].name[strlen((*dir)[i].name)-1] = 0;	//get rid of trailing '/'
-	}
-	//kill the large TOC so we can have a lot more memory ingame (256k more)
-	free(DVDToc);
-  DVDToc = NULL;
+	for(i = 0; i < dvd_entries; ++i) {
+		// Create a temporary entry for this directory entry.
+		memset(direntry, 0, sizeof(fileBrowser_file));
+		strcpy(direntry->name, DVDToc[i].name );
+		direntry->discoffset = (uint64_t)(((uint64_t)DVDToc[i].sector)*2048);
+		direntry->offset = 0;
+		direntry->size   = DVDToc[i].size;
+		direntry->attr	 = (DVDToc[i].flags == 2) ? FILE_BROWSER_ATTR_DIR : 0;
+		if(direntry->name[strlen(direntry->name)-1] == '/' )
+			direntry->name[strlen(direntry->name)-1] = 0;	//get rid of trailing '/'
 		
+		// If recursive, search all directories
+		if(recursive && (direntry->attr == FILE_BROWSER_ATTR_DIR)) {
+			if((strlen(&direntry->name[0]) == 0) || direntry->name[0] == '.') continue;	// hide/do not browse these directories.
+			//print_gecko("Entering directory: %s\r\n", direntry->name);
+			fileBrowser_DVD_readDir(direntry, dir, recursive, n64only);
+		}
+		else {
+			if(*dir == NULL) {
+				*dir = malloc(sizeof(fileBrowser_file));
+				num_entries = 0;
+			}
+			else {
+				//print_gecko("Size of *dir = %i\r\n", num_entries);
+				*dir = realloc( *dir, ((num_entries)+1) * sizeof(fileBrowser_file) ); 
+			}
+			if(n64only) {
+				if(!(strcasestr(direntry->name,".v64") || strcasestr(direntry->name,".z64")) ||
+					 strcasestr(direntry->name,".n64") || strcasestr(direntry->name,".bin"))
+					continue;
+			}
+			
+			memcpy(&(*dir)[num_entries], direntry, sizeof(fileBrowser_file));
+			//print_gecko("Adding file: %s\r\n", (*dir)[num_entries].name);
+			num_entries++;
+		}
+	}
+	if(direntry) 
+		free(direntry);
+	if(DVDToc)
+		free(DVDToc);
+
 	if(strlen((*dir)[0].name) == 0)
 		strcpy( (*dir)[0].name, ".." );
-	
+
 	return num_entries;
 }
 
@@ -140,7 +169,7 @@ int fileBrowser_DVD_seekFile(fileBrowser_file* file, unsigned int where, unsigne
 }
 
 int fileBrowser_DVD_readFile(fileBrowser_file* file, void* buffer, unsigned int length){
-	int bytesread = read_safe(buffer,file->discoffset+file->offset,length);
+	int bytesread = DVD_Read(buffer,file->discoffset+file->offset,length);
 	if(bytesread > 0)
 		file->offset += bytesread;
 	return bytesread;

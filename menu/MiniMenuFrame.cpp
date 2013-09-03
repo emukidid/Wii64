@@ -43,9 +43,7 @@ extern "C" {
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-CARD.h"
-#include "../main/gc_dvd.h"
 }
-#include <ogc/dvd.h>
 
 void Func_MMResetROM();
 void Func_MMRefreshStateInfo();

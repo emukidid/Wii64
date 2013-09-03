@@ -37,8 +37,8 @@ extern "C" {
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-DVD.h"
 #include "../fileBrowser/fileBrowser-CARD.h"
+#include "../fileBrowser/gc_dvd.h"
 #include "../main/rom.h"
-#include "../main/gc_dvd.h"
 #include "../main/ROM-Cache.h"
 #include "../main/wii64config.h"
 }
