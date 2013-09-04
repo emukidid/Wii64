@@ -34,7 +34,8 @@ public:
 
 	enum SelectRomSubmenus
 	{
-		SUBMENU_SD=0,
+		SUBMENU_DEFAULT=0,
+		SUBMENU_SD,
 		SUBMENU_DVD,
 		SUBMENU_USB
 	};

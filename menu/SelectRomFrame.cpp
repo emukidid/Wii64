@@ -220,7 +220,7 @@ void selectRomFrame_LoadFile(int i);
 
 void SelectRomFrame::activateSubmenu(int submenu)
 {
-	activeSubmenu = submenu;
+	if (submenu) activeSubmenu = submenu;
 
 	//Unselect all ROM source buttons
 	for (int i = 0; i < 3; i++)
@@ -612,7 +612,7 @@ void selectRomFrame_Error(fileBrowser_file* dir, int error_code)
 	menu::Focus::getInstance().clearPrimaryFocus();*/
 	menu::MessageBox::getInstance().setMessage(feedback_string);
 //	pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
-	Func_ReturnFromSelectRomFrame();
+//	Func_ReturnFromSelectRomFrame();
 }
 
 void selectRomFrame_FillPage()

@@ -412,7 +412,7 @@ void Func_MMExitToLoader()
 void Func_MMSelectROM()
 {
 //	pMenuContext->setActiveFrame(MenuContext::FRAME_LOADROM);
-	pMenuContext->setActiveFrame(MenuContext::FRAME_SELECTROM, SelectRomFrame::SUBMENU_SD);
+	pMenuContext->setActiveFrame(MenuContext::FRAME_SELECTROM, SelectRomFrame::SUBMENU_DEFAULT);
 }
 
 void Func_MMAdvancedMenu()
