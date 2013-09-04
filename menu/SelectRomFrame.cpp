@@ -46,8 +46,8 @@ extern "C" {
 
 void Func_ReturnFromSelectRomFrame();
 void Func_SR_SD();
-void Func_SR_DVD();
 void Func_SR_USB();
+void Func_SR_DVD();
 void Func_SR_PrevPage();
 void Func_SR_NextPage();
 void Func_SR_Select1();
@@ -76,8 +76,8 @@ void Func_SR_Select16();
 
 static char FRAME_STRINGS[7][14] =
 	{ "SD",
-	  "DVD",
 	  "USB",
+	  "DVD",
 	  "Prev",
 	  "Next",
 	  "",
@@ -109,8 +109,8 @@ struct ButtonInfo
 } FRAME_BUTTONS[NUM_FRAME_BUTTONS] =
 { //	button	buttonStyle		buttonString		x		y	width	height	Up	Dwn	Lft	Rt	clickFunc			returnFunc
 	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[0],	120.0,	 40.0,	 70.0,	40.0,	-1,	 5,	-1,	 1,	Func_SR_SD,			Func_ReturnFromSelectRomFrame }, // SD
-	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[1],	220.0,	 40.0,	 70.0,	40.0,	-1,	 6,	 0,	 2,	Func_SR_DVD,		Func_ReturnFromSelectRomFrame }, // DVD
-	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[2],	320.0,	 40.0,	 70.0,	40.0,	-1,	 7,	 1,	-1,	Func_SR_USB,		Func_ReturnFromSelectRomFrame }, // USB
+	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[1],	220.0,	 40.0,	 70.0,	40.0,	-1,	 6,	 0,	 2,	Func_SR_USB,		Func_ReturnFromSelectRomFrame }, // USB
+	{	NULL,	BTN_A_SEL,	FRAME_STRINGS[2],	320.0,	 40.0,	 70.0,	40.0,	-1,	 7,	 1,	-1,	Func_SR_DVD,		Func_ReturnFromSelectRomFrame }, // DVD
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	 35.0,	215.0,	 70.0,	40.0,	-1,	-1,	-1,	 5,	Func_SR_PrevPage,	Func_ReturnFromSelectRomFrame }, // Prev
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	535.0,	215.0,	 70.0,	40.0,	-1,	-1,	 8,	-1,	Func_SR_NextPage,	Func_ReturnFromSelectRomFrame }, // Next
 	{	NULL,	BTN_BOX3D,	FRAME_STRINGS[5],	120.0,	 90.0,	100.0,	80.0,	 0,	 9,	 3,	 6,	Func_SR_Select1,	Func_ReturnFromSelectRomFrame }, // File Button 1
@@ -226,6 +226,11 @@ void SelectRomFrame::activateSubmenu(int submenu)
 	for (int i = 0; i < 3; i++)
 		FRAME_BUTTONS[i].button->setSelected(false);
 
+#ifndef WII
+	//Disable USB button for GC
+	FRAME_BUTTONS[1].button->setActive(false);
+#endif
+
 	//Init textures
 	for (int i = 0; i < NUM_FILE_SLOTS; i++)
 	{
@@ -247,15 +252,15 @@ void SelectRomFrame::activateSubmenu(int submenu)
 			FRAME_BUTTONS[0].button->setSelected(true);
 			menu::MessageBox::getInstance().fadeMessage("Searching SD for ROMs");
 			break;
-		case SUBMENU_DVD:
-			FRAME_BUTTONS[1].button->setSelected(true);
-			menu::MessageBox::getInstance().fadeMessage("Searching DVD for ROMs");
-			break;
 		case SUBMENU_USB:
 #ifdef WII
-			FRAME_BUTTONS[2].button->setSelected(true);
+			FRAME_BUTTONS[1].button->setSelected(true);
 			menu::MessageBox::getInstance().fadeMessage("Searching USB for ROMs");
 #endif
+			break;
+		case SUBMENU_DVD:
+			FRAME_BUTTONS[2].button->setSelected(true);
+			menu::MessageBox::getInstance().fadeMessage("Searching DVD for ROMs");
 			break;
 	}
 	//Draw one frame with message
@@ -286,21 +291,6 @@ void SelectRomFrame::activateSubmenu(int submenu)
 			romFile_init( romFile_topLevel );
 			selectRomFrame_OpenDirectory(romFile_topLevel);
 			break;
-		case SUBMENU_DVD:
-			// Deinit any existing romFile state
-			if(romFile_deinit) romFile_deinit( romFile_topLevel );
-			// Change all the romFile pointers
-			romFile_topLevel = &topLevel_DVD;
-			romFile_readDir  = fileBrowser_DVD_readDir;
-			romFile_readFile = fileBrowser_DVD_readFile;
-			romFile_readHeader = fileBrowser_DVD_readFile;
-			romFile_seekFile = fileBrowser_DVD_seekFile;
-			romFile_init     = fileBrowser_DVD_init;
-			romFile_deinit   = fileBrowser_DVD_deinit;
-			// Make sure the romFile system is ready before we browse the filesystem
-			romFile_init( romFile_topLevel );
-			selectRomFrame_OpenDirectory(romFile_topLevel);
-			break;
 		case SUBMENU_USB:
 #ifdef WII
 			// Deinit any existing romFile state
@@ -318,6 +308,21 @@ void SelectRomFrame::activateSubmenu(int submenu)
 			romFile_init( romFile_topLevel );
 			selectRomFrame_OpenDirectory(romFile_topLevel);
 #endif
+			break;
+		case SUBMENU_DVD:
+			// Deinit any existing romFile state
+			if(romFile_deinit) romFile_deinit( romFile_topLevel );
+			// Change all the romFile pointers
+			romFile_topLevel = &topLevel_DVD;
+			romFile_readDir  = fileBrowser_DVD_readDir;
+			romFile_readFile = fileBrowser_DVD_readFile;
+			romFile_readHeader = fileBrowser_DVD_readFile;
+			romFile_seekFile = fileBrowser_DVD_seekFile;
+			romFile_init     = fileBrowser_DVD_init;
+			romFile_deinit   = fileBrowser_DVD_deinit;
+			// Make sure the romFile system is ready before we browse the filesystem
+			romFile_init( romFile_topLevel );
+			selectRomFrame_OpenDirectory(romFile_topLevel);
 			break;
 	}
 }
@@ -459,16 +464,16 @@ void Func_SR_SD()
 	pMenuContext->setActiveFrame(MenuContext::FRAME_SELECTROM,SelectRomFrame::SUBMENU_SD);
 }
 
-void Func_SR_DVD()
-{
-	pMenuContext->setActiveFrame(MenuContext::FRAME_SELECTROM,SelectRomFrame::SUBMENU_DVD);
-}
-
 void Func_SR_USB()
 {
 #ifdef WII
 	pMenuContext->setActiveFrame(MenuContext::FRAME_SELECTROM,SelectRomFrame::SUBMENU_USB);
 #endif
+}
+
+void Func_SR_DVD()
+{
+	pMenuContext->setActiveFrame(MenuContext::FRAME_SELECTROM,SelectRomFrame::SUBMENU_DVD);
 }
 
 void Func_SR_PrevPage()

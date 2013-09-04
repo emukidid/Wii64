@@ -36,8 +36,8 @@ public:
 	{
 		SUBMENU_DEFAULT=0,
 		SUBMENU_SD,
-		SUBMENU_DVD,
-		SUBMENU_USB
+		SUBMENU_USB,
+		SUBMENU_DVD
 	};
 
 private:
