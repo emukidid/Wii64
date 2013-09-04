@@ -31,6 +31,7 @@
 #include "../libgui/MessageBox.h"
 #include "../libgui/FocusManager.h"
 #include "../libgui/CursorManager.h"
+#include "../libgui/Gui.h"
 
 extern "C" {
 #include "../fileBrowser/fileBrowser.h"
@@ -224,23 +225,52 @@ void SelectRomFrame::activateSubmenu(int submenu)
 	//Unselect all ROM source buttons
 	for (int i = 0; i < 3; i++)
 		FRAME_BUTTONS[i].button->setSelected(false);
-	
-/*	//All buttons: hide; unselect
-	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
+
+	//Init textures
+	for (int i = 0; i < NUM_FILE_SLOTS; i++)
 	{
-		FRAME_BUTTONS[i].button->setVisible(false);
-		FRAME_BUTTONS[i].button->setSelected(false);
-		FRAME_BUTTONS[i].button->setActive(false);
+		int btn_ind = i+5;
+		if(!fileTextures[i])
+		{
+			fileTextures[i] = (u8*) memalign(32, BOXART_TEX_SIZE);
+			memset(fileTextures[i], 0xFF, BOXART_TEX_SIZE);
+			DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
+			FRAME_BUTTONS[btn_ind].button->setBoxTexture(fileTextures[i]);
+			FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {128,128,128,128});
+		}
 	}
-	//All textBoxes: hide
-	for (int i = 0; i < NUM_FRAME_TEXTBOXES; i++)
-	{
-		FRAME_TEXTBOXES[i].textBox->setVisible(false);
-	}*/
-	switch (activeSubmenu)	//ROM Source buttons: set selected
+	GX_InvalidateTexAll();
+	
+	switch (activeSubmenu)	//Display message saying which device we're opening
 	{						
 		case SUBMENU_SD:
 			FRAME_BUTTONS[0].button->setSelected(true);
+			menu::MessageBox::getInstance().fadeMessage("Searching SD for ROMs");
+			break;
+		case SUBMENU_DVD:
+			FRAME_BUTTONS[1].button->setSelected(true);
+			menu::MessageBox::getInstance().fadeMessage("Searching DVD for ROMs");
+			break;
+		case SUBMENU_USB:
+#ifdef WII
+			FRAME_BUTTONS[2].button->setSelected(true);
+			menu::MessageBox::getInstance().fadeMessage("Searching USB for ROMs");
+#endif
+			break;
+	}
+	//Draw one frame with message
+	menu::Focus::getInstance().setFocusActive(false);
+	menu::Focus::getInstance().setFreezeAction(true);
+	menu::Cursor::getInstance().setFreezeAction(true);
+	menu::Gui::getInstance().draw();
+	menu::Focus::getInstance().setFocusActive(true);
+	menu::Focus::getInstance().setFreezeAction(false);
+	menu::Cursor::getInstance().setFreezeAction(false);
+	menu::Focus::getInstance().clearPrimaryFocus();	
+
+	switch (activeSubmenu)	//Init romFile pointers
+	{						
+		case SUBMENU_SD:
 			// Deinit any existing romFile state
 			if(romFile_deinit) romFile_deinit( romFile_topLevel );
 			// Change all the romFile pointers
@@ -257,7 +287,6 @@ void SelectRomFrame::activateSubmenu(int submenu)
 			selectRomFrame_OpenDirectory(romFile_topLevel);
 			break;
 		case SUBMENU_DVD:
-			FRAME_BUTTONS[1].button->setSelected(true);
 			// Deinit any existing romFile state
 			if(romFile_deinit) romFile_deinit( romFile_topLevel );
 			// Change all the romFile pointers
@@ -274,7 +303,6 @@ void SelectRomFrame::activateSubmenu(int submenu)
 			break;
 		case SUBMENU_USB:
 #ifdef WII
-			FRAME_BUTTONS[2].button->setSelected(true);
 			// Deinit any existing romFile state
 			if(romFile_deinit) romFile_deinit( romFile_topLevel );
 			// Change all the romFile pointers
@@ -409,7 +437,7 @@ void SelectRomFrame::drawChildren(menu::Graphics &gfx)
 		for (int i = 0; i < NUM_FILE_SLOTS; i++)
 		{
 			int btn_ind = i+5;
-			if (FRAME_BUTTONS[btn_ind].button->getFocus())
+			if (FRAME_BUTTONS[btn_ind].button->getFocus() && ((current_page*NUM_FILE_SLOTS) + i < num_entries))
 			{
 				FRAME_TEXTBOXES[1].textBoxString = filenameFromAbsPath(dir_entries[i+(current_page*NUM_FILE_SLOTS)].name);
 			}
@@ -593,15 +621,15 @@ void selectRomFrame_FillPage()
 	for (int i = 0; i < NUM_FILE_SLOTS; i++)
 	{
 		int btn_ind = i+5;
-		if(!fileTextures[i])
+/*		if(!fileTextures[i])
 			fileTextures[i] = (u8*) memalign(32, BOXART_TEX_SIZE);
-		FRAME_BUTTONS[btn_ind].button->setBoxTexture(fileTextures[i]);
+		FRAME_BUTTONS[btn_ind].button->setBoxTexture(fileTextures[i]);*/
 		if ((current_page*NUM_FILE_SLOTS) + i < num_entries)
 		{
 			if(dir_entries[i+(current_page*NUM_FILE_SLOTS)].attr & FILE_BROWSER_ATTR_DIR)
 			{
 				FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,50,50,255});
-				memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
+				memset(fileTextures[i], 0xFF, BOXART_TEX_SIZE);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 			}
 			else
@@ -618,7 +646,7 @@ void selectRomFrame_FillPage()
 		else
 		{
 			FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,255,255,128});
-			memset(fileTextures[i], 0x00, BOXART_TEX_SIZE);
+			memset(fileTextures[i], 0xFF, BOXART_TEX_SIZE);
 			DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 		}
 	}
