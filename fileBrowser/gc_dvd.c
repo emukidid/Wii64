@@ -425,6 +425,7 @@ void dvd_motor_on_extra()
 	while (dvd[7] & 1);
 }
 
+#ifdef HW_DOL
 void* drive_patch_ptr(u32 driveVersion)
 {
 	if(driveVersion == 0x20020402)
@@ -469,6 +470,7 @@ void dvd_enable_patches()
 	dvd_read_id();
 	//print_gecko("Read ID %08X\r\n",dvd_get_error());
 }
+#endif //HW_DOL
 
 /* Wrapper functions */
 
