@@ -77,8 +77,12 @@ int convert(void);
 { PowerPC_instr ppc; _LWZ(ppc,rd,immed,ra); set_next_dst(ppc); }
 #define GEN_LHZ(rd,immed,ra) \
 { PowerPC_instr ppc; _LHZ(ppc,rd,immed,ra); set_next_dst(ppc); }
+#define GEN_LHZX(rd,ra,rb) \
+{ PowerPC_instr ppc; _LHZX(ppc,rd,ra,rb); set_next_dst(ppc); }
 #define GEN_LHA(rd,immed,ra) \
 { PowerPC_instr ppc; _LHA(ppc,rd,immed,ra); set_next_dst(ppc); }
+#define GEN_LHAX(rd,ra,rb) \
+{ PowerPC_instr ppc; _LHAX(ppc,rd,ra,rb); set_next_dst(ppc); }
 #define GEN_LBZ(rd,immed,ra) \
 { PowerPC_instr ppc; _LBZ(ppc,rd,immed,ra); set_next_dst(ppc); }
 #define GEN_LBZX(rd,ra,rb) \

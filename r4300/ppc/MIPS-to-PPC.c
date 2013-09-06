@@ -3678,8 +3678,8 @@ static void genCheckFP(void){
 
 // Recompiles a Load, includes constant propagation, physical, virtual and runtime determined cases
 void genRecompileLoad(memType type, MIPS_instr mips) {
-	int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	int isPhysical = 1, isVirtual = 1;
+	/*int isConstant = isRegisterConstant( MIPS_GET_RS(mips) );
 	if(isConstant){
 		int constant = getRegisterConstant( MIPS_GET_RS(mips) );
 		int immediate = MIPS_GET_IMMED(mips);
@@ -3689,50 +3689,48 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 			isPhysical = 0;
 		else
 			isVirtual = 0;
-	}
+	}*/
 	
 	PowerPC_instr* preCall[2] = {0,0};
 	int not_fastmem_id[2] = {0,0};
-	int rd, base, rdram_base;
+	int rd, base;
 	if(isVirtual) {
 		flushRegisters();
 		reset_code_addr();
-		rdram_base = rd = mapRegisterTemp(); // r3 = rd
+		rd = mapRegisterTemp(); // r3 = rd
 		base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
 		invalidateRegisters();
 	}
 	else {
 		base = mapRegister( MIPS_GET_RS(mips) );
 		rd = mapRegisterNew( MIPS_GET_RT(mips) );
-		rdram_base = mapRegisterTemp();
 	}
 
 	if(isPhysical && isVirtual){
 		// If base in physical memory
+		GEN_ADDI(base, base, MIPS_GET_IMMED(mips));
 		GEN_CMP(base, DYNAREG_MEM_TOP, 1);
 		not_fastmem_id[0] = add_jump_special(0);
 		GEN_BGE(1, not_fastmem_id[0], 0, 0);
 		preCall[0] = get_curr_dst();
 	}
 	if(isPhysical){
-		// Add rdram pointer
-		GEN_ADD(rdram_base, DYNAREG_RDRAM, base);
 		// Perform the actual load
 		switch(type) {
 			case MEM_LW:
-				GEN_LWZ(rd, MIPS_GET_IMMED(mips), rdram_base);
+				GEN_LWZX(rd, DYNAREG_RDRAM, base);
 			break;
 			case MEM_LBU:
-				GEN_LBZ(rd, MIPS_GET_IMMED(mips), rdram_base);
+				GEN_LBZX(rd, DYNAREG_RDRAM, base);
 			break;
 			case MEM_LHU:
-				GEN_LHZ(rd, MIPS_GET_IMMED(mips), rdram_base);
+				GEN_LHZX(rd, DYNAREG_RDRAM, base);
 			break;
 			case MEM_LH:
-				GEN_LHA(rd, MIPS_GET_IMMED(mips), rdram_base);
+				GEN_LHAX(rd, DYNAREG_RDRAM, base);
 			break;
 			case MEM_LB:
-				GEN_LBZ(rd, MIPS_GET_IMMED(mips), rdram_base);
+				GEN_LBZX(rd, DYNAREG_RDRAM, base);
 				// extsb rt
 				GEN_EXTSB(rd, rd);
 			break;
@@ -3743,9 +3741,6 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 	if(isVirtual) {
 		mapRegisterNew( MIPS_GET_RT(mips) );
 		flushRegisters();
-	}
-	else {
-		unmapRegisterTemp(rdram_base);
 	}
 
 	if(isPhysical && isVirtual){
@@ -3760,7 +3755,7 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 		set_jump_special(not_fastmem_id[0], callSize+1);
 		// load into rt
 		GEN_LI(rd, 0, MIPS_GET_RT(mips));
-		genCallDynaMem(type, base, MIPS_GET_IMMED(mips));
+		genCallDynaMem(type, base, 0);
 	}
 
 	if(isPhysical && isVirtual){
