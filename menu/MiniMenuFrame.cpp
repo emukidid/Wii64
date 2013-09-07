@@ -475,10 +475,11 @@ void Func_MMPlayGame()
 		menu::MessageBox::getInstance().setMessage("Please load a ROM first");
 		return;
 	}
-	
+
 	//Wait until 'A' or 'B'button released before play/resume game
-	menu::Cursor::getInstance().setFreezeAction(true);
+	menu::Focus::getInstance().setFocusActive(false);
 	menu::Focus::getInstance().setFreezeAction(true);
+	menu::Cursor::getInstance().setFreezeAction(true);
 	int buttonHeld = 1;
 	while(buttonHeld)
 	{
@@ -494,8 +495,10 @@ void Func_MMPlayGame()
 #endif
 		}
 	}
-	menu::Cursor::getInstance().setFreezeAction(false);
+	menu::Focus::getInstance().setFocusActive(true);
 	menu::Focus::getInstance().setFreezeAction(false);
+	menu::Cursor::getInstance().setFreezeAction(false);
+	menu::Focus::getInstance().clearPrimaryFocus();	
 
 	menu::Gui::getInstance().gfx->clearEFB((GXColor){0, 0, 0, 0xFF}, 0x000000);
 	BOXART_DeInit();
