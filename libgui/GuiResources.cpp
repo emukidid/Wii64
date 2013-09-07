@@ -67,7 +67,7 @@ Resources::Resources()
 
 	//Image for boxart texture
 	boxartTexture = (u8*) memalign(32, BOXART_TEX_SIZE);
-	memset(boxartTexture, 0x00, BOXART_TEX_SIZE);
+	memset(boxartTexture, 0xFF, BOXART_TEX_SIZE);
 	DCFlushRange(boxartTexture, BOXART_TEX_SIZE);
 	boxartFrontImage = new Image(boxartTexture, 
 								BOXART_TEX_WD, BOXART_TEX_FRONT_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);

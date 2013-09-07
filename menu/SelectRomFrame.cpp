@@ -672,6 +672,7 @@ extern int rom_length;
 extern int autoSaveLoaded;
 void Func_SetPlayGame();
 void Func_MMRefreshStateInfo();
+void Func_MMPlayGame();
 
 void selectRomFrame_LoadFile(int i)
 {
@@ -756,6 +757,9 @@ void selectRomFrame_LoadFile(int i)
 			autoSaveLoaded = NATIVESAVEDEVICE_NONE;
 
 			menu::MessageBox::getInstance().setMessage(RomInfo);
+			
+			//Launch game
+			Func_MMPlayGame();
 		}
 		else		// If not.
 		{

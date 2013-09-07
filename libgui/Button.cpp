@@ -46,6 +46,8 @@ Button::Button(int style, char** label, float x, float y, float width, float hei
 		  width(width),
 		  height(height),
 		  fontSize(1.0),
+		  boxSize(1.6),
+		  boxFocusSize(2.0),
 		  clickedFunc(0),
 		  returnFunc(0),
 		  boxTexture(0)
@@ -171,6 +173,12 @@ void Button::setBoxTexture(u8* texture)
 	boxTexture = texture;
 }
 
+void Button::setBoxSize(float size, float focusSize)
+{
+	boxSize = size;
+	boxFocusSize = focusSize;
+}
+
 #define SCROLL_PERIOD 4.0f
 
 void Button::drawComponent(Graphics& gfx)
@@ -248,13 +256,13 @@ void Button::drawComponent(Graphics& gfx)
 	case BUTTON_BOX3D:
 		if (getFocus())	
 		{
-			menu::Gui::getInstance().menuBox3D->setSize(2.0);
+			menu::Gui::getInstance().menuBox3D->setSize(boxFocusSize);
 			menu::Gui::getInstance().menuBox3D->setEnableRotate(true);
 			menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -150.0);
 		}
 		else
 		{
-			menu::Gui::getInstance().menuBox3D->setSize(1.6);
+			menu::Gui::getInstance().menuBox3D->setSize(boxSize);
 			menu::Gui::getInstance().menuBox3D->setEnableRotate(false);
 			menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -100.0);
 		}

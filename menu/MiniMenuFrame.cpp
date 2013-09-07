@@ -39,6 +39,7 @@ extern "C" {
 #include "../gc_memory/memory.h"
 #include "../gc_memory/Saves.h"
 #include "../main/plugin.h"
+#include "../main/rom.h"
 #include "../main/savestates.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
@@ -54,9 +55,9 @@ void Func_MMSelectROM();
 void Func_MMAdvancedMenu();
 void Func_MMControls();
 void Func_MMPlayGame();
-void Func_MMControls();
+void Func_MMRomInfo();
 
-#define NUM_FRAME_BUTTONS 7
+#define NUM_FRAME_BUTTONS 8
 #define FRAME_BUTTONS miniMenuFrameButtons
 #define FRAME_STRINGS miniMenuFrameStrings
 #define NUM_FRAME_TEXTBOXES 4
@@ -103,13 +104,14 @@ struct ButtonInfo
 	ButtonFunc		returnFunc;
 } FRAME_BUTTONS[NUM_FRAME_BUTTONS] =
 { //	button	buttonStyle	buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc				returnFunc
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	240.0,	 60.0,	160.0,	56.0,	 4,	 4,	 1,	 2,	Func_MMResetROM,		Func_MMPlayGame }, // Reset ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	240.0,	 60.0,	160.0,	56.0,	 4,	 7,	 1,	 2,	Func_MMResetROM,		Func_MMPlayGame }, // Reset ROM
 	{	NULL,	BTN_DEFAULT,NULL,	 			60.0,	103.0,	180.0,	185.0,	 0,	 3,	-1,	 4,	Func_MMSaveState,		Func_MMPlayGame }, // Save State
 	{	NULL,	BTN_DEFAULT,NULL,				400.0,	103.0,	180.0,	185.0,	 0,	 5,	 4,	-1,	Func_MMLoadState,		Func_MMPlayGame }, // Load State
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	 50.0,	350.0,	150.0,	56.0,	 1,	-1,	-1,	 6,	Func_MMExitToLoader,	Func_MMPlayGame }, // Quit
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	240.0,	270.0,	160.0,	56.0,	 0,	 6,	 1,	 2,	Func_MMSelectROM,		Func_MMPlayGame }, // Select ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	240.0,	270.0,	160.0,	56.0,	 7,	 6,	 1,	 2,	Func_MMSelectROM,		Func_MMPlayGame }, // Select ROM
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	440.0,	350.0,	150.0,	56.0,	 2,	-1,	 6,	-1,	Func_MMAdvancedMenu,	Func_MMPlayGame }, // Advanced
 	{	NULL,	BTN_DEFAULT,NULL,				205.0,	330.0,	230.0,	84.0,	 4,	-1,	 3,	 5,	Func_MMControls,		Func_MMPlayGame }, // Controller Settings
+	{	NULL,	BTN_BOX3D,	NULL,				260.0,	136.0,	120.0,	88.0,	 0,	 4,	 1,	 2,	Func_MMRomInfo,			Func_MMPlayGame }, // Boxart Button
 };
 
 struct TextBoxInfo
@@ -163,6 +165,10 @@ MiniMenuFrame::MiniMenuFrame()
 	FRAME_TEXTBOXES[0].textBox->setColor(&textColor);
 	FRAME_TEXTBOXES[1].textBox->setColor(&textColor);
 
+	//Set size of boxart button
+	FRAME_BUTTONS[7].button->setBoxSize(2.0, 2.4);
+	FRAME_BUTTONS[7].button->setLabelColor((GXColor) {128,128,128,128});
+	
 	miniInfoBar = new menu::MiniInfoBar();
 	add(miniInfoBar);
 	inputStatusBar = new menu::InputStatusBar(216,340);
@@ -190,6 +196,7 @@ MiniMenuFrame::~MiniMenuFrame()
 static unsigned int which_slot = 0;
 static bool state_exists;
 static char state_date[10], state_time[10];
+extern BOOL hasLoadedROM;
 
 void MiniMenuFrame::drawChildren(menu::Graphics &gfx)
 {
@@ -263,17 +270,9 @@ void MiniMenuFrame::drawChildren(menu::Graphics &gfx)
 #endif //HW_RVL
 		}
 
-//Testing Code
-//	time_t now;
-//	time(&now);
-//	strftime(FRAME_STRINGS[7], 49, "%D %R", localtime(&now));
-/*	sprintf(FRAME_STRINGS[7], "%s", ctime(&now));		
-	std::locale::global(std::locale("ja_JP.utf8"));
-	std::time_t t = std::time(NULL);
-	char mbstr[100];
-	if (std::strftime(mbstr, 100, "%A %c", std::localtime(&t))) {
-		std::cout << mbstr << '\n';
-	}*/
+	//Set boxart button transparency
+	if(!hasLoadedROM) 	FRAME_BUTTONS[7].button->setLabelColor((GXColor) {128,128,128,90});
+	else				FRAME_BUTTONS[7].button->setLabelColor((GXColor) {255,255,255,255});
 
 		//Draw buttons
 		menu::ComponentList::const_iterator iteration;
@@ -285,8 +284,6 @@ void MiniMenuFrame::drawChildren(menu::Graphics &gfx)
 }
 
 extern MenuContext *pMenuContext;
-
-extern BOOL hasLoadedROM;
 
 extern "C" {
 void cpu_init();
@@ -424,6 +421,37 @@ void Func_MMAdvancedMenu()
 void Func_MMControls()
 {
 	pMenuContext->setActiveFrame(MenuContext::FRAME_SETTINGS, SettingsFrame::SUBMENU_INPUT);
+}
+
+extern BOOL hasLoadedROM;
+extern int rom_length;
+
+void Func_MMRomInfo()
+{
+	if(!hasLoadedROM||!ROM_HEADER)
+	{
+		menu::MessageBox::getInstance().setMessage("No ROM loaded");
+		return;
+	}
+	
+	char RomInfo[256] = "";
+	char buffer [50];
+	char buffer2 [50];
+	
+	sprintf(buffer,"Rom name: %s\n",ROM_SETTINGS.goodname);
+	strcat(RomInfo,buffer);
+	sprintf(buffer,"Rom size: %d Mb\n",rom_length/1024/1024);
+	strcat(RomInfo,buffer);
+	if(ROM_HEADER->Manufacturer_ID == 'N') sprintf(buffer,"Manufacturer: Nintendo\n");
+	else sprintf(buffer,"Manufacturer: %x\n", (unsigned int)(ROM_HEADER->Manufacturer_ID));
+	strcat(RomInfo,buffer);
+	countrycodestring(ROM_HEADER->Country_code&0xFF, buffer2);
+	sprintf(buffer,"Country: %s\n",buffer2);
+	strcat(RomInfo,buffer);
+	sprintf(buffer,"CRCs: %08X %08X\n",(unsigned int)ROM_HEADER->CRC1,(unsigned int)ROM_HEADER->CRC2);
+	strcat(RomInfo,buffer);
+
+	menu::MessageBox::getInstance().setMessage(RomInfo);
 }
 
 extern "C" {
