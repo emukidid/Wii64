@@ -3702,13 +3702,13 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 		invalidateRegisters();
 	}
 	else {
-		base = mapRegister( MIPS_GET_RS(mips) );
 		rd = mapRegisterNew( MIPS_GET_RT(mips) );
+		base = mapRegister( MIPS_GET_RS(mips) );
 	}
 
+	GEN_ADDI(base, base, MIPS_GET_IMMED(mips));	// base = base + immed.
 	if(isPhysical && isVirtual){
 		// If base in physical memory
-		GEN_ADDI(base, base, MIPS_GET_IMMED(mips));
 		GEN_CMP(base, DYNAREG_MEM_TOP, 1);
 		not_fastmem_id[0] = add_jump_special(0);
 		GEN_BGE(1, not_fastmem_id[0], 0, 0);
@@ -3753,7 +3753,7 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 	if(isVirtual){
 		int callSize = get_curr_dst() - preCall[0];
 		set_jump_special(not_fastmem_id[0], callSize+1);
-		// load into rt
+		// load dest reg number into r3
 		GEN_LI(rd, 0, MIPS_GET_RT(mips));
 		genCallDynaMem(type, base, 0);
 	}
