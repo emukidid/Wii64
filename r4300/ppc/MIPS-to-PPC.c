@@ -3817,8 +3817,8 @@ void genRecompileStore(memType type, MIPS_instr mips){
 			GEN_LI(rd, 0, 0); // r3 = 0
 		}
 	}
-	int base = mapRegister( MIPS_GET_RS(mips) ); // r4 = addr
-	int addr = mapRegisterTemp(); // r5 = fpr_addr
+	int addr = mapRegisterTemp(); // r4 = fpr_addr and then base + immed
+	int base = mapRegister( MIPS_GET_RS(mips) ); // r5 = base
 	short immed = MIPS_GET_IMMED(mips);
 	invalidateRegisters();
 	
@@ -3828,13 +3828,11 @@ void genRecompileStore(memType type, MIPS_instr mips){
 		// frs = *addr
 		GEN_LWZ(rd, 0, addr);
 	}
-	
-	// DYNAREG_RADDR = address
-	GEN_ADDI(4, base, immed);
+	GEN_ADDI(addr, base, immed);
 
 	if(isPhysical && isVirtual){
 		// If base in physical memory
-		GEN_CMP(4, DYNAREG_MEM_TOP, 1);
+		GEN_CMP(addr, DYNAREG_MEM_TOP, 1);
 		GEN_BGE(1, 11, 0, 0);
 	}
 	
@@ -3843,23 +3841,23 @@ void genRecompileStore(memType type, MIPS_instr mips){
 
 		// Perform the actual store
 		if(type == MEM_SB){
-			GEN_STBX(3, DYNAREG_RDRAM, 4);
+			GEN_STBX(rd, DYNAREG_RDRAM, addr);
 		}
 		else if(type == MEM_SH) {
-			GEN_STHX(3, DYNAREG_RDRAM, 4);
+			GEN_STHX(rd, DYNAREG_RDRAM, addr);
 		}
 		else if(type == MEM_SW || type == MEM_SWC1) {
-			GEN_STWX(3, DYNAREG_RDRAM, 4);
+			GEN_STWX(rd, DYNAREG_RDRAM, addr);
 		}
 		
 		// r5 = invalid_code_get(address>>12)
-		GEN_RLWINM(6, 4, 20, 12, 31);	// address >> 12
+		GEN_RLWINM(6, addr, 20, 12, 31);	// address >> 12
 		GEN_LBZX(5, 6, DYNAREG_INVCODE);
 		GEN_CMPI(5, 0, 0);
 
 		// if (!r5)
 		GEN_BNE(0, (isVirtual && isPhysical) ? 14 : 5, 0, 0);
-		GEN_ADDI(3, 4, 0);
+		GEN_ADDI(3, addr, 0);
 		// invalidate_func(address);
 		GEN_B(add_jump((unsigned long)(&invalidate_func), 1, 1), 0, 1);
 		
@@ -3876,8 +3874,8 @@ void genRecompileStore(memType type, MIPS_instr mips){
 	
 	if(isVirtual) {
 		/* Slow case outside of RDRAM */
-		
-		// r4 = address (already set)
+		// r3 = rd
+		// r4 = address (already set up here)
 		// adjust delay_slot and pc
 		// r5 = pc
 		GEN_LIS(5, extractUpper16(get_src_pc()+4));
