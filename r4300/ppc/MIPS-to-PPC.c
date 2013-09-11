@@ -3769,7 +3769,8 @@ void genCallDynaMem(memType type, int base, short immed){
 	// Pass PC as arg 4 (upper half)
 	GEN_LIS(6, extractUpper16(get_src_pc()+4));
 	// addr = base + immed (arg 2)
-	GEN_ADDI(4, base, immed);
+	if(base != 4 || immed)
+		GEN_ADDI(4, base, immed);
 	// type passed as arg 3
 	GEN_LI(5, 0, type);
 	// Lower half of PC
