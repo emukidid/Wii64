@@ -3699,10 +3699,8 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 		
 		if((constant + immediate) > (int)RAM_TOP)
 			isPhysical = 0;
-		else {
-			if(MIPS_GET_RS(mips) != MIPS_GET_RT(mips))
-				isVirtual = 0;
-		}			
+		else 
+			isVirtual = 0;
 	}
 	
 	PowerPC_instr* preCall[2] = {0,0};
@@ -3717,9 +3715,10 @@ void genRecompileLoad(memType type, MIPS_instr mips) {
 		invalidateRegisters();	// if we map anything from here, it'll be from r3 again!
 	}
 	else {
+		// addr is first because rs might be the same as rt and we need to make sure it's not marked dirty/not read.
+		addr = mapRegister( MIPS_GET_RS(mips) ); // Not guarranteed to be r5
 		rd = mapRegisterNew( MIPS_GET_RT(mips) );	// Not guarranteed to be r3
 		base = mapRegisterTemp(); // Not guarranteed to be r4
-		addr = mapRegister( MIPS_GET_RS(mips) ); // Not guarranteed to be r5
 	}
 
 	GEN_ADDI(base, addr, MIPS_GET_IMMED(mips));	// base = base + immed.
