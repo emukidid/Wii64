@@ -209,8 +209,8 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir, i
 				*dir = realloc( *dir, ((num_entries)+1) * sizeof(fileBrowser_file) ); 
 			}
 			if(n64only) {
-				if(!(strcasestr(direntry->name,".v64") || strcasestr(direntry->name,".z64")) ||
-					 strcasestr(direntry->name,".n64") || strcasestr(direntry->name,".bin"))
+				if(!(strcasestr(direntry->name,".v64") || strcasestr(direntry->name,".z64") ||
+					 strcasestr(direntry->name,".n64") || strcasestr(direntry->name,".bin")))
 					continue;
 			}
 			
