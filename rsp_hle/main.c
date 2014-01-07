@@ -37,7 +37,6 @@
 #include <string.h>
 #endif
 #include <stdio.h>
-
 #include "../gui/DEBUG.h"
 
 #ifdef __PPC__
@@ -48,6 +47,7 @@
 #include "hle.h"
 
 #include "Audio_#1.1.h"
+#include "musyx.h"
 
 //#define DEBUG_RSP 1
 
@@ -115,7 +115,7 @@ __declspec(dllexport) void DllTest ( HWND hParent )
 static int audio_ucode_detect(OSTask_t *task)
 {
 	if (*(unsigned long*)(rsp.RDRAM + task->ucode_data + 0) != 0x1) {
-		if (*(rsp.RDRAM + task->ucode_data + (0 ^ (3-S8))) == 0xF) {
+		if (*(unsigned long*)(rsp.RDRAM + task->ucode_data + 0x10) == 0x00000001) {
 	 		return 4;
  		}
 		else {
@@ -154,6 +154,9 @@ static int audio_ucode(OSTask_t *task)
 		case 3: // zelda ucode
 			ABI = &ABI3[0];
 			break;
+		case 4:	// musy x
+			musyx_task(task);
+			return 0;
 		default: // unknown ucode
 			return -1;
 	}
