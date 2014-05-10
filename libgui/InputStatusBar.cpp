@@ -93,12 +93,21 @@ void InputStatusBar::drawComponent(Graphics& gfx)
 			controller_Wiimote.available[(int)padAssign[i]] = (err == WPAD_ERR_NONE && type == WPAD_EXP_NONE) ? 1 : 0;
 			if (controller_Classic.available[(int)padAssign[i]])
 			{
+				struct expansion_t exp;
+				WPAD_Expansion((int)padAssign[i], &exp);
 				assign_controller(i, &controller_Classic, (int)padAssign[i]);
 //				gfx.setColor(activeColor);
 //				IplFont::getInstance().drawInit(activeColor);
 				gfx.setColor(controllerColors[i]);
 				IplFont::getInstance().drawInit(controllerColors[i]);
-				statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_CLASSIC);
+				// exp->classic.type: 0 = original classic (analog L/R), 1 = classic pro, 2 = wiiu pro
+				if(exp.classic.type != 2) {
+					statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_CLASSIC);
+				}
+				else {
+					// TODO sepp256, add the image here for Wii U Pro
+					statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_WIIMOTENUNCHUCK);
+				}
 //				sprintf (statusText, "Pad%d: CC%d", i+1, padAssign[i]+1);
 			}
 			else if (controller_WiimoteNunchuk.available[(int)padAssign[i]])

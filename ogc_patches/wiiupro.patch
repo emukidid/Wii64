@@ -1,0 +1,329 @@
+/* 
+	This is a patch for libOGC 1.8.12 to add Wii U Pro controller support 
+	All credit goes to tueidj
+	
+	Remove this section before applying.
+*/
+
+Index: gc/wiiuse/wiiuse.h
+===================================================================
+--- gc/wiiuse/wiiuse.h	(revision 4915)
++++ gc/wiiuse/wiiuse.h	(working copy)
+@@ -245,7 +245,7 @@
+ 	CMD_DONE
+ } cmd_blk_s;
+ 
+-struct cmd_blk_t 
++struct cmd_blk_t
+ {
+ 	lwp_node node;
+ 
+@@ -470,6 +470,7 @@
+ 
+ 	struct joystick_t ljs;			/**< left joystick calibration				*/
+ 	struct joystick_t rjs;			/**< right joystick calibration				*/
++	ubyte type;						/**< original, pro, wiiu pro					*/
+ } classic_ctrl_t;
+ 
+ 
+@@ -627,7 +628,7 @@
+ 	WCONST ubyte expansion_state;			/**< the state of the expansion handshake	*/
+ 
+ 	WCONST struct data_req_t* data_req;		/**< list of data read requests				*/
+-	
++
+ 	WCONST struct cmd_blk_t *cmd_head;
+ 	WCONST struct cmd_blk_t *cmd_tail;
+ 
+Index: wiiuse/classic.c
+===================================================================
+--- wiiuse/classic.c	(revision 4915)
++++ wiiuse/classic.c	(working copy)
+@@ -71,40 +71,57 @@
+ 	for (i = 0; i < len; ++i)
+ 		data[i] = (data[i] ^ 0x17) + 0x17;
+ 	*/
+-	if (data[offset] == 0xFF) {
+-		/*
+-		 *	Sometimes the data returned here is not correct.
+-		 *	This might happen because the wiimote is lagging
+-		 *	behind our initialization sequence.
+-		 *	To fix this just request the handshake again.
+-		 *
+-		 *	Other times it's just the first 16 bytes are 0xFF,
+-		 *	but since the next 16 bytes are the same, just use
+-		 *	those.
+-		 */
+-		if (data[offset + 16] == 0xFF) {
+-			/* get the calibration data again */
+-			WIIUSE_DEBUG("Classic controller handshake appears invalid, trying again.");
+-			wiiuse_read_data(wm, data, WM_EXP_MEM_CALIBR, EXP_HANDSHAKE_LEN, wiiuse_handshake_expansion);
+-		} else
+-			offset += 16;
++
++	/* is this a wiiu pro? */
++	if (len > 223 && data[223] == 0x20) {
++		cc->ljs.max.x = cc->ljs.max.y = 0xFF;
++		cc->ljs.min.x = cc->ljs.min.y = 0;
++		cc->ljs.center.x = cc->ljs.center.y = 0x80;
++
++		cc->rjs = cc->ljs;
++
++		cc->type = 2;
+ 	}
++	else {
++		if (data[offset] == 0xFF) {
++			/*
++			 *	Sometimes the data returned here is not correct.
++			 *	This might happen because the wiimote is lagging
++			 *	behind our initialization sequence.
++			 *	To fix this just request the handshake again.
++			 *
++			 *	Other times it's just the first 16 bytes are 0xFF,
++			 *	but since the next 16 bytes are the same, just use
++			 *	those.
++			 */
++			if (data[offset + 16] == 0xFF) {
++				/* get the calibration data again */
++				WIIUSE_DEBUG("Classic controller handshake appears invalid, trying again.");
++				wiiuse_read_data(wm, data, WM_EXP_MEM_CALIBR, EXP_HANDSHAKE_LEN, wiiuse_handshake_expansion);
++			} else
++				offset += 16;
++		}
+ 
++		if (len > 218 && data[218])
++			cc->type = 1; /* classic controller pro (no analog triggers) */
++		else
++			cc->type = 0; /* original classic controller (analog triggers) */
+ 
+-	/* joystick stuff */
+-	cc->ljs.max.x = data[0 + offset] / 4 == 0 ? 64 : data[0 + offset] / 4;
+-	cc->ljs.min.x = data[1 + offset] / 4;
+-	cc->ljs.center.x = data[2 + offset] / 4 == 0 ? 32 : data[2 + offset] / 4;
+-	cc->ljs.max.y = data[3 + offset] / 4 == 0 ? 64 : data[3 + offset] / 4;
+-	cc->ljs.min.y = data[4 + offset] / 4;
+-	cc->ljs.center.y = data[5 + offset] / 4 == 0 ? 32 : data[5 + offset] / 4;
++		/* joystick stuff */
++		cc->ljs.max.x = data[0 + offset] / 4 == 0 ? 64 : data[0 + offset] / 4;
++		cc->ljs.min.x = data[1 + offset] / 4;
++		cc->ljs.center.x = data[2 + offset] / 4 == 0 ? 32 : data[2 + offset] / 4;
++		cc->ljs.max.y = data[3 + offset] / 4 == 0 ? 64 : data[3 + offset] / 4;
++		cc->ljs.min.y = data[4 + offset] / 4;
++		cc->ljs.center.y = data[5 + offset] / 4 == 0 ? 32 : data[5 + offset] / 4;
+ 
+-	cc->rjs.max.x = data[6 + offset] / 8 == 0 ? 32 : data[6 + offset] / 8;
+-	cc->rjs.min.x = data[7 + offset] / 8;
+-	cc->rjs.center.x = data[8 + offset] / 8 == 0 ? 16 : data[8 + offset] / 8;
+-	cc->rjs.max.y = data[9 + offset] / 8 == 0 ? 32 : data[9 + offset] / 8;
+-	cc->rjs.min.y = data[10 + offset] / 8;
+-	cc->rjs.center.y = data[11 + offset] / 8 == 0 ? 16 : data[11 + offset] / 8;
++		cc->rjs.max.x = data[6 + offset] / 8 == 0 ? 32 : data[6 + offset] / 8;
++		cc->rjs.min.x = data[7 + offset] / 8;
++		cc->rjs.center.x = data[8 + offset] / 8 == 0 ? 16 : data[8 + offset] / 8;
++		cc->rjs.max.y = data[9 + offset] / 8 == 0 ? 32 : data[9 + offset] / 8;
++		cc->rjs.min.y = data[10 + offset] / 8;
++		cc->rjs.center.y = data[11 + offset] / 8 == 0 ? 16 : data[11 + offset] / 8;
++	}
+ 
+ 	/* handshake done */
+ 	wm->event = WIIUSE_CLASSIC_CTRL_INSERTED;
+@@ -123,7 +140,7 @@
+  *
+  *	@param cc		A pointer to a classic_ctrl_t structure.
+  */
+-void classic_ctrl_disconnected(struct classic_ctrl_t* cc) 
++void classic_ctrl_disconnected(struct classic_ctrl_t* cc)
+ {
+ 	memset(cc, 0, sizeof(struct classic_ctrl_t));
+ }
+@@ -144,25 +161,40 @@
+ 	for (i = 0; i < 6; ++i)
+ 		msg[i] = (msg[i] ^ 0x17) + 0x17;
+ 	*/
+-	classic_ctrl_pressed_buttons(cc, BIG_ENDIAN_SHORT(*(short*)(msg + 4)));
++	if (cc->type==2) {
++		classic_ctrl_pressed_buttons(cc, BIG_ENDIAN_SHORT(*(short*)(msg + 8)));
+ 
+-	/* left/right buttons */
+-	cc->ls_raw = (((msg[2] & 0x60) >> 2) | ((msg[3] & 0xE0) >> 5));
+-	cc->rs_raw = (msg[3] & 0x1F);
++		/* 12-bit little endian values adjusted to 8-bit */
++		cc->ljs.pos.x = (msg[0] >> 4) | (msg[1] << 4);
++		cc->rjs.pos.x = (msg[2] >> 4) | (msg[3] << 4);
++		cc->ljs.pos.y = (msg[4] >> 4) | (msg[5] << 4);
++		cc->rjs.pos.y = (msg[6] >> 4) | (msg[7] << 4);
+ 
+-	/*
+-	 *	TODO - LR range hardcoded from 0x00 to 0x1F.
+-	 *	This is probably in the calibration somewhere.
+-	 */
++		cc->ls_raw = cc->btns & CLASSIC_CTRL_BUTTON_FULL_L ? 0x1F : 0;
++		cc->rs_raw = cc->btns & CLASSIC_CTRL_BUTTON_FULL_R ? 0x1F : 0;
++	}
++	else {
++		classic_ctrl_pressed_buttons(cc, BIG_ENDIAN_SHORT(*(short*)(msg + 4)));
++
++		/* left/right buttons */
++		cc->ls_raw = (((msg[2] & 0x60) >> 2) | ((msg[3] & 0xE0) >> 5));
++		cc->rs_raw = (msg[3] & 0x1F);
++
++		/*
++		 *	TODO - LR range hardcoded from 0x00 to 0x1F.
++		 *	This is probably in the calibration somewhere.
++		 */
+ #ifndef GEKKO
+-	cc->r_shoulder = ((float)r / 0x1F);
+-	cc->l_shoulder = ((float)l / 0x1F);
++		cc->r_shoulder = ((float)r / 0x1F);
++		cc->l_shoulder = ((float)l / 0x1F);
+ #endif
+-	/* calculate joystick orientation */
+-	cc->ljs.pos.x = (msg[0] & 0x3F);
+-	cc->ljs.pos.y = (msg[1] & 0x3F);
+-	cc->rjs.pos.x = ((msg[0] & 0xC0) >> 3) | ((msg[1] & 0xC0) >> 5) | ((msg[2] & 0x80) >> 7);
+-	cc->rjs.pos.y = (msg[2] & 0x1F);
++		/* calculate joystick orientation */
++		cc->ljs.pos.x = (msg[0] & 0x3F);
++		cc->ljs.pos.y = (msg[1] & 0x3F);
++		cc->rjs.pos.x = ((msg[0] & 0xC0) >> 3) | ((msg[1] & 0xC0) >> 5) | ((msg[2] & 0x80) >> 7);
++		cc->rjs.pos.y = (msg[2] & 0x1F);
++	}
++
+ #ifndef GEKKO
+ 	calc_joystick_state(&cc->ljs, cc->ljs.pos.x, cc->ljs.pos.y);
+ 	calc_joystick_state(&cc->rjs, cc->rjs.pos.x, cc->rjs.pos.y);
+Index: wiiuse/io.c
+===================================================================
+--- wiiuse/io.c	(revision 4915)
++++ wiiuse/io.c	(working copy)
+@@ -1,5 +1,6 @@
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <string.h>
+ 
+ #include "definitions.h"
+ #include "wiiuse_internal.h"
+@@ -16,39 +17,52 @@
+ 	ubyte *buf = NULL;
+ 	struct accel_t *accel = &wm->accel_calib;
+ 
+-	//printf("wiiuse_handshake(%d,%p,%d)\n",wm->handshake_state,data,len);
++//	printf("wiiuse_handshake(%d,%p,%d)\n",wm->handshake_state,data,len);
+ 
+ 	switch(wm->handshake_state) {
+ 		case 0:
+ 			wm->handshake_state++;
+ 
+ 			wiiuse_set_leds(wm,WIIMOTE_LED_NONE,NULL);
++			wiiuse_status(wm,wiiuse_handshake);
++			return;
+ 
+-			buf = __lwp_wkspace_allocate(sizeof(ubyte)*8);
+-			wiiuse_read_data(wm,buf,WM_MEM_OFFSET_CALIBRATION,7,wiiuse_handshake);
+-			break;
+ 		case 1:
+ 			wm->handshake_state++;
++			buf = __lwp_wkspace_allocate(sizeof(ubyte)*8);
+ 
+-			accel->cal_zero.x = ((data[0]<<2)|((data[3]>>4)&3));
+-			accel->cal_zero.y = ((data[1]<<2)|((data[3]>>2)&3));
+-			accel->cal_zero.z = ((data[2]<<2)|(data[3]&3));
++			if (len > 2 && data[2]&WM_CTRL_STATUS_BYTE1_ATTACHMENT) {
++				wiiuse_read_data(wm,buf,WM_EXP_ID,6,wiiuse_handshake);
++				return;
+ 
+-			accel->cal_g.x = (((data[4]<<2)|((data[7]>>4)&3)) - accel->cal_zero.x);
+-			accel->cal_g.y = (((data[5]<<2)|((data[7]>>2)&3)) - accel->cal_zero.y);
+-			accel->cal_g.z = (((data[6]<<2)|(data[7]&3)) - accel->cal_zero.z);
+-			__lwp_wkspace_free(data);
+-			
+-			WIIMOTE_DISABLE_STATE(wm, WIIMOTE_STATE_HANDSHAKE);
+-			WIIMOTE_ENABLE_STATE(wm, WIIMOTE_STATE_HANDSHAKE_COMPLETE);
++		case 2:
++				if (BIG_ENDIAN_LONG(*(int*)(&data[2])) == EXP_ID_CODE_CLASSIC_WIIU_PRO) {
++					memset(data, 0, 8);
++					WIIMOTE_ENABLE_STATE(wm, WIIMOTE_STATE_WIIU_PRO);
++					break;
++				}
++				buf = data;
++			}
+ 
+-			wm->event = WIIUSE_CONNECT;
+-			wiiuse_status(wm,NULL);
+-			break;
+-		default:
+-			break;
++			wm->handshake_state++;
++			wiiuse_read_data(wm,buf,WM_MEM_OFFSET_CALIBRATION,7,wiiuse_handshake);
++			return;
++	}
+ 
+-	}
++	accel->cal_zero.x = ((data[0]<<2)|((data[3]>>4)&3));
++	accel->cal_zero.y = ((data[1]<<2)|((data[3]>>2)&3));
++	accel->cal_zero.z = ((data[2]<<2)|(data[3]&3));
++
++	accel->cal_g.x = (((data[4]<<2)|((data[7]>>4)&3)) - accel->cal_zero.x);
++	accel->cal_g.y = (((data[5]<<2)|((data[7]>>2)&3)) - accel->cal_zero.y);
++	accel->cal_g.z = (((data[6]<<2)|(data[7]&3)) - accel->cal_zero.z);
++	__lwp_wkspace_free(data);
++
++	WIIMOTE_DISABLE_STATE(wm, WIIMOTE_STATE_HANDSHAKE);
++	WIIMOTE_ENABLE_STATE(wm, WIIMOTE_STATE_HANDSHAKE_COMPLETE);
++
++	wm->event = WIIUSE_CONNECT;
++	wiiuse_status(wm,NULL);
+ }
+ 
+ void wiiuse_handshake_expansion_start(struct wiimote_t *wm)
+@@ -101,6 +115,7 @@
+ 				case EXP_ID_CODE_CLASSIC_CONTROLLER_GENERIC3:
+ 				case EXP_ID_CODE_CLASSIC_CONTROLLER_GENERIC4:
+ 				case EXP_ID_CODE_CLASSIC_CONTROLLER_GENERIC5:
++				case EXP_ID_CODE_CLASSIC_WIIU_PRO:
+ 					if(!classic_ctrl_handshake(wm,&wm->exp.classic,data,len)) return;
+ 					break;
+ 				case EXP_ID_CODE_GUITAR:
+Index: wiiuse/ir.c
+===================================================================
+--- wiiuse/ir.c	(revision 4915)
++++ wiiuse/ir.c	(working copy)
+@@ -190,7 +190,7 @@
+ 
+ 	if (status) {
+ 		/* if already enabled then stop */
+-		if (WIIMOTE_IS_SET(wm, WIIMOTE_STATE_IR)) {
++		if (WIIMOTE_IS_SET(wm, WIIMOTE_STATE_IR) || WIIMOTE_IS_SET(wm, WIIMOTE_STATE_WIIU_PRO)) {
+ 			wiiuse_status(wm,NULL);
+ 			return;
+ 		}
+@@ -579,7 +579,7 @@
+ 					hadj = SB_DOT_HEIGHT_RATIO * difference.x;
+ 					wadj = SB_DOT_WIDTH_RATIO * difference.x;
+ 					rotate_dots(&dots[i], &tdot, 1, cand.angle);
+-					if( ((cand.rot_dots[0].x + wadj) < tdot.x) && 
++					if( ((cand.rot_dots[0].x + wadj) < tdot.x) &&
+ 						((cand.rot_dots[1].x - wadj) > tdot.x) &&
+ 						((cand.rot_dots[0].y + hadj) > tdot.y) &&
+ 						((cand.rot_dots[0].y - hadj) < tdot.y))
+Index: wiiuse/wiiuse_internal.h
+===================================================================
+--- wiiuse/wiiuse_internal.h	(revision 4915)
++++ wiiuse/wiiuse_internal.h	(working copy)
+@@ -173,6 +173,7 @@
+ #define EXP_ID_CODE_CLASSIC_CONTROLLER_GENERIC3		0xa0a1a000
+ #define EXP_ID_CODE_CLASSIC_CONTROLLER_GENERIC4		0x8d8d8e00
+ #define EXP_ID_CODE_CLASSIC_CONTROLLER_GENERIC5		0x93949400
++#define EXP_ID_CODE_CLASSIC_WIIU_PRO				0xa4200120
+ #define EXP_ID_CODE_GUITAR							0xa4200103
+ #define EXP_ID_CODE_WIIBOARD						0xa4200402
+ #define EXP_ID_CODE_MOTION_PLUS						0xa4200405
+@@ -205,6 +206,7 @@
+ #define WIIMOTE_STATE_IR_SENS_LVL5				0x10000
+ #define WIIMOTE_STATE_IR_INIT					0x20000
+ #define WIIMOTE_STATE_SPEAKER_INIT				0x40000
++#define WIIMOTE_STATE_WIIU_PRO					0x80000
+ 
+ #define WIIMOTE_INIT_STATES					(WIIMOTE_STATE_IR_SENS_LVL3)
+ 
+
