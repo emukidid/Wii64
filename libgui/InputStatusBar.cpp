@@ -1,6 +1,6 @@
 /**
  * Wii64 - InputStatusBar.cpp
- * Copyright (C) 2009, 2013 sepp256
+ * Copyright (C) 2009, 2013, 2014 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -105,8 +105,7 @@ void InputStatusBar::drawComponent(Graphics& gfx)
 					statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_CLASSIC);
 				}
 				else {
-					// TODO sepp256, add the image here for Wii U Pro
-					statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_WIIMOTENUNCHUCK);
+					statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_WIIUPRO);
 				}
 //				sprintf (statusText, "Pad%d: CC%d", i+1, padAssign[i]+1);
 			}

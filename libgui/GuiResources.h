@@ -1,6 +1,6 @@
 /**
  * Wii64 - GuiResources.h
- * Copyright (C) 2009, 2013 sepp256
+ * Copyright (C) 2009, 2013, 2014 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -60,6 +60,7 @@ public:
 		IMAGE_CONTROLLER_CLASSIC,
 		IMAGE_CONTROLLER_WIIMOTENUNCHUCK,
 		IMAGE_CONTROLLER_WIIMOTE,
+		IMAGE_CONTROLLER_WIIUPRO,
 		IMAGE_N64_CONTROLLER,
 		IMAGE_CURRENT_FB,
 		IMAGE_STATE_FB,
@@ -79,7 +80,7 @@ private:
 	Image *logoImage;
 	Image *controllerEmptyImage, *controllerGamecubeImage;
 	Image *controllerClassicImage, *controllerWiimoteNunchuckImage;
-	Image *controllerWiimoteImage;
+	Image *controllerWiimoteImage, *controllerWiiUProImage;
 	Image *n64ControllerImage;
 	Image *currentFramebufferImage, *stateFramebufferImage;
 	u8	*currentFramebufferTexture, *stateFramebufferTexture;

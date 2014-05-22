@@ -68,6 +68,14 @@
    ControlWiimoteTexture_length:
    .long (ControlWiimoteTexture_length - ControlWiimoteTexture)
 
+   .globl ControlWiiUProTexture
+   .balign 32
+   ControlWiiUProTexture:
+   .incbin	"./menu/resources/cntrlWUPro.tx"
+   .globl ControlWiiUProTexture_length
+   ControlWiiUProTexture_length:
+   .long (ControlWiiUProTexture_length - ControlWiiUProTexture)
+
    .globl N64ControllerTexture
    .balign 32
    N64ControllerTexture:

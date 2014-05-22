@@ -1,6 +1,6 @@
 /**
  * Wii64 - GuiResources.cpp
- * Copyright (C) 2009, 2013 sepp256
+ * Copyright (C) 2009, 2013, 2014 sepp256
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: sepp256@gmail.com
@@ -53,6 +53,7 @@ Resources::Resources()
 	controllerClassicImage = new Image(ControlClassicTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	controllerWiimoteNunchuckImage = new Image(ControlWiimoteNunchuckTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	controllerWiimoteImage = new Image(ControlWiimoteTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
+	controllerWiiUProImage = new Image(ControlWiiUProTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	n64ControllerImage = new Image(N64ControllerTexture, 208, 200, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	
 	//Thumbnail images for current FB and state FB
@@ -94,6 +95,7 @@ Resources::~Resources()
 	delete controllerClassicImage;
 	delete controllerWiimoteNunchuckImage;
 	delete controllerWiimoteImage;
+	delete controllerWiiUProImage;
 	delete n64ControllerImage;
 	delete currentFramebufferImage;
 	delete stateFramebufferImage;
@@ -154,6 +156,9 @@ Image* Resources::getImage(int image)
 		break;
 	case IMAGE_CONTROLLER_WIIMOTE:
 		returnImage = controllerWiimoteImage;
+		break;
+	case IMAGE_CONTROLLER_WIIUPRO:
+		returnImage = controllerWiiUProImage;
 		break;
 	case IMAGE_N64_CONTROLLER:
 		returnImage = n64ControllerImage;
