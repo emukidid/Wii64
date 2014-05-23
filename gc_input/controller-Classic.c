@@ -24,19 +24,21 @@
 
 
 #include <string.h>
+#include <malloc.h>
 #include <math.h>
 #include <wiiuse/wpad.h>
 #include "controller.h"
+#include "../gui/DEBUG.h"
 
 #ifndef PI
 #define PI 3.14159f
 #endif
 
 enum { STICK_X, STICK_Y };
-static int getStickValue(joystick_t* j, int axis, int maxAbsValue){
+static int getStickValue(joystick_t* j, float maxMag, int axis, int maxAbsValue){
 	double angle = PI * j->ang/180.0f;
-	double magnitude = (j->mag > 1.0f) ? 1.0f :
-	                    (j->mag < -1.0f) ? -1.0f : j->mag;
+	double magnitude = (j->mag/maxMag > 1.0f) ? 1.0f :
+	                    (j->mag/maxMag < -1.0f) ? -1.0f : j->mag/maxMag;
 	double value;
 	if(axis == STICK_X)
 		value = magnitude * sin( angle );
@@ -97,13 +99,13 @@ static button_t menu_combos[] = {
 	{ 1, CLASSIC_CTRL_BUTTON_ZL|CLASSIC_CTRL_BUTTON_ZR, "ZL+ZR" },
 };
 
-static unsigned int getButtons(classic_ctrl_t* controller)
+static unsigned int getButtons(classic_ctrl_t* controller, float maxLMag, float maxRMag)
 {
 	unsigned int b = (unsigned)controller->btns;
-	s8 stickX      = getStickValue(&controller->ljs, STICK_X, 7);
-	s8 stickY      = getStickValue(&controller->ljs, STICK_Y, 7);
-	s8 substickX   = getStickValue(&controller->rjs, STICK_X, 7);
-	s8 substickY   = getStickValue(&controller->rjs, STICK_Y, 7);
+	s8 stickX      = getStickValue(&controller->ljs, maxLMag, STICK_X, 7);
+	s8 stickY      = getStickValue(&controller->ljs, maxLMag, STICK_Y, 7);
+	s8 substickX   = getStickValue(&controller->rjs, maxRMag, STICK_X, 7);
+	s8 substickY   = getStickValue(&controller->rjs, maxRMag, STICK_Y, 7);
 	
 	if(stickX    < -3) b |= L_STICK_L;
 	if(stickX    >  3) b |= L_STICK_R;
@@ -140,6 +142,53 @@ static int available(int Control) {
 	}
 }
 
+#define DEFAULT_MAX_MAG 0.5f
+typedef struct maxMagEntry_t {
+	struct bd_addr bdaddr;
+	float maxLMag;
+	float maxRMag;
+} maxMagEntry;
+
+static maxMagEntry* maxMagTable = NULL;
+static int maxMagTableSize = 0;
+
+static void SetMaxMag(const struct bd_addr *bdaddr, float magL, float magR, float* maxLMag, float* maxRMag)
+{
+	int i;
+	int match_ind = -1;
+	//Find bdaddr in table
+	if (maxMagTable)
+	{
+		for (i = 0; i<maxMagTableSize; i++)
+		{
+			if (bd_addr_cmp(bdaddr, &maxMagTable[i].bdaddr)) //Found a match!
+			{
+				match_ind = i;
+				break;
+				maxMagTable[maxMagTableSize-1].maxLMag = magL > DEFAULT_MAX_MAG ? magL : DEFAULT_MAX_MAG;
+				maxMagTable[maxMagTableSize-1].maxRMag = magR > DEFAULT_MAX_MAG ? magR : DEFAULT_MAX_MAG;
+				*maxLMag = maxMagTable[maxMagTableSize-1].maxLMag;
+				*maxRMag = maxMagTable[maxMagTableSize-1].maxRMag;
+			}
+		}
+	}
+	if (match_ind < 0) //Make new entry in table
+	{ 
+		maxMagTableSize++;
+		maxMagTable = realloc(maxMagTable, sizeof(maxMagEntry)*maxMagTableSize);
+		if (maxMagTable==NULL) return;
+		match_ind = maxMagTableSize-1;
+		maxMagTable[match_ind].bdaddr = *bdaddr;
+		maxMagTable[match_ind].maxLMag = DEFAULT_MAX_MAG;
+		maxMagTable[match_ind].maxRMag = DEFAULT_MAX_MAG;
+	}
+	//Compare and Update Table Entry
+	maxMagTable[match_ind].maxLMag = magL > maxMagTable[match_ind].maxLMag ? magL : maxMagTable[match_ind].maxLMag;
+	maxMagTable[match_ind].maxRMag = magR > maxMagTable[match_ind].maxRMag ? magR : maxMagTable[match_ind].maxRMag;
+	*maxLMag = maxMagTable[match_ind].maxLMag;
+	*maxRMag = maxMagTable[match_ind].maxRMag;
+}
+
 static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 {
 	if(wpadNeedScan){ WPAD_ScanPads(); wpadNeedScan = 0; }
@@ -151,7 +200,14 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	if(!available(Control))
 		return 0;
 
-	unsigned int b = getButtons(&wpad->exp.classic);
+	//Look up BT address
+	//wiimote* WPAD_GetWiimotes(s32 chan)
+	wiimote* wm = WPAD_GetWiimote(Control);
+	float maxLMag = DEFAULT_MAX_MAG;
+	float maxRMag = DEFAULT_MAX_MAG; 
+	if(wm) SetMaxMag(&wm->bdaddr, wpad->exp.classic.ljs.mag, wpad->exp.classic.rjs.mag, &maxLMag, &maxRMag);
+	
+	unsigned int b = getButtons(&wpad->exp.classic, maxLMag, maxRMag);
 	inline int isHeld(button_tp button){
 		return (b & button->mask) == button->mask;
 	}
@@ -175,13 +231,17 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	c->U_CBUTTON    = isHeld(config->CU);
 
 	if(config->analog->mask == L_STICK_AS_ANALOG){
-		c->X_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_X, 80);
-		c->Y_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_Y, 80);
+		c->X_AXIS = getStickValue(&wpad->exp.classic.ljs, maxLMag, STICK_X, 80);
+		c->Y_AXIS = getStickValue(&wpad->exp.classic.ljs, maxLMag, STICK_Y, 80);
+		//sprintf(txtbuffer,"GetKeys: ctr %d, ang %f, mag %f, max %f, posx %x, posy %x, x %d, y %d", Control, wpad->exp.classic.ljs.ang, wpad->exp.classic.ljs.mag, maxLMag, wpad->exp.classic.ljs.pos.x, wpad->exp.classic.ljs.pos.y, c->X_AXIS, c->Y_AXIS);
 	} else if(config->analog->mask == R_STICK_AS_ANALOG){
-		c->X_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_X, 80);
-		c->Y_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_Y, 80);
+		c->X_AXIS = getStickValue(&wpad->exp.classic.rjs, maxRMag, STICK_X, 80);
+		c->Y_AXIS = getStickValue(&wpad->exp.classic.rjs, maxRMag, STICK_Y, 80);
+		//sprintf(txtbuffer,"GetKeys: ctr %d, ang %f, mag %f, max %f, posx %x, posy %x, x %d, y %d", Control, wpad->exp.classic.rjs.ang, wpad->exp.classic.rjs.mag, maxRMag, wpad->exp.classic.rjs.pos.x, wpad->exp.classic.rjs.pos.y, c->X_AXIS, c->Y_AXIS);
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
+
+	//DEBUG_print(txtbuffer,DBG_RSPINFO1+Control);
 
 	// Return whether the exit button(s) are pressed
 	return isHeld(config->exit);
