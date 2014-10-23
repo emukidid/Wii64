@@ -59,11 +59,21 @@ public:
 	bool readTexture(void* textureData, const ArchiveEntry&);
 	bool readTexture(void* textureData, const ArchiveEntry&,
 	                 const ArchiveEntryInfo&, unsigned int stride);
+	char *getDescription();
+	char *getAuthor();
+	char *getPacker();
+	char *getDatepacked();
+	unsigned char *getIcon();
 
 private:
 	FILE* file;
 	ArchiveTable* table;
-
+	
+	char description[68];
+	char author[20];
+	char packer[20];
+	char datepacked[16]; // Date packed yyyy/mm/dd
+	unsigned char icon[96*72*2]; // RGB5A3 icon<br>
 	static const int COMPRESSION = 9, CHUNK_SIZE = 2 * 1024;
 	z_stream stream;
 

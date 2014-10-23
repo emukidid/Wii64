@@ -1,6 +1,8 @@
+extern "C" {
+	#include <string.h>
+};
 #include "ArchiveReader.h"
 #include "Endian.h"
-
 #ifdef SHOW_DEBUG
 #include "../gui/DEBUG.h"
 #endif
@@ -8,6 +10,13 @@
 template <typename T>
 static void readBinary(FILE* file, T& data) {
 	fread(&data, sizeof(data), 1, file);
+	swap(data);
+}
+
+template <typename T>
+static void readBinaryWithSize(FILE* file, T& data, int size) {
+	memset(data, 0, sizeof(data));
+	fread(&data, size, 1, file);
 	swap(data);
 }
 
@@ -21,12 +30,27 @@ ArchiveReader::~ArchiveReader() {
 	delete table;
 }
 
+char* ArchiveReader::getDescription() { return &description[0]; }
+char* ArchiveReader::getAuthor() { return &author[0]; }
+char* ArchiveReader::getPacker() { return &packer[0]; }
+char* ArchiveReader::getDatepacked() { return &datepacked[0]; }
+unsigned char* ArchiveReader::getIcon() { return &icon[0]; }
+
 ArchiveTable* ArchiveReader::readMetadata() {
 	unsigned int magic, tableOffset, tableSize = 0;
+	readBinary(file, magic);//GXA1
+	if(0x47584131 != magic) return new ArchiveTable(0);
 
-	readBinary(file, magic);
-	if('GXA1' != magic) return new ArchiveTable(0);
+	readBinaryWithSize(file, description, 64);	
+	readBinaryWithSize(file, author, 16);
+	readBinaryWithSize(file, packer, 16);
+	readBinaryWithSize(file, datepacked, 12);
+	readBinaryWithSize(file, icon, 96 * 72 * 2);
 
+	//sprintf(txtbuffer,"PAK info:\r\nDescription: [%s]\r\nAuthor: [%s] Packer: [%s] Date Packed: [%s]\r\n", 
+	//	description, author, packer, datepacked);
+	//DEBUG_print(txtbuffer,DBG_USBGECKO);
+	
 	readBinary(file, tableOffset);
 	readBinary(file, tableSize);
 
