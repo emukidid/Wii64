@@ -40,8 +40,6 @@
 	#define TOPOFMEM 0x80400000
 #endif
 
-unsigned long rom_base_in_tlb = 0;
-
 #ifndef USE_TLB_CACHE
 #include "MEM2.h"
 unsigned long *const tlb_LUT_r = (unsigned long*)(TLBLUT_LO);
@@ -60,9 +58,6 @@ void tlb_mem2_init()
 
 unsigned long virtual_to_physical_address(unsigned long addresse, int w)
 {
-	if(rom_base_in_tlb && (addresse >= 0x7f000000 && addresse < 0x80000000)) {
-		return rom_base_in_tlb + (addresse & 0x7FFFFF);	// GoldenEye Hack
-	}
 #ifdef USE_TLB_CACHE
 	unsigned long paddr = w==1 ? TLBCache_get_w(addresse>>12) : TLBCache_get_r(addresse>>12);
 #else

@@ -113,22 +113,16 @@ void dynarec(unsigned int address){
 			blocks[address>>12]->start_address = address & ~0xFFF;
 			blocks[address>>12]->end_address   = (address & ~0xFFF) + 0x1000;
 			
-			init_block(blocks[address>>12], paddr - (address-blocks[address>>12]->start_address));
+			init_block(blocks[address>>12], NULL);
 
 		} else if(invalid_code_get(address>>12)){
 			invalidate_block(blocks[address>>12]);
-			init_block(blocks[address>>12], paddr - (address-blocks[address>>12]->start_address));
 		}
 
 		PowerPC_func* func = find_func(&blocks[address>>12]->funcs, address);
 
 		if(!func || !func->code_addr[(address-func->start_addr)>>2]){
-			/*sprintf(txtbuffer, "code at %08x is not compiled\n", address);
-			DEBUG_print(txtbuffer, DBG_USBGECKO);*/
-			if((paddr >= 0xb0000000 && paddr < 0xc0000000) ||
-			   (paddr >= 0x90000000 && paddr < 0xa0000000))
-				blocks[address>>12]->mips_code =
-					ROMCache_pointer((paddr-(address-blocks[address>>12]->start_address))&0x0FFFFFFF);
+			blocks[address>>12]->mips_code = fast_mem_access(paddr & ~0xFFF);
 #ifdef PROFILE
 			start_section(COMPILER_SECTION);
 #endif

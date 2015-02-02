@@ -194,15 +194,6 @@ int rom_read(fileBrowser_file* file){
   GameSpecificHackSetup();
   //Set VI limit based on ROM header
   InitTimer();
-  // Setup GoldenEye TLB ROM access base address
-  if (ROM_HEADER.CRC1 == sl(0xDCBC50D1)) // US
-    rom_base_in_tlb = 0xb0034b30;
-  else if (ROM_HEADER.CRC1 == sl(0x0414CA61)) // E
-    rom_base_in_tlb = 0xb00329f0;
-  else if (ROM_HEADER.CRC1 == sl(0xA24F4CF1)) // J
-    rom_base_in_tlb = 0xb0034b70;
-  else 
-	rom_base_in_tlb = 0;
 	
   return ret;
 }
