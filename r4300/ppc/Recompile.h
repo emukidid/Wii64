@@ -105,6 +105,6 @@ void init_block  (PowerPC_block* ppc_block, unsigned int paddr);
 void deinit_block(PowerPC_block* ppc_block);
 void invalidate_block(PowerPC_block* ppc_block);
 
-extern PowerPC_block **blocks;
+extern PowerPC_block **const blocks;
 
 #endif

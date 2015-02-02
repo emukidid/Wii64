@@ -35,14 +35,14 @@
 #define KB (1024)
 
 // MEM2 begins at MEM2_LO, the Starlet's Dedicated Memory begins at MEM2_HI
-#define MEM2_LO   ((char*)0x90080000)
+#define MEM2_LO   ((char*)0x90000000)
 #define MEM2_HI   ((char*)0x933E0000)
 #define MEM2_SIZE (MEM2_HI - MEM2_LO)
 
 #ifdef MEM2XFB
 // Testing the xfb in MEM2 (reduce Texture Cache by 2MB to accomodate)
-#define XFB_SIZE (1*MB) // XFB_SIZE*2 ~= 1.4MB but to keep things aligned, 2mb
-#define XFB0_LO	(MEM2_LO)
+#define XFB_SIZE (640*576*2) // XFB_SIZE*2 ~= 1.4MB but to keep things aligned, 2mb
+#define XFB0_LO	(MEM2_LO + 2*KB)
 #define XFB1_LO	(XFB0_LO + XFB_SIZE)
 #define XFB_HI	(XFB1_LO + XFB_SIZE)
 #endif
@@ -50,7 +50,7 @@
 // We want 16MB for our ROM Cache
 #define ROMCACHE_SIZE (16*MB)
 #ifdef MEM2XFB
-#define ROMCACHE_LO   (XFB_HI)
+#define ROMCACHE_LO   (XFB_HI + 2*KB)
 #else
 #define ROMCACHE_LO   (MEM2_LO)
 #endif
@@ -115,7 +115,7 @@
                         + FONT_SIZE + FLASHRAM_SIZE \
                         + SRAM_SIZE + MEMPACK_SIZE \
                         + BLOCKS_SIZE + RECOMPMETA_SIZE)
-#if MEM2_USED_SIZE > (0x933E0000-0x90080000)
+#if MEM2_USED_SIZE > (0x933E0000-0x90000000)
 #error Too much MEM2 used!
 #endif
 

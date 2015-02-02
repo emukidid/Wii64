@@ -17,7 +17,7 @@
 
 #define CRC32_POLYNOMIAL     0x04C11DB7
 
-unsigned long CRCTable[ 256 ];
+unsigned long CRCTable[ 256 * 4 ];
 
 DWORD Reflect( DWORD ref, char ch )
 {
@@ -38,7 +38,7 @@ void CRC_BuildTable()
 {
     DWORD crc;
 
-    for (int i = 0; i <= 255; i++)
+    for (int i = 0; i < 256; i++)
 	{
         crc = Reflect( i, 8 ) << 24;
         for (int j = 0; j < 8; j++)
@@ -46,6 +46,12 @@ void CRC_BuildTable()
         
         CRCTable[i] = Reflect( crc, 32 );
     }
+
+    for (int i = 0; i < 256; i++)
+    {
+        for (int j = 0; j < 3; j++)
+            CRCTable[256 * (j + 1) + i] = (CRCTable[256 * j + i] >> 8) ^ CRCTable[CRCTable[256 * j + i] & 0xFF];
+}
 }
 
 DWORD CRC_Calculate( DWORD crc, void *buffer, DWORD count )
@@ -54,12 +60,20 @@ DWORD CRC_Calculate( DWORD crc, void *buffer, DWORD count )
 	DWORD orig = crc;
 
     p = (BYTE*) buffer;
+
+    while (count > 3)
+    {
+        crc ^= *(unsigned int*) p; p += 4;
+        crc = CRCTable[3 * 256 + (crc & 0xFF)]
+            ^ CRCTable[2 * 256 + ((crc >> 8) & 0xFF)]
+            ^ CRCTable[1 * 256 + ((crc >> 16) & 0xFF)]
+            ^ CRCTable[0 * 256 + ((crc >> 24))];
+
+        count -= 4;
+    }
+
 	while (count--) 
-#ifndef _BIG_ENDIAN
 		crc = (crc >> 8) ^ CRCTable[(crc & 0xFF) ^ *p++];
-#else // !_BIG_ENDIAN -> Big Endian fix - necessary for Ucode detection.
-		crc = (crc >> 8) ^ CRCTable[(crc & 0xFF) ^ *(BYTE*)((int)p++ ^ 3)]; //This fixes the endian problem for uc_crc
-#endif // _BIG_ENDIAN
 
     return crc ^ orig;
 }
@@ -72,18 +86,48 @@ DWORD CRC_CalculatePalette( DWORD crc, void *buffer, DWORD count )
     p = (BYTE*) buffer;
     while (count--)
 	{
-#ifndef _BIG_ENDIAN
 		crc = (crc >> 8) ^ CRCTable[(crc & 0xFF) ^ *p++];
 		crc = (crc >> 8) ^ CRCTable[(crc & 0xFF) ^ *p++];
 
 		p += 6;
-#else // !_BIG_ENDIAN -> Big Endian fix  
-		crc = (crc >> 8) ^ CRCTable[(crc & 0xFF) ^ *(BYTE*)((int)p + 1)];
-		crc = (crc >> 8) ^ CRCTable[(crc & 0xFF) ^ *(BYTE*)((int)p)];
-
-		p += 8;
-#endif // _BIG_ENDIAN
 	}
 
     return crc ^ orig;
+}
+
+u32 Hash_Calculate(u32 hash, void *buffer, u32 count)
+{
+    unsigned int i;
+    u32 *data = (u32 *) buffer;
+
+    count /= 4;
+    for(i = 0; i < count; ++i) {
+        hash += data[i];
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    return hash;
+}
+
+u32 Hash_CalculatePalette(u32 hash, void *buffer, u32 count)
+{
+    unsigned int i;
+    u16 *data = (u16 *) buffer;
+
+    count /= 16;
+    for(i = 0; i < count; ++i) {
+        hash += data[i * 8 + 0] << 16;
+        hash += data[i * 8 + 4];
+        hash += (hash << 10);
+        hash ^= (hash >> 6);
+    }
+
+    hash += (hash << 3);
+    hash ^= (hash >> 11);
+    hash += (hash << 15);
+    return hash;
 }

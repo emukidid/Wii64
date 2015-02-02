@@ -1,6 +1,6 @@
 # Makefile for Wii-specific code
 
-CFLAGS		+= -DWII -DHW_RVL -DUSE_EXPANSION -DUSE_INLINE_STORES -D__wii__
+CFLAGS		+= -DWII -DHW_RVL -DUSE_EXPANSION -DMEM2XFB -DUSE_INLINE_STORES -D__wii__
 
 LDFLAGS		+= -mrvl
 

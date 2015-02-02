@@ -43,11 +43,14 @@ u8 dvdbuffer[2048] __attribute__((aligned(32)));
 volatile unsigned long* dvd = (volatile unsigned long*)0xCD806000;
 #else
 #include "drivecodes.h"
+#define is_gamecube() (((mfpvr() == GC_CPU_VERSION01)||((mfpvr() == GC_CPU_VERSION02))))
 volatile unsigned long* dvd = (volatile unsigned long*)0xCC006000;
 #endif
 
 int have_hw_access() {
   if((*(volatile unsigned int*)HW_ARMIRQMASK)&&(*(volatile unsigned int*)HW_ARMIRQFLAG)) {
+	// disable DVD irq for starlet
+	mask32(HW_ARMIRQMASK, 1<<18, 0);
     return 1;
   }
   return 0;
@@ -56,7 +59,7 @@ int have_hw_access() {
 int init_dvd() {
 // Gamecube Mode
 #ifdef HW_DOL
-  if(mfpvr()!=GC_CPU_VERSION) //GC mode on Wii, modchip required
+  if(!is_gamecube()) //GC mode on Wii, modchip required
   {
     dvd_reset();
     dvd_read_id();
@@ -150,7 +153,7 @@ int dvd_read_id()
 	dvd[2] = 0xA8000040;
 	dvd[3] = 0;
 	dvd[4] = 0x20;
-	dvd[5] = 0x80000000;
+	dvd[5] = 0;
 	dvd[6] = 0x20;
 	dvd[7] = 3; // enable reading!
 	while (dvd[7] & 1);

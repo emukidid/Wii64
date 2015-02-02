@@ -28,7 +28,7 @@
 #include "../r4300/r4300.h"
 
 void *game_specific_hack = 0;
-
+/*
 // Pokemon Snap (U)
 void hack_pkm_snap_u() {
 	// Pass 1st Level and Controller Fix
@@ -137,7 +137,7 @@ void hack_topgear_od_u() {
 		write_byte_in_memory(0x80001B4E, 0);
 	}
 }
-
+*/
 // Return a pointer to the game specific hack or 0 if there isn't any
 void *GetGameSpecificHack() {
 	return game_specific_hack;
@@ -145,7 +145,7 @@ void *GetGameSpecificHack() {
 
 // Game specific hack detection via CRC
 void GameSpecificHackSetup() {
-	unsigned int curCRC[2];
+	/*unsigned int curCRC[2];
 	ROMCache_read((u8*)&curCRC[0], 0x10, sizeof(unsigned int)*2);
 	
 	if(curCRC[0] == 0xCA12B547 && curCRC[1] == 0x71FA4EE4) {
@@ -178,7 +178,7 @@ void GameSpecificHackSetup() {
 	else if(curCRC[0] == 0xD741CD80 && curCRC[1] == 0xACA9B912) {
 		game_specific_hack = &hack_topgear_od_u;
 	}
-	else {
+	else {*/
 		game_specific_hack = 0;
-	}
+	/*}*/
 }

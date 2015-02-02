@@ -51,7 +51,7 @@
 #else
 #include "ARAM.h"
 #endif
-static unsigned char *flashram = (unsigned char*)(FLASHRAM_LO);
+static unsigned char *const flashram = (unsigned char*)(FLASHRAM_LO);
 
 BOOL flashramWritten = FALSE;
 _FlashRAMInfo flashRAMInfo;
@@ -156,6 +156,7 @@ void flashram_command(unsigned long command)
 						flashram[(flashRAMInfo.erase_offset+i)^S8] = ((unsigned char*)rdram)[(flashRAMInfo.write_pointer+i)^S8];
 				}
 				break;
+				case READ_MODE:
 				case STATUS_MODE:
 				break;
 				default:

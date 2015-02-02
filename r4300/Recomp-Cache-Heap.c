@@ -23,6 +23,7 @@
 #include <gccore.h>
 #include <ogc/lwp_heap.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include "r4300.h"
 #include "ppc/Recompile.h"
 #include "ppc/Wrappers.h"
@@ -175,10 +176,9 @@ static void free_func(PowerPC_func* func, unsigned int addr){
 }
 
 static inline void update_lru(PowerPC_func* func){
-	static unsigned int nextLRU = 0;
-	/*if(func->lru != nextLRU-1)*/ func->lru = nextLRU++;
+	func->lru = r4300.nextLRU++;
 
-	if(!nextLRU){
+	if(!r4300.nextLRU || r4300.nextLRU>0x80000000){
 		// Handle nextLRU overflows
 		// By heap-sorting and assigning new LRUs
 		heapify();
@@ -193,7 +193,7 @@ static inline void update_lru(PowerPC_func* func){
 		free(cacheHeap);
 		cacheHeap = newHeap;
 
-		nextLRU = heapSize = savedSize;
+		r4300.nextLRU = heapSize = savedSize;
 	}
 }
 
@@ -312,12 +312,12 @@ void RecompCache_Link(PowerPC_func* src_func, PowerPC_instr* src_instr,
 
 void RecompCache_Init(void){
 	if(!cache){
-		cache = malloc(sizeof(heap_cntrl));
-		__lwp_heap_init(cache, malloc(RECOMP_CACHE_SIZE),
+		cache = memalign(32,sizeof(heap_cntrl));
+		__lwp_heap_init(cache, memalign(32,RECOMP_CACHE_SIZE),
 		                RECOMP_CACHE_SIZE, 32);
 	}
 	if(!meta_cache){
-		meta_cache = malloc(sizeof(heap_cntrl));
+		meta_cache = memalign(32,sizeof(heap_cntrl));
 		__lwp_heap_init(meta_cache, (void*)RECOMPMETA_LO,
 		                RECOMPMETA_SIZE, 32);
 	}

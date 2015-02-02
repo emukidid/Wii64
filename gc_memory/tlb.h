@@ -56,8 +56,8 @@ typedef struct _tlb
    char pad;	// so we have 48 bytes
 } tlb;
 #ifndef USE_TLB_CACHE
-extern unsigned long *tlb_LUT_r;
-extern unsigned long *tlb_LUT_w;
+extern unsigned long *const tlb_LUT_r;
+extern unsigned long *const tlb_LUT_w;
 void tlb_mem2_init();
 // Wrapper functions to make our savestate code cleaner
 #define TLBCache_init() tlb_mem2_init()

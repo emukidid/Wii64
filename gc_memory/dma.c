@@ -65,7 +65,7 @@
 #else
 #include "ARAM.h"
 #endif
-static unsigned char *sram = (unsigned char*)(SRAM_LO);
+static unsigned char *const sram = (unsigned char*)(SRAM_LO);
 
 BOOL sramWritten = FALSE;
 
@@ -207,17 +207,8 @@ void dma_pi_write()
 			unsigned long rdram_address1 = pi_register.pi_dram_addr_reg+i+0x80000000;
 			unsigned long rdram_address2 = pi_register.pi_dram_addr_reg+i+0xa0000000;
 
-			if(blocks[rdram_address1>>12]){
-				PowerPC_func* func = find_func(&blocks[rdram_address1>>12]->funcs, rdram_address1);
-				if(!invalid_code_get(rdram_address1>>12))
-					if(func) RecompCache_Free(func->start_addr);
-			}
-
-			if(blocks[rdram_address2>>12]) {
-				PowerPC_func* func = find_func(&blocks[rdram_address2>>12]->funcs, rdram_address2);
-				if(!invalid_code_get(rdram_address2>>12))
-					if(func) RecompCache_Free(func->start_addr);
-			}
+			invalidate_func(rdram_address1);
+			invalidate_func(rdram_address2);
 		}
 	}
 

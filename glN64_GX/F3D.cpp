@@ -131,13 +131,11 @@ void F3D_Tri1( u32 w0, u32 w1 )
 {
 	gSP1Triangle( _SHIFTR( w1, 16, 8 ) / 10, 
 		          _SHIFTR( w1, 8, 8 ) / 10, 
-				  _SHIFTR( w1, 0, 8 ) / 10, 
-				  _SHIFTR( w1, 24, 8 ) );
+				  _SHIFTR( w1, 0, 8 ) / 10 );
 }
 
 void F3D_CullDL( u32 w0, u32 w1 )
 {
-	gSPCullDisplayList( _SHIFTR( w0, 0, 24 ) / 40, (w1 / 40) - 1 );
 }
 
 void F3D_PopMtx( u32 w0, u32 w1 )
@@ -212,8 +210,8 @@ void F3D_MoveWord( u32 w0, u32 w1 )
 
 void F3D_Texture( u32 w0, u32 w1 )
 {
-	gSPTexture( _FIXED2FLOAT( _SHIFTR( w1, 16, 16 ), 16 ), 
-		        _FIXED2FLOAT( _SHIFTR( w1, 0, 16 ), 16 ), 
+	gSPTexture( GXcastu16f32( _SHIFTR( w1, 16, 16 ) ), 
+		        GXcastu16f32( _SHIFTR( w1, 0, 16 ) ), 
 		        _SHIFTR( w0, 11, 3 ), 
 				_SHIFTR( w0, 8, 3 ), 
 				_SHIFTR( w0, 0, 8 ) );

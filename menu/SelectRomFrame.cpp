@@ -89,7 +89,7 @@ static rom_header* 		rom_headers;
 static int				num_entries;
 static int				current_page;
 static int				max_page;
-extern rom_header 		*ROM_HEADER;
+extern rom_header 		ROM_HEADER;
 
 struct ButtonInfo
 {
@@ -706,7 +706,7 @@ void selectRomFrame_LoadFile(int i)
 			Func_SetPlayGame();
 			//Load boxart:
 			BOXART_Init();
-			BOXART_LoadTexture(ROM_HEADER->CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture());
+			BOXART_LoadTexture(ROM_HEADER.CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture());
 			GX_InvalidateTexAll();
 		}
 		else //ClearBoxArt
@@ -729,13 +729,13 @@ void selectRomFrame_LoadFile(int i)
 			strcat(RomInfo,buffer);
 			sprintf(buffer,"Rom size: %d Mb\n",rom_length/1024/1024);
 			strcat(RomInfo,buffer);
-			if(ROM_HEADER->Manufacturer_ID == 'N') sprintf(buffer,"Manufacturer: Nintendo\n");
-			else sprintf(buffer,"Manufacturer: %x\n", (unsigned int)(ROM_HEADER->Manufacturer_ID));
+			if(ROM_HEADER.Manufacturer_ID == 'N') sprintf(buffer,"Manufacturer: Nintendo\n");
+			else sprintf(buffer,"Manufacturer: %x\n", (unsigned int)(ROM_HEADER.Manufacturer_ID));
 			strcat(RomInfo,buffer);
-		    countrycodestring(ROM_HEADER->Country_code&0xFF, buffer2);
+		    countrycodestring(ROM_HEADER.Country_code&0xFF, buffer2);
 			sprintf(buffer,"Country: %s\n",buffer2);
 			strcat(RomInfo,buffer);
-//			sprintf(buffer,"CRCs: %8X %8X\n",ROM_HEADER->CRC1,ROM_HEADER->CRC2);
+//			sprintf(buffer,"CRCs: %8X %8X\n",ROM_HEADER.CRC1,ROM_HEADER.CRC2);
 //			strcat(RomInfo,buffer);
 			switch (autoSaveLoaded)
 			{

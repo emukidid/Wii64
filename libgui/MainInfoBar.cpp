@@ -83,7 +83,7 @@ void MainInfoBar::drawComponent(Graphics& gfx)
 		sprintf(buffer,"%s",ROM_SETTINGS.goodname);
 //		IplFont::getInstance().drawString((int) box_x + 15, (int) text_y, buffer, 0.8, false);
 		text_y += 20*IplFont::getInstance().drawStringWrap((int) box_x + 15, (int) text_y, buffer, 0.8, false, width - 2*15, 20);
-	    countrycodestring(ROM_HEADER->Country_code&0xFF, buffer);
+	    countrycodestring(ROM_HEADER.Country_code&0xFF, buffer);
 		text_y += 13;
 		IplFont::getInstance().drawString((int) box_x + 15, (int) text_y, buffer, 0.7, false);
 		if (autoSave)

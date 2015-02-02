@@ -929,6 +929,10 @@ void GenerateCurrentRomOptions()
     {
         options.enableHackForGames = HACK_FOR_MARIO_KART;
     }
+	else if ((strncasecmp((char*)g_curRomInfo.szGameName, "DONKEY KONG 64",14) == 0))
+    {
+        g_curRomInfo.bEmulateClear = 1;
+    }
 
     if (options.enableHackForGames != NO_HACK_FOR_GAME)
 #ifndef __GX__
@@ -940,6 +944,8 @@ void GenerateCurrentRomOptions()
 		DEBUG_print(txtbuffer,DBG_RICE+2); 
 	}
 #endif //SHOW_DEBUG
+	{
+	}
 #endif //__GX__
 
     if( currentRomOptions.N64FrameBufferEmuType == 0 )      currentRomOptions.N64FrameBufferEmuType = defaultRomOptions.N64FrameBufferEmuType;

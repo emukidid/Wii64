@@ -102,10 +102,10 @@ void RDP_SetFillColor( u32 w0, u32 w1 )
 
 void RDP_FillRect( u32 w0, u32 w1 )
 {
-	gDPFillRectangle( _SHIFTR( w1, 14, 10 ),	// ulx
-					  _SHIFTR( w1,  2, 10 ),	// uly
-		              _SHIFTR( w0, 14, 10 ),	// lrx
-					  _SHIFTR( w0,  2, 10 ) );	// lry
+	gDPFillRectangle( _SHIFTR( w1, 14, 10 ),		// ulx
+					  _SHIFTR( w1,  2, 10 ),		// uly
+					  _SHIFTR( w0, 14, 10 ) + 1,	// lrx
+					  _SHIFTR( w0,  2, 10 ) + 1 );	// lry
 }
 
 void RDP_SetTile( u32 w0, u32 w1 )
@@ -174,11 +174,11 @@ void RDP_SetPrimDepth( u32 w0, u32 w1 )
 
 void RDP_SetScissor( u32 w0, u32 w1 )
 {
-	gDPSetScissor( _SHIFTR( w1, 24, 2 ),						// mode
-		           _FIXED2FLOAT( _SHIFTR( w0, 12, 12 ), 2 ),	// ulx
-				   _FIXED2FLOAT( _SHIFTR( w0,  0, 12 ), 2 ),	// uly
-				   _FIXED2FLOAT( _SHIFTR( w1, 12, 12 ), 2 ),	// lrx
-				   _FIXED2FLOAT( _SHIFTR( w1,  0, 12 ), 2 ) );	// lry
+	gDPSetScissor( _SHIFTR( w1, 24, 2 ),							// mode
+		           _FIXED2FLOAT( (u16)_SHIFTR( w0, 12, 12 ), 2 ),	// ulx
+				   _FIXED2FLOAT( (u16)_SHIFTR( w0,  0, 12 ), 2 ),	// uly
+				   _FIXED2FLOAT( (u16)_SHIFTR( w1, 12, 12 ), 2 ),	// lrx
+				   _FIXED2FLOAT( (u16)_SHIFTR( w1,  0, 12 ), 2 ) );	// lry
 }
 
 void RDP_SetConvert( u32 w0, u32 w1 )
@@ -236,10 +236,10 @@ void RDP_TexRectFlip( u32 w0, u32 w1 )
 	u32 w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
 	RSP.PC[RSP.PCi] += 8;
 
-	gDPTextureRectangleFlip( _FIXED2FLOAT( _SHIFTR( w1, 12, 12 ), 2 ),			// ulx
-							 _FIXED2FLOAT( _SHIFTR( w1,  0, 12 ), 2 ),			// uly
-							 _FIXED2FLOAT( _SHIFTR( w0, 12, 12 ), 2 ),			// lrx
-							 _FIXED2FLOAT( _SHIFTR( w0,  0, 12 ), 2 ),			// lry
+	gDPTextureRectangleFlip( _FIXED2FLOAT( (u16)_SHIFTR( w1, 12, 12 ), 2 ),		// ulx
+							 _FIXED2FLOAT( (u16)_SHIFTR( w1,  0, 12 ), 2 ),		// uly
+							 _FIXED2FLOAT( (u16)_SHIFTR( w0, 12, 12 ), 2 ),		// lrx
+							 _FIXED2FLOAT( (u16)_SHIFTR( w0,  0, 12 ), 2 ),		// lry
 							 _SHIFTR( w1, 24,  3 ),								// tile
 							 _FIXED2FLOAT( (s16)_SHIFTR( w2, 16, 16 ), 5 ),		// s
 							 _FIXED2FLOAT( (s16)_SHIFTR( w2,  0, 16 ), 5 ),		// t
@@ -255,10 +255,10 @@ void RDP_TexRect( u32 w0, u32 w1 )
 	u32 w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
 	RSP.PC[RSP.PCi] += 8;
 
-	gDPTextureRectangle( _FIXED2FLOAT( _SHIFTR( w1, 12, 12 ), 2 ),			// ulx
-						 _FIXED2FLOAT( _SHIFTR( w1,  0, 12 ), 2 ),			// uly
-						 _FIXED2FLOAT( _SHIFTR( w0, 12, 12 ), 2 ),			// lrx
-						 _FIXED2FLOAT( _SHIFTR( w0,  0, 12 ), 2 ),			// lry
+	gDPTextureRectangle( _FIXED2FLOAT( (u16)_SHIFTR( w1, 12, 12 ), 2 ),		// ulx
+						 _FIXED2FLOAT( (u16)_SHIFTR( w1,  0, 12 ), 2 ),		// uly
+						 _FIXED2FLOAT( (u16)_SHIFTR( w0, 12, 12 ), 2 ),		// lrx
+						 _FIXED2FLOAT( (u16)_SHIFTR( w0,  0, 12 ), 2 ),		// lry
 						 _SHIFTR( w1, 24,  3 ),								// tile
 						 _FIXED2FLOAT( (s16)_SHIFTR( w2, 16, 16 ), 5 ),		// s
 						 _FIXED2FLOAT( (s16)_SHIFTR( w2,  0, 16 ), 5 ),		// t

@@ -26,35 +26,40 @@
 #include "Recompile.h"
 #include "../r4300.h"
 
-#define DYNAREG_R4300	14
-#define DYNAREG_RDRAM	15			// r15 stores the offset of rdram in MEM1
-#define DYNAREG_FUNC	16
-#define DYNAREG_ZERO	17
-#define DYNAREG_INVCODE	18
-#define DYNAREG_MEM_TOP 19
+#define DYNAREG_R4300   28
+#define DYNAREG_RDRAM   29
+#define DYNAREG_FUNC    30
+#define DYNAREG_ZERO    31
+
 
 #define R4300OFF_PC 		0
 #define R4300OFF_LADDR		4
 #define R4300OFF_GPR		8
+#define R4300OFF_HI	 		264
+#define R4300OFF_LO		 	272
 #define R4300OFF_COP0		296
 #define R4300OFF_FPR_64		680
 #define R4300OFF_FPR_32		808
 #define R4300OFF_FCR31		940
 #define R4300OFF_NINTR		944
 #define R4300OFF_DELAYSLOT 	952
+#define R4300OFF_DELAYSLOT 	952
+#define R4300OFF_LLBIT	 	964
+#define R4300OFF_NEXTLRU	2768
+#define R4300OFF_NOCHKINTR	2772
 
-#define DYNAOFF_LR     20
+#define DYNAOFF_LR     12
 
 #define REG_LOCALRS    34
 
 
-extern int noCheckInterrupt;
-
-typedef enum { MEM_LWL,  MEM_LWR,  MEM_LW,   MEM_LH,   MEM_LB,   MEM_LD,
+typedef enum { MEM_LW,   MEM_LH,   MEM_LB,   MEM_LD,
                MEM_LWU,  MEM_LHU,  MEM_LBU,
-               MEM_LWC1, MEM_LDC1,
+               MEM_LWC1, MEM_LDC1, MEM_LL,
+               MEM_LWL,  MEM_LWR,  MEM_LDL,  MEM_LDR,
                MEM_SW,   MEM_SH,   MEM_SB,   MEM_SD,
-               MEM_SWC1, MEM_SDC1                    } memType;
+               MEM_SWC1, MEM_SDC1, MEM_SC,
+               MEM_SWL,  MEM_SWR,  MEM_SDL,  MEM_SDR } memType;
 
 void dynarec(unsigned int address);
 unsigned int decodeNInterpret(MIPS_instr, unsigned int, int);
@@ -64,14 +69,9 @@ int dyna_update_count(unsigned int pc, int isDelaySlot);
 int dyna_update_count(unsigned int pc);
 #endif
 unsigned int dyna_check_cop1_unusable(unsigned int pc, int isDelaySlot);
-unsigned int dyna_mem(unsigned int value, unsigned int addr,
+void invalidate_func(unsigned int addr);
+unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
                       memType type, unsigned int pc, int isDelaySlot);
-unsigned int dyna_mem_write_byte(unsigned long value, unsigned int addr,
-							unsigned long pc, int isDelaySlot);
-unsigned int dyna_mem_write_hword(unsigned long value, unsigned int addr,
-							unsigned long pc, int isDelaySlot);
-unsigned int dyna_mem_write_word(unsigned long value, unsigned int addr,
-							unsigned long pc, int isDelaySlot);
 void invalidate_func(unsigned int addr);
 
 //cop0 macros

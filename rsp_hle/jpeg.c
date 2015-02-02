@@ -1,474 +1,594 @@
-/**
- * Mupen64 hle rsp - jpeg.c
- * Copyright (C) 2002 Hacktarux
- *
- * Mupen64 homepage: http://mupen64.emulation64.com
- * email address: hacktarux@yahoo.fr
- *
- * If you want to contribute to the project please contact
- * me first (maybe someone is already making what you are
- * planning to do).
- *
- *
- * This program is free software; you can redistribute it and/
- * or modify it under the terms of the GNU General Public Li-
- * cence as published by the Free Software Foundation; either
- * version 2 of the Licence, or any later version.
- *
- * This program is distributed in the hope that it will be use-
- * ful, but WITHOUT ANY WARRANTY; without even the implied war-
- * ranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public Licence for more details.
- *
- * You should have received a copy of the GNU General Public
- * Licence along with this program; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139,
- * USA.
- *
-**/
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *   Mupen64plus-rsp-hle - jpeg.c                                          *
+ *   Mupen64Plus homepage: http://code.google.com/p/mupen64plus/           *
+ *   Copyright (C) 2012 Bobby Smiles                                       *
+ *   Copyright (C) 2009 Richard Goedeken                                   *
+ *   Copyright (C) 2002 Hacktarux                                          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifdef __WIN32__
-#include <windows.h>
-#else
-#include "wintypes.h"
-#include <string.h>
+#include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
-#endif
-#include <stdio.h>
 
-#include "Rsp_#1.1.h"
-#include "hle.h"
+#include "arithmetics.h"
+#include "hle_external.h"
+#include "hle_internal.h"
+#include "memory.h"
 
-static struct
+#define SUBBLOCK_SIZE 64
+
+typedef void (*tile_line_emitter_t)(struct hle_t* hle, const int16_t *y, const int16_t *u, uint32_t address);
+typedef void (*subblock_transform_t)(int16_t *dst, const int16_t *src);
+
+/* standard jpeg ucode decoder */
+static void jpeg_decode_std(struct hle_t* hle,
+                            const char *const version,
+                            const subblock_transform_t transform_luma,
+                            const subblock_transform_t transform_chroma,
+                            const tile_line_emitter_t emit_line);
+
+/* helper functions */
+static uint8_t clamp_u8(int16_t x);
+static int16_t clamp_s12(int16_t x);
+static uint16_t clamp_RGBA_component(int16_t x);
+
+/* pixel conversion & formatting */
+static uint32_t GetUYVY(int16_t y1, int16_t y2, int16_t u, int16_t v);
+static uint16_t GetRGBA(int16_t y, int16_t u, int16_t v);
+
+/* tile line emitters */
+static void EmitYUVTileLine(struct hle_t* hle, const int16_t *y, const int16_t *u, uint32_t address);
+static void EmitRGBATileLine(struct hle_t* hle, const int16_t *y, const int16_t *u, uint32_t address);
+
+/* macroblocks operations */
+static void decode_macroblock_ob(int16_t *macroblock, int32_t *y_dc, int32_t *u_dc, int32_t *v_dc, const int16_t *qtable);
+static void decode_macroblock_std(const subblock_transform_t transform_luma,
+                                  const subblock_transform_t transform_chroma,
+                                  int16_t *macroblock,
+                                  unsigned int subblock_count,
+                                  const int16_t qtables[3][SUBBLOCK_SIZE]);
+static void EmitTilesMode0(struct hle_t* hle, const tile_line_emitter_t emit_line, const int16_t *macroblock, uint32_t address);
+static void EmitTilesMode2(struct hle_t* hle, const tile_line_emitter_t emit_line, const int16_t *macroblock, uint32_t address);
+
+/* subblocks operations */
+static void TransposeSubBlock(int16_t *dst, const int16_t *src);
+static void ZigZagSubBlock(int16_t *dst, const int16_t *src);
+static void ReorderSubBlock(int16_t *dst, const int16_t *src, const unsigned int *table);
+static void MultSubBlocks(int16_t *dst, const int16_t *src1, const int16_t *src2, unsigned int shift);
+static void ScaleSubBlock(int16_t *dst, const int16_t *src, int16_t scale);
+static void RShiftSubBlock(int16_t *dst, const int16_t *src, unsigned int shift);
+static void InverseDCT1D(const float *const x, float *dst, unsigned int stride);
+static void InverseDCTSubBlock(int16_t *dst, const int16_t *src);
+static void RescaleYSubBlock(int16_t *dst, const int16_t *src);
+static void RescaleUVSubBlock(int16_t *dst, const int16_t *src);
+
+/* transposed dequantization table */
+static const int16_t DEFAULT_QTABLE[SUBBLOCK_SIZE] = {
+    16, 12, 14, 14,  18,  24,  49,  72,
+    11, 12, 13, 17,  22,  35,  64,  92,
+    10, 14, 16, 22,  37,  55,  78,  95,
+    16, 19, 24, 29,  56,  64,  87,  98,
+    24, 26, 40, 51,  68,  81, 103, 112,
+    40, 58, 57, 87, 109, 104, 121, 100,
+    51, 60, 69, 80, 103, 113, 120, 103,
+    61, 55, 56, 62,  77,  92, 101,  99
+};
+
+/* zig-zag indices */
+static const unsigned int ZIGZAG_TABLE[SUBBLOCK_SIZE] = {
+     0,  1,  5,  6, 14, 15, 27, 28,
+     2,  4,  7, 13, 16, 26, 29, 42,
+     3,  8, 12, 17, 25, 30, 41, 43,
+     9, 11, 18, 24, 31, 40, 44, 53,
+    10, 19, 23, 32, 39, 45, 52, 54,
+    20, 22, 33, 38, 46, 51, 55, 60,
+    21, 34, 37, 47, 50, 56, 59, 61,
+    35, 36, 48, 49, 57, 58, 62, 63
+};
+
+/* transposition indices */
+static const unsigned int TRANSPOSE_TABLE[SUBBLOCK_SIZE] = {
+    0,  8, 16, 24, 32, 40, 48, 56,
+    1,  9, 17, 25, 33, 41, 49, 57,
+    2, 10, 18, 26, 34, 42, 50, 58,
+    3, 11, 19, 27, 35, 43, 51, 59,
+    4, 12, 20, 28, 36, 44, 52, 60,
+    5, 13, 21, 29, 37, 45, 53, 61,
+    6, 14, 22, 30, 38, 46, 54, 62,
+    7, 15, 23, 31, 39, 47, 55, 63
+};
+
+
+
+/* IDCT related constants
+ * Cn = alpha * cos(n * PI / 16) (alpha is chosen such as C4 = 1) */
+static const float IDCT_C3 = 1.175875602f;
+static const float IDCT_C6 = 0.541196100f;
+static const float IDCT_K[10] = {
+     0.765366865f,   /*  C2-C6         */
+    -1.847759065f,   /* -C2-C6         */
+    -0.390180644f,   /*  C5-C3         */
+    -1.961570561f,   /* -C5-C3         */
+     1.501321110f,   /*  C1+C3-C5-C7   */
+     2.053119869f,   /*  C1+C3-C5+C7   */
+     3.072711027f,   /*  C1+C3+C5-C7   */
+     0.298631336f,   /* -C1+C3+C5-C7   */
+    -0.899976223f,   /*  C7-C3         */
+    -2.562915448f    /* -C1-C3         */
+};
+
+
+/* global functions */
+
+/***************************************************************************
+ * JPEG decoding ucode found in Japanese exclusive version of Pokemon Stadium.
+ **************************************************************************/
+void jpeg_decode_PS0(struct hle_t* hle)
 {
-   unsigned long pic;
-   long w;
-   long h;
-   unsigned long m1;
-   unsigned long m2;
-   unsigned long m3;
-} jpg_data;
-
-static short* q[3];
-
-static short *pic;
-
-static unsigned long len1, len2;
-
-void jpg_uncompress(OSTask_t *task)
-{
-   int i, w;
-   short *temp1,*temp2;
-   short* data = (short*)(rsp.RDRAM + task->ucode_data);
-   short m[8*32];
-
-   if (!(task->flags & 1))
-   {
-      memcpy(&jpg_data, rsp.RDRAM+task->data_ptr,
-      task->data_size > sizeof(jpg_data) ?
-      sizeof(jpg_data) : task->data_size);
-	q[0] = (short*)(rsp.RDRAM + jpg_data.m1);
-	q[1] = (short*)(rsp.RDRAM + jpg_data.m2);
-	q[2] = (short*)(rsp.RDRAM + jpg_data.m3);
-
-	if (jpg_data.h == 0)
-	  {
-	     len1 = 512;
-	     len2 = 255;
-	  }
-	else
-	  {
-	     len1 = 768;
-	     len2 = 511;
-	  }
-     }
-/*   else
-     {
-#ifdef __WIN32__
-	MessageBox(NULL, "!flags", "!flags", MB_OK);
-#else
-	printf("!flags\n");
-#endif
-     }*/
-   pic = (short*)(rsp.RDRAM + jpg_data.pic);
-
-   temp1 = (short*)malloc((jpg_data.h+4)*64*2);
-   temp2 = (short*)malloc((jpg_data.h+4)*64*2);
-   w = jpg_data.w;
-
-   do
-     {
-	// quantification
-	for (i=0; i<(jpg_data.h+2)*64; i++)
-	  temp1[i] = (short)((unsigned short)(pic[i^S]*q[0][(i&0x3F)^S])*(long)data[0^S]);
-	for (;i<(jpg_data.h+3)*64; i++)
-	  temp1[i] = (short)((unsigned short)(pic[i^S]*q[1][(i&0x3F)^S])*(long)data[0^S]);
-	for (;i<(jpg_data.h+4)*64; i++)
-	  temp1[i] = (short)((unsigned short)(pic[i^S]*q[2][(i&0x3F)^S])*(long)data[0^S]);
-
-	// zigzag
-	for (i=0; i<(jpg_data.h+4); i++)
-	  {
-	     temp2[i*64+0 ] = temp1[i*64+0 ];
-	     temp2[i*64+8 ] = temp1[i*64+1 ];
-	     temp2[i*64+1 ] = temp1[i*64+2 ];
-	     temp2[i*64+2 ] = temp1[i*64+3 ];
-	     temp2[i*64+9 ] = temp1[i*64+4 ];
-	     temp2[i*64+16] = temp1[i*64+5 ];
-	     temp2[i*64+24] = temp1[i*64+6 ];
-	     temp2[i*64+17] = temp1[i*64+7 ];
-	     temp2[i*64+10] = temp1[i*64+8 ];
-	     temp2[i*64+3 ] = temp1[i*64+9 ];
-	     temp2[i*64+4 ] = temp1[i*64+10];
-	     temp2[i*64+11] = temp1[i*64+11];
-	     temp2[i*64+18] = temp1[i*64+12];
-	     temp2[i*64+25] = temp1[i*64+13];
-	     temp2[i*64+32] = temp1[i*64+14];
-	     temp2[i*64+40] = temp1[i*64+15];
-	     temp2[i*64+33] = temp1[i*64+16];
-	     temp2[i*64+26] = temp1[i*64+17];
-	     temp2[i*64+19] = temp1[i*64+18];
-	     temp2[i*64+12] = temp1[i*64+19];
-	     temp2[i*64+5 ] = temp1[i*64+20];
-	     temp2[i*64+6 ] = temp1[i*64+21];
-	     temp2[i*64+13] = temp1[i*64+22];
-	     temp2[i*64+20] = temp1[i*64+23];
-	     temp2[i*64+27] = temp1[i*64+24];
-	     temp2[i*64+34] = temp1[i*64+25];
-	     temp2[i*64+41] = temp1[i*64+26];
-	     temp2[i*64+48] = temp1[i*64+27];
-	     temp2[i*64+56] = temp1[i*64+28];
-	     temp2[i*64+49] = temp1[i*64+29];
-	     temp2[i*64+42] = temp1[i*64+30];
-	     temp2[i*64+35] = temp1[i*64+31];
-	     temp2[i*64+28] = temp1[i*64+32];
-	     temp2[i*64+21] = temp1[i*64+33];
-	     temp2[i*64+14] = temp1[i*64+34];
-	     temp2[i*64+7 ] = temp1[i*64+35];
-	     temp2[i*64+15] = temp1[i*64+36];
-	     temp2[i*64+22] = temp1[i*64+37];
-	     temp2[i*64+29] = temp1[i*64+38];
-	     temp2[i*64+36] = temp1[i*64+39];
-	     temp2[i*64+43] = temp1[i*64+40];
-	     temp2[i*64+50] = temp1[i*64+41];
-	     temp2[i*64+57] = temp1[i*64+42];
-	     temp2[i*64+58] = temp1[i*64+43];
-	     temp2[i*64+51] = temp1[i*64+44];
-	     temp2[i*64+44] = temp1[i*64+45];
-	     temp2[i*64+37] = temp1[i*64+46];
-	     temp2[i*64+30] = temp1[i*64+47];
-	     temp2[i*64+23] = temp1[i*64+48];
-	     temp2[i*64+31] = temp1[i*64+49];
-	     temp2[i*64+38] = temp1[i*64+50];
-	     temp2[i*64+45] = temp1[i*64+51];
-	     temp2[i*64+52] = temp1[i*64+52];
-	     temp2[i*64+59] = temp1[i*64+53];
-	     temp2[i*64+60] = temp1[i*64+54];
-	     temp2[i*64+53] = temp1[i*64+55];
-	     temp2[i*64+46] = temp1[i*64+56];
-	     temp2[i*64+39] = temp1[i*64+57];
-	     temp2[i*64+47] = temp1[i*64+58];
-	     temp2[i*64+54] = temp1[i*64+59];
-	     temp2[i*64+61] = temp1[i*64+60];
-	     temp2[i*64+62] = temp1[i*64+61];
-	     temp2[i*64+55] = temp1[i*64+62];
-	     temp2[i*64+63] = temp1[i*64+63];
-	  }
-
-	// idct
-	for (i=0; i<(jpg_data.h+4); i++)
-	  {
-	     int j,k;
-	     long accum;
-
-	     for (j=0; j<8; j++)
-	       {
-		  m[8 *8+j] = (((long)temp2[i*64+1*8+j] * (long)data[(2*8+0)^S]*2)+0x8000
-			       +((long)temp2[i*64+7*8+j] * (long)data[(2*8+1)^S]*2))>>16;
-		  m[9 *8+j] = (((long)temp2[i*64+5*8+j] * (long)data[(2*8+2)^S]*2)+0x8000
-			       +((long)temp2[i*64+3*8+j] * (long)data[(2*8+3)^S]*2))>>16;
-		  m[10*8+j] = (((long)temp2[i*64+3*8+j] * (long)data[(2*8+2)^S]*2)+0x8000
-			       +((long)temp2[i*64+5*8+j] * (long)data[(2*8+4)^S]*2))>>16;
-		  m[11*8+j] = (((long)temp2[i*64+7*8+j] * (long)data[(2*8+0)^S]*2)+0x8000
-			       +((long)temp2[i*64+1*8+j] * (long)data[(2*8+5)^S]*2))>>16;
-
-		  m[6 *8+j] = (((long)temp2[i*64+0*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +  ((long)temp2[i*64+4*8+j] * (long)data[(3*8+1)^S]*2))>>16;
-
-		  m[5 *8+j] = m[11*8+j]-m[10*8+j];
-		  m[4 *8+j] = m[8 *8+j]-m[9 *8+j];
-		  m[12*8+j] = m[8 *8+j]+m[9 *8+j];
-		  m[15*8+j] = m[11*8+j]+m[10*8+j];
-
-		  m[13*8+j] = (((long)m[5*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +((long)m[4*8+j] * (long)data[(3*8+1)^S]*2))>>16;
-		  m[14*8+j] = (((long)m[5*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +((long)m[4*8+j] * (long)data[(3*8+0)^S]*2))>>16;
-
-		  m[4 *8+j] = (((long)temp2[i*64+0*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +((long)temp2[i*64+4*8+j] * (long)data[(3*8+0)^S]*2))>>16;
-		  m[5 *8+j] = (((long)temp2[i*64+6*8+j] * (long)data[(3*8+2)^S]*2)+0x8000
-			       +((long)temp2[i*64+2*8+j] * (long)data[(3*8+4)^S]*2))>>16;
-		  m[7 *8+j] = (((long)temp2[i*64+2*8+j] * (long)data[(3*8+2)^S]*2)+0x8000
-			       +((long)temp2[i*64+6*8+j] * (long)data[(3*8+3)^S]*2))>>16;
-
-		  m[8 *8+j] = m[4 *8+j]+m[5 *8+j];
-		  m[9 *8+j] = m[6 *8+j]+m[7 *8+j];
-		  m[10*8+j] = m[6 *8+j]-m[7 *8+j];
-		  m[11*8+j] = m[4 *8+j]-m[5 *8+j];
-
-		  m[16*8+j] = m[8 *8+j]+m[15*8+j];
-		  m[17*8+j] = m[9 *8+j]+m[14*8+j];
-		  m[18*8+j] = m[10*8+j]+m[13*8+j];
-		  m[19*8+j] = m[11*8+j]+m[12*8+j];
-		  m[20*8+j] = m[11*8+j]-m[12*8+j];
-		  m[21*8+j] = m[10*8+j]-m[13*8+j];
-		  m[22*8+j] = m[9 *8+j]-m[14*8+j];
-		  m[23*8+j] = m[8 *8+j]-m[15*8+j];
-	       }
-	     // transpose
-	     for (j=0; j<8; j++)
-	       for (k=j; k<8; k++)
-		 {
-		    m[24*8+j*8+k] = m[16*8+k*8+j];
-		    m[24*8+k*8+j] = m[16*8+j*8+k];
-		 }
-
-	     for (j=0; j<8; j++)
-	       {
-		  m[8 *8+j] = (((long)m[25*8+j] * (long)data[(2*8+0)^S]*2)+0x8000
-			       +((long)m[31*8+j] * (long)data[(2*8+1)^S]*2))>>16;
-		  m[9 *8+j] = (((long)m[29*8+j] * (long)data[(2*8+2)^S]*2)+0x8000
-			       +((long)m[27*8+j] * (long)data[(2*8+3)^S]*2))>>16;
-		  m[10*8+j] = (((long)m[27*8+j] * (long)data[(2*8+2)^S]*2)+0x8000
-			       +((long)m[29*8+j] * (long)data[(2*8+4)^S]*2))>>16;
-		  m[11*8+j] = (((long)m[31*8+j] * (long)data[(2*8+0)^S]*2)+0x8000
-			       +((long)m[25*8+j] * (long)data[(2*8+5)^S]*2))>>16;
-
-		  m[6 *8+j] = (((long)m[24*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +((long)m[28*8+j] * (long)data[(3*8+1)^S]*2))>>16;
-
-		  m[5 *8+j] = m[11*8+j]-m[10*8+j];
-		  m[4 *8+j] = m[8 *8+j]-m[9 *8+j];
-		  m[12*8+j] = m[8 *8+j]+m[9 *8+j];
-		  m[15*8+j] = m[11*8+j]+m[10*8+j];
-
-		  m[13*8+j] = (((long)m[5*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +((long)m[4*8+j] * (long)data[(3*8+1)^S]*2))>>16;
-		  m[14*8+j] = (((long)m[5*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +((long)m[4*8+j] * (long)data[(3*8+0)^S]*2))>>16;
-
-		  m[4 *8+j] = (((long)m[24*8+j] * (long)data[(3*8+0)^S]*2)+0x8000
-			       +((long)m[28*8+j] * (long)data[(3*8+0)^S]*2))>>16;
-		  m[5 *8+j] = (((long)m[30*8+j] * (long)data[(3*8+2)^S]*2)+0x8000
-			       +((long)m[26*8+j] * (long)data[(3*8+4)^S]*2))>>16;
-		  m[7 *8+j] = (((long)m[26*8+j] * (long)data[(3*8+2)^S]*2)+0x8000
-			       +((long)m[30*8+j] * (long)data[(3*8+3)^S]*2))>>16;
-
-		  m[8 *8+j] = m[4 *8+j]+m[5 *8+j];
-		  m[9 *8+j] = m[6 *8+j]+m[7 *8+j];
-		  m[10*8+j] = m[6 *8+j]-m[7 *8+j];
-		  m[11*8+j] = m[4 *8+j]-m[5 *8+j];
-
-		  accum = ((long)m[8 *8+j] * (long)data[1^S]*2)+0x8000
-		    + ((long)m[15*8+j] * (long)data[1^S]*2);
-		  temp1[i*64+0*8+j] = (short)(accum>>16);
-		  temp1[i*64+7*8+j] = (accum+((long)m[15*8+j]*(long)data[2^S]*2))>>16;
-		  accum = ((long)m[9 *8+j] * (long)data[1^S]*2)+0x8000
-		    + ((long)m[14*8+j] * (long)data[1^S]*2);
-		  temp1[i*64+1*8+j] = (short)(accum>>16);
-		  temp1[i*64+6*8+j] = (accum+((long)m[14*8+j]*(long)data[2^S]*2))>>16;
-		  accum = ((long)m[10*8+j] * (long)data[1^S]*2)+0x8000
-		    + ((long)m[13*8+j] * (long)data[1^S]*2);
-		  temp1[i*64+2*8+j] = (short)(accum>>16);
-		  temp1[i*64+5*8+j] = (accum+((long)m[13*8+j]*(long)data[2^S]*2))>>16;
-		  accum = ((long)m[11*8+j] * (long)data[1^S]*2)+0x8000
-		    + ((long)m[12*8+j] * (long)data[1^S]*2);
-		  temp1[i*64+3*8+j] = (short)(accum>>16);
-		  temp1[i*64+4*8+j] = (accum+((long)m[12*8+j]*(long)data[2^S]*2))>>16;
-	       }
-	  }
-
-	/*if (jpg_data.h == 0)
-	  {
-#ifdef __WIN32
-	     MessageBox(NULL, "h==0", "h==0", MB_OK);
-#else
-	     printf("h==0\n");
-#endif
-	  }
-	else*/
-	  {
-	     for (i=0; i<8; i++)
-	       m[9 *8+i] = m[10*8+i] = m[11*8+i] = m[12*8+i] = 0;
-	     m[9 *8+0] = m[10*8+2] = m[11*8+4] = m[12*8+6] = data[6^S];
-	     m[9 *8+1] = m[10*8+3] = m[11*8+5] = m[12*8+7] = data[7^S];
-	     for (i=0; i<8; i++)
-	       {
-		  m[1 *8+i] = data[(0*8+i)^S];
-		  m[4 *8+i] = data[(1*8+i)^S];
-	       }
-	     for (i=0; i<2; i++)
-	       {
-		  int j;
-		  for (j=0; j<4; j++)
-		    {
-		       int k;
-		       for (k=0; k<8; k++)
-			 {
-			    m[16*8+k]=(short)((long)m[9 *8+k]*(long)temp1[256+i*32+j*8+64+0]
-					      +(long)m[10*8+k]*(long)temp1[256+i*32+j*8+64+1]
-					      +(long)m[11*8+k]*(long)temp1[256+i*32+j*8+64+2]
-					      +(long)m[12*8+k]*(long)temp1[256+i*32+j*8+64+3]);
-
-			    m[15*8+k] =(short)((long)m[9 *8+k]*(long)temp1[256+i*32+j*8+64+4]
-					       +(long)m[10*8+k]*(long)temp1[256+i*32+j*8+64+5]
-					       +(long)m[11*8+k]*(long)temp1[256+i*32+j*8+64+6]
-					       +(long)m[12*8+k]*(long)temp1[256+i*32+j*8+64+7]);
-
-			    m[18*8+k] = temp1[i*128+j*16+k]+m[4*8+7];
-			    m[17*8+k] = temp1[i*128+j*16+64+k]+m[4*8+7];
-
-			    m[14*8+k] =(short)((long)m[9 *8+k]*(long)temp1[256+i*32+j*8+0]
-					       +(long)m[10*8+k]*(long)temp1[256+i*32+j*8+1]
-					       +(long)m[11*8+k]*(long)temp1[256+i*32+j*8+2]
-					       +(long)m[12*8+k]*(long)temp1[256+i*32+j*8+3]);
-
-			    m[13*8+k] =(short)((long)m[9 *8+k]*(long)temp1[256+i*32+j*8+4]
-					       +(long)m[10*8+k]*(long)temp1[256+i*32+j*8+5]
-					       +(long)m[11*8+k]*(long)temp1[256+i*32+j*8+6]
-					       +(long)m[12*8+k]*(long)temp1[256+i*32+j*8+7]);
-
-			    m[24*8+k] = (short)(((long)m[16*8+k]*(unsigned short)m[4*8+0])>>16);
-			    m[23*8+k] = (short)(((long)m[15*8+k]*(unsigned short)m[4*8+0])>>16);
-			    m[26*8+k] = (short)(((long)m[14*8+k]*(unsigned short)m[4*8+1])>>16);
-			    m[25*8+k] = (short)(((long)m[13*8+k]*(unsigned short)m[4*8+1])>>16);
-			    m[21*8+k] = (short)(((long)m[16*8+k]*(unsigned short)m[4*8+2])>>16);
-			    m[22*8+k] = (short)(((long)m[15*8+k]*(unsigned short)m[4*8+2])>>16);
-			    m[28*8+k] = (short)(((long)m[14*8+k]*(unsigned short)m[4*8+3])>>16);
-			    m[27*8+k] = (short)(((long)m[13*8+k]*(unsigned short)m[4*8+3])>>16);
-
-			    m[24*8+k] += m[16*8+k];
-			    m[23*8+k] += m[15*8+k];
-			    m[26*8+k] += m[21*8+k];
-			    m[25*8+k] += m[22*8+k];
-			    m[28*8+k] += m[14*8+k];
-			    m[27*8+k] += m[13*8+k];
-			    m[24*8+k] += m[18*8+k];
-			    m[23*8+k] += m[17*8+k];
-			    m[26*8+k] = m[18*8+k] - m[26*8+k];
-			    m[25*8+k] = m[17*8+k] - m[25*8+k];
-			    m[28*8+k] += m[18*8+k];
-			    m[27*8+k] += m[17*8+k];
-
-			    m[23*8+k] = m[23*8+k] >= 0 ? m[23*8+k] : 0;
-			    m[24*8+k] = m[24*8+k] >= 0 ? m[24*8+k] : 0;
-			    m[25*8+k] = m[25*8+k] >= 0 ? m[25*8+k] : 0;
-			    m[26*8+k] = m[26*8+k] >= 0 ? m[26*8+k] : 0;
-			    m[27*8+k] = m[27*8+k] >= 0 ? m[27*8+k] : 0;
-			    m[28*8+k] = m[28*8+k] >= 0 ? m[28*8+k] : 0;
-
-			    m[23*8+k] = m[23*8+k] < m[4*8+4] ? m[23*8+k] : m[4*8+4];
-			    m[24*8+k] = m[24*8+k] < m[4*8+4] ? m[24*8+k] : m[4*8+4];
-			    m[25*8+k] = m[25*8+k] < m[4*8+4] ? m[25*8+k] : m[4*8+4];
-			    m[26*8+k] = m[26*8+k] < m[4*8+4] ? m[26*8+k] : m[4*8+4];
-			    m[27*8+k] = m[27*8+k] < m[4*8+4] ? m[27*8+k] : m[4*8+4];
-			    m[28*8+k] = m[28*8+k] < m[4*8+4] ? m[28*8+k] : m[4*8+4];
-
-			    m[23*8+k] = (short)(((long)m[23*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[24*8+k] = (short)(((long)m[24*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[25*8+k] = (short)(((long)m[25*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[26*8+k] = (short)(((long)m[26*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[27*8+k] = (short)(((long)m[27*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[28*8+k] = (short)(((long)m[28*8+k] * (unsigned short)m[4*8+6])>>16);
-
-			    m[23*8+k] = (short)((unsigned short)m[23*8+k] * (long)m[1*8+3]);
-			    m[24*8+k] = (short)((unsigned short)m[24*8+k] * (long)m[1*8+3]);
-			    m[25*8+k] = (short)((long)m[25*8+k] * (long)m[1*8+4]);
-			    m[26*8+k] = (short)((long)m[26*8+k] * (long)m[1*8+4]);
-			    m[27*8+k] = (short)((long)m[27*8+k] * (long)m[1*8+5]);
-			    m[28*8+k] = (short)((long)m[28*8+k] * (long)m[1*8+5]);
-
-			    m[18*8+k] = temp1[i*128+j*16+8+k] + m[4*8+7];
-			    m[17*8+k] = temp1[i*128+j*16+8+64+k] + m[4*8+7];
-
-			    m[24*8+k] |= m[26*8+k];
-			    m[23*8+k] |= m[25*8+k];
-
-			    m[20*8+k] = (short)(((long)m[16*8+k] * (unsigned short)m[4*8+0])>>16);
-			    m[19*8+k] = (short)(((long)m[15*8+k] * (unsigned short)m[4*8+0])>>16);
-
-			    m[30*8+k] = m[24*8+k] | m[28*8+k];
-			    m[29*8+k] = m[23*8+k] | m[27*8+k];
-
-			    m[26*8+k] = (short)(((long)m[14*8+k] * (unsigned short)m[4*8+1])>>16);
-			    m[25*8+k] = (short)(((long)m[13*8+k] * (unsigned short)m[4*8+1])>>16);
-			    m[21*8+k] = (short)(((long)m[16*8+k] * (unsigned short)m[4*8+2])>>16);
-			    m[22*8+k] = (short)(((long)m[15*8+k] * (unsigned short)m[4*8+2])>>16);
-			    m[28*8+k] = (short)(((long)m[14*8+k] * (unsigned short)m[4*8+3])>>16);
-			    m[27*8+k] = (short)(((long)m[13*8+k] * (unsigned short)m[4*8+3])>>16);
-
-			    m[30*8+k] |= m[1*8+6];
-			    m[29*8+k] |= m[1*8+6];
-
-			    pic[(i*128+j*32+0+k)^S] = m[30*8+k];
-			    pic[(i*128+j*32+8+k)^S] = m[29*8+k];
-
-			    m[24*8+k] = m[20*8+k] + m[16*8+k];
-			    m[23*8+k] = m[19*8+k] + m[15*8+k];
-
-			    m[26*8+k] += m[21*8+k];
-			    m[25*8+k] += m[22*8+k];
-			    m[28*8+k] += m[14*8+k];
-			    m[27*8+k] += m[13*8+k];
-			    m[24*8+k] += m[18*8+k];
-			    m[23*8+k] += m[17*8+k];
-
-			    m[26*8+k] = m[18*8+k] - m[26*8+k];
-			    m[25*8+k] = m[17*8+k] - m[25*8+k];
-
-			    m[28*8+k] += m[18*8+k];
-			    m[27*8+k] += m[17*8+k];
-
-			    m[23*8+k] = m[23*8+k] >= 0 ? m[23*8+k] : 0;
-			    m[24*8+k] = m[24*8+k] >= 0 ? m[24*8+k] : 0;
-			    m[25*8+k] = m[25*8+k] >= 0 ? m[25*8+k] : 0;
-			    m[26*8+k] = m[26*8+k] >= 0 ? m[26*8+k] : 0;
-			    m[27*8+k] = m[27*8+k] >= 0 ? m[27*8+k] : 0;
-			    m[28*8+k] = m[28*8+k] >= 0 ? m[28*8+k] : 0;
-
-			    m[23*8+k] = m[23*8+k] < m[4*8+4] ? m[23*8+k] : m[4*8+4];
-			    m[24*8+k] = m[24*8+k] < m[4*8+4] ? m[24*8+k] : m[4*8+4];
-			    m[25*8+k] = m[25*8+k] < m[4*8+4] ? m[25*8+k] : m[4*8+4];
-			    m[26*8+k] = m[26*8+k] < m[4*8+4] ? m[26*8+k] : m[4*8+4];
-			    m[27*8+k] = m[27*8+k] < m[4*8+4] ? m[27*8+k] : m[4*8+4];
-			    m[28*8+k] = m[28*8+k] < m[4*8+4] ? m[28*8+k] : m[4*8+4];
-
-			    m[23*8+k] = (short)(((long)m[23*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[24*8+k] = (short)(((long)m[24*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[25*8+k] = (short)(((long)m[25*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[26*8+k] = (short)(((long)m[26*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[27*8+k] = (short)(((long)m[27*8+k] * (unsigned short)m[4*8+6])>>16);
-			    m[28*8+k] = (short)(((long)m[28*8+k] * (unsigned short)m[4*8+6])>>16);
-
-			    m[23*8+k] = (short)((unsigned short)m[23*8+k] * (long)m[1*8+3]);
-			    m[24*8+k] = (short)((unsigned short)m[24*8+k] * (long)m[1*8+3]);
-			    m[25*8+k] = (short)((long)m[25*8+k] * (long)m[1*8+4]);
-			    m[26*8+k] = (short)((long)m[26*8+k] * (long)m[1*8+4]);
-			    m[27*8+k] = (short)((long)m[27*8+k] * (long)m[1*8+5]);
-			    m[28*8+k] = (short)((long)m[28*8+k] * (long)m[1*8+5]);
-
-			    pic[(i*128+j*32+16+k)^S] = m[24*8+k] | m[26*8+k] | m[28*8+k] | m[1*8+6];
-			    pic[(i*128+j*32+24+k)^S] = m[23*8+k] | m[25*8+k] | m[27*8+k] | m[1*8+6];
-			 }
-		    }
-	       }
-	  }
-	pic += len1/2;
-     } while (w-- != 1 && !(*rsp.SP_STATUS_REG & 0x80));
-
-   pic -= len1 * jpg_data.w / 2;
-
-   free(temp2);
-   free(temp1);
+    jpeg_decode_std(hle, "PS0", RescaleYSubBlock, RescaleUVSubBlock, EmitYUVTileLine);
 }
+
+/***************************************************************************
+ * JPEG decoding ucode found in Ocarina of Time, Pokemon Stadium 1 and
+ * Pokemon Stadium 2.
+ **************************************************************************/
+void jpeg_decode_PS(struct hle_t* hle)
+{
+    jpeg_decode_std(hle, "PS", NULL, NULL, EmitRGBATileLine);
+}
+
+/***************************************************************************
+ * JPEG decoding ucode found in Ogre Battle and Bottom of the 9th.
+ **************************************************************************/
+void jpeg_decode_OB(struct hle_t* hle)
+{
+    int16_t qtable[SUBBLOCK_SIZE];
+    unsigned int mb;
+
+    int32_t y_dc = 0;
+    int32_t u_dc = 0;
+    int32_t v_dc = 0;
+
+    uint32_t           address          = *dmem_u32(hle, TASK_DATA_PTR);
+    const unsigned int macroblock_count = *dmem_u32(hle, TASK_DATA_SIZE);
+    const int          qscale           = *dmem_u32(hle, TASK_YIELD_DATA_SIZE);
+
+    HleVerboseMessage(hle->user_defined,
+                      "jpeg_decode_OB: *buffer=%x, #MB=%d, qscale=%d",
+                      address,
+                      macroblock_count,
+                      qscale);
+
+    if (qscale != 0) {
+        if (qscale > 0)
+            ScaleSubBlock(qtable, DEFAULT_QTABLE, qscale);
+        else
+            RShiftSubBlock(qtable, DEFAULT_QTABLE, -qscale);
+    }
+
+    for (mb = 0; mb < macroblock_count; ++mb) {
+        int16_t macroblock[6 * SUBBLOCK_SIZE];
+
+        dram_load_u16(hle, (uint16_t *)macroblock, address, 6 * SUBBLOCK_SIZE);
+        decode_macroblock_ob(macroblock, &y_dc, &u_dc, &v_dc, (qscale != 0) ? qtable : NULL);
+        EmitTilesMode2(hle, EmitYUVTileLine, macroblock, address);
+
+        address += (2 * 6 * SUBBLOCK_SIZE);
+    }
+}
+
+
+/* local functions */
+static void jpeg_decode_std(struct hle_t* hle,
+                            const char *const version,
+                            const subblock_transform_t transform_luma,
+                            const subblock_transform_t transform_chroma,
+                            const tile_line_emitter_t emit_line)
+{
+    int16_t qtables[3][SUBBLOCK_SIZE];
+    unsigned int mb;
+    uint32_t address;
+    uint32_t macroblock_count;
+    uint32_t mode;
+    uint32_t qtableY_ptr;
+    uint32_t qtableU_ptr;
+    uint32_t qtableV_ptr;
+    unsigned int subblock_count;
+    unsigned int macroblock_size;
+    /* macroblock contains at most 6 subblocks */
+    int16_t macroblock[6 * SUBBLOCK_SIZE];
+    uint32_t data_ptr;
+
+    if (*dmem_u32(hle, TASK_FLAGS) & 0x1) {
+        HleWarnMessage(hle->user_defined,
+                       "jpeg_decode_%s: task yielding not implemented", version);
+        return;
+    }
+
+    data_ptr = *dmem_u32(hle, TASK_DATA_PTR);
+    address          = *dram_u32(hle, data_ptr);
+    macroblock_count = *dram_u32(hle, data_ptr + 4);
+    mode             = *dram_u32(hle, data_ptr + 8);
+    qtableY_ptr      = *dram_u32(hle, data_ptr + 12);
+    qtableU_ptr      = *dram_u32(hle, data_ptr + 16);
+    qtableV_ptr      = *dram_u32(hle, data_ptr + 20);
+
+    HleVerboseMessage(hle->user_defined,
+                      "jpeg_decode_%s: *buffer=%x, #MB=%d, mode=%d, *Qy=%x, *Qu=%x, *Qv=%x",
+                      version,
+                      address,
+                      macroblock_count,
+                      mode,
+                      qtableY_ptr,
+                      qtableU_ptr,
+                      qtableV_ptr);
+
+    if (mode != 0 && mode != 2) {
+        HleWarnMessage(hle->user_defined,
+                       "jpeg_decode_%s: invalid mode %d", version, mode);
+        return;
+    }
+
+    subblock_count = mode + 4;
+    macroblock_size = subblock_count * SUBBLOCK_SIZE;
+
+    dram_load_u16(hle, (uint16_t *)qtables[0], qtableY_ptr, SUBBLOCK_SIZE);
+    dram_load_u16(hle, (uint16_t *)qtables[1], qtableU_ptr, SUBBLOCK_SIZE);
+    dram_load_u16(hle, (uint16_t *)qtables[2], qtableV_ptr, SUBBLOCK_SIZE);
+
+    for (mb = 0; mb < macroblock_count; ++mb) {
+        dram_load_u16(hle, (uint16_t *)macroblock, address, macroblock_size);
+        decode_macroblock_std(transform_luma, transform_chroma,
+                              macroblock, subblock_count, (const int16_t (*)[SUBBLOCK_SIZE])qtables);
+
+        if (mode == 0)
+            EmitTilesMode0(hle, emit_line, macroblock, address);
+        else
+            EmitTilesMode2(hle, emit_line, macroblock, address);
+
+        address += 2 * macroblock_size;
+    }
+}
+
+static uint8_t clamp_u8(int16_t x)
+{
+    return (x & (0xff00)) ? ((-x) >> 15) & 0xff : x;
+}
+
+static int16_t clamp_s12(int16_t x)
+{
+    if (x < -0x800)
+        x = -0x800;
+    else if (x > 0x7f0)
+        x = 0x7f0;
+    return x;
+}
+
+static uint16_t clamp_RGBA_component(int16_t x)
+{
+    if (x > 0xff0)
+        x = 0xff0;
+    else if (x < 0)
+        x = 0;
+    return (x & 0xf80);
+}
+
+static uint32_t GetUYVY(int16_t y1, int16_t y2, int16_t u, int16_t v)
+{
+    return (uint32_t)clamp_u8(u)  << 24 |
+           (uint32_t)clamp_u8(y1) << 16 |
+           (uint32_t)clamp_u8(v)  << 8 |
+           (uint32_t)clamp_u8(y2);
+}
+
+static uint16_t GetRGBA(int16_t y, int16_t u, int16_t v)
+{
+    const float fY = (float)y + 2048.0f;
+    const float fU = (float)u;
+    const float fV = (float)v;
+
+    const uint16_t r = clamp_RGBA_component((int16_t)(fY               + 1.4025 * fV));
+    const uint16_t g = clamp_RGBA_component((int16_t)(fY - 0.3443 * fU - 0.7144 * fV));
+    const uint16_t b = clamp_RGBA_component((int16_t)(fY + 1.7729 * fU));
+
+    return (r << 4) | (g >> 1) | (b >> 6) | 1;
+}
+
+static void EmitYUVTileLine(struct hle_t* hle, const int16_t *y, const int16_t *u, uint32_t address)
+{
+    uint32_t uyvy[8];
+
+    const int16_t *const v  = u + SUBBLOCK_SIZE;
+    const int16_t *const y2 = y + SUBBLOCK_SIZE;
+
+    uyvy[0] = GetUYVY(y[0],  y[1],  u[0], v[0]);
+    uyvy[1] = GetUYVY(y[2],  y[3],  u[1], v[1]);
+    uyvy[2] = GetUYVY(y[4],  y[5],  u[2], v[2]);
+    uyvy[3] = GetUYVY(y[6],  y[7],  u[3], v[3]);
+    uyvy[4] = GetUYVY(y2[0], y2[1], u[4], v[4]);
+    uyvy[5] = GetUYVY(y2[2], y2[3], u[5], v[5]);
+    uyvy[6] = GetUYVY(y2[4], y2[5], u[6], v[6]);
+    uyvy[7] = GetUYVY(y2[6], y2[7], u[7], v[7]);
+
+    dram_store_u32(hle, uyvy, address, 8);
+}
+
+static void EmitRGBATileLine(struct hle_t* hle, const int16_t *y, const int16_t *u, uint32_t address)
+{
+    uint16_t rgba[16];
+
+    const int16_t *const v  = u + SUBBLOCK_SIZE;
+    const int16_t *const y2 = y + SUBBLOCK_SIZE;
+
+    rgba[0]  = GetRGBA(y[0],  u[0], v[0]);
+    rgba[1]  = GetRGBA(y[1],  u[0], v[0]);
+    rgba[2]  = GetRGBA(y[2],  u[1], v[1]);
+    rgba[3]  = GetRGBA(y[3],  u[1], v[1]);
+    rgba[4]  = GetRGBA(y[4],  u[2], v[2]);
+    rgba[5]  = GetRGBA(y[5],  u[2], v[2]);
+    rgba[6]  = GetRGBA(y[6],  u[3], v[3]);
+    rgba[7]  = GetRGBA(y[7],  u[3], v[3]);
+    rgba[8]  = GetRGBA(y2[0], u[4], v[4]);
+    rgba[9]  = GetRGBA(y2[1], u[4], v[4]);
+    rgba[10] = GetRGBA(y2[2], u[5], v[5]);
+    rgba[11] = GetRGBA(y2[3], u[5], v[5]);
+    rgba[12] = GetRGBA(y2[4], u[6], v[6]);
+    rgba[13] = GetRGBA(y2[5], u[6], v[6]);
+    rgba[14] = GetRGBA(y2[6], u[7], v[7]);
+    rgba[15] = GetRGBA(y2[7], u[7], v[7]);
+
+    dram_store_u16(hle, rgba, address, 16);
+}
+
+static void EmitTilesMode0(struct hle_t* hle, const tile_line_emitter_t emit_line, const int16_t *macroblock, uint32_t address)
+{
+    unsigned int i;
+
+    unsigned int y_offset = 0;
+    unsigned int u_offset = 2 * SUBBLOCK_SIZE;
+
+    for (i = 0; i < 8; ++i) {
+        emit_line(hle, &macroblock[y_offset], &macroblock[u_offset], address);
+
+        y_offset += 8;
+        u_offset += 8;
+        address += 32;
+    }
+}
+
+static void EmitTilesMode2(struct hle_t* hle, const tile_line_emitter_t emit_line, const int16_t *macroblock, uint32_t address)
+{
+    unsigned int i;
+
+    unsigned int y_offset = 0;
+    unsigned int u_offset = 4 * SUBBLOCK_SIZE;
+
+    for (i = 0; i < 8; ++i) {
+        emit_line(hle, &macroblock[y_offset],     &macroblock[u_offset], address);
+        emit_line(hle, &macroblock[y_offset + 8], &macroblock[u_offset], address + 32);
+
+        y_offset += (i == 3) ? SUBBLOCK_SIZE + 16 : 16;
+        u_offset += 8;
+        address += 64;
+    }
+}
+
+static void decode_macroblock_ob(int16_t *macroblock, int32_t *y_dc, int32_t *u_dc, int32_t *v_dc, const int16_t *qtable)
+{
+    int sb;
+
+    for (sb = 0; sb < 6; ++sb) {
+        int16_t tmp_sb[SUBBLOCK_SIZE];
+
+        /* update DC */
+        int32_t dc = (int32_t)macroblock[0];
+        switch (sb) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            *y_dc += dc;
+            macroblock[0] = *y_dc & 0xffff;
+            break;
+        case 4:
+            *u_dc += dc;
+            macroblock[0] = *u_dc & 0xffff;
+            break;
+        case 5:
+            *v_dc += dc;
+            macroblock[0] = *v_dc & 0xffff;
+            break;
+        }
+
+        ZigZagSubBlock(tmp_sb, macroblock);
+        if (qtable != NULL)
+            MultSubBlocks(tmp_sb, tmp_sb, qtable, 0);
+        TransposeSubBlock(macroblock, tmp_sb);
+        InverseDCTSubBlock(macroblock, macroblock);
+
+        macroblock += SUBBLOCK_SIZE;
+    }
+}
+
+static void decode_macroblock_std(const subblock_transform_t transform_luma,
+                                  const subblock_transform_t transform_chroma,
+                                  int16_t *macroblock,
+                                  unsigned int subblock_count,
+                                  const int16_t qtables[3][SUBBLOCK_SIZE])
+{
+    unsigned int sb;
+    unsigned int q = 0;
+
+    for (sb = 0; sb < subblock_count; ++sb) {
+        int16_t tmp_sb[SUBBLOCK_SIZE];
+        const int isChromaSubBlock = (subblock_count - sb <= 2);
+
+        if (isChromaSubBlock)
+            ++q;
+
+        MultSubBlocks(macroblock, macroblock, qtables[q], 4);
+        ZigZagSubBlock(tmp_sb, macroblock);
+        InverseDCTSubBlock(macroblock, tmp_sb);
+
+        if (isChromaSubBlock) {
+            if (transform_chroma != NULL)
+                transform_chroma(macroblock, macroblock);
+        } else {
+            if (transform_luma != NULL)
+                transform_luma(macroblock, macroblock);
+        }
+
+        macroblock += SUBBLOCK_SIZE;
+    }
+}
+
+static void TransposeSubBlock(int16_t *dst, const int16_t *src)
+{
+    ReorderSubBlock(dst, src, TRANSPOSE_TABLE);
+}
+
+static void ZigZagSubBlock(int16_t *dst, const int16_t *src)
+{
+    ReorderSubBlock(dst, src, ZIGZAG_TABLE);
+}
+
+static void ReorderSubBlock(int16_t *dst, const int16_t *src, const unsigned int *table)
+{
+    unsigned int i;
+
+    /* source and destination sublocks cannot overlap */
+    assert(abs(dst - src) > SUBBLOCK_SIZE);
+
+    for (i = 0; i < SUBBLOCK_SIZE; ++i)
+        dst[i] = src[table[i]];
+}
+
+static void MultSubBlocks(int16_t *dst, const int16_t *src1, const int16_t *src2, unsigned int shift)
+{
+    unsigned int i;
+
+    for (i = 0; i < SUBBLOCK_SIZE; ++i) {
+        int32_t v = src1[i] * src2[i];
+        dst[i] = clamp_s16(v) << shift;
+    }
+}
+
+static void ScaleSubBlock(int16_t *dst, const int16_t *src, int16_t scale)
+{
+    unsigned int i;
+
+    for (i = 0; i < SUBBLOCK_SIZE; ++i) {
+        int32_t v = src[i] * scale;
+        dst[i] = clamp_s16(v);
+    }
+}
+
+static void RShiftSubBlock(int16_t *dst, const int16_t *src, unsigned int shift)
+{
+    unsigned int i;
+
+    for (i = 0; i < SUBBLOCK_SIZE; ++i)
+        dst[i] = src[i] >> shift;
+}
+
+/***************************************************************************
+ * Fast 2D IDCT using separable formulation and normalization
+ * Computations use single precision floats
+ * Implementation based on Wikipedia :
+ * http://fr.wikipedia.org/wiki/Transform%C3%A9e_en_cosinus_discr%C3%A8te
+ **************************************************************************/
+static void InverseDCT1D(const float *const x, float *dst, unsigned int stride)
+{
+    float e[4];
+    float f[4];
+    float x26, x1357, x15, x37, x17, x35;
+
+    x15   = IDCT_K[2] * (x[1] + x[5]);
+    x37   = IDCT_K[3] * (x[3] + x[7]);
+    x17   = IDCT_K[8] * (x[1] + x[7]);
+    x35   = IDCT_K[9] * (x[3] + x[5]);
+    x1357 = IDCT_C3   * (x[1] + x[3] + x[5] + x[7]);
+    x26   = IDCT_C6   * (x[2] + x[6]);
+
+    f[0] = x[0] + x[4];
+    f[1] = x[0] - x[4];
+    f[2] = x26  + IDCT_K[0] * x[2];
+    f[3] = x26  + IDCT_K[1] * x[6];
+
+    e[0] = x1357 + x15 + IDCT_K[4] * x[1] + x17;
+    e[1] = x1357 + x37 + IDCT_K[6] * x[3] + x35;
+    e[2] = x1357 + x15 + IDCT_K[5] * x[5] + x35;
+    e[3] = x1357 + x37 + IDCT_K[7] * x[7] + x17;
+
+    *dst = f[0] + f[2] + e[0];
+    dst += stride;
+    *dst = f[1] + f[3] + e[1];
+    dst += stride;
+    *dst = f[1] - f[3] + e[2];
+    dst += stride;
+    *dst = f[0] - f[2] + e[3];
+    dst += stride;
+    *dst = f[0] - f[2] - e[3];
+    dst += stride;
+    *dst = f[1] - f[3] - e[2];
+    dst += stride;
+    *dst = f[1] + f[3] - e[1];
+    dst += stride;
+    *dst = f[0] + f[2] - e[0];
+}
+
+static void InverseDCTSubBlock(int16_t *dst, const int16_t *src)
+{
+    float x[8];
+    float block[SUBBLOCK_SIZE];
+    unsigned int i, j;
+
+    /* idct 1d on rows (+transposition) */
+    for (i = 0; i < 8; ++i) {
+        for (j = 0; j < 8; ++j)
+            x[j] = (float)src[i * 8 + j];
+
+        InverseDCT1D(x, &block[i], 8);
+    }
+
+    /* idct 1d on columns (thanks to previous transposition) */
+    for (i = 0; i < 8; ++i) {
+        InverseDCT1D(&block[i * 8], x, 1);
+
+        /* C4 = 1 normalization implies a division by 8 */
+        for (j = 0; j < 8; ++j)
+            dst[i + j * 8] = (int16_t)x[j] >> 3;
+    }
+}
+
+static void RescaleYSubBlock(int16_t *dst, const int16_t *src)
+{
+    unsigned int i;
+
+    for (i = 0; i < SUBBLOCK_SIZE; ++i)
+        dst[i] = (((uint32_t)(clamp_s12(src[i]) + 0x800) * 0xdb0) >> 16) + 0x10;
+}
+
+static void RescaleUVSubBlock(int16_t *dst, const int16_t *src)
+{
+    unsigned int i;
+
+    for (i = 0; i < SUBBLOCK_SIZE; ++i)
+        dst[i] = (((int)clamp_s12(src[i]) * 0xe00) >> 16) + 0x80;
+}
+

@@ -51,7 +51,7 @@ unsigned long i, dynacore = 0, interpcore = 0;
 int no_audio_delay = 0;
 int no_compiled_jump = 0;
 unsigned long dyna_interp = 0;
-unsigned long long int debug_count = 0;
+
 precomp_instr *PC = NULL;
 //char invalid_code[0x100000];
 
@@ -59,10 +59,10 @@ precomp_instr *PC = NULL;
 #include "ppc/Recompile.h"
 #ifdef HW_RVL
 #include "../gc_memory/MEM2.h"
-PowerPC_block **blocks = (PowerPC_block**)(BLOCKS_LO);
+PowerPC_block **const blocks = (PowerPC_block**)(BLOCKS_LO);
 #else
 #include "../gc_memory/ARAM.h"
-PowerPC_block **blocks = (PowerPC_block**)(BLOCKS_LO);
+PowerPC_block **const blocks = (PowerPC_block**)(BLOCKS_LO);
 #endif
 #else
 precomp_block *blocks[0x100000];
@@ -72,19 +72,10 @@ int rounding_mode = 0x33F, trunc_mode = 0xF3F, round_mode = 0x33F,
 
 inline unsigned long update_invalid_addr(unsigned long addr)
 {
-   if(rom_base_in_tlb && (addr >= 0x7f000000 && addr < 0x80000000)) {
-	return rom_base_in_tlb + (addr & 0x7FFFFF);	// GoldenEye Hack
-   }
-   if (addr >= 0x80000000 && addr < 0xa0000000)
+   if (addr >= 0x80000000 && addr < 0xc0000000)
      {
-	if (invalid_code_get(addr>>12)) invalid_code_set((addr+0x20000000)>>12, 1);
-	if (invalid_code_get((addr+0x20000000)>>12)) invalid_code_set(addr>>12, 1);
-	return addr;
-     }
-   else if (addr >= 0xa0000000 && addr < 0xc0000000)
-     {
-	if (invalid_code_get(addr>>12)) invalid_code_set((addr-0x20000000)>>12, 1);
-	if (invalid_code_get((addr-0x20000000)>>12)) invalid_code_set(addr>>12, 1);
+	if (invalid_code_get(addr>>12)) invalid_code_set((addr^0x20000000)>>12, 1);
+	if (invalid_code_get((addr^0x20000000)>>12)) invalid_code_set(addr>>12, 1);
 	return addr;
      }
    else
@@ -209,7 +200,6 @@ void update_count()
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
 	}
 #endif
-	do_SP_Task(1,(r4300.pc - r4300.last_pc) / 2);
 	Count = Count + (r4300.pc - r4300.last_pc) / 2;
 	r4300.last_pc = r4300.pc;
 	
@@ -265,7 +255,6 @@ void go()
 	} else {
 		interpcore = 0;
 		dynacore = 1;
-		//printf("dynamic recompiler\n");
 		if(cpu_inited) {
 			RecompCache_Init();
 			init_blocks();
@@ -273,13 +262,11 @@ void go()
 		}
 		dynarec(r4300.pc);
 	}
-	debug_count += Count;
 }
 
 void cpu_init(void){
    long long CRC = 0;
-   debug_count = 0;
-   ROMCache_read((u8*)SP_DMEM+0x40, 0x40, 0xFBC);
+   ROMCache_read((u8*)SP_DMEM+0x40, 0x40, 0xFC0);
    r4300.delay_slot=0;
    r4300.skip_jump=0;
    r4300.stop = 0;
@@ -345,6 +332,7 @@ void cpu_init(void){
    r4300.gpr[10]= 0x0000000000000040LL;
    r4300.gpr[11]= 0xFFFFFFFFA4000040LL;
    r4300.gpr[29]= 0xFFFFFFFFA4001FF0LL;
+   r4300.gpr[31]= 0xFFFFFFFFA4001550LL;
 
    Random = 31;
    Status= 0x34000000;
@@ -381,7 +369,7 @@ void cpu_init(void){
       r4300.cic_chip = 2;
    }
 
-   switch(ROM_HEADER->Country_code&0xFF)
+   switch(ROM_HEADER.Country_code&0xFF)
      {
       case 0x44:
       case 0x46:
@@ -401,7 +389,6 @@ void cpu_init(void){
 	   r4300.gpr[14]= 0x000000001AF99984LL;
 	   break;
 	 case 5:
-	   SP_IMEM[1] = 0xBDA807FC;
 	   r4300.gpr[5] = 0xFFFFFFFFDECAAAD1LL;
 	   r4300.gpr[14]= 0x000000000CF85C13LL;
 	   r4300.gpr[24]= 0x0000000000000002LL;
@@ -413,7 +400,6 @@ void cpu_init(void){
 	   break;
 	}
 	r4300.gpr[23]= 0x0000000000000006LL;
-	r4300.gpr[31]= 0xFFFFFFFFA4001554LL;
 	break;
       case 0x37:
       case 0x41:
@@ -430,7 +416,6 @@ void cpu_init(void){
 	   r4300.gpr[14]= 0x000000005BACA1DFLL;
 	   break;
 	 case 5:
-	   SP_IMEM[1] = 0x8DA807FC;
 	   r4300.gpr[5] = 0x000000005493FB9ALL;
 	   r4300.gpr[14]= 0xFFFFFFFFC2C20384LL;
 	   break;
@@ -441,7 +426,6 @@ void cpu_init(void){
 	}
 	r4300.gpr[20]= 0x0000000000000001LL;
 	r4300.gpr[24]= 0x0000000000000003LL;
-	r4300.gpr[31]= 0xFFFFFFFFA4001550LL;
      }
    switch (r4300.cic_chip) {
     case 1:
@@ -471,6 +455,7 @@ void cpu_init(void){
       break;
     case 5:
       SP_IMEM[0] = 0x3C0DBFC0;
+	  SP_IMEM[1] = 0x8DA807FC;
       SP_IMEM[2] = 0x25AD07C0;
       SP_IMEM[3] = 0x31080080;
       SP_IMEM[4] = 0x5500FFFC;

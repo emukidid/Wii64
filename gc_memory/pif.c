@@ -61,7 +61,7 @@
 #include "ARAM.h"
 #endif
 static unsigned char eeprom[0x800] __attribute__((aligned(32)));
-static unsigned char (*mempack)[0x8000] = (unsigned char(*)[0x8000])MEMPACK_LO;
+static unsigned char (*const mempack)[0x8000] = (unsigned char(*)[])(MEMPACK_LO);
 
 BOOL eepromWritten = FALSE;
 BOOL mempakWritten = FALSE;

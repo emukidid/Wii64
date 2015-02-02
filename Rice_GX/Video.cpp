@@ -97,7 +97,7 @@ void gfx_set_fb(unsigned int* fb1, unsigned int* fb2){
 	VI_GX_setFB(fb1, fb2);
 }
 
-void showLoadProgress(float percent){
+void showLoadIcon(void){
 //	VI_GX_showLoadProg(percent);
 }
 }

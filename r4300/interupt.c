@@ -41,16 +41,45 @@
 #include "../main/savestates.h"
 #include "../gc_memory/memory.h"
 
+#define QUEUE_SIZE 8
 static int SPECIAL_done = 0;
 static interupt_queue *q = NULL;
+static interupt_queue *qstack[QUEUE_SIZE];
+static unsigned int qstackindex = 0;
+static interupt_queue *qbase = NULL;
 
-void clear_queue()
+static interupt_queue* queue_malloc(size_t Bytes)
 {
-  while(q != NULL) {
-    interupt_queue *aux = q->next;
-    free(q);
-    q = aux;
-  }
+       if (qstackindex >= QUEUE_SIZE) // should never happen
+       {
+               return malloc(Bytes);
+       }
+       interupt_queue* newQueue = qstack[qstackindex];
+       qstackindex ++;
+
+       return newQueue;
+}
+
+static void queue_free(interupt_queue *qToFree)
+{
+       if (qToFree < qbase || qToFree >= qbase + sizeof(interupt_queue) * QUEUE_SIZE)
+       {
+               free(qToFree); //must be a non-stack memory allocation
+               return;
+       }
+       qstackindex --;
+       qstack[qstackindex] = qToFree;
+}
+
+static void clear_queue(void)
+{
+    int i;
+    q = NULL;
+    for (i =0; i < QUEUE_SIZE; i++)
+    {
+       qstack[i] = &qbase[i];
+    }
+    qstackindex = 0;
 }
 
 void print_queue()
@@ -113,7 +142,7 @@ void add_interupt_event(int type, unsigned long delay)
    
   interupt_queue *aux = q;
   if (q == NULL) {
-    q = malloc(sizeof(interupt_queue));
+    q = queue_malloc(sizeof(interupt_queue));
     q->next = NULL;
     q->count = count;
     q->type = type;
@@ -122,7 +151,7 @@ void add_interupt_event(int type, unsigned long delay)
   }
    
   if(before_event(count, q->count, q->type) && !special) {
-    q = malloc(sizeof(interupt_queue));
+    q = queue_malloc(sizeof(interupt_queue));
     q->next = aux;
     q->count = count;
     q->type = type;
@@ -135,7 +164,7 @@ void add_interupt_event(int type, unsigned long delay)
   }
 
   if (aux->next == NULL) {
-    aux->next = malloc(sizeof(interupt_queue));
+    aux->next = queue_malloc(sizeof(interupt_queue));
     aux = aux->next;
     aux->next = NULL;
     aux->count = count;
@@ -149,7 +178,7 @@ void add_interupt_event(int type, unsigned long delay)
       }
     }
     aux2 = aux->next;
-    aux->next = malloc(sizeof(interupt_queue));
+    aux->next = queue_malloc(sizeof(interupt_queue));
     aux = aux->next;
     aux->next = aux2;
     aux->count = count;
@@ -168,7 +197,7 @@ void remove_interupt_event()
   if(q->type == SPECIAL_INT) {
     SPECIAL_done = 1;
   }
-  free(q);
+  queue_free(q);
   q = aux;
   if (q != NULL && (q->count > Count || (Count - q->count) < 0x80000000)) {
     r4300.next_interrupt = q->count;
@@ -202,7 +231,7 @@ void remove_event(int type)
   if (q == NULL) return;
   if (q->type == type) {
     aux = aux->next;
-    free(q);
+    queue_free(q);
     q = aux;
     return;
   }
@@ -211,7 +240,7 @@ void remove_event(int type)
   }
   if (aux->next != NULL) { // it's a type int
     interupt_queue *aux2 = aux->next->next;
-    free(aux->next);
+    queue_free(aux->next);
     aux->next = aux2;
   }
 }
@@ -268,6 +297,10 @@ void init_interupt()
   r4300.next_vi = r4300.next_interrupt = 5000;
   vi_register.vi_delay = r4300.next_vi;
   r4300.vi_field = 0;
+  if (qbase != NULL) free(qbase);
+  qbase = (interupt_queue *) malloc(sizeof(interupt_queue) * QUEUE_SIZE );
+  memset(qbase,0,sizeof(interupt_queue) * QUEUE_SIZE );
+  qstackindex=0;
   clear_queue();
   add_interupt_event_count(VI_INT, r4300.next_vi);
   add_interupt_event_count(SPECIAL_INT, 0);
@@ -275,6 +308,11 @@ void init_interupt()
 
 void check_interupt()
 {
+  if (q != NULL && q->type == CHECK_INT) {
+    // Don't add another CHECK_INT if there's one pending
+    // MI_register.mi_intr_reg is a bitmask so interupts can be combined
+    return;
+  }
   if (MI_register.mi_intr_reg & MI_register.mi_intr_mask_reg) {
     Cause = (Cause | 0x400) & 0xFFFFFF83;
   }
@@ -286,13 +324,13 @@ void check_interupt()
   }
   if (Status & Cause & 0xFF00) {
     if(q == NULL) {
-      q = malloc(sizeof(interupt_queue));
+      q = queue_malloc(sizeof(interupt_queue));
       q->next = NULL;
       q->count = Count;
       q->type = CHECK_INT;
     }
     else {
-      interupt_queue* aux = malloc(sizeof(interupt_queue));
+      interupt_queue* aux = queue_malloc(sizeof(interupt_queue));
       aux->next = q;
       aux->count = Count;
       aux->type = CHECK_INT;
@@ -416,33 +454,6 @@ void gen_interupt()
         ai_register.ai_status &= ~0x40000000;
       }
       MI_register.mi_intr_reg |= 0x04;
-      if(!chk_status(1)) {
-        return;
-      }
-    break;
-  
-    case SP_INT:
-      remove_interupt_event();
-      sp_register.sp_status_reg |= 0x303;
-      sp_register.signal2 = 1;
-      sp_register.broke = 1;
-      sp_register.halt = 1;
-
-      if (!sp_register.intr_break) {
-        return;
-      }
-      MI_register.mi_intr_reg |= 0x01;
-      if(!chk_status(1)) {
-        return;
-      }
-    break;
-  
-    case DP_INT:
-      remove_interupt_event();
-      dpc_register.dpc_status &= ~2;
-      dpc_register.dpc_status |= 0x81;
-      MI_register.mi_intr_reg |= 0x20;
-
       if(!chk_status(1)) {
         return;
       }

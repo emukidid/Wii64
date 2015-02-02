@@ -71,8 +71,7 @@ void F3DEX2_Tri1( u32 w0, u32 w1 )
 {
 	gSP1Triangle( _SHIFTR( w0, 17, 7 ), 
 		          _SHIFTR( w0, 9, 7 ), 
-				  _SHIFTR( w0, 1, 7 ), 
-				  0 );
+				  _SHIFTR( w0, 1, 7 ) );
 }
 
 void F3DEX2_PopMtx( u32 w0, u32 w1 )
@@ -147,8 +146,8 @@ void F3DEX2_MoveWord( u32 w0, u32 w1 )
 
 void F3DEX2_Texture( u32 w0, u32 w1 )
 {
-	gSPTexture( _FIXED2FLOAT( _SHIFTR( w1, 16, 16 ), 16 ), 
-		        _FIXED2FLOAT( _SHIFTR( w1, 0, 16 ), 16 ), 
+	gSPTexture( GXcastu16f32( _SHIFTR( w1, 16, 16 ) ), 
+		        GXcastu16f32( _SHIFTR( w1, 0, 16 ) ), 
 		        _SHIFTR( w0, 11, 3 ), 
 				_SHIFTR( w0, 8, 3 ), 
 				_SHIFTR( w0, 1, 7 ) );
@@ -256,11 +255,9 @@ void F3DEX2_Quad( u32 w0, u32 w1 )
 	gSP2Triangles( _SHIFTR( w0, 17, 7 ), 
 		           _SHIFTR( w0, 9, 7 ), 
 				   _SHIFTR( w0, 1, 7 ), 
-				   0,
 				   _SHIFTR( w1, 17, 7 ), 
 		           _SHIFTR( w1, 9, 7 ), 
-				   _SHIFTR( w1, 1, 7 ), 
-				   0 );
+				   _SHIFTR( w1, 1, 7 ) );
 }
 
 void F3DEX2_Init()

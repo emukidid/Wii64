@@ -428,7 +428,7 @@ extern int rom_length;
 
 void Func_MMRomInfo()
 {
-	if(!hasLoadedROM||!ROM_HEADER)
+	if(!hasLoadedROM)
 	{
 		menu::MessageBox::getInstance().setMessage("No ROM loaded");
 		return;
@@ -442,13 +442,13 @@ void Func_MMRomInfo()
 	strcat(RomInfo,buffer);
 	sprintf(buffer,"Rom size: %d Mb\n",rom_length/1024/1024);
 	strcat(RomInfo,buffer);
-	if(ROM_HEADER->Manufacturer_ID == 'N') sprintf(buffer,"Manufacturer: Nintendo\n");
-	else sprintf(buffer,"Manufacturer: %x\n", (unsigned int)(ROM_HEADER->Manufacturer_ID));
+	if(ROM_HEADER.Manufacturer_ID == 'N') sprintf(buffer,"Manufacturer: Nintendo\n");
+	else sprintf(buffer,"Manufacturer: %x\n", (unsigned int)(ROM_HEADER.Manufacturer_ID));
 	strcat(RomInfo,buffer);
-	countrycodestring(ROM_HEADER->Country_code&0xFF, buffer2);
+	countrycodestring(ROM_HEADER.Country_code&0xFF, buffer2);
 	sprintf(buffer,"Country: %s\n",buffer2);
 	strcat(RomInfo,buffer);
-	sprintf(buffer,"CRCs: %08X %08X\n",(unsigned int)ROM_HEADER->CRC1,(unsigned int)ROM_HEADER->CRC2);
+	sprintf(buffer,"CRCs: %08X %08X\n",(unsigned int)ROM_HEADER.CRC1,(unsigned int)ROM_HEADER.CRC2);
 	strcat(RomInfo,buffer);
 
 	menu::MessageBox::getInstance().setMessage(RomInfo);

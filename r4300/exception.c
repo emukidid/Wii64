@@ -127,28 +127,15 @@ void TLB_refill_exception(unsigned long address, int w)
   }
   
   if(w != 2) {
-    EPC-=4;  //wii64: wtf is w != 2 ?
+    EPC-=4;
   }
    
   r4300.last_pc = r4300.pc;
    
-  /*
-  // wii64: I'm not sure if this does any good, WTF is dyna_interp?
-  if (dynacore) {
-    dyna_jump();
-    if (!dyna_interp) {
-      r4300.delay_slot = 0;
-    }
-  }  
-   
-  if (!dynacore || dyna_interp) {
-    dyna_interp = 0;
-    */
   if (r4300.delay_slot) {
     r4300.skip_jump = r4300.pc;
     r4300.next_interrupt = 0;
   }
-  /*}*/
 }
 
 void TLB_mod_exception()
@@ -189,20 +176,8 @@ void exception_general()
   r4300.pc = 0x80000180;
   r4300.last_pc = r4300.pc;
   
-  /*
-  // wii64: Again, WTF?
-  if (dynacore) {
-    dyna_jump();
-    if (!dyna_interp) {
-      r4300.delay_slot = 0;
-    }
+  if (r4300.delay_slot) {
+    r4300.skip_jump = r4300.pc;
+    r4300.next_interrupt = 0;
   }
-  if (!dynacore || dyna_interp) {
-    dyna_interp = 0;
-    */
-    if (r4300.delay_slot) {
-      r4300.skip_jump = r4300.pc;
-      r4300.next_interrupt = 0;
-    }
-  /*}*/
 }

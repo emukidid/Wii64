@@ -104,14 +104,18 @@ OBJ_INPUT	+= \
 		gc_input/input.o \
 		gc_input/controller-GC.o
 
-OBJ_RSPHLE	+= \
-		rsp_hle/main.o \
+OBJ_RSPHLE	=rsp_hle/alist.o \
+		rsp_hle/alist_audio.o \
+		rsp_hle/alist_naudio.o \
+		rsp_hle/alist_nead.o \
+		rsp_hle/audio.o \
+		rsp_hle/cicx105.o \
+		rsp_hle/hle.o \
 		rsp_hle/jpeg.o \
+		rsp_hle/memory.o \
+		rsp_hle/mp3.o \
 		rsp_hle/musyx.o \
-		rsp_hle/ucode3.o \
-		rsp_hle/ucode2.o \
-		rsp_hle/ucode1.o \
-		rsp_hle/ucode3mp3.o
+		rsp_hle/plugin.o
 		
 OBJ_RSPHLEPPC	+= \
 		rsp_hle-ppc/main.o \
@@ -135,7 +139,7 @@ HEADER		+= \
 		r4300/recomp.h \
 		gc_memory/pif.h
 
-LIB		+= -logc -lm -lfat -ldb -lz -laesnd
+LIB		+= -logc -lm -lfat -ldb -lz -laesnd -logc -static
 
 ALL_OBJ		+= $(OBJ) $(OBJ_INPUT) $(OBJ_AUDIO) $(OBJ_RSPHLE) $(OBJ_PPC)
 

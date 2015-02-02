@@ -55,19 +55,10 @@ extern void update_debugger();
 #ifdef PPC_DYNAREC
 #include "Invalid_Code.h"
 
-static void invalidate_func(unsigned int addr){
-  PowerPC_block* block = blocks[addr>>12];
-	PowerPC_func* func = find_func(&block->funcs, addr);
-	if(func)
-		RecompCache_Free(func->start_addr);
-}
-
-#define check_memory(address) \
-	if(dynacore && !invalid_code_get(address>>12)/* && \
-	   blocks[address>>12]->code_addr[(address&0xfff)>>2]*/) \
-		invalidate_func(address); //invalid_code_set(address>>12, 1);
+#define check_memory() \
+	if(dynacore) invalidate_func(address)
 #else
-#define check_memory(address)
+#define check_memory()
 #endif
 
 unsigned long op;
@@ -816,9 +807,8 @@ static void (*interp_regimm[32])(void) =
    NI    , NI    , NI     , NI     , NI, NI, NI, NI
 };
 
-static void TLBR()
+void TLBR()
 {
-   //DEBUG_stats(14, "TLBR", STAT_TYPE_ACCUM, 1);
    int index;
    index = Index & 0x1F;
    PageMask = r4300.tlb_e[index].mask << 13;
@@ -829,249 +819,405 @@ static void TLBR()
    EntryLo1 = (r4300.tlb_e[index].pfn_odd << 6) | (r4300.tlb_e[index].c_odd << 3)
      | (r4300.tlb_e[index].d_odd << 2) | (r4300.tlb_e[index].v_odd << 1)
        | r4300.tlb_e[index].g;
-	//print_gecko("TLBR index %i PageMask %08X EntryHi %08X EntryLo0 %08X EntryLo1 %08X\r\n",index,PageMask,EntryHi,EntryLo0,EntryLo1);
    r4300.pc+=4;
 }
 
-static void tlb_adler_invalidation_pt1(unsigned int page)
+void TLBWI()
 {
-	if(dynacore)
-	{
-#ifndef AGGRESSIVE_TLB_INVALIDATION
+   unsigned int i;
+   PowerPC_block* temp_block;
+   
+   if (r4300.tlb_e[Index&0x3F].v_even)
+     {
+	for (i=r4300.tlb_e[Index&0x3F].start_even>>12; i<=r4300.tlb_e[Index&0x3F].end_even>>12; i++)
+	  {
+  	  temp_block = blocks[i];
 #ifdef USE_TLB_CACHE
-		unsigned int paddr = TLBCache_get_r(page);
+		unsigned long paddr = TLBCache_get_r(i);
+		if(!invalid_code_get(i) && (invalid_code_get(paddr>>12) ||
+		                        invalid_code_get((paddr>>12)+0x20000)))
 #else
-		unsigned int paddr = tlb_LUT_r[page];
+	     if(!invalid_code_get(i) &&(invalid_code_get(tlb_LUT_r[i]>>12) ||
+				    invalid_code_get((tlb_LUT_r[i]>>12)+0x20000)))
 #endif
-		if(!invalid_code_get(page) && (invalid_code_get(paddr>>12) || invalid_code_get((paddr>>12)+0x20000)))
-			invalid_code_set(page, 1);
-		if(!invalid_code_get(page))
-		{
-			blocks[page]->adler32 = adler32(0, (Bytef *)&rdram[(paddr&0x7FF000)/4], 0x1000);
-			invalid_code_set(page, 1);
-		}
-		else if(blocks[page])
-		{
-			blocks[page]->adler32 = 0;
-			invalidate_block(blocks[page]);
-		}
-#else
-		invalid_code_set(page, 1);
-		if(blocks[page]) invalidate_block(blocks[page]);
-#endif
-	}
-}
-static void tlb_adler_invalidation_pt2(unsigned int page)
-{
-	if(dynacore)
-	{
-#ifndef AGGRESSIVE_TLB_INVALIDATION
-		if(blocks[page] && blocks[page]->adler32)
-		{
+	       invalid_code_set(i, 1);
+	     if (!invalid_code_get(i))
+	       {
 #ifdef USE_TLB_CACHE
-			unsigned int paddr = TLBCache_get_r(page);
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(paddr&0x7FF000)/4], 0x1000);
 #else
-			unsigned int paddr = tlb_LUT_r[page];
-#endif
-			if(blocks[page]->adler32 == adler32(0, (Bytef *)&rdram[(paddr&0x7FF000)/4], 0x1000)) {
-				invalid_code_set(page, 0);
-				//print_gecko("pt2 NOT invalid paddr %08X stored adler %08X actual %08X\r\n",paddr,blocks[page]->adler32,adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000));
-			}
-			else {
-				invalidate_block(blocks[page]);
-				//print_gecko("pt2 invalid paddr %08X stored adler %08X actual %08X\r\n",paddr,blocks[page]->adler32,adler32(0, (const char*)&rdram[(paddr&0x7FF000)/4], 0x1000));
-			}
-		}
-#endif
-	}
-}
-
-static void TLBW(unsigned long tlbIdx) {
-
-	unsigned int i;
-
-	if (r4300.tlb_e[tlbIdx].v_even)
-	{
-		for (i=r4300.tlb_e[tlbIdx].start_even; i<r4300.tlb_e[tlbIdx].end_even; i+=0x1000)
-		{
-			tlb_adler_invalidation_pt1(i>>12);
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4], 0x1000);
+#endif		  
+		  invalid_code_set(i, 1);
+	       }
+	     else if (temp_block)
+	       {
+		  temp_block->adler32 = 0;
+	       }
 #ifdef USE_TLB_CACHE
-			TLBCache_set_r(i>>12, 0);
+		TLBCache_set_r(i, 0);
 #else
-			tlb_LUT_r[i>>12] = 0;
+	     tlb_LUT_r[i] = 0;
 #endif
-		}
-		if (r4300.tlb_e[tlbIdx].d_even)
-			for (i=r4300.tlb_e[tlbIdx].start_even; i<r4300.tlb_e[tlbIdx].end_even; i+=0x1000)
+	  }
+	if (r4300.tlb_e[Index&0x3F].d_even)
+	  for (i=r4300.tlb_e[Index&0x3F].start_even>>12; i<=r4300.tlb_e[Index&0x3F].end_even>>12; i++)
 #ifdef USE_TLB_CACHE
-				TLBCache_set_w(i>>12, 0);
+		TLBCache_set_w(i, 0);
 #else
-				tlb_LUT_w[i>>12] = 0;
+	    tlb_LUT_w[i] = 0;
 #endif
-	}
-	if (r4300.tlb_e[tlbIdx].v_odd)
-	{
-		for (i=r4300.tlb_e[tlbIdx].start_odd; i<r4300.tlb_e[tlbIdx].end_odd; i+=0x1000)
-		{
-			tlb_adler_invalidation_pt1(i>>12);
+     }
+   if (r4300.tlb_e[Index&0x3F].v_odd)
+     {
+	for (i=r4300.tlb_e[Index&0x3F].start_odd>>12; i<=r4300.tlb_e[Index&0x3F].end_odd>>12; i++)
+	  {
+  	  temp_block = blocks[i];
 #ifdef USE_TLB_CACHE
-			TLBCache_set_r(i>>12, 0);
+		unsigned long paddr = TLBCache_get_r(i);
+		if(!invalid_code_get(i) && (invalid_code_get(paddr>>12) ||
+		                        invalid_code_get((paddr>>12)+0x20000)))
 #else
-			tlb_LUT_r[i>>12] = 0;
+	     if(!invalid_code_get(i) &&(invalid_code_get(tlb_LUT_r[i]>>12) ||
+				    invalid_code_get((tlb_LUT_r[i]>>12)+0x20000)))
 #endif
-		}
-		if (r4300.tlb_e[tlbIdx].d_odd)
-			for (i=r4300.tlb_e[tlbIdx].start_odd; i<r4300.tlb_e[tlbIdx].end_odd; i+=0x1000)
+	       invalid_code_set(i, 1);
+	     if (!invalid_code_get(i))
+	       {
+		  
 #ifdef USE_TLB_CACHE
-				TLBCache_set_w(i>>12, 0);
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(paddr&0x7FF000)/4], 0x1000);
 #else
-				tlb_LUT_w[i>>12] = 0;
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4], 0x1000);
+#endif		  
+		  invalid_code_set(i, 1);
+	       }
+	     else if (temp_block)
+	       {
+		  temp_block->adler32 = 0;
+	       }
+#ifdef USE_TLB_CACHE
+		TLBCache_set_r(i, 0);
+#else
+	     tlb_LUT_r[i] = 0;
 #endif
-	}
-	r4300.tlb_e[tlbIdx].g = (EntryLo0 & EntryLo1 & 1);
-	r4300.tlb_e[tlbIdx].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
-	r4300.tlb_e[tlbIdx].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
-	r4300.tlb_e[tlbIdx].c_even = (EntryLo0 & 0x38) >> 3;
-	r4300.tlb_e[tlbIdx].c_odd = (EntryLo1 & 0x38) >> 3;
-	r4300.tlb_e[tlbIdx].d_even = (EntryLo0 & 0x4) >> 2;
-	r4300.tlb_e[tlbIdx].d_odd = (EntryLo1 & 0x4) >> 2;
-	r4300.tlb_e[tlbIdx].v_even = (EntryLo0 & 0x2) >> 1;
-	r4300.tlb_e[tlbIdx].v_odd = (EntryLo1 & 0x2) >> 1;
-	r4300.tlb_e[tlbIdx].asid = (EntryHi & 0xFF);
-	r4300.tlb_e[tlbIdx].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
-	//r4300.tlb_e[tlbIdx].r = (EntryHi & 0xC000000000000000LL) >> 62;
-	r4300.tlb_e[tlbIdx].mask = (PageMask & 0x1FFE000) >> 13;
-
-	r4300.tlb_e[tlbIdx].start_even = r4300.tlb_e[tlbIdx].vpn2 << 13;
-	r4300.tlb_e[tlbIdx].end_even = r4300.tlb_e[tlbIdx].start_even+
-		(r4300.tlb_e[tlbIdx].mask << 12) + 0xFFF;
-	r4300.tlb_e[tlbIdx].phys_even = r4300.tlb_e[tlbIdx].pfn_even << 12;
-
-	// print_gecko("r4300.tlb_e[%i] entry created!\r\n",tlbIdx);
-	// print_gecko("r4300.tlb_e[%i].g\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].g		);
-	// print_gecko("r4300.tlb_e[%i].pfn_even\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].pfn_even);
-	// print_gecko("r4300.tlb_e[%i].pfn_odd\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].pfn_odd );
-	// print_gecko("r4300.tlb_e[%i].c_even\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].c_even  );
-	// print_gecko("r4300.tlb_e[%i].c_odd\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].c_odd   );
-	// print_gecko("r4300.tlb_e[%i].d_even\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].d_even  );
-	// print_gecko("r4300.tlb_e[%i].d_odd\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].d_odd   );
-	// print_gecko("r4300.tlb_e[%i].v_even\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].v_even  );
-	// print_gecko("r4300.tlb_e[%i].v_odd\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].v_odd   );
-	// print_gecko("r4300.tlb_e[%i].asid\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].asid    );
-	// print_gecko("r4300.tlb_e[%i].vpn2\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].vpn2    );
-	// print_gecko("r4300.tlb_e[%i].mask\t\t%08X\r\n",tlbIdx, r4300.tlb_e[tlbIdx].mask    );
+	  }
+	if (r4300.tlb_e[Index&0x3F].d_odd)
+	  for (i=r4300.tlb_e[Index&0x3F].start_odd>>12; i<=r4300.tlb_e[Index&0x3F].end_odd>>12; i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_w(i, 0);
+#else
+	    tlb_LUT_w[i] = 0;
+#endif
+     }
+   r4300.tlb_e[Index&0x3F].g = (EntryLo0 & EntryLo1 & 1);
+   r4300.tlb_e[Index&0x3F].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
+   r4300.tlb_e[Index&0x3F].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
+   r4300.tlb_e[Index&0x3F].c_even = (EntryLo0 & 0x38) >> 3;
+   r4300.tlb_e[Index&0x3F].c_odd = (EntryLo1 & 0x38) >> 3;
+   r4300.tlb_e[Index&0x3F].d_even = (EntryLo0 & 0x4) >> 2;
+   r4300.tlb_e[Index&0x3F].d_odd = (EntryLo1 & 0x4) >> 2;
+   r4300.tlb_e[Index&0x3F].v_even = (EntryLo0 & 0x2) >> 1;
+   r4300.tlb_e[Index&0x3F].v_odd = (EntryLo1 & 0x2) >> 1;
+   r4300.tlb_e[Index&0x3F].asid = (EntryHi & 0xFF);
+   r4300.tlb_e[Index&0x3F].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
+   //r4300.tlb_e[Index&0x3F].r = (EntryHi & 0xC000000000000000LL) >> 62;
+   r4300.tlb_e[Index&0x3F].mask = (PageMask & 0x1FFE000) >> 13;
+   
+   r4300.tlb_e[Index&0x3F].start_even = r4300.tlb_e[Index&0x3F].vpn2 << 13;
+   r4300.tlb_e[Index&0x3F].end_even = r4300.tlb_e[Index&0x3F].start_even+
+     (r4300.tlb_e[Index&0x3F].mask << 12) + 0xFFF;
+   r4300.tlb_e[Index&0x3F].phys_even = r4300.tlb_e[Index&0x3F].pfn_even << 12;
+   
+   if (r4300.tlb_e[Index&0x3F].v_even)
+     {
+	if (r4300.tlb_e[Index&0x3F].start_even < r4300.tlb_e[Index&0x3F].end_even &&
+	    !(r4300.tlb_e[Index&0x3F].start_even >= 0x80000000 &&
+	    r4300.tlb_e[Index&0x3F].end_even < 0xC0000000) &&
+	    r4300.tlb_e[Index&0x3F].phys_even < 0x20000000)
+	  {
+	     for (i=r4300.tlb_e[Index&0x3F].start_even;i<r4300.tlb_e[Index&0x3F].end_even;i++){
+#ifdef USE_TLB_CACHE
+		TLBCache_set_r(i>>12, 0x80000000 | 
+	        (r4300.tlb_e[Index&0x3F].phys_even + (i - r4300.tlb_e[Index&0x3F].start_even)));
+#else
+	       tlb_LUT_r[i>>12] = 0x80000000 | 
+	       (r4300.tlb_e[Index&0x3F].phys_even + (i - r4300.tlb_e[Index&0x3F].start_even));
+#endif
+	     }
+	     if (r4300.tlb_e[Index&0x3F].d_even)
+	       for (i=r4300.tlb_e[Index&0x3F].start_even;i<r4300.tlb_e[Index&0x3F].end_even;i++)
+#ifdef USE_TLB_CACHE
+		 TLBCache_set_w(i>>12, 0x80000000 | 
+	         (r4300.tlb_e[Index&0x3F].phys_even + (i - r4300.tlb_e[Index&0x3F].start_even)));
+#else
+	        tlb_LUT_w[i>>12] = 0x80000000 | 
+	        (r4300.tlb_e[Index&0x3F].phys_even + (i - r4300.tlb_e[Index&0x3F].start_even));
+#endif
+	  }
 	
-	// print_gecko("r4300.tlb_e[%i].start_even\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].start_even);
-	// print_gecko("r4300.tlb_e[%i].end_even\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].end_even);
-	// print_gecko("r4300.tlb_e[%i].phys_even\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].phys_even);
+	for (i=r4300.tlb_e[Index&0x3F].start_even>>12; i<=r4300.tlb_e[Index&0x3F].end_even>>12; i++)
+	  {
+  	  temp_block = blocks[i];
+	     if(temp_block && temp_block->adler32)
+	       {
+#ifdef USE_TLB_CACHE
+		  unsigned long paddr = TLBCache_get_r(i);
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(paddr&0x7FF000)/4],0x1000))
+#else
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4],0x1000))
+#endif
+		    invalid_code_set(i, 0);
+	       }
+	  }
+     }
+   r4300.tlb_e[Index&0x3F].start_odd = r4300.tlb_e[Index&0x3F].end_even+1;
+   r4300.tlb_e[Index&0x3F].end_odd = r4300.tlb_e[Index&0x3F].start_odd+
+     (r4300.tlb_e[Index&0x3F].mask << 12) + 0xFFF;
+   r4300.tlb_e[Index&0x3F].phys_odd = r4300.tlb_e[Index&0x3F].pfn_odd << 12;
+   
+   if (r4300.tlb_e[Index&0x3F].v_odd)
+     {
+	if (r4300.tlb_e[Index&0x3F].start_odd < r4300.tlb_e[Index&0x3F].end_odd &&
+	    !(r4300.tlb_e[Index&0x3F].start_odd >= 0x80000000 &&
+	    r4300.tlb_e[Index&0x3F].end_odd < 0xC0000000) &&
+	    r4300.tlb_e[Index&0x3F].phys_odd < 0x20000000)
+	  {
+	     for (i=r4300.tlb_e[Index&0x3F].start_odd;i<r4300.tlb_e[Index&0x3F].end_odd;i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_r(i>>12, 0x80000000 | 
+	        (r4300.tlb_e[Index&0x3F].phys_odd + (i - r4300.tlb_e[Index&0x3F].start_odd)));
+#else
+	       tlb_LUT_r[i>>12] = 0x80000000 | 
+	       (r4300.tlb_e[Index&0x3F].phys_odd + (i - r4300.tlb_e[Index&0x3F].start_odd));
+#endif
+	     if (r4300.tlb_e[Index&0x3F].d_odd)
+	       for (i=r4300.tlb_e[Index&0x3F].start_odd;i<r4300.tlb_e[Index&0x3F].end_odd;i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_w(i>>12, 0x80000000 | 
+	       (r4300.tlb_e[Index&0x3F].phys_odd + (i - r4300.tlb_e[Index&0x3F].start_odd)));
+#else
+		 tlb_LUT_w[i>>12] = 0x80000000 | 
+	       (r4300.tlb_e[Index&0x3F].phys_odd + (i - r4300.tlb_e[Index&0x3F].start_odd));
+#endif
+	  }
 	
-	if (r4300.tlb_e[tlbIdx].v_even)
-	{
-		if (r4300.tlb_e[tlbIdx].start_even < r4300.tlb_e[tlbIdx].end_even &&
-				!(r4300.tlb_e[tlbIdx].start_even >= 0x80000000 &&
-					r4300.tlb_e[tlbIdx].end_even < 0xC0000000) &&
-				r4300.tlb_e[tlbIdx].phys_even < 0x20000000)
-		{
-			for (i=r4300.tlb_e[tlbIdx].start_even;i<r4300.tlb_e[tlbIdx].end_even;i+=0x1000)
-			{
+	for (i=r4300.tlb_e[Index&0x3F].start_odd>>12; i<=r4300.tlb_e[Index&0x3F].end_odd>>12; i++)
+	  {
+  	  temp_block = blocks[i];
+	     if(temp_block && temp_block->adler32)
+	       {
 #ifdef USE_TLB_CACHE
-				TLBCache_set_r(i>>12, 0x80000000 |
-						(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF)));
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(TLBCache_get_r(i)&0x7FF000)/4],0x1000))
 #else
-				tlb_LUT_r[i>>12] = 0x80000000 |
-					(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF));
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4],0x1000))
 #endif
-				// print_gecko("SET (v_even) tlb_LUT_r[%08X] = %08X\r\n", i>>12, tlb_LUT_r[i>>12]);
-			}
-			if (r4300.tlb_e[tlbIdx].d_even)
-			{
-				for (i=r4300.tlb_e[tlbIdx].start_even;i<r4300.tlb_e[tlbIdx].end_even;i+=0x1000) 
-				{
-#ifdef USE_TLB_CACHE
-					TLBCache_set_w(i>>12, 0x80000000 |
-							(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF)));
-#else
-					tlb_LUT_w[i>>12] = 0x80000000 |
-						(r4300.tlb_e[tlbIdx].phys_even + (i - r4300.tlb_e[tlbIdx].start_even + 0xFFF));
-#endif
-					// print_gecko("SET (d_even) tlb_LUT_w[%08X] = %08X\r\n", i>>12, tlb_LUT_w[i>>12]);
-				}
-			}
-		}
-		for (i=r4300.tlb_e[tlbIdx].start_even>>12; i<=r4300.tlb_e[tlbIdx].end_even>>12; i++)
-		{
-			tlb_adler_invalidation_pt2(i);
-		}
-	}
-
-	r4300.tlb_e[tlbIdx].start_odd = r4300.tlb_e[tlbIdx].end_even+1;
-	r4300.tlb_e[tlbIdx].end_odd = r4300.tlb_e[tlbIdx].start_odd+
-		(r4300.tlb_e[tlbIdx].mask << 12) + 0xFFF;
-	r4300.tlb_e[tlbIdx].phys_odd = r4300.tlb_e[tlbIdx].pfn_odd << 12;
-	// print_gecko("r4300.tlb_e[%i].start_odd\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].start_odd);
-	// print_gecko("r4300.tlb_e[%i].end_odd\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].end_odd);
-	// print_gecko("r4300.tlb_e[%i].phys_odd\t%08X\r\n", tlbIdx, r4300.tlb_e[tlbIdx].phys_odd);
-
-	if (r4300.tlb_e[tlbIdx].v_odd)
-	{
-		if (r4300.tlb_e[tlbIdx].start_odd < r4300.tlb_e[tlbIdx].end_odd &&
-				!(r4300.tlb_e[tlbIdx].start_odd >= 0x80000000 &&
-					r4300.tlb_e[tlbIdx].end_odd < 0xC0000000) &&
-				r4300.tlb_e[tlbIdx].phys_odd < 0x20000000)
-		{
-			for (i=r4300.tlb_e[tlbIdx].start_odd;i<r4300.tlb_e[tlbIdx].end_odd;i+=0x1000)
-			{
-#ifdef USE_TLB_CACHE
-				TLBCache_set_r(i>>12, 0x80000000 |
-						(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF)));
-#else
-				tlb_LUT_r[i>>12] = 0x80000000 |
-					(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF));
-#endif
-				// print_gecko("SET (v_odd) tlb_LUT_r[%08X] = %08X\r\n", i>>12, tlb_LUT_r[i>>12]);
-			}
-			if (r4300.tlb_e[tlbIdx].d_odd)
-			{
-				for (i=r4300.tlb_e[tlbIdx].start_odd;i<r4300.tlb_e[tlbIdx].end_odd;i+=0x1000)
-				{
-#ifdef USE_TLB_CACHE
-					TLBCache_set_w(i>>12, 0x80000000 |
-							(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF)));
-#else
-					tlb_LUT_w[i>>12] = 0x80000000 |
-						(r4300.tlb_e[tlbIdx].phys_odd + (i - r4300.tlb_e[tlbIdx].start_odd + 0xFFF));
-#endif
-					// print_gecko("SET (d_odd) tlb_LUT_w[%08X] = %08X\r\n", i>>12, tlb_LUT_w[i>>12]);
-				}
-			}
-		}
-		for (i=r4300.tlb_e[tlbIdx].start_odd>>12; i<=r4300.tlb_e[tlbIdx].end_odd>>12; i++)
-		{
-			tlb_adler_invalidation_pt2(i);
-		}
-	}
+		    invalid_code_set(i, 0);
+	       }
+	  }
+     }
+   r4300.pc+=4;
 }
 
-
-static void TLBWI()
+void TLBWR()
 {
-	TLBW(Index&0x3F);
-	r4300.pc+=4;
+   unsigned int i;
+   update_count();
+   PowerPC_block* temp_block;
+   Random = (Count/2 % (32 - Wired)) + Wired;
+
+   if (r4300.tlb_e[Random].v_even)
+     {
+	for (i=r4300.tlb_e[Random].start_even>>12; i<=r4300.tlb_e[Random].end_even>>12; i++)
+	  {
+  	  temp_block = blocks[i];
+#ifdef USE_TLB_CACHE
+		unsigned long paddr = TLBCache_get_r(i);
+		if(!invalid_code_get(i) && (invalid_code_get(paddr>>12) ||
+		                        invalid_code_get((paddr>>12)+0x20000)))
+#else
+	     if(!invalid_code_get(i) &&(invalid_code_get(tlb_LUT_r[i]>>12) ||
+				    invalid_code_get((tlb_LUT_r[i]>>12)+0x20000)))
+#endif
+	       invalid_code_set(i, 1);
+	     if (!invalid_code_get(i))
+	       {
+#ifdef USE_TLB_CACHE
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(paddr&0x7FF000)/4], 0x1000);
+#else
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4], 0x1000);
+#endif	  
+		  invalid_code_set(i, 1);
+	       }
+	     else if (temp_block)
+	       {
+		  temp_block->adler32 = 0;
+	       }
+#ifdef USE_TLB_CACHE
+	TLBCache_set_r(i, 0);
+#else
+	     tlb_LUT_r[i] = 0;
+#endif
+	  }
+	if (r4300.tlb_e[Random].d_even)
+	  for (i=r4300.tlb_e[Random].start_even>>12; i<=r4300.tlb_e[Random].end_even>>12; i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_w(i, 0);
+#else
+	    tlb_LUT_w[i] = 0;
+#endif
+     }
+   if (r4300.tlb_e[Random].v_odd)
+     {
+	for (i=r4300.tlb_e[Random].start_odd>>12; i<=r4300.tlb_e[Random].end_odd>>12; i++)
+	  {
+  	  temp_block = blocks[i];
+#ifdef USE_TLB_CACHE
+		unsigned long paddr = TLBCache_get_r(i);
+		if(!invalid_code_get(i) && (invalid_code_get(paddr>>12) ||
+		                        invalid_code_get((paddr>>12)+0x20000)))
+#else
+	     if(!invalid_code_get(i) &&(invalid_code_get(tlb_LUT_r[i]>>12) ||
+				    invalid_code_get((tlb_LUT_r[i]>>12)+0x20000)))
+#endif
+	       invalid_code_set(i, 1);
+	     if (!invalid_code_get(i))
+	       {
+#ifdef USE_TLB_CACHE
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(paddr&0x7FF000)/4], 0x1000);
+#else	  
+		  temp_block->adler32 = adler32(0, (const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4], 0x1000);
+#endif
+		  
+		  invalid_code_set(i, 1);
+	       }
+	     else if (temp_block)
+	       {
+		  temp_block->adler32 = 0;
+	       }
+#ifdef USE_TLB_CACHE
+		TLBCache_set_r(i, 0);
+#else
+	     tlb_LUT_r[i] = 0;
+#endif
+	  }
+	if (r4300.tlb_e[Random].d_odd)
+	  for (i=r4300.tlb_e[Random].start_odd>>12; i<=r4300.tlb_e[Random].end_odd>>12; i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_w(i, 0);
+#else
+	    tlb_LUT_w[i] = 0;
+#endif
+     }
+   r4300.tlb_e[Random].g = (EntryLo0 & EntryLo1 & 1);
+   r4300.tlb_e[Random].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
+   r4300.tlb_e[Random].pfn_odd = (EntryLo1 & 0x3FFFFFC0) >> 6;
+   r4300.tlb_e[Random].c_even = (EntryLo0 & 0x38) >> 3;
+   r4300.tlb_e[Random].c_odd = (EntryLo1 & 0x38) >> 3;
+   r4300.tlb_e[Random].d_even = (EntryLo0 & 0x4) >> 2;
+   r4300.tlb_e[Random].d_odd = (EntryLo1 & 0x4) >> 2;
+   r4300.tlb_e[Random].v_even = (EntryLo0 & 0x2) >> 1;
+   r4300.tlb_e[Random].v_odd = (EntryLo1 & 0x2) >> 1;
+   r4300.tlb_e[Random].asid = (EntryHi & 0xFF);
+   r4300.tlb_e[Random].vpn2 = (EntryHi & 0xFFFFE000) >> 13;
+   //r4300.tlb_e[Random].r = (EntryHi & 0xC000000000000000LL) >> 62;
+   r4300.tlb_e[Random].mask = (PageMask & 0x1FFE000) >> 13;
+   
+   r4300.tlb_e[Random].start_even = r4300.tlb_e[Random].vpn2 << 13;
+   r4300.tlb_e[Random].end_even = r4300.tlb_e[Random].start_even+
+     (r4300.tlb_e[Random].mask << 12) + 0xFFF;
+   r4300.tlb_e[Random].phys_even = r4300.tlb_e[Random].pfn_even << 12;
+   
+   if (r4300.tlb_e[Random].v_even)
+     {
+	if (r4300.tlb_e[Random].start_even < r4300.tlb_e[Random].end_even &&
+	    !(r4300.tlb_e[Random].start_even >= 0x80000000 &&
+	    r4300.tlb_e[Random].end_even < 0xC0000000) &&
+	    r4300.tlb_e[Random].phys_even < 0x20000000)
+	  {
+	     for (i=r4300.tlb_e[Random].start_even;i<r4300.tlb_e[Random].end_even;i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_r(i>>12, 0x80000000 | 
+	       (r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even)));
+#else
+	       tlb_LUT_r[i>>12] = 0x80000000 | 
+	       (r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even));
+#endif
+	     if (r4300.tlb_e[Random].d_even)
+	       for (i=r4300.tlb_e[Random].start_even;i<r4300.tlb_e[Random].end_even;i++)
+#ifdef USE_TLB_CACHE
+		  TLBCache_set_w(i>>12, 0x80000000 | 
+	          (r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even)));
+#else
+	          tlb_LUT_w[i>>12] = 0x80000000 | 
+	          (r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even));
+#endif
+	  }
+	
+	for (i=r4300.tlb_e[Random].start_even>>12; i<=r4300.tlb_e[Random].end_even>>12; i++)
+	  {
+  	  temp_block = blocks[i];
+	     if(temp_block && temp_block->adler32)
+	       {
+#ifdef USE_TLB_CACHE
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(TLBCache_get_r(i)&0x7FF000)/4],0x1000))
+#else
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4],0x1000))
+#endif
+		     invalid_code_set(i, 0);
+	       }
+	  }
+     }
+   r4300.tlb_e[Random].start_odd = r4300.tlb_e[Random].end_even+1;
+   r4300.tlb_e[Random].end_odd = r4300.tlb_e[Random].start_odd+
+     (r4300.tlb_e[Random].mask << 12) + 0xFFF;
+   r4300.tlb_e[Random].phys_odd = r4300.tlb_e[Random].pfn_odd << 12;
+   
+   if (r4300.tlb_e[Random].v_odd)
+     {
+	if (r4300.tlb_e[Random].start_odd < r4300.tlb_e[Random].end_odd &&
+	    !(r4300.tlb_e[Random].start_odd >= 0x80000000 &&
+	    r4300.tlb_e[Random].end_odd < 0xC0000000) &&
+	    r4300.tlb_e[Random].phys_odd < 0x20000000)
+	  {
+	     for (i=r4300.tlb_e[Random].start_odd;i<r4300.tlb_e[Random].end_odd;i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_r(i>>12, 0x80000000 | 
+	       (r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd)));
+#else
+	       tlb_LUT_r[i>>12] = 0x80000000 | 
+	       (r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd));
+#endif
+	     if (r4300.tlb_e[Random].d_odd)
+	       for (i=r4300.tlb_e[Random].start_odd;i<r4300.tlb_e[Random].end_odd;i++)
+#ifdef USE_TLB_CACHE
+		TLBCache_set_w(i>>12, 0x80000000 | 
+	       (r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd)));
+#else
+	       tlb_LUT_w[i>>12] = 0x80000000 | 
+	       (r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd));
+#endif
+	  }
+	
+	for (i=r4300.tlb_e[Random].start_odd>>12; i<=r4300.tlb_e[Random].end_odd>>12; i++)
+	  {
+  	  temp_block = blocks[i];
+	     if(temp_block && temp_block->adler32)
+	       {
+#ifdef USE_TLB_CACHE
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(TLBCache_get_r(i)&0x7FF000)/4],0x1000))
+#else
+		  if(temp_block->adler32 == adler32(0,(const Bytef*)&rdram[(tlb_LUT_r[i]&0x7FF000)/4],0x1000))
+#endif
+		    invalid_code_set(i, 0);
+	       }
+	  }
+     }
+   r4300.pc+=4;
 }
 
-static void TLBWR()
+void TLBP()
 {
-	//DEBUG_stats(16, "TLBWR", STAT_TYPE_ACCUM, 1);
-	update_count();
-	Random = (Count/2 % (32 - Wired)) + Wired;
-
-	TLBW(Random);
-	r4300.pc+=4;
-}
-
-static void TLBP()
-{
-   //DEBUG_stats(17, "TLBP", STAT_TYPE_ACCUM, 1);
    int i;
    Index |= 0x80000000;
    for (i=0; i<32; i++)
@@ -1178,10 +1324,10 @@ static void MTC0()
       case 9:    // Count
 	update_count();
 	if (r4300.next_interrupt <= Count) gen_interupt();
-	debug_count += Count;
+
 	translate_event_queue(rrt & 0xFFFFFFFF);
 	Count = rrt & 0xFFFFFFFF;
-	debug_count -= Count;
+
 	break;
       case 10:   // EntryHi
 	EntryHi = rrt & 0xFFFFE0FF;
@@ -1200,9 +1346,9 @@ static void MTC0()
 		set_fpr_pointers(rrt);
 	}
 	Status = rrt;
+	update_count();
 	r4300.pc+=4;
 	check_interupt();
-	update_count();
 	if (r4300.next_interrupt <= Count) gen_interupt();
 	r4300.pc-=4;
 	break;
@@ -2661,89 +2807,112 @@ static void DADDIU()
 
 static void LDL()
 {
-	//DEBUG_stats(9, "LDL", STAT_TYPE_ACCUM, 1);
-	unsigned long long int word = 0;
-	r4300.pc+=4;
-	unsigned long address = iimmediate + irs32;
-	unsigned int type = address & 7;
-	if(likely(!type)) {
-		irt = read_dword_in_memory(address, 0);
-	}
-	else {
-		address &= 0xFFFFFFF8;
-		word = read_dword_in_memory(address, 0);
-		switch(type) {
-			case 1:
-				irt = (irt & 0xFF) | (word << 8);
-			break;
-			case 2:
-				irt = (irt & 0xFFFF) | (word << 16);
-			break;
-			case 3:
-				irt = (irt & 0xFFFFFF) | (word << 24);
-			break;
-			case 4:
-				irt = (irt & 0xFFFFFFFF) | (word << 32);
-			break;
-			case 5:
-				irt = (irt & 0xFFFFFFFFFFLL) | (word << 40);
-			break;
-			case 6:
-				irt = (irt & 0xFFFFFFFFFFFFLL) | (word << 48);
-			break;
-			case 7:
-				irt = (irt & 0xFFFFFFFFFFFFFFLL) | (word << 56);
-			break;
-		}
-	}
+   r4300.pc+=4;
+   switch ((iimmediate + irs32) & 7)
+     {
+      case 0:
+	address = iimmediate + irs32;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = dword;
+	break;
+      case 1:
+	address = (iimmediate + irs32) & 0xFFFFFFF8;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFF) | (dword << 8);
+	break;
+      case 2:
+	address = (iimmediate + irs32) & 0xFFFFFFF8;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFF) | (dword << 16);
+	break;
+      case 3:
+	address = (iimmediate + irs32) & 0xFFFFFFF8;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFF) | (dword << 24);
+	break;
+      case 4:
+	address = (iimmediate + irs32) & 0xFFFFFFF8;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFF) | (dword << 32);
+	break;
+      case 5:
+	address = (iimmediate + irs32) & 0xFFFFFFF8;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFFLL) | (dword << 40);
+	break;
+      case 6:
+	address = (iimmediate + irs32) & 0xFFFFFFF8;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFFFFLL) | (dword << 48);
+	break;
+      case 7:
+	address = (iimmediate + irs32) & 0xFFFFFFF8;
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFFFFFFLL) | (dword << 56);
+	break;
+     }
 }
 
 static void LDR()
 {
-   //DEBUG_stats(10, "LDR", STAT_TYPE_ACCUM, 1);
-   unsigned long long int word = 0;
-   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory(address, 0);
-	irt = (irt & 0xFFFFFFFFFFFFFF00LL) | (word >> 56);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFFFFFF00LL) | (dword >> 56);
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory(address, 0);
-	irt = (irt & 0xFFFFFFFFFFFF0000LL) | (word >> 48);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFFFF0000LL) | (dword >> 48);
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory(address, 0);
-	irt = (irt & 0xFFFFFFFFFF000000LL) | (word >> 40);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFF000000LL) | (dword >> 40);
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory(address, 0);
-	irt = (irt & 0xFFFFFFFF00000000LL) | (word >> 32);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFF00000000LL) | (dword >> 32);
 	break;
       case 4:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory(address, 0);
-	irt = (irt & 0xFFFFFF0000000000LL) | (word >> 24);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFF0000000000LL) | (dword >> 24);
 	break;
       case 5:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory(address, 0);
-	irt = (irt & 0xFFFF000000000000LL) | (word >> 16);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFF000000000000LL) | (dword >> 16);
 	break;
       case 6:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	word = read_dword_in_memory(address, 0);
-	irt = (irt & 0xFF00000000000000LL) | (word >> 8);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFF00000000000000LL) | (dword >> 8);
 	break;
       case 7:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	irt = read_dword_in_memory(address, 0);
+	read_dword_in_memory();
+	if (!address) return;
+	irt = dword;
 	break;
      }
 }
@@ -2751,142 +2920,173 @@ static void LDR()
 static void LB()
 {
    r4300.pc+=4;
-   irt = read_byte_in_memory((iimmediate + irs32), 0);
+   address = iimmediate + irs32;
+   read_byte_in_memory();
+   if (!address) return;
+   irt = byte;
    sign_extendedb(irt);
-
 }
 
 static void LH()
 {
    r4300.pc+=4;
-   irt = read_hword_in_memory((iimmediate + irs32), 0);
+   address = iimmediate + irs32;
+   read_hword_in_memory();
+   if (!address) return;
+   irt = hword;
    sign_extendedh(irt);
 }
 
 static void LWL()
 {
-   //DEBUG_stats(4, "LWL", STAT_TYPE_ACCUM, 1);
-   unsigned long long int word = 0;
    r4300.pc+=4;
-   unsigned long address = iimmediate + irs32;
-   u32 type = (address) & 3;
-   if(likely(!type)) {
-	  irt = read_word_in_memory(address, 0);
-	}
-	else {
-		address &= 0xFFFFFFFC;
-		word = read_word_in_memory(address, 0);
-		switch(type) {
-			case 1:
-				irt = (irt & 0xFF) | (word << 8);
-			break;
-			case 2:
-				irt = (irt & 0xFFFF) | (word << 16);
-			break;
-			case 3:
-				irt = (irt & 0xFFFFFF) | (word << 24);
-			break;
-		}
-    }
-	sign_extended(irt);
+   switch ((iimmediate + irs32) & 3)
+     {
+      case 0:
+	address = iimmediate + irs32;
+	read_word_in_memory();
+	if (!address) return;
+	irt = word;
+	break;
+      case 1:
+	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	read_word_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFF) | (word << 8);
+	break;
+      case 2:
+	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	read_word_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFF) | (word << 16);
+	break;
+      case 3:
+	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	read_word_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFF) | (word << 24);
+	break;
+     }
+   sign_extended(irt);
 }
 
 static void LW()
 {
+   address = iimmediate + irs32;
    r4300.pc+=4;
-   irt = read_word_in_memory((iimmediate + irs32), 0);
+   read_word_in_memory();
+   if (!address) return;
+   irt = word;
    sign_extended(irt);
 }
 
 static void LBU()
 {
    r4300.pc+=4;
-   irt = read_byte_in_memory((iimmediate + irs32), 0);
+   address = iimmediate + irs32;
+   read_byte_in_memory();
+   if (!address) return;
+   irt = byte;
 }
 
 static void LHU()
 {
    r4300.pc+=4;
-   irt = read_hword_in_memory((iimmediate + irs32), 0);
+   address = iimmediate + irs32;
+   read_hword_in_memory();
+   if (!address) return;
+   irt = hword;
 }
 
 static void LWR()
 {
-	//DEBUG_stats(5, "LWR", STAT_TYPE_ACCUM, 1);
-	unsigned long long int word = 0;
-	r4300.pc+=4;
-	u32 type = (iimmediate + irs32) & 3;
-	unsigned long address = (iimmediate + irs32) & 0xFFFFFFFC;
-	if(likely((type == 3))) {
-		irt = read_word_in_memory(address, 0);
-		sign_extended(irt);
-	}
-	else {
-		word = read_word_in_memory(address, 0);
-		switch(type) {
-			case 0:
-				irt = (irt & 0xFFFFFFFFFFFFFF00LL) | ((word >> 24) & 0xFF);
-				break;
-			case 1:
-				irt = (irt & 0xFFFFFFFFFFFF0000LL) | ((word >> 16) & 0xFFFF);
-				break;
-			case 2:
-				irt = (irt & 0xFFFFFFFFFF000000LL) | ((word >> 8) & 0xFFFFFF);
-				break;
-		}
-	}
-}
-
-static void LWU()
-{
-   r4300.pc+=4;
-   irt = read_word_in_memory((iimmediate + irs32), 0);
-}
-
-static void SB()
-{
-   r4300.pc+=4;
-   unsigned long address = iimmediate + irs32;
-   write_byte_in_memory(address, (unsigned char)(irt & 0xFF));
-   check_memory(address);
-}
-
-static void SH()
-{
-   r4300.pc+=4;
-   unsigned long address = iimmediate + irs32;
-   write_hword_in_memory(address, (unsigned short)(irt & 0xFFFF));
-   check_memory(address);
-}
-static void SWL()
-{
-   //DEBUG_stats(6, "SWL", STAT_TYPE_ACCUM, 1);
-   unsigned long long int old_word = 0;
-   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	write_word_in_memory(address, (unsigned long)irt);
-	check_memory(address);
+	read_word_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFFFFFF00LL) | ((word >> 24) & 0xFF);
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory(address, 0);
-	write_word_in_memory(address, ((unsigned long)irt >> 8) | (old_word & 0xFF000000));
-	check_memory(address);
+	read_word_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFFFF0000LL) | ((word >> 16) & 0xFFFF);
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory(address, 0);
-	write_word_in_memory(address, ((unsigned long)irt >> 16) | (old_word & 0xFFFF0000));
-	check_memory(address);
+	read_word_in_memory();
+	if (!address) return;
+	irt = (irt & 0xFFFFFFFFFF000000LL) | ((word >> 8) & 0xFFFFFF);
+	break;
+      case 3:
+	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	read_word_in_memory();
+	if (!address) return;
+	irt = word;
+	sign_extended(irt);
+     }
+}
+
+static void LWU()
+{
+   address = iimmediate + irs32;
+   r4300.pc+=4;
+   read_word_in_memory();
+   if (!address) return;
+   irt = word;
+}
+
+static void SB()
+{
+   r4300.pc+=4;
+   address = iimmediate + irs32;
+   byte = (unsigned char)(irt & 0xFF);
+   write_byte_in_memory();
+   check_memory();
+}
+
+static void SH()
+{
+   r4300.pc+=4;
+   address = iimmediate + irs32;
+   hword = (unsigned short)(irt & 0xFFFF);
+   write_hword_in_memory();
+   check_memory();
+}
+
+static void SWL()
+{
+   r4300.pc+=4;
+   switch ((iimmediate + irs32) & 3)
+     {
+      case 0:
+	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	word = (unsigned long)irt;
+	write_word_in_memory();
+	check_memory();
+	break;
+      case 1:
+	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	read_word_in_memory();
+	word = ((unsigned long)irt >> 8) | (word & 0xFF000000);
+	write_word_in_memory();
+	check_memory();
+	break;
+      case 2:
+	address = (iimmediate + irs32) & 0xFFFFFFFC;
+	read_word_in_memory();
+	word = ((unsigned long)irt >> 16) | (word & 0xFFFF0000);
+	write_word_in_memory();
+	check_memory();
 	break;
       case 3:
 	address = iimmediate + irs32;
-	write_byte_in_memory(address, (unsigned char)(irt >> 24));
-	check_memory(address);
+	byte = (unsigned char)(irt >> 24);
+	write_byte_in_memory();
+	check_memory();
 	break;
      }
 }
@@ -2894,157 +3094,169 @@ static void SWL()
 static void SW()
 {
    r4300.pc+=4;
-   unsigned long address = iimmediate + irs32;
-   write_word_in_memory(address, (unsigned long)(irt & 0xFFFFFFFF));
-   check_memory(address);
+   address = iimmediate + irs32;
+   word = (unsigned long)(irt & 0xFFFFFFFF);
+   write_word_in_memory();
+   check_memory();
 }
 
 static void SDL()
 {
-   //DEBUG_stats(8, "SDL", STAT_TYPE_ACCUM, 1);
-   unsigned long long int old_word = 0;
-   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	write_dword_in_memory(address, irt);
-	check_memory(address);
+	dword = irt;
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, ((unsigned long long)irt >> 8)|(old_word & 0xFF00000000000000LL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = ((unsigned long long)irt >> 8)|(dword & 0xFF00000000000000LL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, ((unsigned long long)irt >> 16)|(old_word & 0xFFFF000000000000LL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = ((unsigned long long)irt >> 16)|(dword & 0xFFFF000000000000LL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, ((unsigned long long)irt >> 24)|(old_word & 0xFFFFFF0000000000LL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = ((unsigned long long)irt >> 24)|(dword & 0xFFFFFF0000000000LL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 4:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, ((unsigned long long)irt >> 32)|(old_word & 0xFFFFFFFF00000000LL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = ((unsigned long long)irt >> 32)|(dword & 0xFFFFFFFF00000000LL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 5:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, ((unsigned long long)irt >> 40)|(old_word & 0xFFFFFFFFFF000000LL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = ((unsigned long long)irt >> 40)|(dword & 0xFFFFFFFFFF000000LL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 6:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, ((unsigned long long)irt >> 48)|(old_word & 0xFFFFFFFFFFFF0000LL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = ((unsigned long long)irt >> 48)|(dword & 0xFFFFFFFFFFFF0000LL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 7:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, ((unsigned long long)irt >> 56)|(old_word & 0xFFFFFFFFFFFFFF00LL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = ((unsigned long long)irt >> 56)|(dword & 0xFFFFFFFFFFFFFF00LL);
+	write_dword_in_memory();
+	check_memory();
 	break;
      }
 }
 
 static void SDR()
 {
-   //DEBUG_stats(7, "SDR", STAT_TYPE_ACCUM, 1);
-   unsigned long long int old_word = 0;
-   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 7)
      {
       case 0:
 	address = iimmediate + irs32;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, (irt << 56) | (old_word & 0x00FFFFFFFFFFFFFFLL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = (irt << 56) | (dword & 0x00FFFFFFFFFFFFFFLL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, (irt << 48) | (old_word & 0x0000FFFFFFFFFFFFLL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = (irt << 48) | (dword & 0x0000FFFFFFFFFFFFLL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, (irt << 40) | (old_word & 0x000000FFFFFFFFFFLL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = (irt << 40) | (dword & 0x000000FFFFFFFFFFLL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, (irt << 32) | (old_word & 0x00000000FFFFFFFFLL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = (irt << 32) | (dword & 0x00000000FFFFFFFFLL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 4:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, (irt << 24) | (old_word & 0x0000000000FFFFFFLL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = (irt << 24) | (dword & 0x0000000000FFFFFFLL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 5:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, (irt << 16) | (old_word & 0x000000000000FFFFLL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = (irt << 16) | (dword & 0x000000000000FFFFLL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 6:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	old_word = read_dword_in_memory(address, 0);
-	write_dword_in_memory(address, (irt << 8) | (old_word & 0x00000000000000FFLL));
-	check_memory(address);
+	read_dword_in_memory();
+	dword = (irt << 8) | (dword & 0x00000000000000FFLL);
+	write_dword_in_memory();
+	check_memory();
 	break;
       case 7:
 	address = (iimmediate + irs32) & 0xFFFFFFF8;
-	write_dword_in_memory(address, irt);
-	check_memory(address);
+	dword = irt;
+	write_dword_in_memory();
+	check_memory();
 	break;
      }
 }
 
 static void SWR()
 {
-   //DEBUG_stats(11, "SWR", STAT_TYPE_ACCUM, 1);
-   unsigned long long int old_word = 0;
-   unsigned long address;
    r4300.pc+=4;
    switch ((iimmediate + irs32) & 3)
      {
       case 0:
 	address = iimmediate + irs32;
-	old_word = read_word_in_memory(address, 0);
-	write_word_in_memory(address, ((unsigned long)irt << 24) | (old_word & 0x00FFFFFF));
-	check_memory(address);
+	read_word_in_memory();
+	word = ((unsigned long)irt << 24) | (word & 0x00FFFFFF);
+	write_word_in_memory();
+	check_memory();
 	break;
       case 1:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory(address, 0);
-	write_word_in_memory(address, ((unsigned long)irt << 16) | (old_word & 0x0000FFFF));
-	check_memory(address);
+	read_word_in_memory();
+	word = ((unsigned long)irt << 16) | (word & 0x0000FFFF);
+	write_word_in_memory();
+	check_memory();
 	break;
       case 2:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	old_word = read_word_in_memory(address, 0);
-	write_word_in_memory(address, ((unsigned long)irt << 8) | (old_word & 0x000000FF));
-	check_memory(address);
+	read_word_in_memory();
+	word = ((unsigned long)irt << 8) | (word & 0x000000FF);
+	write_word_in_memory();
+	check_memory();
 	break;
       case 3:
 	address = (iimmediate + irs32) & 0xFFFFFFFC;
-	write_word_in_memory(address, (unsigned long)irt);
-	check_memory(address);
+	word = (unsigned long)irt;
+	write_word_in_memory();
+	check_memory();
 	break;
      }
 }
@@ -3056,9 +3268,11 @@ static void CACHE()
 
 static void LL()
 {
-   //DEBUG_stats(12, "LL", STAT_TYPE_ACCUM, 1);
+   address = iimmediate + irs32;
    r4300.pc+=4;
-   irt = read_word_in_memory((iimmediate + irs32), 0);
+   read_word_in_memory();
+   if (!address) return;
+   irt = word;
    sign_extended(irt);
    r4300.llbit = 1;
 }
@@ -3067,31 +3281,40 @@ static void LWC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   *((long*)r4300.fpr_single[lfft]) = read_word_in_memory((lfoffset+r4300.gpr[lfbase]), 0);
+   address = lfoffset+r4300.gpr[lfbase];
+   read_word_in_memory();
+   if (!address) return;
+   *((long*)r4300.fpr_single[lfft]) = word;
 }
 
 static void LDC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   *((long long*)r4300.fpr_double[lfft]) = read_dword_in_memory((lfoffset+r4300.gpr[lfbase]), 0);
+   address = lfoffset+r4300.gpr[lfbase];
+   read_dword_in_memory();
+   if (!address) return;
+   *((long long*)r4300.fpr_double[lfft]) = dword;
 }
 
 static void LD()
 {
    r4300.pc+=4;
-   irt = read_dword_in_memory((iimmediate + irs32), 0);
+   address = iimmediate + irs32;
+   read_dword_in_memory();
+   if (!address) return;
+   irt = dword;
 }
 
 static void SC()
 {
-   //DEBUG_stats(13, "SC", STAT_TYPE_ACCUM, 1);
    r4300.pc+=4;
    if(r4300.llbit)
      {
-	unsigned long address = iimmediate + irs32;
-	write_word_in_memory(address, (unsigned long)(irt & 0xFFFFFFFF));
-	check_memory(address);
+	address = iimmediate + irs32;
+	word = (unsigned long)(irt & 0xFFFFFFFF);
+	write_word_in_memory();
+	check_memory();
 	r4300.llbit = 0;
 	irt = 1;
      }
@@ -3105,26 +3328,29 @@ static void SWC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   unsigned long address = lfoffset+r4300.gpr[lfbase];
-   write_word_in_memory(address, *((long*)r4300.fpr_single[lfft]));
-   check_memory(address);
+   address = lfoffset+r4300.gpr[lfbase];
+   word = *((long*)r4300.fpr_single[lfft]);
+   write_word_in_memory();
+   check_memory();
 }
 
 static void SDC1()
 {
    if (check_cop1_unusable()) return;
    r4300.pc+=4;
-   unsigned long address = lfoffset+r4300.gpr[lfbase];
-   write_dword_in_memory(address, *((unsigned long long*)r4300.fpr_double[lfft]));
-   check_memory(address);
+   address = lfoffset+r4300.gpr[lfbase];
+   dword = *((unsigned long long*)r4300.fpr_double[lfft]);
+   write_dword_in_memory();
+   check_memory();
 }
 
 static void SD()
 {
    r4300.pc+=4;
-   unsigned long address = iimmediate + irs32;
-   write_dword_in_memory(address, irt);
-   check_memory(address);
+   address = iimmediate + irs32;
+   dword = irt;
+   write_dword_in_memory();
+   check_memory();
 }
 
 /*static*/ void (*interp_ops[64])(void) =
@@ -3141,50 +3367,20 @@ static void SD()
 
 void prefetch()
 {
-
-if ((r4300.pc >= 0x80000000) && (r4300.pc < 0xc0000000))
-     {
-	if ((r4300.pc >= 0x80000000) && (r4300.pc < 0x80800000))
-	  {
-	     op = rdram[(r4300.pc&0xFFFFFF)/4];
-	     prefetch_opcode(op);
-	  }
-	else if ((r4300.pc >= 0xa4000000) && (r4300.pc < 0xa4001000))
-	  {
-	     op = SP_DMEM[(r4300.pc&0xFFF)/4];
-	     prefetch_opcode(op);
-	  }
-	else if ((r4300.pc > 0xb0000000))
-	  {
-#ifdef __PPC__
-		ROMCache_read((u8*)&op, (r4300.pc & 0xFFFFFFF), 4);
-#else
-	     op = ((unsigned long*)rom)[(r4300.pc & 0xFFFFFFF)/4];
-#endif
-	     prefetch_opcode(op);
-	  }
+	unsigned long *mem = fast_mem_access(r4300.pc);
+	if (mem != NULL)
+	{
+		op = *mem;
+		prefetch_opcode(op);
+	}
 	else
-	  {
-	     printf("execution &#65533; l'addresse :%x\n", (int)r4300.pc);
+    {
+	     print_gecko("execution &#65533; l'addresse :%x\n", (int)r4300.pc);
 	     r4300.stop=1;
 #ifdef DEBUGON
        _break();
 #endif     
-	  }
-     }
-   else
-     {
-	unsigned long addr = r4300.pc, phys;
-	phys = virtual_to_physical_address(r4300.pc, 2);
-	if (phys != 0x00000000) r4300.pc = phys;
-	else
-	  {
-	     prefetch();
-	     return;
-	  }
-	prefetch();
-	r4300.pc = addr;
-     }
+	}
 }
 
 void pure_interpreter()

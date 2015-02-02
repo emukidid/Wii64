@@ -79,112 +79,121 @@ DPS_register dps_register;
 	#define MEMMASK 0x3FFFFF
 #endif
 
-#ifdef _BIG_ENDIAN
-#define GET_LOW_ADDR(address) ((unsigned short)((address) & 0xFFFF))
-#else
-#define GET_LOW_ADDR(address) ((unsigned short)(((address) >>16) & 0xFFFF))
-#endif
-
 unsigned long rdram[MEM_SIZE/4]  __attribute__((aligned(32)));
-unsigned char *rdramb = (unsigned char *)(rdram);
+unsigned char *const rdramb = (unsigned char *)(rdram);
 unsigned long SP_DMEM[0x1000/4*2];
-unsigned long *SP_IMEM = SP_DMEM+0x1000/4;
-unsigned char *SP_DMEMb = (unsigned char *)(SP_DMEM);
-unsigned char *SP_IMEMb = (unsigned char*)(SP_DMEM+0x1000/4);
+unsigned long *const SP_IMEM = SP_DMEM+0x1000/4;
+unsigned char *const SP_DMEMb = (unsigned char *)(SP_DMEM);
+unsigned char *const SP_IMEMb = (unsigned char*)(SP_DMEM+0x1000/4);
 unsigned long PIF_RAM[0x40/4];
-unsigned char *PIF_RAMb = (unsigned char *)(PIF_RAM);
+unsigned char *const PIF_RAMb = (unsigned char *)(PIF_RAM);
+
+// values that are being written are stored in these variables
+unsigned long word;
+unsigned char byte;
+unsigned short hword;
+unsigned long long int dword;
+
+// address : address of the read/write operation being done
+unsigned long address = 0;
+// *address_low = the lower 16 bit of the address :
+#ifdef _BIG_ENDIAN
+static unsigned short *const address_low = (unsigned short *)(&address)+1; 
+#else
+static unsigned short *const address_low = (unsigned short *)(&address);
+#endif
 
 // trash : when we write to unmaped memory it is written here
 static unsigned long trash;
 
 // hash tables of memory functions
-unsigned long long int (**rwmem[0x10000])(unsigned long, unsigned long long int);
+void (**rwmem[0x10000])();
 
-unsigned long long int (*rw_nothing[8])(unsigned long, unsigned long long int) =
+void (*rw_nothing[8])() =
 	{ read_nothing,  read_nothingb,  read_nothingh,  read_nothingd,
 	  write_nothing, write_nothingb, write_nothingh, write_nothingd };
 
-unsigned long long int (*rw_nomem[8])(unsigned long, unsigned long long int) =
+void (*rw_nomem[8])() =
 	{ read_nomem,  read_nomemb,  read_nomemh,  read_nomemd,
 	  write_nomem, write_nomemb, write_nomemh, write_nomemd };
 
-unsigned long long int (*rw_rdram[8])(unsigned long, unsigned long long int) =
+void (*rw_rdram[8])() =
 	{ read_rdram,  read_rdramb,  read_rdramh,  read_rdramd,
 	  write_rdram, write_rdramb, write_rdramh, write_rdramd };
 
-unsigned long long int (*rw_rdramFB[8])(unsigned long, unsigned long long int) =
+void (*rw_rdramFB[8])() =
 	{ read_rdramFB,  read_rdramFBb,  read_rdramFBh,  read_rdramFBd,
 	  write_rdramFB, write_rdramFBb, write_rdramFBh, write_rdramFBd };
 
-unsigned long long int (*rw_rdramreg[8])(unsigned long, unsigned long long int) =
+void (*rw_rdramreg[8])() =
 	{ read_rdramreg,  read_rdramregb,  read_rdramregh,  read_rdramregd,
 	  write_rdramreg, write_rdramregb, write_rdramregh, write_rdramregd };
 
-unsigned long long int (*rw_rsp_mem[8])(unsigned long, unsigned long long int) =
+void (*rw_rsp_mem[8])() =
 	{ read_rsp_mem,  read_rsp_memb,  read_rsp_memh,  read_rsp_memd,
 	  write_rsp_mem, write_rsp_memb, write_rsp_memh, write_rsp_memd };
 
-unsigned long long int (*rw_rsp_reg[8])(unsigned long, unsigned long long int) =
+void (*rw_rsp_reg[8])() =
 	{ read_rsp_reg,  read_rsp_regb,  read_rsp_regh,  read_rsp_regd,
 	  write_rsp_reg, write_rsp_regb, write_rsp_regh, write_rsp_regd };
 
-unsigned long long int (*rw_rsp[8])(unsigned long, unsigned long long int) =
+void (*rw_rsp[8])() =
 	{ read_rsp,  read_rspb,  read_rsph,  read_rspd,
 	  write_rsp, write_rspb, write_rsph, write_rspd };
 
-unsigned long long int (*rw_dp[8])(unsigned long, unsigned long long int) =
+void (*rw_dp[8])() =
 	{ read_dp,  read_dpb,  read_dph,  read_dpd,
 	  write_dp, write_dpb, write_dph, write_dpd };
 
-unsigned long long int (*rw_dps[8])(unsigned long, unsigned long long int) =
+void (*rw_dps[8])() =
 	{ read_dps,  read_dpsb,  read_dpsh,  read_dpsd,
 	  write_dps, write_dpsb, write_dpsh, write_dpsd };
 
-unsigned long long int (*rw_mi[8])(unsigned long, unsigned long long int) =
+void (*rw_mi[8])() =
 	{ read_mi,  read_mib,  read_mih,  read_mid,
 	  write_mi, write_mib, write_mih, write_mid };
 
-unsigned long long int (*rw_vi[8])(unsigned long, unsigned long long int) =
+void (*rw_vi[8])() =
 	{ read_vi,  read_vib,  read_vih,  read_vid,
 	  write_vi, write_vib, write_vih, write_vid };
 
-unsigned long long int (*rw_ai[8])(unsigned long, unsigned long long int) =
+void (*rw_ai[8])() =
 	{ read_ai,  read_aib,  read_aih,  read_aid,
 	  write_ai, write_aib, write_aih, write_aid };
 
-unsigned long long int (*rw_pi[8])(unsigned long, unsigned long long int) =
+void (*rw_pi[8])() =
 	{ read_pi,  read_pib,  read_pih,  read_pid,
 	  write_pi, write_pib, write_pih, write_pid };
 
-unsigned long long int (*rw_ri[8])(unsigned long, unsigned long long int) =
+void (*rw_ri[8])() =
 	{ read_ri,  read_rib,  read_rih,  read_rid,
 	  write_ri, write_rib, write_rih, write_rid };
 
-unsigned long long int (*rw_si[8])(unsigned long, unsigned long long int) =
+void (*rw_si[8])() =
 	{ read_si,  read_sib,  read_sih,  read_sid,
 	  write_si, write_sib, write_sih, write_sid };
 
-unsigned long long int (*rw_flashram0[8])(unsigned long, unsigned long long int) =
+void (*rw_flashram0[8])() =
 	{ read_flashram_status,  read_flashram_statusb,
 	  read_flashram_statush, read_flashram_statusd,
 	  write_flashram_dummy,  write_flashram_dummyb,
 	  write_flashram_dummyh, write_flashram_dummyd };
 
-unsigned long long int (*rw_flashram1[8])(unsigned long, unsigned long long int) =
+void (*rw_flashram1[8])() =
 	{ read_nothing,            read_nothingb,
 	  read_nothingh,           read_nothingd,
 	  write_flashram_command,  write_flashram_commandb,
 	  write_flashram_commandh, write_flashram_commandd };
 
-unsigned long long int (*rw_rom0[8])(unsigned long, unsigned long long int) =
+void (*rw_rom0[8])() =
 	{ read_rom,      read_romb,      read_romh,      read_romd,
 	  write_nothing, write_nothingb, write_nothingh, write_nothingd };
 
-unsigned long long int (*rw_rom1[8])(unsigned long, unsigned long long int) =
+void (*rw_rom1[8])() =
 	{ read_rom,      read_romb,      read_romh,      read_romd,
 	  write_rom,     write_nothingb, write_nothingh, write_nothingd };
 
-unsigned long long int (*rw_pif[8])(unsigned long, unsigned long long int) =
+void (*rw_pif[8])() =
 	{ read_pif,  read_pifb,  read_pifh,  read_pifd,
 	  write_pif, write_pifb, write_pifh, write_pifd };
 
@@ -441,9 +450,10 @@ int init_memory()
 	rwmem[0x8480] = rw_si;
 	rwmem[0xa480] = rw_si;
 	memset(&si_register, 0, sizeof(SI_register));
-	readsi[0x0] = &si_register.si_dram_addr;
-	readsi[0x4] = &si_register.si_pif_addr_rd64b;
-	readsi[0x8] = &trash;
+	readsi[0x00] = &si_register.si_dram_addr;
+	readsi[0x04] = &si_register.si_pif_addr_rd64b;
+	readsi[0x08] = &trash;
+	readsi[0x0C] = &trash;
 	readsi[0x10] = &si_register.si_pif_addr_wr64b;
 	readsi[0x14] = &trash;
 	readsi[0x18] = &si_register.si_status;
@@ -509,78 +519,45 @@ void free_memory()
 
 static void update_MI_init_mode_reg()
 {
-	MI_register.init_length = MI_register.w_mi_init_mode_reg & 0x7F;
-	if (MI_register.w_mi_init_mode_reg & 0x80) 
-		MI_register.init_mode = 0;
-	if (MI_register.w_mi_init_mode_reg & 0x100)
-		MI_register.init_mode = 1;
-	if (MI_register.w_mi_init_mode_reg & 0x200)
-		MI_register.ebus_test_mode = 0;
-	if (MI_register.w_mi_init_mode_reg & 0x400)
-		MI_register.ebus_test_mode = 1;
-	if (MI_register.w_mi_init_mode_reg & 0x800)
+	MI_register.mi_init_mode_reg &= ~0x7F; // init_length
+	MI_register.mi_init_mode_reg |= MI_register.w_mi_init_mode_reg & 0x7F;
+	if (MI_register.w_mi_init_mode_reg & 0x80) // clear init_mode
+		MI_register.mi_init_mode_reg &= ~0x80;
+	if (MI_register.w_mi_init_mode_reg & 0x100) // set init_mode
+		MI_register.mi_init_mode_reg |= 0x80;
+	if (MI_register.w_mi_init_mode_reg & 0x200) // clear ebus_test_mode
+		MI_register.mi_init_mode_reg &= ~0x100;
+	if (MI_register.w_mi_init_mode_reg & 0x400) // set ebus_test_mode
+		MI_register.mi_init_mode_reg |= 0x100;
+	if (MI_register.w_mi_init_mode_reg & 0x800) // clear DP interupt
 	{
 		MI_register.mi_intr_reg &= 0xFFFFFFDF;
 		check_interupt();
 	}
-	if (MI_register.w_mi_init_mode_reg & 0x1000)
-		MI_register.RDRAM_reg_mode=0;
-	if (MI_register.w_mi_init_mode_reg & 0x2000)
-		MI_register.RDRAM_reg_mode=1;
-	MI_register.mi_init_mode_reg = ((MI_register.init_length) |
-		(MI_register.init_mode << 7) |
-		(MI_register.ebus_test_mode << 8) |
-		(MI_register.RDRAM_reg_mode << 9)
-		);
+	if (MI_register.w_mi_init_mode_reg & 0x1000) // clear RDRAM_reg_mode
+		MI_register.mi_init_mode_reg &= ~0x200;
+	if (MI_register.w_mi_init_mode_reg & 0x2000) // set RDRAM_reg_mode
+		MI_register.mi_init_mode_reg |= 0x200;
 }
 
 static void update_MI_intr_mask_reg()
 {
-	if (MI_register.w_mi_intr_mask_reg & 0x1)   MI_register.SP_intr_mask = 0;
-	if (MI_register.w_mi_intr_mask_reg & 0x2)   MI_register.SP_intr_mask = 1;
-	if (MI_register.w_mi_intr_mask_reg & 0x4)   MI_register.SI_intr_mask = 0;
-	if (MI_register.w_mi_intr_mask_reg & 0x8)   MI_register.SI_intr_mask = 1;
-	if (MI_register.w_mi_intr_mask_reg & 0x10)  MI_register.AI_intr_mask = 0;
-	if (MI_register.w_mi_intr_mask_reg & 0x20)  MI_register.AI_intr_mask = 1;
-	if (MI_register.w_mi_intr_mask_reg & 0x40)  MI_register.VI_intr_mask = 0;
-	if (MI_register.w_mi_intr_mask_reg & 0x80)  MI_register.VI_intr_mask = 1;
-	if (MI_register.w_mi_intr_mask_reg & 0x100) MI_register.PI_intr_mask = 0;
-	if (MI_register.w_mi_intr_mask_reg & 0x200) MI_register.PI_intr_mask = 1;
-	if (MI_register.w_mi_intr_mask_reg & 0x400) MI_register.DP_intr_mask = 0;
-	if (MI_register.w_mi_intr_mask_reg & 0x800) MI_register.DP_intr_mask = 1;
-	MI_register.mi_intr_mask_reg = ((MI_register.SP_intr_mask) |
-		(MI_register.SI_intr_mask << 1) |
-		(MI_register.AI_intr_mask << 2) |
-		(MI_register.VI_intr_mask << 3) |
-		(MI_register.PI_intr_mask << 4) |
-		(MI_register.DP_intr_mask << 5)
-		);
+	if (MI_register.w_mi_intr_mask_reg & 0x1)   MI_register.mi_intr_mask_reg &= ~0x1; // clear SP mask
+	if (MI_register.w_mi_intr_mask_reg & 0x2)   MI_register.mi_intr_mask_reg |= 0x1; // set SP mask
+	if (MI_register.w_mi_intr_mask_reg & 0x4)   MI_register.mi_intr_mask_reg &= ~0x2; // clear SI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x8)   MI_register.mi_intr_mask_reg |= 0x2; // set SI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x10)  MI_register.mi_intr_mask_reg &= ~0x4; // clear AI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x20)  MI_register.mi_intr_mask_reg |= 0x4; // set AI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x40)  MI_register.mi_intr_mask_reg &= ~0x8; // clear VI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x80)  MI_register.mi_intr_mask_reg |= 0x8; // set VI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x100) MI_register.mi_intr_mask_reg &= ~0x10; // clear PI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x200) MI_register.mi_intr_mask_reg |= 0x10; // set PI mask
+	if (MI_register.w_mi_intr_mask_reg & 0x400) MI_register.mi_intr_mask_reg &= ~0x20; // clear DP mask
+	if (MI_register.w_mi_intr_mask_reg & 0x800) MI_register.mi_intr_mask_reg |= 0x20; // set DP mask
 }
 
-// It seems the SP task shouldn't be done right after the freeze bit is cleared
-// else Perfect Dark intro freezes, I don't have a N64 to test the proper timing
-// but that value seems fine for DK64/BC/PD...
-// GliGli
-
-#define FROZEN_TASK_DELAY 500
-#define INT_MIN -1
-static int SP_Task_pending_cycles=INT_MIN;
-
-void do_SP_Task(int delayedDP, int cycles)
+static void do_SP_task()
 {
-	if(delayedDP)
-	{
-		if(SP_Task_pending_cycles==INT_MIN) // not pending
-			return;
-
-		SP_Task_pending_cycles-=cycles;
-
-		if(SP_Task_pending_cycles>0) // still pending
-			return;
-	}
-
-	SP_Task_pending_cycles=INT_MIN;
-
 	int save_pc = rsp_register.rsp_pc & ~0xFFF;
     if (SP_DMEM[0xFC0/4] == 1)
     {
@@ -622,14 +599,6 @@ void do_SP_Task(int delayedDP, int cycles)
 		end_section(GFX_SECTION);
 		rsp_register.rsp_pc |= save_pc;
 		new_frame();
-
-		update_count();
-		if (MI_register.mi_intr_reg & 0x1)
-			add_interupt_event(SP_INT, 500);
-		if (MI_register.mi_intr_reg & 0x20)
-			add_interupt_event(DP_INT, 1000);
-		MI_register.mi_intr_reg &= ~0x21;
-		sp_register.sp_status_reg &= ~0x303;
 
 		// protecting new frame buffers
 		if(fBGetFrameBufferInfo && fBRead && fBWrite) fBGetFrameBufferInfo(frameBufferInfos);
@@ -674,9 +643,6 @@ void do_SP_Task(int delayedDP, int cycles)
 		}
 		return;
 	}
-	
-	if(delayedDP) // only DPs in delayed mode
-		return;
 
 	if (SP_DMEM[0xFC0/4] == 2)
     {
@@ -685,281 +651,218 @@ void do_SP_Task(int delayedDP, int cycles)
         start_section(AUDIO_SECTION);
         doRspCycles(100);
         end_section(AUDIO_SECTION);
-        rsp_register.rsp_pc |= save_pc;
-
-        update_count();
-        if (MI_register.mi_intr_reg & 0x1)
-            add_interupt_event(SP_INT, 100);
-        MI_register.mi_intr_reg &= ~0x1;
-        sp_register.sp_status_reg &= ~0x303;
-        
+        rsp_register.rsp_pc |= save_pc;       
     }
     else
     {
         rsp_register.rsp_pc &= 0xFFF;
         doRspCycles(100);
         rsp_register.rsp_pc |= save_pc;
-
-        update_count();
-        if (MI_register.mi_intr_reg & 0x1)
-            add_interupt_event(SP_INT, 0);
-        MI_register.mi_intr_reg &= ~0x1;
-        sp_register.sp_status_reg &= ~0x203;
     }
 }
 
 void update_SP()
 {
-	if (sp_register.w_sp_status_reg & 0x1)
-		sp_register.halt = 0;
-	if (sp_register.w_sp_status_reg & 0x2)
-		sp_register.halt = 1;
-	if (sp_register.w_sp_status_reg & 0x4)
-		sp_register.broke = 0;
-	if (sp_register.w_sp_status_reg & 0x8)
+	if (sp_register.w_sp_status_reg & 0x1) // clear halt
+		sp_register.sp_status_reg &= ~0x1;
+	if (sp_register.w_sp_status_reg & 0x2) // set halt
+		sp_register.sp_status_reg |= 0x1;
+	if (sp_register.w_sp_status_reg & 0x4) // clear broke
+		sp_register.sp_status_reg &= ~0x2;
+	if (sp_register.w_sp_status_reg & 0x8) // clear SP interupt
 	{
 		MI_register.mi_intr_reg &= 0xFFFFFFFE;
 		check_interupt();
 	}
-	if (sp_register.w_sp_status_reg & 0x10)
+	if (sp_register.w_sp_status_reg & 0x10) // set SP interupt
 	{
 		MI_register.mi_intr_reg |= 1;
 		check_interupt();
 	}
-	if (sp_register.w_sp_status_reg & 0x20)
-		sp_register.single_step = 0;
-	if (sp_register.w_sp_status_reg & 0x40)
-		sp_register.single_step = 1;
-	if (sp_register.w_sp_status_reg & 0x80)
-		sp_register.intr_break = 0;
-	if (sp_register.w_sp_status_reg & 0x100)
-		sp_register.intr_break = 1;
-	if (sp_register.w_sp_status_reg & 0x200)
-		sp_register.signal0 = 0;
-	if (sp_register.w_sp_status_reg & 0x400)
-		sp_register.signal0 = 1;
-	if (sp_register.w_sp_status_reg & 0x800)
-		sp_register.signal1 = 0;
-	if (sp_register.w_sp_status_reg & 0x1000)
-		sp_register.signal1 = 1;
-	if (sp_register.w_sp_status_reg & 0x2000)
-		sp_register.signal2 = 0;
-	if (sp_register.w_sp_status_reg & 0x4000)
-		sp_register.signal2 = 1;
-	if (sp_register.w_sp_status_reg & 0x8000)
-		sp_register.signal3 = 0;
-	if (sp_register.w_sp_status_reg & 0x10000)
-		sp_register.signal3 = 1;
-	if (sp_register.w_sp_status_reg & 0x20000)
-		sp_register.signal4 = 0;
-	if (sp_register.w_sp_status_reg & 0x40000)
-		sp_register.signal4 = 1;
-	if (sp_register.w_sp_status_reg & 0x80000)
-		sp_register.signal5 = 0;
-	if (sp_register.w_sp_status_reg & 0x100000)
-		sp_register.signal5 = 1;
-	if (sp_register.w_sp_status_reg & 0x200000)
-		sp_register.signal6 = 0;
-	if (sp_register.w_sp_status_reg & 0x400000)
-		sp_register.signal6 = 1;
-	if (sp_register.w_sp_status_reg & 0x800000)
-		sp_register.signal7 = 0;
-	if (sp_register.w_sp_status_reg & 0x1000000)
-		sp_register.signal7 = 1;
-		sp_register.sp_status_reg = ((sp_register.halt) |
-			(sp_register.broke << 1) |
-			(sp_register.dma_busy << 2) |
-			(sp_register.dma_full << 3) |
-			(sp_register.io_full << 4) |
-			(sp_register.single_step << 5) |
-			(sp_register.intr_break << 6) |
-			(sp_register.signal0 << 7) |
-			(sp_register.signal1 << 8) |
-			(sp_register.signal2 << 9) |
-			(sp_register.signal3 << 10) |
-			(sp_register.signal4 << 11) |
-			(sp_register.signal5 << 12) |
-			(sp_register.signal6 << 13) |
-			(sp_register.signal7 << 14)
-		);
-	//if (get_event(SP_INT)) return;
-	if (!(sp_register.w_sp_status_reg & 0x1) && !(sp_register.w_sp_status_reg & 0x4)) return;
-	if (!sp_register.halt && !sp_register.broke)
-		do_SP_Task(0,0); // immediate run
+	if (sp_register.w_sp_status_reg & 0x20) // clear single step
+		sp_register.sp_status_reg &= ~0x20;
+	if (sp_register.w_sp_status_reg & 0x40) // set single step
+		sp_register.sp_status_reg |= 0x20;
+	if (sp_register.w_sp_status_reg & 0x80) // clear interrupt on break
+		sp_register.sp_status_reg &= ~0x40;
+	if (sp_register.w_sp_status_reg & 0x100) // set interrupt on break
+		sp_register.sp_status_reg |= 0x40;
+	if (sp_register.w_sp_status_reg & 0x200) // clear signal 0
+		sp_register.sp_status_reg &= ~0x80;
+	if (sp_register.w_sp_status_reg & 0x400) // set signal 0
+		sp_register.sp_status_reg |= 0x80;
+	if (sp_register.w_sp_status_reg & 0x800) // clear signal 1
+		sp_register.sp_status_reg &= ~0x100;
+	if (sp_register.w_sp_status_reg & 0x1000) // set signal 1
+		sp_register.sp_status_reg |= 0x100;
+	if (sp_register.w_sp_status_reg & 0x2000) // clear signal 2
+		sp_register.sp_status_reg &= ~0x200;
+	if (sp_register.w_sp_status_reg & 0x4000) // set signal 2
+		sp_register.sp_status_reg |= 0x200;
+	if (sp_register.w_sp_status_reg & 0x8000) // clear signal 3
+		sp_register.sp_status_reg &= ~0x400;
+	if (sp_register.w_sp_status_reg & 0x10000) // set signal 3
+		sp_register.sp_status_reg |= 0x400;
+	if (sp_register.w_sp_status_reg & 0x20000) // clear signal 4
+		sp_register.sp_status_reg &= ~0x800;
+	if (sp_register.w_sp_status_reg & 0x40000) // set signal 4
+		sp_register.sp_status_reg |= 0x800;
+	if (sp_register.w_sp_status_reg & 0x80000) // clear signal 5
+		sp_register.sp_status_reg &= ~0x1000;
+	if (sp_register.w_sp_status_reg & 0x100000) // set signal 5
+		sp_register.sp_status_reg |= 0x1000;
+	if (sp_register.w_sp_status_reg & 0x200000) // clear signal 6
+		sp_register.sp_status_reg &= ~0x2000;
+	if (sp_register.w_sp_status_reg & 0x400000) // set signal 6
+		sp_register.sp_status_reg |= 0x2000;
+	if (sp_register.w_sp_status_reg & 0x800000) // clear signal 7
+		sp_register.sp_status_reg &= ~0x4000;
+	if (sp_register.w_sp_status_reg & 0x1000000) // set signal 7
+		sp_register.sp_status_reg |= 0x4000;
+
+	if (!(sp_register.w_sp_status_reg & 0x1) && 
+		!(sp_register.w_sp_status_reg & 0x4)) return;
+	if (!(sp_register.sp_status_reg & 0x3)) // !halt && !broke
+		do_SP_task();
 }
 
 void update_DPC(void)
 {
-    if (dpc_register.w_dpc_status & 0x1) // clear xbus_dmem_dma
-        dpc_register.dpc_status &= ~0x1;
-    if (dpc_register.w_dpc_status & 0x2) // set xbus_dmem_dma
-        dpc_register.dpc_status |= 0x1;
-
-    if (dpc_register.w_dpc_status & 0x4) // clear freeze
-    {
-        dpc_register.dpc_status &= ~0x2;
-
-        // see do_SP_task for more info
-        if (!(sp_register.sp_status_reg & 0x3)) // !halt && !broke
-            SP_Task_pending_cycles=FROZEN_TASK_DELAY;
-    }
-    if (dpc_register.w_dpc_status & 0x8) // set freeze
-        dpc_register.dpc_status |= 0x2;
-
-    if (dpc_register.w_dpc_status & 0x10) // clear flush
-        dpc_register.dpc_status &= ~0x4;
-    if (dpc_register.w_dpc_status & 0x20) // set flush
-        dpc_register.dpc_status |= 0x4;
+	if (dpc_register.w_dpc_status & 0x1) // clear xbus_dmem_dma
+		dpc_register.dpc_status &= ~0x1;
+	if (dpc_register.w_dpc_status & 0x2) // set xbus_dmem_dma
+		dpc_register.dpc_status |= 0x1;
+	if (dpc_register.w_dpc_status & 0x4) // clear freeze
+	{
+		dpc_register.dpc_status &= ~0x2;
+		// see do_SP_task for more info
+		if (!(sp_register.sp_status_reg & 0x3)) // !halt && !broke
+			do_SP_task();
+	}
+	if (dpc_register.w_dpc_status & 0x8) // set freeze
+		dpc_register.dpc_status |= 0x2;
+	if (dpc_register.w_dpc_status & 0x10) // clear flush
+		dpc_register.dpc_status &= ~0x4;
+	if (dpc_register.w_dpc_status & 0x20) // set flush
+		dpc_register.dpc_status |= 0x4;
 }
 
-unsigned long long int read_nothing(unsigned long address, unsigned long long int data)
+void read_nothing()
 {
-	if (address == 0xa5000508) 
-		return 0xFFFFFFFF;
-	else
-		return 0;
+   if (address == 0xa5000508) word = 0xFFFFFFFF;
+   else
+    word = 0;
 }
 
-unsigned long long int read_nothingb(unsigned long address, unsigned long long int data)
+void read_nothingb()
 {
-	return 0;
+   byte = 0;
 }
 
-unsigned long long int read_nothingh(unsigned long address, unsigned long long int data)
+void read_nothingh()
 {
-	return 0;
+   hword = 0;
 }
 
-unsigned long long int read_nothingd(unsigned long address, unsigned long long int data)
+void read_nothingd()
 {
-	return 0;
+   dword = 0;
 }
 
-unsigned long long int write_nothing(unsigned long address, unsigned long long int data)
+void write_nothing()
 {
-	return 0;
 }
 
-unsigned long long int write_nothingb(unsigned long address, unsigned long long int data)
+void write_nothingb()
 {
-	return 0;
 }
 
-unsigned long long int write_nothingh(unsigned long address, unsigned long long int data)
+void write_nothingh()
 {
-	return 0;
 }
 
-unsigned long long int write_nothingd(unsigned long address, unsigned long long int data)
+void write_nothingd()
 {
-	return 0;
 }
 
-unsigned long long int read_nomem(unsigned long address, unsigned long long int data)
-{
-	address = virtual_to_physical_address(address,0);
-	if (address == 0x00000000) return 0;
-	return read_word_in_memory(address, 0);
-}
-
-unsigned long long int read_nomemb(unsigned long address, unsigned long long int data)
-{
-	address = virtual_to_physical_address(address,0);
-	if (address == 0x00000000) return 0;
-	return read_byte_in_memory(address, 0);
-}
-
-unsigned long long int read_nomemh(unsigned long address, unsigned long long int data)
+void read_nomem()
 {
    address = virtual_to_physical_address(address,0);
-   if (address == 0x00000000) return 0;
-   return read_hword_in_memory(address, 0);
+   if (address == 0x00000000) return;
+   read_word_in_memory();
 }
 
-unsigned long long int read_nomemd(unsigned long address, unsigned long long int data)
+void read_nomemb()
 {
-	address = virtual_to_physical_address(address,0);
-	if (address == 0x00000000) return 0;
-	return read_dword_in_memory(address, 0);
+   address = virtual_to_physical_address(address,0);
+   if (address == 0x00000000) return;
+   read_byte_in_memory();
 }
 
-#define check_memory(address) \
-	if(!interpcore && !invalid_code_get(address>>12)) \
-		invalidate_func(address);
-unsigned long long int write_nomem(unsigned long address, unsigned long long int data)
+void read_nomemh()
 {
-	check_memory(address);
-	address = virtual_to_physical_address(address,1);
-	if (address == 0x00000000) return 0;
-	return write_word_in_memory(address, data);
+   address = virtual_to_physical_address(address,0);
+   if (address == 0x00000000) return;
+   read_hword_in_memory();
 }
 
-unsigned long long int write_nomemb(unsigned long address, unsigned long long int data)
+void read_nomemd()
 {
-	check_memory(address);
-	address = virtual_to_physical_address(address,1);
-	if (address == 0x00000000) return 0;
-	return write_byte_in_memory(address, data);
+   address = virtual_to_physical_address(address,0);
+   if (address == 0x00000000) return;
+   read_dword_in_memory();
 }
 
-unsigned long long int write_nomemh(unsigned long address, unsigned long long int data)
+void write_nomem()
 {
-	check_memory(address);
-	address = virtual_to_physical_address(address,1);
-	if (address == 0x00000000) return 0;
-	return write_hword_in_memory(address, data);
+   address = virtual_to_physical_address(address,1);
+   if (address == 0x00000000) return;
+   write_word_in_memory();
 }
 
-unsigned long long int write_nomemd(unsigned long address, unsigned long long int data)
+void write_nomemb()
 {
-	check_memory(address);
-	address = virtual_to_physical_address(address,1);
-	if (address == 0x00000000) return 0;
-	return write_dword_in_memory(address, data);
+   address = virtual_to_physical_address(address,1);
+   if (address == 0x00000000) return;
+   write_byte_in_memory();
 }
 
-unsigned long long int read_rdram(unsigned long address, unsigned long long int data)
+void write_nomemh()
 {
-	return *((unsigned long *)(rdramb + (address & MEMMASK)));
+   address = virtual_to_physical_address(address,1);
+   if (address == 0x00000000) return;
+   write_hword_in_memory();
 }
 
-unsigned long long int read_rdramb(unsigned long address, unsigned long long int data)
+void write_nomemd()
 {
-	return *(rdramb + ((address & MEMMASK)^S8));
+   address = virtual_to_physical_address(address,1);
+   if (address == 0x00000000) return;
+   write_dword_in_memory();
 }
 
-unsigned long long int read_rdramh(unsigned long address, unsigned long long int data)
+void read_rdram()
 {
-	return *((unsigned short *)(rdramb + ((address & MEMMASK)^S16)));
+   word = *((unsigned long *)(rdramb + (address & MEMMASK)));
 }
 
-unsigned long long int read_rdramd(unsigned long address, unsigned long long int data)
+void read_rdramb()
 {
-	return ((unsigned long long int)(*(unsigned long *)(rdramb + (address & MEMMASK))) << 32) | ((*(unsigned long *)(rdramb + (address & MEMMASK) + 4)));
+   byte = *(rdramb + ((address & MEMMASK)^S8));
 }
 
-unsigned long long int read_rdramFB(unsigned long address, unsigned long long int data)
+void read_rdramh()
 {
-	int i;
-	for(i=0; i<6; i++)
-	{
-		if(frameBufferInfos[i].addr)
-		{
-			int start = frameBufferInfos[i].addr & MEMMASK;
-			int end = start + frameBufferInfos[i].width*
-			frameBufferInfos[i].height*
-			frameBufferInfos[i].size - 1;
-			if((address & MEMMASK) >= start && (address & MEMMASK) <= end && framebufferRead[(address & MEMMASK)>>12])
-			{
-				fBRead(address);
-				framebufferRead[(address & MEMMASK)>>12] = 0;
-			}
-		}
-	}
-	return read_rdram(address, 0);
+   hword = *((unsigned short *)(rdramb + ((address & MEMMASK)^S16)));
 }
 
-unsigned long long int read_rdramFBb(unsigned long address, unsigned long long int data)
+void read_rdramd()
+{
+   dword = ((unsigned long long int)(*(unsigned long *)(rdramb + (address & MEMMASK))) << 32) |
+     ((*(unsigned long *)(rdramb + (address & MEMMASK) + 4)));
+}
+
+void read_rdramFB()
 {
 	int i;
 	for(i=0; i<6; i++)
@@ -977,10 +880,10 @@ unsigned long long int read_rdramFBb(unsigned long address, unsigned long long i
 			}
 		}
 	}
-	return read_rdramb(address, 0);
+	read_rdram();
 }
 
-unsigned long long int read_rdramFBh(unsigned long address, unsigned long long int data)
+void read_rdramFBb()
 {
 	int i;
 	for(i=0; i<6; i++)
@@ -998,10 +901,10 @@ unsigned long long int read_rdramFBh(unsigned long address, unsigned long long i
 			}
 		}
 	}
-	return read_rdramh(address, 0);
+	read_rdramb();
 }
 
-unsigned long long int read_rdramFBd(unsigned long address, unsigned long long int data)
+void read_rdramFBh()
 {
 	int i;
 	for(i=0; i<6; i++)
@@ -1019,35 +922,52 @@ unsigned long long int read_rdramFBd(unsigned long address, unsigned long long i
 			}
 		}
 	}
-	return read_rdramd(address, 0);
+	read_rdramh();
 }
 
-unsigned long long int write_rdram(unsigned long address, unsigned long long int data)
+void read_rdramFBd()
 {
-	*((unsigned long *)(rdramb + (address & MEMMASK))) = (unsigned long)data;
-	return 0;
+	int i;
+	for(i=0; i<6; i++)
+	{
+		if(frameBufferInfos[i].addr)
+		{
+			int start = frameBufferInfos[i].addr & MEMMASK;
+			int end = start + frameBufferInfos[i].width*
+			frameBufferInfos[i].height*
+			frameBufferInfos[i].size - 1;
+			if((address & MEMMASK) >= start && (address & MEMMASK) <= end && framebufferRead[(address & MEMMASK)>>12])
+			{
+				fBRead(address);
+				framebufferRead[(address & MEMMASK)>>12] = 0;
+			}
+		}
+	}
+	read_rdramd();
 }
 
-unsigned long long int write_rdramb(unsigned long address, unsigned long long int data)
+void write_rdram()
 {
-	*((rdramb + ((address & MEMMASK)^S8))) = (unsigned char)data;
-	return 0;
+   *((unsigned long *)(rdramb + (address & MEMMASK))) = word;
 }
 
-unsigned long long int write_rdramh(unsigned long address, unsigned long long int data)
+void write_rdramb()
 {
-	*(unsigned short *)((rdramb + ((address & MEMMASK)^S16))) = (unsigned short)data;
-	return 0;
+   *((rdramb + ((address & MEMMASK)^S8))) = byte;
 }
 
-unsigned long long int write_rdramd(unsigned long address, unsigned long long int data)
+void write_rdramh()
 {
-	*((unsigned long *)(rdramb + (address & MEMMASK))) = data >> 32;
-	*((unsigned long *)(rdramb + (address & MEMMASK) + 4 )) = data & 0xFFFFFFFF;
-	return 0;
+   *(unsigned short *)((rdramb + ((address & MEMMASK)^S16))) = hword;
 }
 
-unsigned long long int write_rdramFB(unsigned long address, unsigned long long int data)
+void write_rdramd()
+{
+   *((unsigned long *)(rdramb + (address & MEMMASK))) = dword >> 32;
+   *((unsigned long *)(rdramb + (address & MEMMASK) + 4 )) = dword & 0xFFFFFFFF;
+}
+
+void write_rdramFB()
 {
 	int i;
 	for(i=0; i<6; i++)
@@ -1062,10 +982,10 @@ unsigned long long int write_rdramFB(unsigned long address, unsigned long long i
 				fBWrite(address, 4);
 		}
 	}
-	return write_rdram(address, data);
+	write_rdram();
 }
 
-unsigned long long int write_rdramFBb(unsigned long address, unsigned long long int data)
+void write_rdramFBb()
 {
 	int i;
 	for(i=0; i<6; i++)
@@ -1080,10 +1000,10 @@ unsigned long long int write_rdramFBb(unsigned long address, unsigned long long 
 				fBWrite(address^S8, 1);
 		}
 	}
-	return write_rdramb(address, data);
+	write_rdramb();
 }
 
-unsigned long long int write_rdramFBh(unsigned long address, unsigned long long int data)
+void write_rdramFBh()
 {
 	int i;
 	for(i=0; i<6; i++)
@@ -1098,10 +1018,10 @@ unsigned long long int write_rdramFBh(unsigned long address, unsigned long long 
 				fBWrite(address^S16, 2);
 		}
 	}
-	return write_rdramh(address, data);
+	write_rdramh();
 }
 
-unsigned long long int write_rdramFBd(unsigned long address, unsigned long long int data)
+void write_rdramFBd()
 {
 	int i;
 	for(i=0; i<6; i++)
@@ -1116,200 +1036,195 @@ unsigned long long int write_rdramFBd(unsigned long address, unsigned long long 
 				fBWrite(address, 8);
 		}
 	}
-	return write_rdramd(address, data);
+	write_rdramd();
 }
 
-unsigned long long int read_rdramreg(unsigned long address, unsigned long long int data)
+void read_rdramreg()
 {
-	if(unlikely(GET_LOW_ADDR(address) >= sizeof(readrdramreg))) {
-		return trash;
+	if(*address_low >= sizeof(readrdramreg)) {
+		word = trash;
 	}
 	else {
-		return *(readrdramreg[GET_LOW_ADDR(address)]);
-	}   
+		word = *(readrdramreg[*address_low]);
+	}
 }
 
-unsigned long long int read_rdramregb(unsigned long address, unsigned long long int data)
+void read_rdramregb()
 {
-	if(unlikely((GET_LOW_ADDR(address) & 0xfffc) >= sizeof(readrdramreg))) {
-		return trash & 0xFF;
+	if((*address_low & 0xfffc) >= sizeof(readrdramreg)) {
+		byte = trash & 0xFF;
 	}
 	else {
-		return *((unsigned char*)readrdramreg[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+		byte = *((unsigned char*)readrdramreg[*address_low & 0xfffc]
+			+ ((*address_low&3)^S8) );
 	}
 }
 
-unsigned long long int read_rdramregh(unsigned long address, unsigned long long int data)
+void read_rdramregh()
 {
-	if(unlikely((GET_LOW_ADDR(address) & 0xfffc) >= sizeof(readrdramreg))) {
-		return trash & 0xFFFF;
+	if((*address_low & 0xfffc) >= sizeof(readrdramreg)) {
+		hword = trash & 0xFFFF;
 	}
 	else {
-		return *((unsigned short*)((unsigned char*)readrdramreg[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+		hword = *((unsigned short*)((unsigned char*)readrdramreg[*address_low & 0xfffc]
+			+ ((*address_low&3)^S16) ));
 	}
 }
 
-unsigned long long int read_rdramregd(unsigned long address, unsigned long long int data)
+void read_rdramregd()
 {
-	if(unlikely(GET_LOW_ADDR(address) > sizeof(readrdramreg) - sizeof(long long int))) {
-		return trash;
+	if(*address_low > sizeof(readrdramreg) - sizeof(long long int)) {
+		dword = trash;
 	}
 	else {
-		return ((unsigned long long int)(*readrdramreg[GET_LOW_ADDR(address)])<<32) | *readrdramreg[GET_LOW_ADDR(address)+4];
+		dword = ((unsigned long long int)(*readrdramreg[*address_low])<<32) |
+			*readrdramreg[*address_low + 4];
 	}
 }
 
-unsigned long long int write_rdramreg(unsigned long address, unsigned long long int data)
+void write_rdramreg()
 {
-	if(unlikely(GET_LOW_ADDR(address) >= sizeof(readrdramreg))) {
-		trash = (unsigned long)data;
+	if(*address_low >= sizeof(readrdramreg)) {
+		trash = word;
 	}
 	else {
-		*readrdramreg[GET_LOW_ADDR(address)] = (unsigned long)data;
+		*readrdramreg[*address_low] = word;
 	}
-	return 0;
 }
 
-unsigned long long int write_rdramregb(unsigned long address, unsigned long long int data)
+void write_rdramregb()
 {
-	if(unlikely((GET_LOW_ADDR(address) & 0xfffc) >= sizeof(readrdramreg))) {
-		trash = (unsigned char)data;
+	if((*address_low & 0xfffc) >= sizeof(readrdramreg)) {
+		trash = byte;
 	}
 	else {
-		*((unsigned char*)readrdramreg[GET_LOW_ADDR(address) & 0xfffc]
-			+ ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+		*((unsigned char*)readrdramreg[*address_low & 0xfffc]
+			+ ((*address_low&3)^S8) ) = byte;
 	}
-	return 0;
 }
 
-unsigned long long int write_rdramregh(unsigned long address, unsigned long long int data)
+void write_rdramregh()
 {
-	if(unlikely((GET_LOW_ADDR(address) & 0xfffc) >= sizeof(readrdramreg))) {
-		trash = (unsigned short)data;
+	if((*address_low & 0xfffc) >= sizeof(readrdramreg)) {
+		trash = hword;
 	}
 	else {
-		*((unsigned short*)((unsigned char*)readrdramreg[GET_LOW_ADDR(address) & 0xfffc]
-			+ ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+		*((unsigned short*)((unsigned char*)readrdramreg[*address_low & 0xfffc]
+			+ ((*address_low&3)^S16) )) = hword;
 	}
-	return 0;
 }
 
-unsigned long long int write_rdramregd(unsigned long address, unsigned long long int data)
+void write_rdramregd()
 {
-	if(unlikely(GET_LOW_ADDR(address) > sizeof(readrdramreg) - sizeof(long long int))) {
-		trash = (unsigned long)data;
+	if(*address_low > sizeof(readrdramreg) - sizeof(long long int)) {
+		trash = dword;
 	}
 	else {
-		*readrdramreg[GET_LOW_ADDR(address)] = data >> 32;
-		*readrdramreg[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
+		*readrdramreg[*address_low] = dword >> 32;
+		*readrdramreg[*address_low+4] = dword & 0xFFFFFFFF;
 	}
-	return 0;
 }
 
-unsigned long long int read_rsp_mem(unsigned long address, unsigned long long int data)
+void read_rsp_mem()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
-		return *((unsigned long *)(SP_DMEMb + (GET_LOW_ADDR(address))));
-	else if (GET_LOW_ADDR(address) < 0x2000)
-		return *((unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF)));
+	if (*address_low < 0x1000)
+		word = *((unsigned long *)(SP_DMEMb + (*address_low)));
+	else if (*address_low < 0x2000)
+		word = *((unsigned long *)(SP_IMEMb + (*address_low&0xFFF)));
 	else
-		return read_nomem(address, 0);
+		read_nomem();
 }
 
-unsigned long long int read_rsp_memb(unsigned long address, unsigned long long int data)
+void read_rsp_memb()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
-		return *(SP_DMEMb + (GET_LOW_ADDR(address)^S8));
-	else if (GET_LOW_ADDR(address) < 0x2000)
-		return *(SP_IMEMb + ((GET_LOW_ADDR(address)&0xFFF)^S8));
+	if (*address_low < 0x1000)
+		byte = *(SP_DMEMb + (*address_low^S8));
+	else if (*address_low < 0x2000)
+		byte = *(SP_IMEMb + ((*address_low&0xFFF)^S8));
 	else
-		return read_nomemb(address, 0);
+		read_nomemb();
 }
 
-unsigned long long int read_rsp_memh(unsigned long address, unsigned long long int data)
+void read_rsp_memh()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
-		return *((unsigned short *)(SP_DMEMb + (GET_LOW_ADDR(address)^S16)));
-	else if (GET_LOW_ADDR(address) < 0x2000)
-		return *((unsigned short *)(SP_IMEMb + ((GET_LOW_ADDR(address)&0xFFF)^S16)));
+	if (*address_low < 0x1000)
+		hword = *((unsigned short *)(SP_DMEMb + (*address_low^S16)));
+	else if (*address_low < 0x2000)
+		hword = *((unsigned short *)(SP_IMEMb + ((*address_low&0xFFF)^S16)));
 	else
-		return read_nomemh(address, 0);
+		read_nomemh();
 }
 
-unsigned long long int read_rsp_memd(unsigned long address, unsigned long long int data)
+void read_rsp_memd()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
+	if (*address_low < 0x1000)
 	{
-		return ((unsigned long long int)(*(unsigned long *)(SP_DMEMb + (GET_LOW_ADDR(address)))) << 32) | ((*(unsigned long *)(SP_DMEMb + (GET_LOW_ADDR(address)) + 4)));
+		dword = ((unsigned long long int)(*(unsigned long *)(SP_DMEMb + (*address_low))) << 32) | ((*(unsigned long *)(SP_DMEMb + (*address_low) + 4)));
 	}
-	else if (GET_LOW_ADDR(address) < 0x2000)
+	else if (*address_low < 0x2000)
 	{
-		return ((unsigned long long int)(*(unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF))) << 32) | ((*(unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF) + 4)));
+		dword = ((unsigned long long int)(*(unsigned long *)(SP_IMEMb + (*address_low&0xFFF))) << 32) | ((*(unsigned long *)(SP_IMEMb + (*address_low&0xFFF) + 4)));
 	}
 	else
-		return read_nomemd(address, 0);
+		read_nomemd();
 }
 
-unsigned long long int write_rsp_mem(unsigned long address, unsigned long long int data)
+void write_rsp_mem()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
-		*((unsigned long *)(SP_DMEMb + (GET_LOW_ADDR(address)))) = (unsigned long)data;
-	else if (GET_LOW_ADDR(address) < 0x2000)
-		*((unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF))) = (unsigned long)data;
+	if (*address_low < 0x1000)
+		*((unsigned long *)(SP_DMEMb + (*address_low))) = word;
+	else if (*address_low < 0x2000)
+		*((unsigned long *)(SP_IMEMb + (*address_low&0xFFF))) = word;
 	else
-		write_nomem(address, data);
-	return 0;
+		write_nomem();
 }
 
-unsigned long long int write_rsp_memb(unsigned long address, unsigned long long int data)
+void write_rsp_memb()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
-		*(SP_DMEMb + (GET_LOW_ADDR(address)^S8)) = (unsigned char)data;
-	else if (GET_LOW_ADDR(address) < 0x2000)
-		*(SP_IMEMb + ((GET_LOW_ADDR(address)&0xFFF)^S8)) = (unsigned char)data;
+	if (*address_low < 0x1000)
+		*(SP_DMEMb + (*address_low^S8)) = byte;
+	else if (*address_low < 0x2000)
+		*(SP_IMEMb + ((*address_low&0xFFF)^S8)) = byte;
 	else
-		write_nomemb(address, data);
-	return 0;
+		write_nomemb();
 }
 
-unsigned long long int write_rsp_memh(unsigned long address, unsigned long long int data)
+void write_rsp_memh()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
-		*((unsigned short *)(SP_DMEMb + (GET_LOW_ADDR(address)^S16))) = (unsigned short)data;
-	else if (GET_LOW_ADDR(address) < 0x2000)
-		*((unsigned short *)(SP_IMEMb + ((GET_LOW_ADDR(address)&0xFFF)^S16))) = (unsigned short)data;
+	if (*address_low < 0x1000)
+		*((unsigned short *)(SP_DMEMb + (*address_low^S16))) = hword;
+	else if (*address_low < 0x2000)
+		*((unsigned short *)(SP_IMEMb + ((*address_low&0xFFF)^S16))) = hword;
 	else
-		write_nomemh(address, data);
-	return 0;
+		write_nomemh();
 }
 
-unsigned long long int write_rsp_memd(unsigned long address, unsigned long long int data)
+void write_rsp_memd()
 {
-	if (GET_LOW_ADDR(address) < 0x1000)
+	if (*address_low < 0x1000)
 	{
-		*((unsigned long *)(SP_DMEMb + GET_LOW_ADDR(address))) = data >> 32;
-		*((unsigned long *)(SP_DMEMb + GET_LOW_ADDR(address) + 4 )) = data & 0xFFFFFFFF;
+		*((unsigned long *)(SP_DMEMb + *address_low)) = dword >> 32;
+		*((unsigned long *)(SP_DMEMb + *address_low + 4 )) = dword & 0xFFFFFFFF;
 	}
-	else if (GET_LOW_ADDR(address) < 0x2000)
+	else if (*address_low < 0x2000)
 	{
-		*((unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF))) = data >> 32;
-		*((unsigned long *)(SP_IMEMb + (GET_LOW_ADDR(address)&0xFFF) + 4 )) = data & 0xFFFFFFFF;
+		*((unsigned long *)(SP_IMEMb + (*address_low&0xFFF))) = dword >> 32;
+		*((unsigned long *)(SP_IMEMb + (*address_low&0xFFF) + 4 )) = dword & 0xFFFFFFFF;
 	}
 	else
-		write_nomemd(address, data);
-	return 0;
+		read_nomemd();
 }
 
-unsigned long long int read_rsp_reg(unsigned long address, unsigned long long int data)
+void read_rsp_reg()
 {
-	if(GET_LOW_ADDR(address) == 0x1C)
+	if(*address_low == 0x1C)
 		sp_register.sp_semaphore_reg = 1;
-	return *(readrspreg[GET_LOW_ADDR(address)]);
+	word = *(readrspreg[*address_low]);
 }
 
-unsigned long long int read_rsp_regb(unsigned long address, unsigned long long int data)
+void read_rsp_regb()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x1c:
 		case 0x1d:
@@ -1318,44 +1233,44 @@ unsigned long long int read_rsp_regb(unsigned long address, unsigned long long i
 			sp_register.sp_semaphore_reg = 1;
 		break;
 	}
-	return *((unsigned char*)readrspreg[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readrspreg[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_rsp_regh(unsigned long address, unsigned long long int data)
+void read_rsp_regh()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x1c:
 		case 0x1e:
 			sp_register.sp_semaphore_reg = 1;
 		break;
 	}
-	return *((unsigned short*)((unsigned char*)readrspreg[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readrspreg[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_rsp_regd(unsigned long address, unsigned long long int data)
+void read_rsp_regd()
 {
-	if(GET_LOW_ADDR(address) == 0x18)
+	if(*address_low == 0x18)
 		sp_register.sp_semaphore_reg = 1;
-	return ((unsigned long long int)(*readrspreg[GET_LOW_ADDR(address)])<<32) | *readrspreg[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readrspreg[*address_low])<<32) | *readrspreg[*address_low+4];
 }
 
-unsigned long long int write_rsp_reg(unsigned long address, unsigned long long int data)
+void write_rsp_reg()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
-			sp_register.w_sp_status_reg = (unsigned long)data;
+			sp_register.w_sp_status_reg = word;
 			update_SP();
-			return 0;
+			return;
 		break;
 		case 0x14:
 		case 0x18:
-			return 0;
+			return;
 		break;
 	}
-	*readrspreg[GET_LOW_ADDR(address)] = (unsigned long)data;
-	switch(GET_LOW_ADDR(address))
+	*readrspreg[*address_low] = word;
+	switch(*address_low)
 	{
 		case 0x8:
 			dma_sp_write();
@@ -1367,19 +1282,18 @@ unsigned long long int write_rsp_reg(unsigned long address, unsigned long long i
 			sp_register.sp_semaphore_reg = 0;
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_rsp_regb(unsigned long address, unsigned long long int data)
+void write_rsp_regb()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
 		case 0x11:
 		case 0x12:
 		case 0x13:
-			*((unsigned char*)&sp_register.w_sp_status_reg + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-			return 0;
+			*((unsigned char*)&sp_register.w_sp_status_reg + ((*address_low&3)^S8) ) = byte;
+			return;
 		break;
 		case 0x14:
 		case 0x15:
@@ -1389,11 +1303,11 @@ unsigned long long int write_rsp_regb(unsigned long address, unsigned long long 
 		case 0x19:
 		case 0x1a:
 		case 0x1b:
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned char*)readrspreg[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-	switch(GET_LOW_ADDR(address))
+	*((unsigned char*)readrspreg[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
+	switch(*address_low)
 	{
 		case 0x8:
 		case 0x9:
@@ -1414,27 +1328,26 @@ unsigned long long int write_rsp_regb(unsigned long address, unsigned long long 
 			sp_register.sp_semaphore_reg = 0;
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_rsp_regh(unsigned long address, unsigned long long int data)
+void write_rsp_regh()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
 		case 0x12:
-			*((unsigned short*)((unsigned char*)&sp_register.w_sp_status_reg + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-			return 0;
+			*((unsigned short*)((unsigned char*)&sp_register.w_sp_status_reg + ((*address_low&3)^S16) )) = hword;
+			return;
 		break;
 		case 0x14:
 		case 0x16:
 		case 0x18:
 		case 0x1a:
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned short*)((unsigned char*)readrspreg[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-	switch(GET_LOW_ADDR(address))
+	*((unsigned short*)((unsigned char*)readrspreg[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
+	switch(*address_low)
 	{
 		case 0x8:
 		case 0xa:
@@ -1449,119 +1362,113 @@ unsigned long long int write_rsp_regh(unsigned long address, unsigned long long 
 			sp_register.sp_semaphore_reg = 0;
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_rsp_regd(unsigned long address, unsigned long long int data)
+void write_rsp_regd()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
-			sp_register.w_sp_status_reg = data >> 32;
+			sp_register.w_sp_status_reg = dword >> 32;
 			update_SP();
-			return 0;
+			return;
 		break;
 		case 0x18:
 			sp_register.sp_semaphore_reg = 0;
-			return 0;
+			return;
 		break;
 	}
-	*readrspreg[GET_LOW_ADDR(address)] = data >> 32;
-	*readrspreg[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
-	switch(GET_LOW_ADDR(address))
+	*readrspreg[*address_low] = dword >> 32;
+	*readrspreg[*address_low] = dword & 0xFFFFFFFF;
+	switch(*address_low)
 	{
 		case 0x8:
 			dma_sp_write();
 			dma_sp_read();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int read_rsp(unsigned long address, unsigned long long int data)
+void read_rsp()
 {
-	return *(readrsp[GET_LOW_ADDR(address)]);
+	word = *(readrsp[*address_low]);
 }
 
-unsigned long long int read_rspb(unsigned long address, unsigned long long int data)
+void read_rspb()
 {
-	return *((unsigned char*)readrsp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readrsp[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_rsph(unsigned long address, unsigned long long int data)
+void read_rsph()
 {
-	return *((unsigned short*)((unsigned char*)readrsp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readrsp[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_rspd(unsigned long address, unsigned long long int data)
+void read_rspd()
 {
-	return ((unsigned long long int)(*readrsp[GET_LOW_ADDR(address)])<<32) | *readrsp[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readrsp[*address_low])<<32) | *readrsp[*address_low+4];
 }
 
-unsigned long long int write_rsp(unsigned long address, unsigned long long int data)
+void write_rsp()
 {
-	*readrsp[GET_LOW_ADDR(address)] = (unsigned long)data;
-	return 0;
+	*readrsp[*address_low] = word;
 }
 
-unsigned long long int write_rspb(unsigned long address, unsigned long long int data)
+void write_rspb()
 {
-	*((unsigned char*)readrsp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-	return 0;
+	*((unsigned char*)readrsp[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
 }
 
-unsigned long long int write_rsph(unsigned long address, unsigned long long int data)
+void write_rsph()
 {
-	*((unsigned short*)((unsigned char*)readrsp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-	return 0;
+	*((unsigned short*)((unsigned char*)readrsp[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
 }
 
-unsigned long long int write_rspd(unsigned long address, unsigned long long int data)
+void write_rspd()
 {
-	*readrsp[GET_LOW_ADDR(address)] = data >> 32;
-	*readrsp[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
-	return 0;
+	*readrsp[*address_low] = dword >> 32;
+	*readrsp[*address_low+4] = dword & 0xFFFFFFFF;
 }
 
-unsigned long long int read_dp(unsigned long address, unsigned long long int data)
+void read_dp()
 {
-	return *(readdp[GET_LOW_ADDR(address)]);
+	word = *(readdp[*address_low]);
 }
 
-unsigned long long int read_dpb(unsigned long address, unsigned long long int data)
+void read_dpb()
 {
-	return *((unsigned char*)readdp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readdp[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_dph(unsigned long address, unsigned long long int data)
+void read_dph()
 {
-	return *((unsigned short*)((unsigned char*)readdp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readdp[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_dpd(unsigned long address, unsigned long long int data)
+void read_dpd()
 {
-	return ((unsigned long long int)(*readdp[GET_LOW_ADDR(address)])<<32) | *readdp[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readdp[*address_low])<<32) | *readdp[*address_low+4];
 }
 
-unsigned long long int write_dp(unsigned long address, unsigned long long int data)
+void write_dp()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0xc:
-			dpc_register.w_dpc_status = (unsigned long)data;
+			dpc_register.w_dpc_status = word;
 			update_DPC();
-			return 0;
+			return;
 		break;
 		case 0x8:
 		case 0x10:
 		case 0x14:
 		case 0x18:
 		case 0x1c:
-			return 0;
+			return;
 		break;
 	}
-	*readdp[GET_LOW_ADDR(address)] = (unsigned long)data;
-	switch(GET_LOW_ADDR(address))
+	*readdp[*address_low] = word;
+	switch(*address_low)
 	{
 		case 0x0:
 			dpc_register.dpc_current = dpc_register.dpc_start;
@@ -1572,20 +1479,19 @@ unsigned long long int write_dp(unsigned long address, unsigned long long int da
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_dpb(unsigned long address, unsigned long long int data)
+void write_dpb()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0xc:
 		case 0xd:
 		case 0xe:
 		case 0xf:
-			*((unsigned char*)&dpc_register.w_dpc_status + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&dpc_register.w_dpc_status + ((*address_low&3)^S8) ) = byte;
 			update_DPC();
-			return 0;
+			return;
 		break;
 		case 0x8:
 		case 0x9:
@@ -1607,11 +1513,11 @@ unsigned long long int write_dpb(unsigned long address, unsigned long long int d
 		case 0x1d:
 		case 0x1e:
 		case 0x1f:
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned char*)readdp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-	switch(GET_LOW_ADDR(address))
+	*((unsigned char*)readdp[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x1:
@@ -1628,18 +1534,17 @@ unsigned long long int write_dpb(unsigned long address, unsigned long long int d
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_dph(unsigned long address, unsigned long long int data)
+void write_dph()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0xc:
 		case 0xe:
-			*((unsigned short*)((unsigned char*)&dpc_register.w_dpc_status + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&dpc_register.w_dpc_status + ((*address_low&3)^S16) )) = hword;
 			update_DPC();
-			return 0;
+			return;
 		break;
 		case 0x8:
 		case 0xa:
@@ -1651,11 +1556,11 @@ unsigned long long int write_dph(unsigned long address, unsigned long long int d
 		case 0x1a:
 		case 0x1c:
 		case 0x1e:
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned short*)((unsigned char*)readdp[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-	switch(GET_LOW_ADDR(address))
+	*((unsigned short*)((unsigned char*)readdp[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x2:
@@ -1668,26 +1573,25 @@ unsigned long long int write_dph(unsigned long address, unsigned long long int d
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_dpd(unsigned long address, unsigned long long int data)
+void write_dpd()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x8:
-			dpc_register.w_dpc_status = data & 0xFFFFFFFF;
+			dpc_register.w_dpc_status = dword & 0xFFFFFFFF;
 			update_DPC();
-			return 0;
+			return;
 		break;
 		case 0x10:
 		case 0x18:
-			return 0;
+			return;
 		break;
 	}
-	*readdp[GET_LOW_ADDR(address)] = data >> 32;
-	*readdp[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
-	switch(GET_LOW_ADDR(address))
+	*readdp[*address_low] = dword >> 32;
+	*readdp[*address_low+4] = dword & 0xFFFFFFFF;
+	switch(*address_low)
 	{
 		case 0x0:
 			dpc_register.dpc_current = dpc_register.dpc_start;
@@ -1696,161 +1600,152 @@ unsigned long long int write_dpd(unsigned long address, unsigned long long int d
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int read_dps(unsigned long address, unsigned long long int data)
+void read_dps()
 {
-	return *(readdps[GET_LOW_ADDR(address)]);
+	word = *(readdps[*address_low]);
 }
 
-unsigned long long int read_dpsb(unsigned long address, unsigned long long int data)
+void read_dpsb()
 {
-	return *((unsigned char*)readdps[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readdps[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_dpsh(unsigned long address, unsigned long long int data)
+void read_dpsh()
 {
-	return *((unsigned short*)((unsigned char*)readdps[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readdps[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_dpsd(unsigned long address, unsigned long long int data)
+void read_dpsd()
 {
-	return ((unsigned long long int)(*readdps[GET_LOW_ADDR(address)])<<32) | *readdps[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readdps[*address_low])<<32) | *readdps[*address_low+4];
 }
 
-unsigned long long int write_dps(unsigned long address, unsigned long long int data)
+void write_dps()
 {
-	*readdps[GET_LOW_ADDR(address)] = (unsigned long)data;
-	return 0;
+	*readdps[*address_low] = word;
 }
 
-unsigned long long int write_dpsb(unsigned long address, unsigned long long int data)
+void write_dpsb()
 {
-	*((unsigned char*)readdps[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-	return 0;
+	*((unsigned char*)readdps[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
 }
 
-unsigned long long int write_dpsh(unsigned long address, unsigned long long int data)
+void write_dpsh()
 {
-	*((unsigned short*)((unsigned char*)readdps[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-	return 0;
+	*((unsigned short*)((unsigned char*)readdps[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
 }
 
-unsigned long long int write_dpsd(unsigned long address, unsigned long long int data)
+void write_dpsd()
 {
-	*readdps[GET_LOW_ADDR(address)] = data >> 32;
-	*readdps[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
-	return 0;
+	*readdps[*address_low] = dword >> 32;
+	*readdps[*address_low+4] = dword & 0xFFFFFFFF;
 }
 
-unsigned long long int read_mi(unsigned long address, unsigned long long int data)
+void read_mi()
 {
-	return *(readmi[GET_LOW_ADDR(address)]);
+	word = *(readmi[*address_low]);
 }
 
-unsigned long long int read_mib(unsigned long address, unsigned long long int data)
+void read_mib()
 {
-	return *((unsigned char*)readmi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readmi[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_mih(unsigned long address, unsigned long long int data)
+void read_mih()
 {
-	return *((unsigned short*)((unsigned char*)readmi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readmi[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_mid(unsigned long address, unsigned long long int data)
+void read_mid()
 {
-	return ((unsigned long long int)(*readmi[GET_LOW_ADDR(address)])<<32) | *readmi[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readmi[*address_low])<<32) | *readmi[*address_low+4];
 }
 
-unsigned long long int write_mi(unsigned long address, unsigned long long int data)
+void write_mi()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
-			MI_register.w_mi_init_mode_reg = (unsigned long)data;
+			MI_register.w_mi_init_mode_reg = word;
 			update_MI_init_mode_reg();
 		break;
 		case 0xc:
-			MI_register.w_mi_intr_mask_reg = (unsigned long)data;
+			MI_register.w_mi_intr_mask_reg = word;
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
 			if (r4300.next_interrupt <= Count) gen_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_mib(unsigned long address, unsigned long long int data)
+void write_mib()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x1:
 		case 0x2:
 		case 0x3:
-			*((unsigned char*)&MI_register.w_mi_init_mode_reg + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&MI_register.w_mi_init_mode_reg + ((*address_low&3)^S8) ) = byte;
 			update_MI_init_mode_reg();
 		break;
 		case 0xc:
 		case 0xd:
 		case 0xe:
 		case 0xf:
-			*((unsigned char*)&MI_register.w_mi_intr_mask_reg + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&MI_register.w_mi_intr_mask_reg + ((*address_low&3)^S8) ) = byte;
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
 			if (r4300.next_interrupt <= Count) gen_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_mih(unsigned long address, unsigned long long int data)
+void write_mih()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x2:
-			*((unsigned short*)((unsigned char*)&MI_register.w_mi_init_mode_reg + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&MI_register.w_mi_init_mode_reg + ((*address_low&3)^S16) )) = hword;
 			update_MI_init_mode_reg();
 		break;
 		case 0xc:
 		case 0xe:
-			*((unsigned short*)((unsigned char*)&MI_register.w_mi_intr_mask_reg + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&MI_register.w_mi_intr_mask_reg + ((*address_low&3)^S16) )) = hword;
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
 			if (r4300.next_interrupt <= Count) gen_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_mid(unsigned long address, unsigned long long int data)
+void write_mid()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
-			MI_register.w_mi_init_mode_reg = data >> 32;
+			MI_register.w_mi_init_mode_reg = dword >> 32;
 			update_MI_init_mode_reg();
 		break;
 		case 0x8:
-			MI_register.w_mi_intr_mask_reg = data & 0xFFFFFFFF;
+			MI_register.w_mi_intr_mask_reg = dword & 0xFFFFFFFF;
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
 			if (r4300.next_interrupt <= Count) gen_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int read_vi(unsigned long address, unsigned long long int data)
+void read_vi()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
 			update_count();
@@ -1858,12 +1753,12 @@ unsigned long long int read_vi(unsigned long address, unsigned long long int dat
 			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
-	return *(readvi[GET_LOW_ADDR(address)]);
+	word = *(readvi[*address_low]);
 }
 
-unsigned long long int read_vib(unsigned long address, unsigned long long int data)
+void read_vib()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
 		case 0x11:
@@ -1874,12 +1769,12 @@ unsigned long long int read_vib(unsigned long address, unsigned long long int da
 			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
-	return *((unsigned char*)readvi[GET_LOW_ADDR(address) & 0xfffc]+ ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readvi[*address_low & 0xfffc]+ ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_vih(unsigned long address, unsigned long long int data)
+void read_vih()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
 		case 0x12:
@@ -1888,12 +1783,12 @@ unsigned long long int read_vih(unsigned long address, unsigned long long int da
 			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
-	return *((unsigned short*)((unsigned char*)readvi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readvi[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_vid(unsigned long address, unsigned long long int data)
+void read_vid()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x10:
 			update_count();
@@ -1901,69 +1796,68 @@ unsigned long long int read_vid(unsigned long address, unsigned long long int da
 			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 		break;
 	}
-	return ((unsigned long long int)(*readvi[GET_LOW_ADDR(address)])<<32) | *readvi[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readvi[*address_low])<<32) | *readvi[*address_low+4];
 }
 
-unsigned long long int write_vi(unsigned long address, unsigned long long int data)
+void write_vi()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
-			if (vi_register.vi_status != (unsigned long)data)
+			if (vi_register.vi_status != word)
 			{
-				vi_register.vi_status = (unsigned long)data;
+				vi_register.vi_status = word;
 				viStatusChanged();
 			}
-			return 0;
+			return;
 		break;
 		case 0x8:
-			if (vi_register.vi_width != (unsigned long)data)
+			if (vi_register.vi_width != word)
 			{
-				vi_register.vi_width = (unsigned long)data;
+				vi_register.vi_width = word;
 				viWidthChanged();
 			}
-			return 0;
+			return;
 		break;
 		case 0x10:
 			MI_register.mi_intr_reg &= 0xFFFFFFF7;
 			check_interupt();
-			return 0;
+			return;
 		break;
 	}
-	*readvi[GET_LOW_ADDR(address)] = (unsigned long)data;
-	return 0;
+	*readvi[*address_low] = word;
 }
 
-unsigned long long int write_vib(unsigned long address, unsigned long long int data)
+void write_vib()
 {
 	int temp;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x1:
 		case 0x2:
 		case 0x3:
 			temp = vi_register.vi_status;
-			*((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
 			if (vi_register.vi_status != temp)
 			{
 				vi_register.vi_status = temp;
 				viStatusChanged();
 			}
-			return 0;
+			return;
 		break;
 		case 0x8:
 		case 0x9:
 		case 0xa:
 		case 0xb:
 			temp = vi_register.vi_status;
-			*((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
 			if (vi_register.vi_width != temp)
 			{
 				vi_register.vi_width = temp;
 				viWidthChanged();
 			}
-			return 0;
+			return;
 		break;
 		case 0x10:
 		case 0x11:
@@ -1971,104 +1865,101 @@ unsigned long long int write_vib(unsigned long address, unsigned long long int d
 		case 0x13:
 			MI_register.mi_intr_reg &= 0xFFFFFFF7;
 			check_interupt();
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned char*)readvi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-	return 0;
+	*((unsigned char*)readvi[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
 }
 
-unsigned long long int write_vih(unsigned long address, unsigned long long int data)
+void write_vih()
 {
 	int temp;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x2:
 			temp = vi_register.vi_status;
-			*((unsigned short*)((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
 			if (vi_register.vi_status != temp)
 			{
 				vi_register.vi_status = temp;
 				viStatusChanged();
 			}
-			return 0;
+			return;
 		break;
 		case 0x8:
 		case 0xa:
 			temp = vi_register.vi_status;
-			*((unsigned short*)((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
 			if (vi_register.vi_width != temp)
 			{
 				vi_register.vi_width = temp;
 				viWidthChanged();
 			}
-			return 0;
+			return;
 		break;
 		case 0x10:
 		case 0x12:
 			MI_register.mi_intr_reg &= 0xFFFFFFF7;
 			check_interupt();
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned short*)((unsigned char*)readvi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-	return 0;
+	*((unsigned short*)((unsigned char*)readvi[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
 }
 
-unsigned long long int write_vid(unsigned long address, unsigned long long int data)
+void write_vid()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
-			if (vi_register.vi_status != data >> 32)
+			if (vi_register.vi_status != dword >> 32)
 			{
-				vi_register.vi_status = data >> 32;
+				vi_register.vi_status = dword >> 32;
 				viStatusChanged();
 			}
-			vi_register.vi_origin = data & 0xFFFFFFFF;
-			return 0;
+			vi_register.vi_origin = dword & 0xFFFFFFFF;
+			return;
 		break;
 		case 0x8:
-			if (vi_register.vi_width != data >> 32)
+			if (vi_register.vi_width != dword >> 32)
 			{
-				vi_register.vi_width = data >> 32;
+				vi_register.vi_width = dword >> 32;
 				viWidthChanged();
 			}
-			vi_register.vi_v_intr = data & 0xFFFFFFFF;
-			return 0;
+			vi_register.vi_v_intr = dword & 0xFFFFFFFF;
+			return;
 		break;
 		case 0x10:
 			MI_register.mi_intr_reg &= 0xFFFFFFF7;
 			check_interupt();
-			vi_register.vi_burst = data & 0xFFFFFFFF;
-			return 0;
+			vi_register.vi_burst = dword & 0xFFFFFFFF;
+			return;
 		break;
 	}
-	*readvi[GET_LOW_ADDR(address)] = data >> 32;
-	*readvi[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
-	return 0;
+	*readvi[*address_low] = dword >> 32;
+	*readvi[*address_low+4] = dword & 0xFFFFFFFF;
 }
 
-unsigned long long int read_ai(unsigned long address, unsigned long long int data)
+void read_ai()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x4:
 			update_count();
 			if (ai_register.current_delay != 0 && get_event(AI_INT) != 0 && (get_event(AI_INT)-Count) < 0x80000000)
-				return ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
+				word = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
 			else
-				return 0;
+				word = 0;
 		break;
 	}
-	return *(readai[GET_LOW_ADDR(address)]);
+	word = *(readai[*address_low]);
 }
 
-unsigned long long int read_aib(unsigned long address, unsigned long long int data)
+void read_aib()
 {
 	unsigned long len;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x4:
 		case 0x5:
@@ -2079,16 +1970,16 @@ unsigned long long int read_aib(unsigned long address, unsigned long long int da
 				len = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
 			else
 				len = 0;
-			return *((unsigned char*)&len + ((GET_LOW_ADDR(address)&3)^S8) );
+			byte = *((unsigned char*)&len + ((*address_low&3)^S8) );
 		break;
 	}
-	return *((unsigned char*)readai[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readai[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_aih(unsigned long address, unsigned long long int data)
+void read_aih()
 {
 	unsigned long len;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x4:
 		case 0x6:
@@ -2097,36 +1988,36 @@ unsigned long long int read_aih(unsigned long address, unsigned long long int da
 				len = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
 			else
 				len = 0;
-			return *((unsigned short*)((unsigned char*)&len + ((GET_LOW_ADDR(address)&3)^S16) ));
+			hword = *((unsigned short*)((unsigned char*)&len + ((*address_low&3)^S16) ));
 		break;
 	}
-	return *((unsigned short*)((unsigned char*)readai[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readai[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_aid(unsigned long address, unsigned long long int data)
+void read_aid()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
 			update_count();
 			if (ai_register.current_delay != 0 && get_event(AI_INT) != 0)
-				return ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
+				dword = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
 			else
-				return (unsigned long long)ai_register.ai_dram_addr << 32 & 0xFFFFFFFF00000000LL;
+				dword = (unsigned long long)ai_register.ai_dram_addr << 32 & 0xFFFFFFFF00000000LL;
 		break;
 	}
-	return ((unsigned long long int)(*readai[GET_LOW_ADDR(address)])<<32) | *readai[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readai[*address_low])<<32) | *readai[*address_low+4];
 }
 
-unsigned long long int write_ai(unsigned long address, unsigned long long int data)
+void write_ai()
 {
 	unsigned long delay=0;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x4:
-			ai_register.ai_len = (unsigned long)data;
+			ai_register.ai_len = word;
 			aiLenChanged();
-			switch(ROM_HEADER->Country_code&0xFF)
+			switch(ROM_HEADER.Country_code&0xFF)
 			{
 				case 0x44:
 				case 0x46:
@@ -2168,18 +2059,18 @@ unsigned long long int write_ai(unsigned long address, unsigned long long int da
 				add_interupt_event(AI_INT, delay);
 				ai_register.ai_status |= 0x40000000;
 			}
-			return 0;
+			return;
 		break;
 		case 0xc:
 			MI_register.mi_intr_reg &= 0xFFFFFFFB;
 			check_interupt();
-			return 0;
+			return;
 		break;
 		case 0x10:
-			if (ai_register.ai_dacrate != (unsigned long)data)
+			if (ai_register.ai_dacrate != word)
 			{
-				ai_register.ai_dacrate = (unsigned long)data;
-				switch(ROM_HEADER->Country_code&0xFF)
+				ai_register.ai_dacrate = word;
+				switch(ROM_HEADER.Country_code&0xFF)
 				{
 				case 0x44:
 				case 0x46:
@@ -2199,28 +2090,27 @@ unsigned long long int write_ai(unsigned long address, unsigned long long int da
 				break;
 				}
 			}
-			return 0;
+			return;
 		break;
 	}
-	*readai[GET_LOW_ADDR(address)] = (unsigned long)data;
-	return 0;
+	*readai[*address_low] = word;
 }
 
-unsigned long long int write_aib(unsigned long address, unsigned long long int data)
+void write_aib()
 {
 	int temp;
 	unsigned long delay=0;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x4:
 		case 0x5:
 		case 0x6:
 		case 0x7:
 			temp = ai_register.ai_len;
-			*((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
 			ai_register.ai_len = temp;
 			aiLenChanged();
-			switch(ROM_HEADER->Country_code&0xFF)
+			switch(ROM_HEADER.Country_code&0xFF)
 			{
 				case 0x44:
 				case 0x46:
@@ -2254,7 +2144,7 @@ unsigned long long int write_aib(unsigned long address, unsigned long long int d
 				add_interupt_event(AI_INT, delay/2);
 				ai_register.ai_status |= 0x40000000;
 			}
-			return 0;
+			return;
 		break;
 		case 0xc:
 		case 0xd:
@@ -2262,18 +2152,18 @@ unsigned long long int write_aib(unsigned long address, unsigned long long int d
 		case 0xf:
 			MI_register.mi_intr_reg &= 0xFFFFFFFB;
 			check_interupt();
-			return 0;
+			return;
 		break;
 		case 0x10:
 		case 0x11:
 		case 0x12:
 		case 0x13:
 			temp = ai_register.ai_dacrate;
-			*((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
 			if (ai_register.ai_dacrate != temp)
 			{
 				ai_register.ai_dacrate = temp;
-				switch(ROM_HEADER->Country_code&0xFF)
+				switch(ROM_HEADER.Country_code&0xFF)
 				{
 					case 0x44:
 					case 0x46:
@@ -2293,26 +2183,25 @@ unsigned long long int write_aib(unsigned long address, unsigned long long int d
 					break;
 				}
 			}
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned char*)readai[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-	return 0;
+	*((unsigned char*)readai[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
 }
 
-unsigned long long int write_aih(unsigned long address, unsigned long long int data)
+void write_aih()
 {
 	int temp;
 	unsigned long delay=0;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x4:
 		case 0x6:
 			temp = ai_register.ai_len;
-			*((unsigned short*)((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
 			ai_register.ai_len = temp;
 			aiLenChanged();
-			switch(ROM_HEADER->Country_code&0xFF)
+			switch(ROM_HEADER.Country_code&0xFF)
 			{
 				case 0x44:
 				case 0x46:
@@ -2346,22 +2235,22 @@ unsigned long long int write_aih(unsigned long address, unsigned long long int d
 				add_interupt_event(AI_INT, delay/2);
 				ai_register.ai_status |= 0x40000000;
 			}
-			return 0;
+			return;
 		break;
 		case 0xc:
 		case 0xe:
 			MI_register.mi_intr_reg &= 0xFFFFFFFB;
 			check_interupt();
-			return 0;
+			return;
 		break;
 		case 0x10:
 		case 0x12:
 			temp = ai_register.ai_dacrate;
-			*((unsigned short*)((unsigned char*)&temp + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
 			if (ai_register.ai_dacrate != temp)
 			{
 				ai_register.ai_dacrate = temp;
-				switch(ROM_HEADER->Country_code&0xFF)
+				switch(ROM_HEADER.Country_code&0xFF)
 				{
 					case 0x44:
 					case 0x46:
@@ -2381,23 +2270,22 @@ unsigned long long int write_aih(unsigned long address, unsigned long long int d
 					break;
 				}
 			}
-			return 0;
+			return;
 		break;
 	}
-	*((unsigned short*)((unsigned char*)readai[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-	return 0;
+	*((unsigned short*)((unsigned char*)readai[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
 }
 
-unsigned long long int write_aid(unsigned long address, unsigned long long int data)
+void write_aid()
 {
 	unsigned long delay=0;
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
-			ai_register.ai_dram_addr = data >> 32;
-			ai_register.ai_len = data & 0xFFFFFFFF;
+			ai_register.ai_dram_addr = dword >> 32;
+			ai_register.ai_len = dword & 0xFFFFFFFF;
 			aiLenChanged();
-			switch(ROM_HEADER->Country_code&0xFF)
+			switch(ROM_HEADER.Country_code&0xFF)
 			{
 				case 0x44:
 				case 0x46:
@@ -2433,19 +2321,19 @@ unsigned long long int write_aid(unsigned long address, unsigned long long int d
 				add_interupt_event(AI_INT, delay/2);
 				ai_register.ai_status |= 0x40000000;
 			}
-			return 0;
+			return;
 		break;
 		case 0x8:
-			ai_register.ai_control = data >> 32;
+			ai_register.ai_control = dword >> 32;
 			MI_register.mi_intr_reg &= 0xFFFFFFFB;
 			check_interupt();
-			return 0;
+			return;
 		break;
 		case 0x10:
-			if (ai_register.ai_dacrate != data >> 32)
+			if (ai_register.ai_dacrate != dword >> 32)
 			{
-				ai_register.ai_dacrate = data >> 32;
-				switch(ROM_HEADER->Country_code&0xFF)
+				ai_register.ai_dacrate = dword >> 32;
+				switch(ROM_HEADER.Country_code&0xFF)
 				{
 					case 0x44:
 					case 0x46:
@@ -2465,73 +2353,72 @@ unsigned long long int write_aid(unsigned long address, unsigned long long int d
 					break;
 				}
 			}
-			ai_register.ai_bitrate = data & 0xFFFFFFFF;
-			return 0;
+			ai_register.ai_bitrate = dword & 0xFFFFFFFF;
+			return;
 		break;
 	}
-	*readai[GET_LOW_ADDR(address)] = data >> 32;
-	*readai[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
-	return 0;
+	*readai[*address_low] = dword >> 32;
+	*readai[*address_low+4] = dword & 0xFFFFFFFF;
 }
 
-unsigned long long int read_pi(unsigned long address, unsigned long long int data)
+void read_pi()
 {
-	if(unlikely(GET_LOW_ADDR(address) >= sizeof(readpi))) {
-		return trash;
+	if(*address_low >= sizeof(readpi)) {
+		word = trash;
 	}
 	else {
-		return *(readpi[GET_LOW_ADDR(address)]);
+		word = *(readpi[*address_low]);
 	}
 }
 
-unsigned long long int read_pib(unsigned long address, unsigned long long int data)
+void read_pib()
 {
-	if(unlikely((GET_LOW_ADDR(address) & 0xfffc) >= sizeof(readpi))) {
-		return trash & 0xFF;
+	if((*address_low & 0xfffc) >= sizeof(readpi)) {
+		byte = trash & 0xFF;
 	}
 	else {
-		return *((unsigned char*)readpi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+		byte = *((unsigned char*)readpi[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 	}
 }
 
-unsigned long long int read_pih(unsigned long address, unsigned long long int data)
+void read_pih()
 {
-	if(unlikely((GET_LOW_ADDR(address) & 0xfffc) >= sizeof(readpi))) {
-		return trash & 0xFFFF;
+	if((*address_low & 0xfffc) >= sizeof(readpi)) {
+		hword = trash & 0xFFFF;
 	}
 	else {
-		return *((unsigned short*)((unsigned char*)readpi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+		hword = *((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 	}
 }
 
-unsigned long long int read_pid(unsigned long address, unsigned long long int data)
+void read_pid()
 {
-	if(unlikely(GET_LOW_ADDR(address) > sizeof(readpi) - sizeof(long long int))) {
-		return trash;
+	if(*address_low > sizeof(readpi) - sizeof(long long int)) {
+		dword = trash;
 	}
 	else {
-		return ((unsigned long long int)(*readpi[GET_LOW_ADDR(address)])<<32) | *readpi[GET_LOW_ADDR(address)+4];
+		dword = ((unsigned long long int)(*readpi[*address_low])<<32) | *readpi[*address_low+4];
 	}
 }
 
-unsigned long long int write_pi(unsigned long address, unsigned long long int data)
+void write_pi()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x8:
-			pi_register.pi_rd_len_reg = (unsigned long)data;
+			pi_register.pi_rd_len_reg = word;
 			dma_pi_read();
-			return 0;
+			return;
 		break;
 		case 0xc:
-			pi_register.pi_wr_len_reg = (unsigned long)data;
+			pi_register.pi_wr_len_reg = word;
 			dma_pi_write();
-			return 0;
+			return ;
 		break;
 		case 0x10:
-			if ((unsigned long)data & 2) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			if (word & 2) MI_register.mi_intr_reg &= 0xFFFFFFEF;
 			check_interupt();
-			return 0;
+			return;
 		break;
 		case 0x14:
 		case 0x18:
@@ -2541,46 +2428,45 @@ unsigned long long int write_pi(unsigned long address, unsigned long long int da
 		case 0x28:
 		case 0x2c:
 		case 0x30:
-			*readpi[GET_LOW_ADDR(address)] = (unsigned long)data & 0xFF;
-			return 0;
+			*readpi[*address_low] = word & 0xFF;
+			return;
 		break;
 	}
-	if(unlikely(GET_LOW_ADDR(address) >= sizeof(readpi))) {
-		trash = (unsigned long)data;
+	if(*address_low >= sizeof(readpi)) {
+		trash = word;
 	}
 	else {
-		*readpi[GET_LOW_ADDR(address)] = (unsigned long)data;
+		*readpi[*address_low] = word;
 	}
-	return 0;
 }
 
-unsigned long long int write_pib(unsigned long address, unsigned long long int data)
+void write_pib()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x8:
 		case 0x9:
 		case 0xa:
 		case 0xb:
-			*((unsigned char*)&pi_register.pi_rd_len_reg + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&pi_register.pi_rd_len_reg + ((*address_low&3)^S8) ) = byte;
 			dma_pi_read();
-			return 0;
+			return;
 		break;
 		case 0xc:
 		case 0xd:
 		case 0xe:
 		case 0xf:
-			*((unsigned char*)&pi_register.pi_wr_len_reg + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&pi_register.pi_wr_len_reg + ((*address_low&3)^S8) ) = byte;
 			dma_pi_write();
-			return 0;
+			return;
 		break;
 		case 0x10:
 		case 0x11:
 		case 0x12:
 		case 0x13:
-			if ((unsigned char)data) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			if (byte) MI_register.mi_intr_reg &= 0xFFFFFFEF;
 			check_interupt();
-			return 0;
+			return;
 		break;
 		case 0x14:
 		case 0x15:
@@ -2606,39 +2492,38 @@ unsigned long long int write_pib(unsigned long address, unsigned long long int d
 		case 0x30:
 		case 0x31:
 		case 0x32:
-			return 0;
+			return;
 		break;
 	}
-	if(unlikely(GET_LOW_ADDR(address) >= sizeof(readpi))) {
-		trash = (unsigned char)data;
+	if(*address_low >= sizeof(readpi)) {
+		trash = byte;
 	}
 	else {
-		*((unsigned char*)readpi[GET_LOW_ADDR(address) & 0xfffc]	+ ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+		*((unsigned char*)readpi[*address_low & 0xfffc]	+ ((*address_low&3)^S8) ) = byte;
 	}
-	return 0;
 }
 
-unsigned long long int write_pih(unsigned long address, unsigned long long int data)
+void write_pih()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x8:
 		case 0xa:
-			*((unsigned short*)((unsigned char*)&pi_register.pi_rd_len_reg + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&pi_register.pi_rd_len_reg + ((*address_low&3)^S16) )) = hword;
 			dma_pi_read();
-			return 0;
+			return;
 		break;
 		case 0xc:
 		case 0xe:
-			*((unsigned short*)((unsigned char*)&pi_register.pi_wr_len_reg + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&pi_register.pi_wr_len_reg + ((*address_low&3)^S16) )) = hword;
 			dma_pi_write();
-			return 0;
+			return;
 		break;
 		case 0x10:
 		case 0x12:
-			if ((unsigned short)data) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			if (hword) MI_register.mi_intr_reg &= 0xFFFFFFEF;
 			check_interupt();
-			return 0;
+			return;
 		break;
 		case 0x16:
 		case 0x1a:
@@ -2648,8 +2533,8 @@ unsigned long long int write_pih(unsigned long address, unsigned long long int d
 		case 0x2a:
 		case 0x2e:
 		case 0x32:
-			*((unsigned short*)((unsigned char*)readpi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data & 0xFF;
-			return 0;
+			*((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword & 0xFF;
+			return;
 		break;
 		case 0x14:
 		case 0x18:
@@ -2659,132 +2544,126 @@ unsigned long long int write_pih(unsigned long address, unsigned long long int d
 		case 0x28:
 		case 0x2c:
 		case 0x30:
-			return 0;
+			return;
 		break;
 	}
-	if(unlikely(GET_LOW_ADDR(address) >= sizeof(readpi))) {
-		trash = (unsigned short)data;
+	if(*address_low >= sizeof(readpi)) {
+		trash = hword;
 	}
 	else {
-		*((unsigned short*)((unsigned char*)readpi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+		*((unsigned short*)((unsigned char*)readpi[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
 	}
-	return 0;
 }
 
-unsigned long long int write_pid(unsigned long address, unsigned long long int data)
+void write_pid()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x8:
-			pi_register.pi_rd_len_reg = data >> 32;
+			pi_register.pi_rd_len_reg = dword >> 32;
 			dma_pi_read();
-			pi_register.pi_wr_len_reg = data & 0xFFFFFFFF;
+			pi_register.pi_wr_len_reg = dword & 0xFFFFFFFF;
 			dma_pi_write();
-			return 0;
+			return;
 		break;
 		case 0x10:
-			if (data) MI_register.mi_intr_reg &= 0xFFFFFFEF;
+			if (dword) MI_register.mi_intr_reg &= 0xFFFFFFEF;
 			check_interupt();
-			*readpi[GET_LOW_ADDR(address)+4] = data & 0xFF;
-			return 0;
+			*readpi[*address_low+4] = dword & 0xFF;
+			return;
 		break;
 		case 0x18:
 		case 0x20:
 		case 0x28:
 		case 0x30:
-			*readpi[GET_LOW_ADDR(address)] = (data >> 32) & 0xFF;
-			*readpi[GET_LOW_ADDR(address)+4] = data & 0xFF;
-			return 0;
+			*readpi[*address_low] = (dword >> 32) & 0xFF;
+			*readpi[*address_low+4] = dword & 0xFF;
+			return;
 		break;
 	}
-	if(unlikely(GET_LOW_ADDR(address) > sizeof(readpi) - sizeof(long long int))) {
-		trash = data & 0xFFFFFFFF;
+	if(*address_low > sizeof(readpi) - sizeof(long long int)) {
+		trash = dword & 0xFFFFFFFF;
 	}
 	else {
-		*readpi[GET_LOW_ADDR(address)] = data >> 32;
-		*readpi[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
+		*readpi[*address_low] = dword >> 32;
+		*readpi[*address_low+4] = dword & 0xFFFFFFFF;
 	}
-	return 0;
 }
 
-unsigned long long int read_ri(unsigned long address, unsigned long long int data)
+void read_ri()
 {
-	return *(readri[GET_LOW_ADDR(address)]);
+	word = *(readri[*address_low]);
 }
 
-unsigned long long int read_rib(unsigned long address, unsigned long long int data)
+void read_rib()
 {
-	return *((unsigned char*)readri[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readri[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_rih(unsigned long address, unsigned long long int data)
+void read_rih()
 {
-	return *((unsigned short*)((unsigned char*)readri[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readri[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_rid(unsigned long address, unsigned long long int data)
+void read_rid()
 {
-	return ((unsigned long long int)(*readri[GET_LOW_ADDR(address)])<<32) | *readri[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readri[*address_low])<<32) | *readri[*address_low+4];
 }
 
-unsigned long long int write_ri(unsigned long address, unsigned long long int data)
+void write_ri()
 {
-	*readri[GET_LOW_ADDR(address)] = (unsigned long)data;
-	return 0;
+	*readri[*address_low] = word;
 }
 
-unsigned long long int write_rib(unsigned long address, unsigned long long int data)
+void write_rib()
 {
-	*((unsigned char*)readri[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
-	return 0;
+	*((unsigned char*)readri[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
 }
 
-unsigned long long int write_rih(unsigned long address, unsigned long long int data)
+void write_rih()
 {
-	*((unsigned short*)((unsigned char*)readri[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
-	return 0;
+	*((unsigned short*)((unsigned char*)readri[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
 }
 
-unsigned long long int write_rid(unsigned long address, unsigned long long int data)
+void write_rid()
 {
-	*readri[GET_LOW_ADDR(address)] = data >> 32;
-	*readri[GET_LOW_ADDR(address)+4] = data & 0xFFFFFFFF;
-	return 0;
+	*readri[*address_low] = dword >> 32;
+	*readri[*address_low+4] = dword & 0xFFFFFFFF;
 }
 
-unsigned long long int read_si(unsigned long address, unsigned long long int data)
+void read_si()
 {
-	return *(readsi[GET_LOW_ADDR(address)]);
+	word = *(readsi[*address_low]);
 }
 
-unsigned long long int read_sib(unsigned long address, unsigned long long int data)
+void read_sib()
 {
-	return *((unsigned char*)readsi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S8) );
+	byte = *((unsigned char*)readsi[*address_low & 0xfffc] + ((*address_low&3)^S8) );
 }
 
-unsigned long long int read_sih(unsigned long address, unsigned long long int data)
+void read_sih()
 {
-	return *((unsigned short*)((unsigned char*)readsi[GET_LOW_ADDR(address) & 0xfffc] + ((GET_LOW_ADDR(address)&3)^S16) ));
+	hword = *((unsigned short*)((unsigned char*)readsi[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
 }
 
-unsigned long long int read_sid(unsigned long address, unsigned long long int data)
+void read_sid()
 {
-	return ((unsigned long long int)(*readsi[GET_LOW_ADDR(address)])<<32) | *readsi[GET_LOW_ADDR(address)+4];
+	dword = ((unsigned long long int)(*readsi[*address_low])<<32) | *readsi[*address_low+4];
 }
 
-unsigned long long int write_si(unsigned long address, unsigned long long int data)
+void write_si()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
-			si_register.si_dram_addr = (unsigned long)data;
+			si_register.si_dram_addr = word;
 		break;
 		case 0x4:
-			si_register.si_pif_addr_rd64b = (unsigned long)data;
+			si_register.si_pif_addr_rd64b = word;
 			dma_si_read();
 		break;
 		case 0x10:
-			si_register.si_pif_addr_wr64b = (unsigned long)data;
+			si_register.si_pif_addr_wr64b = word;
 			dma_si_write();
 		break;
 		case 0x18:
@@ -2793,31 +2672,30 @@ unsigned long long int write_si(unsigned long address, unsigned long long int da
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_sib(unsigned long address, unsigned long long int data)
+void write_sib()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x1:
 		case 0x2:
 		case 0x3:
-			*((unsigned char*)&si_register.si_dram_addr + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&si_register.si_dram_addr + ((*address_low&3)^S8) ) = byte;
 		break;
 		case 0x4:
 		case 0x5:
 		case 0x6:
 		case 0x7:
-			*((unsigned char*)&si_register.si_pif_addr_rd64b + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&si_register.si_pif_addr_rd64b + ((*address_low&3)^S8) ) = byte;
 			dma_si_read();
 		break;
 		case 0x10:
 		case 0x11:
 		case 0x12:
 		case 0x13:
-			*((unsigned char*)&si_register.si_pif_addr_wr64b + ((GET_LOW_ADDR(address)&3)^S8) ) = (unsigned char)data;
+			*((unsigned char*)&si_register.si_pif_addr_wr64b + ((*address_low&3)^S8) ) = byte;
 			dma_si_write();
 		break;
 		case 0x18:
@@ -2829,25 +2707,24 @@ unsigned long long int write_sib(unsigned long address, unsigned long long int d
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_sih(unsigned long address, unsigned long long int data)
+void write_sih()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
 		case 0x2:
-			*((unsigned short*)((unsigned char*)&si_register.si_dram_addr + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&si_register.si_dram_addr + ((*address_low&3)^S16) )) = hword;
 		break;
 		case 0x4:
 		case 0x6:
-			*((unsigned short*)((unsigned char*)&si_register.si_pif_addr_rd64b + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&si_register.si_pif_addr_rd64b + ((*address_low&3)^S16) )) = hword;
 			dma_si_read();
 		break;
 		case 0x10:
 		case 0x12:
-			*((unsigned short*)((unsigned char*)&si_register.si_pif_addr_wr64b + ((GET_LOW_ADDR(address)&3)^S16) )) = (unsigned short)data;
+			*((unsigned short*)((unsigned char*)&si_register.si_pif_addr_wr64b + ((*address_low&3)^S16) )) = hword;
 			dma_si_write();
 		break;
 		case 0x18:
@@ -2857,20 +2734,19 @@ unsigned long long int write_sih(unsigned long address, unsigned long long int d
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int write_sid(unsigned long address, unsigned long long int data)
+void write_sid()
 {
-	switch(GET_LOW_ADDR(address))
+	switch(*address_low)
 	{
 		case 0x0:
-			si_register.si_dram_addr = data >> 32;
-			si_register.si_pif_addr_rd64b = data & 0xFFFFFFFF;
+			si_register.si_dram_addr = dword >> 32;
+			si_register.si_pif_addr_rd64b = dword & 0xFFFFFFFF;
 			dma_si_read();
 		break;
 		case 0x10:
-			si_register.si_pif_addr_wr64b = data >> 32;
+			si_register.si_pif_addr_wr64b = dword >> 32;
 			dma_si_write();
 		break;
 		case 0x18:
@@ -2879,161 +2755,117 @@ unsigned long long int write_sid(unsigned long address, unsigned long long int d
 			check_interupt();
 		break;
 	}
-	return 0;
 }
 
-unsigned long long int read_flashram_status(unsigned long address, unsigned long long int data)
+void read_flashram_status()
 {
-	if (likely(flashRAMInfo.use_flashram != -1 && GET_LOW_ADDR(address) == 0))
-	{
+	//if (flashRAMInfo.use_flashram != -1 && *address_low == 0)
+	//{
 		flashRAMInfo.use_flashram = 1;
-		return flashram_status();
-	}
-	else
-		printf("unknown read in read_flashram_status\n");
-	return 0;
+		word = flashram_status();
+	//}
+	//else
+	//	printf("unknown read in read_flashram_status\n");
 }
 
-unsigned long long int read_flashram_statusb(unsigned long address, unsigned long long int data)
+void read_flashram_statusb()
 {
-   printf("read_flashram_statusb\n");
-   return 0;
+   //printf("read_flashram_statusb\n");
+   byte = 0;
 }
 
-unsigned long long int read_flashram_statush(unsigned long address, unsigned long long int data)
+void read_flashram_statush()
 {
-   printf("read_flashram_statush\n");
-   return 0;
+   //printf("read_flashram_statush\n");
+   hword = 0;
 }
 
-unsigned long long int read_flashram_statusd(unsigned long address, unsigned long long int data)
+void read_flashram_statusd()
 {
-   printf("read_flashram_statusd\n");
-   return 0;
+   //printf("read_flashram_statusd\n");
+   dword = 0;
 }
 
-unsigned long long int write_flashram_dummy(unsigned long address, unsigned long long int data)
-{
-	return 0;
-}
+void write_flashram_dummy() {}
+void write_flashram_dummyb() {}
+void write_flashram_dummyh() {}
+void write_flashram_dummyd() {}
 
-unsigned long long int write_flashram_dummyb(unsigned long address, unsigned long long int data)
+void write_flashram_command()
 {
-	return 0;
-}
-
-unsigned long long int write_flashram_dummyh(unsigned long address, unsigned long long int data)
-{
-	return 0;
-}
-
-unsigned long long int write_flashram_dummyd(unsigned long address, unsigned long long int data)
-{
-	return 0;
-}
-
-unsigned long long int write_flashram_command(unsigned long address, unsigned long long int data)
-{
-	if (likely(flashRAMInfo.use_flashram != -1 && GET_LOW_ADDR(address) == 0))
-	{
-		flashram_command((unsigned long)data);
+	//if (flashRAMInfo.use_flashram != -1 && *address_low == 0)
+	//{
+		flashram_command(word);
 		flashRAMInfo.use_flashram = 1;
-	}
-	else
-		printf("unknown write in write_flashram_command\n");
-	return 0;
+	//}
+	//else
+	//	printf("unknown write in write_flashram_command\n");
 }
 
-unsigned long long int write_flashram_commandb(unsigned long address, unsigned long long int data)
-{
-	printf("write_flashram_commandb\n");
-	return 0;
-}
-
-unsigned long long int write_flashram_commandh(unsigned long address, unsigned long long int data)
-{
-	printf("write_flashram_commandh\n");
-	return 0;
-}
-
-unsigned long long int write_flashram_commandd(unsigned long address, unsigned long long int data)
-{
-	printf("write_flashram_commandd\n");
-	return 0;
-}
+void write_flashram_commandb(){}
+void write_flashram_commandh(){}
+void write_flashram_commandd(){}
 
 static unsigned long lastwrite = 0;
 
-unsigned long long int read_rom(unsigned long address, unsigned long long int data)
+void read_rom()
 {
-	if (unlikely(lastwrite))
+	if (lastwrite)
 	{
 		unsigned long tmp = lastwrite;
 		lastwrite = 0;
-		return tmp;
+		word = tmp;
 	}
 	else {
-		unsigned long long int ret;
-		ROMCache_read((u8*)&ret+4, (address & 0x03FFFFFF), 4);
-		sign_extended(ret);
-		return ret;
+		word = sign_extended(*(unsigned long *)ROMCache_pointer(address & 0x3FFFFFF));
 	}
 }
 
-unsigned long long int read_romb(unsigned long address, unsigned long long int data)
+void read_romb()
 {
-	unsigned long long int ret;
-	ROMCache_read((u8*)&ret+7, (address & 0x03FFFFFF), 1);
-	sign_extendedb(ret);
-	return ret;
+	byte = sign_extendedb(*(unsigned char *)ROMCache_pointer(address & 0x3FFFFFF));
 }
 
-unsigned long long int read_romh(unsigned long address, unsigned long long int data)
+void read_romh()
 {
-	unsigned long long int ret;
-	ROMCache_read((u8*)&ret+6, (address & 0x03FFFFFF), 2);
-	sign_extendedh(ret);
-	return ret;
+	hword = sign_extendedh(*(unsigned short *)ROMCache_pointer(address & 0x3FFFFFF));
 }
 
-unsigned long long int read_romd(unsigned long address, unsigned long long int data)
+void read_romd()
 {
-	unsigned long long int ret;
-	ROMCache_read((u8*)&ret, (address & 0x03FFFFFF), 8);
-	return ret;
+	dword = *(unsigned long long *)ROMCache_pointer(address & 0x3FFFFFF);
 }
 
-unsigned long long int write_rom(unsigned long address, unsigned long long int data)
+void write_rom()
 {
-	lastwrite = (unsigned long)data;
-	return 0;
+	lastwrite = word;
 }
 
-unsigned long long int read_pif(unsigned long address, unsigned long long int data)
+void read_pif()
 {
-	return sl(*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)));
+	word = sl(*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)));
 }
 
-unsigned long long int read_pifb(unsigned long address, unsigned long long int data)
+void read_pifb()
 {
-	return *(PIF_RAMb + ((address & 0x7FF) - 0x7C0));
+	byte = *(PIF_RAMb + ((address & 0x7FF) - 0x7C0));
 }
 
-unsigned long long int read_pifh(unsigned long address, unsigned long long int data)
+void read_pifh()
 {
-	return (*(PIF_RAMb + ((address & 0x7FF) - 0x7C0)) << 8) | *(PIF_RAMb + (((address+1) & 0x7FF) - 0x7C0));
+	hword = (*(PIF_RAMb + ((address & 0x7FF) - 0x7C0)) << 8) | *(PIF_RAMb + (((address+1) & 0x7FF) - 0x7C0));
 }
 
-unsigned long long int read_pifd(unsigned long address, unsigned long long int data)
+void read_pifd()
 {
-	return ((unsigned long long)sl(*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0))) << 32)|
+	dword = ((unsigned long long)sl(*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0))) << 32)|
 		sl(*((unsigned long *)(PIF_RAMb + ((address+4) & 0x7FF) - 0x7C0)));
 }
 
-unsigned long long int write_pif(unsigned long address, unsigned long long int data)
+void write_pif()
 {
-	*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)) = sl(((unsigned long)data));
-	if (likely((address & 0x7FF) == 0x7FC))
+	*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)) = sl(word);
+	if ((address & 0x7FF) == 0x7FC)
 	{
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
@@ -3044,13 +2876,12 @@ unsigned long long int write_pif(unsigned long address, unsigned long long int d
 		else
 			update_pif_write();
 	}
-	return 0;
 }
 
-unsigned long long int write_pifb(unsigned long address, unsigned long long int data)
+void write_pifb()
 {
-	*(PIF_RAMb + (address & 0x7FF) - 0x7C0) = (unsigned char)data;
-	if (likely((address & 0x7FF) == 0x7FF))
+	*(PIF_RAMb + (address & 0x7FF) - 0x7C0) = byte;
+	if ((address & 0x7FF) == 0x7FF)
 	{
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
@@ -3061,14 +2892,13 @@ unsigned long long int write_pifb(unsigned long address, unsigned long long int 
 		else
 			update_pif_write();
 	}
-	return 0;
 }
 
-unsigned long long int write_pifh(unsigned long address, unsigned long long int data)
+void write_pifh()
 {
-	*(PIF_RAMb + (address & 0x7FF) - 0x7C0) = ((unsigned short)data) >> 8;
-	*(PIF_RAMb + ((address+1) & 0x7FF) - 0x7C0) = ((unsigned char)data) & 0xFF;
-	if (likely((address & 0x7FF) == 0x7FE))
+	*(PIF_RAMb + (address & 0x7FF) - 0x7C0) = (hword >> 8);
+	*(PIF_RAMb + ((address+1) & 0x7FF) - 0x7C0) = (hword & 0xFF);
+	if ((address & 0x7FF) == 0x7FE)
 	{
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
@@ -3079,14 +2909,13 @@ unsigned long long int write_pifh(unsigned long address, unsigned long long int 
 		else
 			update_pif_write();
 	}
-	return 0;
 }
 
-unsigned long long int write_pifd(unsigned long address, unsigned long long int data)
+void write_pifd()
 {
-	*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)) = sl((unsigned long)(data >> 32));
-	*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)) = sl((unsigned long)(data & 0xFFFFFFFF));
-	if (likely((address & 0x7FF) == 0x7F8))
+	*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)) = sl((unsigned long)(dword >> 32));
+	*((unsigned long *)(PIF_RAMb + (address & 0x7FF) - 0x7C0)) = sl((unsigned long)(dword & 0xFFFFFFFF));
+	if ((address & 0x7FF) == 0x7F8)
 	{
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
@@ -3097,5 +2926,23 @@ unsigned long long int write_pifd(unsigned long address, unsigned long long int 
 		else
 			update_pif_write();
 	}
-	return 0;
+}
+
+unsigned long *fast_mem_access(unsigned long address)
+{
+   /* This code is performance critical, specially on pure interpreter mode.
+    * Removing error checking saves some time, but the emulator may crash. */
+	if ((address & 0xc0000000) != 0x80000000)
+		address = virtual_to_physical_address(address, 2);
+
+	address &= 0x1ffffffc;
+
+	if (address < MEM_SIZE)
+		return (unsigned long*)(rdramb + address);
+	else if (address >= 0x10000000)
+		return (unsigned long*)ROMCache_pointer(address - 0x10000000);
+	else if ((address & 0xffffe000) == 0x04000000)
+		return (unsigned long*)(SP_DMEMb + (address & 0x1ffc));
+	else
+		return NULL;
 }

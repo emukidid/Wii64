@@ -50,6 +50,7 @@ extern "C" {
 #include "plugin.h"
 #include "../gc_input/controller.h"
 
+#include "../r4300/interupt.h"
 #include "../r4300/r4300.h"
 #include "../gc_memory/memory.h"
 #include "../gc_memory/TLB-Cache.h"
@@ -120,6 +121,7 @@ char miniMenuActive;
 	   char saveStateDevice;
        char autoSave;
        char screenMode = 0;
+	   char videoMode = 0;
 	   char padAutoAssign;
 	   char padType[4];
 	   char padAssign[4];
@@ -138,6 +140,7 @@ static struct {
   { "FBTex", &glN64_useFrameBufferTextures, GLN64_FBTEX_DISABLE, GLN64_FBTEX_ENABLE },
   { "2xSaI", &glN64_use2xSaiTextures, GLN64_2XSAI_DISABLE, GLN64_2XSAI_ENABLE },
   { "ScreenMode", &screenMode, SCREENMODE_4x3, SCREENMODE_16x9_PILLARBOX },
+  { "VideoMode", &videoMode, VIDEOMODE_AUTO, VIDEOMODE_576P },
   { "Core", ((char*)&dynacore)+3, DYNACORE_INTERPRETER, DYNACORE_PURE_INTERP },
   { "NativeDevice", &nativeSaveDevice, NATIVESAVEDEVICE_SD, NATIVESAVEDEVICE_CARDB },
   { "StatesDevice", &saveStateDevice, SAVESTATEDEVICE_SD, SAVESTATEDEVICE_USB },
@@ -173,7 +176,6 @@ void ScanPADSandReset(u32 dummy);
 int GX_xfb_offset = 0;
 
 // Dummy functions
-static void dummy_func(){ }
 void (*fBRead)(DWORD addr) = NULL;
 void (*fBWrite)(DWORD addr, DWORD size) = NULL;
 void (*fBGetFrameBufferInfo)(void *p) = NULL;
@@ -271,6 +273,7 @@ int main(int argc, char* argv[]) {
 	creditsScrolling = 0; // Normal menu for now
 	dynacore         = 1; // Dynarec
 	screenMode		 = 0; // Stretch FB horizontally
+	videoMode		 = VIDEOMODE_AUTO;
 	padAutoAssign	 = PADAUTOASSIGN_AUTOMATIC;
 	padType[0]		 = PADTYPE_NONE;
 	padType[1]		 = PADTYPE_NONE;
@@ -388,9 +391,9 @@ int loadROM(fileBrowser_file* rom){
 
 	gfx_set_fb(xfb[0], xfb[1]);
 	if (screenMode == SCREENMODE_16x9_PILLARBOX)
-		gfx_set_window( 78, 0, 483, 480);
+		gfx_set_window( 80, 0, 480, rmode->efbHeight);
 	else
-		gfx_set_window( 0, 0, 640, 480);
+		gfx_set_window( 0, 0, 640, rmode->efbHeight);
 
 	gfx_info_init();
 	audio_info_init();
@@ -454,7 +457,7 @@ int loadROM(fileBrowser_file* rom){
 
 static void gfx_info_init(void){
 	gfx_info.MemoryBswaped = TRUE;
-	gfx_info.HEADER = (BYTE*)ROM_HEADER;
+	gfx_info.HEADER = (BYTE*)&ROM_HEADER;
 	gfx_info.RDRAM = (BYTE*)rdram;
 	gfx_info.DMEM = (BYTE*)SP_DMEM;
 	gfx_info.IMEM = (BYTE*)SP_IMEM;
@@ -481,13 +484,13 @@ static void gfx_info_init(void){
 	gfx_info.VI_V_BURST_REG = &(vi_register.vi_v_burst);
 	gfx_info.VI_X_SCALE_REG = &(vi_register.vi_x_scale);
 	gfx_info.VI_Y_SCALE_REG = &(vi_register.vi_y_scale);
-	gfx_info.CheckInterrupts = dummy_func;
+	gfx_info.CheckInterrupts = check_interupt;
 	initiateGFX(gfx_info);
 }
 
 static void audio_info_init(void){
 	audio_info.MemoryBswaped = TRUE;
-	audio_info.HEADER = (BYTE*)ROM_HEADER;
+	audio_info.HEADER = (BYTE*)&ROM_HEADER;
 	audio_info.RDRAM = (BYTE*)rdram;
 	audio_info.DMEM = (BYTE*)SP_DMEM;
 	audio_info.IMEM = (BYTE*)SP_IMEM;
@@ -498,13 +501,13 @@ static void audio_info_init(void){
 	audio_info.AI_STATUS_REG = &(ai_register.ai_status); // FIXME: This was set to dummy
 	audio_info.AI_DACRATE_REG = &(ai_register.ai_dacrate);
 	audio_info.AI_BITRATE_REG = &(ai_register.ai_bitrate);
-	audio_info.CheckInterrupts = dummy_func;
+	audio_info.CheckInterrupts = check_interupt;
 	initiateAudio(audio_info);
 }
 
 void control_info_init(void){
 	control_info.MemoryBswaped = TRUE;
-	control_info.HEADER = (BYTE*)ROM_HEADER;
+	control_info.HEADER = (BYTE*)&ROM_HEADER;
 	control_info.Controls = Controls;
 	int i;
 	for (i=0; i<4; i++)
@@ -540,7 +543,7 @@ static void rsp_info_init(void){
 	rsp_info.DPC_BUFBUSY_REG = &dpc_register.dpc_bufbusy;
 	rsp_info.DPC_PIPEBUSY_REG = &dpc_register.dpc_pipebusy;
 	rsp_info.DPC_TMEM_REG = &dpc_register.dpc_tmem;
-	rsp_info.CheckInterrupts = dummy_func;
+	rsp_info.CheckInterrupts = check_interupt;
 	rsp_info.ProcessDlistList = processDList;
 	rsp_info.ProcessAlistList = processAList;
 	rsp_info.ProcessRdpList = processRDPList;
@@ -570,28 +573,21 @@ static void Initialise (void){
 
 	// Init PS GQRs so I can load signed/unsigned chars/shorts as PS values
 	__asm__ volatile(
-		"lis	3, 4     \n"
-		"addi	3, 3, 4  \n"
-		"mtspr	913, 3   \n" // GQR1 = unsigned char
-		"lis	3, 6     \n"
-		"addi	3, 3, 6  \n"
-		"mtspr	914, 3   \n" // GQR2 = signed char
-		"lis	3, 5     \n"
-		"addi	3, 3, 5  \n"
-		"mtspr	915, 3   \n" // GQR3 = unsigned short
-		"lis	3, 7     \n"
-		"addi	3, 3, 7  \n"
-		"mtspr	916, 3   \n" // GQR4 = signed short
-		"lis	3, %0    \n"
-		"addi	3, 3, %0 \n"
-		"mtspr	917, 3   \n" // GQR5 = unsigned short / (2^16)
-		:: "n" (16<<8 | 5) : "r3");
+		"li		3, 0     \n"
+		"mtspr	912, 3   \n" // GQR0 = F32
+		:: : "r3");
+	CAST_SetGQR2(GQR_TYPE_U8, 8);
+	CAST_SetGQR3(GQR_TYPE_U16, 16);
+	CAST_SetGQR4(GQR_TYPE_U8, 0);
+	CAST_SetGQR5(GQR_TYPE_U16, 0);
+	CAST_SetGQR6(GQR_TYPE_S8, 0);
+	CAST_SetGQR7(GQR_TYPE_S16, 0);
 }
 
-void video_mode_init(GXRModeObj *videomode,unsigned int *fb1, unsigned int *fb2)
+void video_mode_init(GXRModeObj *v,unsigned int *fb1, unsigned int *fb2)
 {
-	vmode = videomode;
-	rmode = videomode;
+	vmode = v;
+	rmode = v;
 	xfb[0] = fb1;
 	xfb[1] = fb2;
 }

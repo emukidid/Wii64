@@ -71,6 +71,34 @@ static const int numMicrocodeTypes = 12;
 #define _FIXED2FLOAT( v, b ) \
 	((f32)v * FIXED2FLOATRECIP##b)
 
+static inline f32 GXcastu8f32( u8 val )
+{
+	f32 rval;
+	__asm__("psq_l%U1%X1 %0,%1,1,2" : "=f"(rval) : "m"(val) : "memory");
+	return rval;
+}
+
+static inline f32 GXcastu16f32( u16 val )
+{
+	f32 rval;
+	__asm__("psq_l%U1%X1 %0,%1,1,3" : "=f"(rval) : "m"(val) : "memory");
+	return rval;
+}
+
+static inline u8 GXcastf32u8( f32 val )
+{
+	u8 rval;
+	__asm__("psq_st%U0%X0 %1,%0,1,2" : "=m"(rval) : "f"(val) : "memory");
+	return rval;
+}
+
+static inline u16 GXcastf32u16( f32 val )
+{
+	u16 rval;
+	__asm__("psq_st%U0%X0 %1,%0,1,3" : "=m"(rval) : "f"(val) : "memory");
+	return rval;
+}
+
 // Useful macros for decoding GBI command's parameters
 #define _SHIFTL( v, s, w )	\
     (((u32)v & ((0x01 << w) - 1)) << s)

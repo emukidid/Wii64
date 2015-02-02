@@ -25,6 +25,7 @@
 //#include "Textures.h"
 #endif // __GX__
 
+#include <math.h>
 #include "glN64.h"
 #include "Types.h"
 #include "VI.h"
@@ -66,15 +67,16 @@ void VI_UpdateSize()
 	u32 hEnd = _SHIFTR( *REG.VI_H_START, 0, 10 );
 	u32 hStart = _SHIFTR( *REG.VI_H_START, 16, 10 );
 
-	// These are in half-lines, so shift an extra bit
-	u32 vEnd = _SHIFTR( *REG.VI_V_START, 1, 9 );
-	u32 vStart = _SHIFTR( *REG.VI_V_START, 17, 9 );
+	u32 vEnd = _SHIFTR( *REG.VI_V_START, 0, 10 );
+	u32 vStart = _SHIFTR( *REG.VI_V_START, 16, 10 );
 
-	VI.width = (unsigned long)((hEnd - hStart) * xScale);
-	VI.height = (unsigned long)((vEnd - vStart) * yScale * 1.0126582f);
+	VI.width = hEnd == hStart ? *REG.VI_WIDTH :
+	           lrintf((hEnd - hStart) * xScale);
+	VI.height = lrintf((vEnd - vStart) * yScale
+	          * (*REG.VI_WIDTH > VI.width ? 1.0125f : 0.50625f));
 
-	if (VI.width == 0.0f) VI.width = (unsigned long)320.0f;
-	if (VI.height == 0.0f) VI.height = (unsigned long)240.0f;
+	if (VI.width == 0.0f) VI.width = 320.0f;
+	if (VI.height == 0.0f) VI.height = 240.0f;
 }
 
 void VI_UpdateScreen()
@@ -122,22 +124,22 @@ void VI_UpdateScreen()
 	}
 	glFinish();
 #else // !__GX__
-	if (renderCpuFramebuffer)
+	if (renderCpuFramebuffer || (RSP.DList == 0))
 	{
 		//Only render N64 framebuffer in RDRAM and not EFB
 		VI_GX_cleanUp();
 		VI_GX_renderCpuFramebuffer();
+		VI_GX_showLoadIcon();
 		VI_GX_showFPS();
 		VI_GX_showDEBUG();
 		GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
-		GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
+		if (VI.copy_fb)	GX_CopyDisp (VI.xfb[VI.which_fb^1]+GX_xfb_offset, GX_TRUE);
+		else			GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_TRUE);
 		GX_DrawDone(); //Wait until EFB->XFB copy is complete
-		VI.enableLoadIcon = true;
-		VI.EFBcleared = false;
+		VI.enableLoadIcon = false;
 		VI.copy_fb = true;
 	}
-
-	if (OGL.frameBufferTextures)
+	else if (OGL.frameBufferTextures)
 	{
 		FrameBuffer *current = FrameBuffer_FindBuffer( *REG.VI_ORIGIN );
 
@@ -154,14 +156,15 @@ void VI_UpdateScreen()
 
 			//Draw DEBUG to screen
 			VI_GX_cleanUp();
+			VI_GX_showLoadIcon();
 			VI_GX_showFPS();
 			VI_GX_showDEBUG();
 			GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
 			//Copy EFB->XFB
-			GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
+			if (VI.copy_fb)	GX_CopyDisp (VI.xfb[VI.which_fb^1]+GX_xfb_offset, GX_TRUE);
+			else			GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_TRUE);
 			GX_DrawDone(); //Wait until EFB->XFB copy is complete
-			VI.updateOSD = false;
-			VI.enableLoadIcon = true;
+			VI.enableLoadIcon = false;
 			VI.copy_fb = true;
 
 			//Restore current EFB
@@ -173,22 +176,17 @@ void VI_UpdateScreen()
 	}
 	else
 	{
-/*		if (gSP.changed & CHANGED_COLORBUFFER)
-		{
-			OGL_SwapBuffers();
-			gSP.changed &= ~CHANGED_COLORBUFFER;
-		}*/
-		if(VI.updateOSD && (gSP.changed & CHANGED_COLORBUFFER))
+		if (gSP.changed & CHANGED_COLORBUFFER)
 		{
 			VI_GX_cleanUp();
+			VI_GX_showLoadIcon();
 			VI_GX_showFPS();
 			VI_GX_showDEBUG();
 			GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
-			GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
+			if (VI.copy_fb)	GX_CopyDisp (VI.xfb[VI.which_fb^1]+GX_xfb_offset, GX_TRUE);
+			else			GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_TRUE);
 			GX_DrawDone(); //Wait until EFB->XFB copy is complete
-			VI.updateOSD = false;
-			VI.enableLoadIcon = true;
-			VI.EFBcleared = false;
+			VI.enableLoadIcon = false;
 			VI.copy_fb = true;
 			gSP.changed &= ~CHANGED_COLORBUFFER;
 		}
@@ -230,23 +228,22 @@ void VI_GX_clearEFB(){
 }
 
 extern timers Timers;
+extern float VILimit;
 
 void VI_GX_showFPS(){
-	static char caption[32];
+	char caption[50];
 
-	TimerUpdate();
-
-	sprintf(caption, "%.1f VI/s, %.1f FPS",Timers.vis,Timers.fps);
+	sprintf(caption, "%.1f VI/s (%.1fx), %.1f DL/s",Timers.vis,Timers.vis/VILimit,Timers.fps);
 	
 	GXColor fontColor = {150,255,150,255};
 #ifndef MENU_V2
 	write_font_init_GX(fontColor);
 	if(showFPSonScreen)
-		write_font(10,35,caption, 1.0);
+		write_font(15,35,caption, 1.0);
 #else
 	menu::IplFont::getInstance().drawInit(fontColor);
 	if(showFPSonScreen)
-		menu::IplFont::getInstance().drawString(10,35,caption, 1.0, false);
+		menu::IplFont::getInstance().drawString(15,35,caption, 1.0, false);
 #endif
 
 	//reset swap table from GUI/DEBUG
@@ -254,7 +251,7 @@ void VI_GX_showFPS(){
 	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
 }
 
-void VI_GX_showLoadProg(float percent)
+void VI_GX_showLoadIcon()
 {
 	if (!VI.enableLoadIcon)
 		return;
@@ -338,7 +335,7 @@ void VI_GX_showLoadProg(float percent)
 	GX_LoadProjectionMtx(GXprojection2D, GX_ORTHOGRAPHIC); //load current 2D projection matrix
 //	GX_SetViewport((f32) 0,(f32) 0,(f32) 640,(f32) 480, 0.0f, 1.0f);
 	GX_SetViewport((f32) OGL.GXorigX,(f32) OGL.GXorigY,(f32) OGL.GXwidth,(f32) OGL.GXheight, 0.0f, 1.0f);
-	GX_SetScissor((u32) 0,(u32) 0,(u32) 640,(u32) 480);	//Set to the same size as the viewport.
+	GX_SetScissor((u32) 0,(u32) 0,(u32) OGL.width,(u32) OGL.height);	//Set to the same size as the viewport.
 
 	GX_ClearVtxDesc();
 	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX2);
@@ -376,33 +373,6 @@ void VI_GX_showLoadProg(float percent)
 	GX_End();
 
 #endif //MENU_V2
-
-	if (OGL.frameBufferTextures)
-	{
-		//Draw DEBUG to screen
-		VI_GX_cleanUp();
-		VI_GX_showFPS();
-		VI_GX_showDEBUG();
-		GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
-		//Copy EFB->XFB
-		if (VI.copy_fb)	GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
-		else			GX_CopyDisp (VI.xfb[VI.which_fb^1]+GX_xfb_offset, GX_FALSE);
-		GX_DrawDone(); //Wait until EFB->XFB copy is complete
-		VI.updateOSD = false;
-		VI.enableLoadIcon = true;
-		VI.copy_fb = true;
-
-		//Restore current EFB
-		FrameBuffer_RestoreBuffer( gDP.colorImage.address, gDP.colorImage.size, gDP.colorImage.width );
-	}
-	else
-	{
-		if (VI.copy_fb)	GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
-		else			GX_CopyDisp (VI.xfb[VI.which_fb^1]+GX_xfb_offset, GX_FALSE);
-		GX_Flush();
-	}
-//    GX_DrawDone();
-//	VI.copy_fb = true;
 }
 
 void VI_GX_updateDEBUG()
@@ -431,7 +401,6 @@ void VI_GX_showDEBUG()
 			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
 #endif
 #endif
-
 	//Reset any stats in DEBUG_stats
 //	DEBUG_stats(8, "RecompCache Blocks Freed", STAT_TYPE_CLEAR, 1);
 
@@ -467,10 +436,10 @@ void VI_GX_cleanUp()
 	GX_SetTevOp(GX_TEVSTAGE0,GX_MODULATE);
 
 	GX_SetFog(GX_FOG_NONE,0,1,0,1,(GXColor){0,0,0,255});
-	GX_SetViewport(0,0,rmode->fbWidth,rmode->efbHeight,0,1);
+	GX_SetViewport((f32) OGL.GXorigX,(f32) OGL.GXorigY,(f32) OGL.GXwidth,(f32) OGL.GXheight, 0.0f, 1.0f);
 	GX_SetCoPlanar(GX_DISABLE);
 	GX_SetClipMode(GX_CLIP_ENABLE);
-	GX_SetScissor(0,0,rmode->fbWidth,rmode->efbHeight);
+	GX_SetScissor((u32) 0,(u32) 0,(u32) OGL.width,(u32) OGL.height);
 	GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
 	GX_SetZCompLoc(GX_TRUE);	// Do Z-compare before texturing.
 }
@@ -488,85 +457,110 @@ void VI_GX_renderCpuFramebuffer()
 #endif
 		return; 
 	}
-	if (!*REG.VI_WIDTH)
+	if (!*REG.VI_H_START)
 	{
 #ifdef SHOW_DEBUG
-		sprintf(txtbuffer,"VI (CpuFramebuffer): VI_WIDTH_REG is NULL");
+		sprintf(txtbuffer,"VI (CpuFramebuffer): VI_H_START_REG is NULL");
 		DEBUG_print(txtbuffer,DBG_VIINFO); 
 #endif
 		return; 
 	}
-	int h_end = *REG.VI_H_START & 0x3FF;
-	int h_start = (*REG.VI_H_START >> 16) & 0x3FF;
-	int v_end = *REG.VI_V_START & 0x3FF;
-	int v_start = (*REG.VI_V_START >> 16) & 0x3FF;
-	float scale_x = ((int)*REG.VI_X_SCALE & 0xFFF) / 1024.0f;
-	float scale_y = (((int)*REG.VI_Y_SCALE & 0xFFF)>>1) / 1024.0f;
-
-	short *im16 = (short*)((char*)RDRAM + (*REG.VI_ORIGIN & 0x7FFFFF));
-
-	int minx = (640-(h_end-h_start))/2;
-	int maxx = 640-minx;
-	int miny = (480-(v_end-v_start))/2;
-	int maxy = 480-miny;
-	int ind = 0;
-	float px, py;
-	py=0.0f;
+	VI_UpdateSize();
+	u32 FBtexW = (VI.width + 3) & ~3;
+	u32 FBtexH = (VI.height + 3) & ~3;
 
 	//Init texture cache heap if not yet inited
 	if(!GXtexCache)
 	{
-		GXtexCache = (heap_cntrl*)memalign(32,sizeof(heap_cntrl));
+		GXtexCache = (heap_cntrl*)malloc(sizeof(heap_cntrl));
 #ifdef HW_RVL
 		__lwp_heap_init(GXtexCache, TEXCACHE_LO,GX_TEXTURE_CACHE_SIZE, 32);
 #else //HW_RVL
 		__lwp_heap_init(GXtexCache, memalign(32,GX_TEXTURE_CACHE_SIZE),GX_TEXTURE_CACHE_SIZE, 32);
 #endif //!HW_RVL
 	}
-	u16* FBtex = (u16*) __lwp_heap_allocate(GXtexCache,640*480*2);
+	u16* FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2);
 	while(!FBtex)
 	{
 		TextureCache_FreeNextTexture();
-		FBtex = (u16*) __lwp_heap_allocate(GXtexCache,640*480*2);
+		FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2);
 	}
-//	u16* FBtex = (u16*) memalign(32,640*480*2);
 	GXTexObj	FBtexObj;
 
 	//N64 Framebuffer is in RGB5A1 format, so shift by 1 and retile.
-	for (int j=0; j<480; j+=4)
-	{
-		for (int i=0; i<640; i+=4)
-		{
-			for (int jj=0; jj<4; jj++)
-			{
-				if (j+jj < miny || j+jj > maxy)
-				{
-					FBtex[ind++] = 0;
-					FBtex[ind++] = 0;
-					FBtex[ind++] = 0;
-					FBtex[ind++] = 0;
-				}
-				else
-				{
-					px = scale_x*i;
-					py = scale_y*(j+jj);
-					for (int ii=0; ii<4; ii++)
-					{
-						if (i+ii < minx || i+ii > maxx)
-							FBtex[ind++] = 0;
-						else
-							FBtex[ind++] = 0x8000 | (im16[((int)py*(*REG.VI_WIDTH)+(int)px)]>>1);
-						px += scale_x;
-					}
-				}
-			}
-		}
+	GX_RedirectWriteGatherPipe(FBtex);
+
+	u32 address = RSP_SegmentToPhysical( *REG.VI_ORIGIN );
+	u32 stride = *REG.VI_WIDTH * 2;
+
+	if (*REG.VI_V_CURRENT_LINE & 1)
+		address -= stride;
+
+	u8 *src1 = &RDRAM[address - 8];
+	u8 *src2 = src1 + stride;
+	u8 *src3 = src2 + stride;
+	u8 *src4 = src3 + stride;
+
+	int rowpitch = stride * 4 - (FBtexW * 2);
+	int rows = FBtexH >> 2;
+
+	while (rows--) {
+		int tiles = FBtexW >> 2;
+
+		do {
+			__asm__ volatile(
+				"lwzu    2, 8(%0) \n"
+				"lwz     3, 4(%0) \n"
+				"lwzu    4, 8(%1) \n"
+				"lwz     5, 4(%1) \n"
+				"lwzu    6, 8(%2) \n"
+				"lwz     7, 4(%2) \n"
+				"lwzu    8, 8(%3) \n"
+				"lwz     9, 4(%3) \n"
+
+				"rotrwi  2, 2, 1 \n"
+				"rotrwi  3, 3, 1 \n"
+				"rotrwi  4, 4, 1 \n"
+				"rotrwi  5, 5, 1 \n"
+				"rotrwi  6, 6, 1 \n"
+				"rotrwi  7, 7, 1 \n"
+				"rotrwi  8, 8, 1 \n"
+				"rotrwi  9, 9, 1 \n"
+
+				"or  2, 2, %4 \n"
+				"or  3, 3, %4 \n"
+				"or  4, 4, %4 \n"
+				"or  5, 5, %4 \n"
+				"or  6, 6, %4 \n"
+				"or  7, 7, %4 \n"
+				"or  8, 8, %4 \n"
+				"or  9, 9, %4 \n"
+
+				"stw     2, 0(%5) \n"
+				"stw     3, 0(%5) \n"
+				"stw     4, 0(%5) \n"
+				"stw     5, 0(%5) \n"
+				"stw     6, 0(%5) \n"
+				"stw     7, 0(%5) \n"
+				"stw     8, 0(%5) \n"
+				"stw     9, 0(%5) \n"
+				: "+b" (src1), "+b" (src2), "+b" (src3), "+b" (src4)
+				: "r" (0x80008000), "b" (wgPipe)
+				: "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9",
+				  "memory");
+		} while (--tiles);
+
+		src1 += rowpitch;
+		src2 += rowpitch;
+		src3 += rowpitch;
+		src4 += rowpitch;
 	}
 
+	GX_RestoreWriteGatherPipe();
+
 	//Initialize texture
-	GX_InitTexObj(&FBtexObj, FBtex, 640, 480, GX_TF_RGB5A3, GX_CLAMP, GX_CLAMP, GX_FALSE); 
-	DCFlushRange(FBtex, 640*480*2);
 	GX_InvalidateTexAll();
+	GX_InitTexObj(&FBtexObj, FBtex, FBtexW, FBtexH, GX_TF_RGB5A3, GX_CLAMP, GX_CLAMP, GX_FALSE); 
 	GX_LoadTexObj(&FBtexObj, GX_TEXMAP0);
 
 	GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR); 
@@ -582,8 +576,14 @@ void VI_GX_renderCpuFramebuffer()
 	Mtx	GXmodelViewIdent;
 	guMtxIdentity(GXmodelViewIdent);
 	GX_LoadPosMtxImm(GXmodelViewIdent,GX_PNMTX0);
-	GX_SetViewport((f32) 0,(f32) 0,(f32) 640,(f32) 480, 0.0f, 1.0f);
-	GX_SetScissor((u32) 0,(u32) 0,(u32) 640,(u32) 480);	//Set to the same size as the viewport.
+	GX_SetViewport((f32) OGL.GXorigX,(f32) OGL.GXorigY,(f32) OGL.GXwidth,(f32) OGL.GXheight, 0.0f, 1.0f);
+	GX_SetScissor((u32) 0,(u32) 0,(u32) OGL.width,(u32) OGL.height);	//Set to the same size as the viewport.
+
+	float u1, v1;
+
+	u1 = (float)VI.width / (float)FBtexW;
+	v1 = (float)VI.height / (float)FBtexH;
+
 	//set vertex description
 	GX_ClearVtxDesc();
 	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX0);
@@ -606,16 +606,14 @@ void VI_GX_renderCpuFramebuffer()
 		GX_Position2f32( 0.0f, 0.0f );
 		GX_TexCoord2f32( 0.0f, 0.0f );
 		GX_Position2f32( 640.0f, 0.0f );
-		GX_TexCoord2f32( 1.0f, 0.0f );
+		GX_TexCoord2f32( u1, 0.0f );
 		GX_Position2f32( 640.0f, 480.0f );
-		GX_TexCoord2f32( 1.0f, 1.0f );
+		GX_TexCoord2f32( u1, v1 );
 		GX_Position2f32( 0.0f, 480.0f );
-		GX_TexCoord2f32( 0.0f, 1.0f );
+		GX_TexCoord2f32( 0.0f, v1 );
 	GX_End();
-	GX_DrawDone();
 
 	__lwp_heap_free(GXtexCache, FBtex);
-//	free(FBtex);
 }
 
 void VI_GX_PreRetraceCallback(u32 retraceCnt)

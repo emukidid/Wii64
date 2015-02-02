@@ -23,6 +23,26 @@
  *
 **/
 
+/*
+ * Copyright (c) 2013 Extrems <metaradil@gmail.com>
+ *
+ * This file is part of Not64.
+ *
+ * Not64 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * Not64 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with Not64; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 #include "../main/winlnxdefs.h"
 #include <gccore.h>
 #include <string.h>
@@ -45,6 +65,7 @@ static unsigned int freq;
 static AESNDPB *voice;
 
 char audioEnabled;
+char scalePitch = 0;
 
 static void aesnd_callback(AESNDPB *pb, uint32_t state)
 {
@@ -92,23 +113,26 @@ EXPORT void CALL AiLenChanged(void)
 	if (audioEnabled) {
 		uint32_t level = IRQ_Disable();
 		
-		void *stream = AudioInfo.RDRAM + (*AudioInfo.AI_DRAM_ADDR_REG & 0xFFFFFF);
-		unsigned int length = *AudioInfo.AI_LEN_REG;
+		char *stream = AudioInfo.RDRAM + (*AudioInfo.AI_DRAM_ADDR_REG & 0xFFFFFF);
+		int length = *AudioInfo.AI_LEN_REG;
 		
 		if (buffered + length < BUFFER_SIZE) {
 			do {
 				int size = MIN(end_ptr - write_ptr, length);
 				memcpy(write_ptr, stream, size);
-				stream = (char *)stream + size;
+				stream += size;
+				length -= size;
 				
 				write_ptr += size;
 				if (write_ptr >= end_ptr)
 					write_ptr = buffer;
 				buffered += size;
-				length -= size;
 			} while (length > 0);
 		}
 	
+		if (scalePitch || Timers.vis > VILimit)
+			AESND_SetVoiceFrequency(voice, freq * (Timers.vis / VILimit));
+			
 		IRQ_Restore(level);
 	}
 }
@@ -129,7 +153,6 @@ EXPORT BOOL CALL InitiateAudio(AUDIO_INFO Audio_Info)
 	
 	AESND_SetVoiceFormat(voice, VOICE_STEREO16);
 	AESND_SetVoiceStream(voice, true);
-	AESND_SetVoiceLoop(voice, true);
 	
 	return TRUE;
 }
@@ -151,12 +174,13 @@ EXPORT void CALL ProcessAlist(void)
 
 void pauseAudio(void)
 {
-	AESND_Pause(true);
+	AESND_SetVoiceLoop(voice, false);
+	AESND_SetVoiceMute(voice, true);
 }
 
 void resumeAudio(void)
 {
-	reset_buffer();
 	AESND_SetVoiceFrequency(voice, freq);
-	AESND_Pause(!audioEnabled);
+	AESND_SetVoiceLoop(voice, !scalePitch);
+	AESND_SetVoiceMute(voice, !audioEnabled);
 }

@@ -1,30 +1,3 @@
-/**
- * Mupen64 hle rsp - main.c
- * Code changes  2010 wii64Team
- * Copyright (C) 2002 Hacktarux
- *
- * Wii64 homepage: http
- * Mupen64 homepage: http://mupen64.emulation64.com
- * email address: hacktarux@yahoo.fr
- *
- *
- * This program is free software; you can redistribute it and/
- * or modify it under the terms of the GNU General Public Li-
- * cence as published by the Free Software Foundation; either
- * version 2 of the Licence, or any later version.
- *
- * This program is distributed in the hope that it will be use-
- * ful, but WITHOUT ANY WARRANTY; without even the implied war-
- * ranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public Licence for more details.
- *
- * You should have received a copy of the GNU General Public
- * Licence along with this program; if not, write to the Free
- * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139,
- * USA.
- *
-**/
-
 #ifdef __WIN32__
 #include <windows.h>
 #include "./winproject/resource.h"
@@ -37,6 +10,7 @@
 #include <string.h>
 #endif
 #include <stdio.h>
+
 #include "../gui/DEBUG.h"
 
 #ifdef __PPC__
@@ -47,9 +21,6 @@
 #include "hle.h"
 
 #include "Audio_#1.1.h"
-#include "musyx.h"
-
-//#define DEBUG_RSP 1
 
 RSP_INFO rsp;
 
@@ -61,36 +32,40 @@ static BOOL firstTime = TRUE;
 void loadPlugin();
 #endif
 
-__declspec(dllexport) void CloseDLL (void) {}
+//void disasm(FILE *f, unsigned int t[0x1000/4]);
 
-__declspec(dllexport) void DllAbout ( HWND hParent ) 
+__declspec(dllexport) void CloseDLL (void)
+{
+}
+
+__declspec(dllexport) void DllAbout ( HWND hParent )
 {
 #ifdef __WIN32__
-	MessageBox(NULL, "Mupen64 HLE RSP plugin v0.2 with Azimers code by Hacktarux", "RSP HLE", MB_OK);
+   MessageBox(NULL, "Mupen64 HLE RSP plugin v0.2 with Azimers code by Hacktarux", "RSP HLE", MB_OK);
 #else
 #ifdef USE_GTK
-	char tMsg[256];
-	GtkWidget *dialog, *label, *okay_button;
+   char tMsg[256];
+   GtkWidget *dialog, *label, *okay_button;
 
-	dialog = gtk_dialog_new();
-	sprintf(tMsg,"Mupen64 HLE RSP plugin v0.2 with Azimers code by Hacktarux");
-	label = gtk_label_new(tMsg);
-	okay_button = gtk_button_new_with_label("OK");
+   dialog = gtk_dialog_new();
+   sprintf(tMsg,"Mupen64 HLE RSP plugin v0.2 with Azimers code by Hacktarux");
+   label = gtk_label_new(tMsg);
+   okay_button = gtk_button_new_with_label("OK");
 
-	gtk_signal_connect_object(GTK_OBJECT(okay_button), "clicked",
-				 GTK_SIGNAL_FUNC(gtk_widget_destroy),
-				 GTK_OBJECT(dialog));
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->action_area),
-			 okay_button);
-	
-	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox),
-			 label);
-	gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
-	gtk_widget_show_all(dialog);
+   gtk_signal_connect_object(GTK_OBJECT(okay_button), "clicked",
+			     GTK_SIGNAL_FUNC(gtk_widget_destroy),
+			     GTK_OBJECT(dialog));
+   gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->action_area),
+		     okay_button);
+
+   gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox),
+		     label);
+   gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+   gtk_widget_show_all(dialog);
 #else
-	char tMsg[256];
-	sprintf(tMsg,"Mupen64 HLE RSP plugin v0.2 with Azimers code by Hacktarux");
-	//fprintf(stderr, "About\n%s\n", tMsg);
+   char tMsg[256];
+   sprintf(tMsg,"Mupen64 HLE RSP plugin v0.2 with Azimers code by Hacktarux");
+   //fprintf(stderr, "About\n%s\n", tMsg);
 #endif
 #endif
 }
@@ -98,71 +73,83 @@ __declspec(dllexport) void DllAbout ( HWND hParent )
 __declspec(dllexport) void DllConfig ( HWND hParent )
 {
 #ifdef __WIN32__
-	if (firstTime)
-	DialogBox(dll_hInstance,
-							MAKEINTRESOURCE(IDD_RSPCONFIG), hParent, ConfigDlgProc);
-	//MessageBox(NULL, "no config", "noconfig", MB_OK);
+    if (firstTime)
+    DialogBox(dll_hInstance,
+                     MAKEINTRESOURCE(IDD_RSPCONFIG), hParent, ConfigDlgProc);
+   //MessageBox(NULL, "no config", "noconfig", MB_OK);
 #endif
 }
 
 __declspec(dllexport) void DllTest ( HWND hParent )
 {
 #ifdef __WIN32__
-	MessageBox(NULL, "no test", "no test", MB_OK);
+   MessageBox(NULL, "no test", "no test", MB_OK);
 #endif
 }
 
 static int audio_ucode_detect(OSTask_t *task)
 {
-	if (*(unsigned long*)(rsp.RDRAM + task->ucode_data + 0) != 0x1) {
-		if (*(unsigned long*)(rsp.RDRAM + task->ucode_data + 0x10) == 0x00000001) {
-	 		return 4;
- 		}
-		else {
-	 		return 3;
- 		}
-	}
-	else {
-		if (*(unsigned long*)(rsp.RDRAM + task->ucode_data + 0x30) == 0xF0000F00) {
-	 		return 1;
- 		}
-		else {
-	 		return 2;
- 		}
-	}
+   if (*(unsigned long*)(rsp.RDRAM + task->ucode_data + 0) != 0x1)
+     {
+	if (*(rsp.RDRAM + task->ucode_data + (0 ^ (3-S8))) == 0xF)
+	  return 4;
+	else
+	  return 3;
+     }
+   else
+     {
+	if (*(unsigned long*)(rsp.RDRAM + task->ucode_data + 0x30) == 0xF0000F00)
+	  return 1;
+	else
+	  return 2;
+     }
 }
 
 extern void (*ABI1[0x20])();
 extern void (*ABI2[0x20])();
 extern void (*ABI3[0x20])();
 
-void (**ABI)();
+void (*ABI[0x20])();
+
 u32 inst1, inst2;
 
 static int audio_ucode(OSTask_t *task)
 {
 	unsigned long *p_alist = (unsigned long*)(rsp.RDRAM + task->data_ptr);
-	unsigned int i, ucode_type = audio_ucode_detect(task);
-	
-	switch(ucode_type) {
-		case 1: // mario ucode
-			ABI = &ABI1[0];
-			break;
-		case 2: // banjo kazooie ucode
-			ABI = &ABI2[0];
-			break;
-		case 3: // zelda ucode
-			ABI = &ABI3[0];
-			break;
-		case 4:	// musy x
-			musyx_task(task);
-			return 0;
-		default: // unknown ucode
-			return -1;
+	unsigned int i;
+
+	switch(audio_ucode_detect(task))
+	{
+	case 1: // mario ucode
+		memcpy( ABI, ABI1, sizeof(ABI[0])*0x20 );
+//		DEBUG_print("Audio Ucode 1: Mario",DBG_RSPINFO1);
+		break;
+	case 2: // banjo kazooie ucode
+		memcpy( ABI, ABI2, sizeof(ABI[0])*0x20 );
+//		DEBUG_print("Audio Ucode 2: Banjo",DBG_RSPINFO1);
+		break;
+	case 3: // zelda ucode
+		memcpy( ABI, ABI3, sizeof(ABI[0])*0x20 );
+//		DEBUG_print("Audio Ucode 3: Zelda",DBG_RSPINFO1);
+		break;
+	default:
+		{
+//		DEBUG_print("Audio Ucode Invalid",DBG_RSPINFO1);
+/*		char s[1024];
+		sprintf(s, "unknown audio\n\tsum:%x", sum);
+#ifdef __WIN32__
+		MessageBox(NULL, s, "unknown task", MB_OK);
+#else
+		printf("%s\n", s);
+#endif*/
+		return -1;
+		}
 	}
-	
-	// Execute the task using the correct HLE funcs
-	for (i = 0; i < (task->data_size/4); i += 2) {
+
+//	data = (short*)(rsp.RDRAM + task->ucode_data);
+
+	for (i = 0; i < (task->data_size/4); i += 2)
+	{
 		inst1 = p_alist[i];
 		inst2 = p_alist[i+1];
 		ABI[inst1 >> 24]();
@@ -173,198 +160,150 @@ static int audio_ucode(OSTask_t *task)
 
 __declspec(dllexport) DWORD DoRspCycles ( DWORD Cycles )
 {
-	OSTask_t *task = (OSTask_t*)(rsp.DMEM + 0xFC0);
-
+   OSTask_t *task = (OSTask_t*)(rsp.DMEM + 0xFC0);
+   unsigned int i, sum=0;
 #ifdef __WIN32__
-	if(firstTime) {
-		firstTime=FALSE;
-		if (SpecificHle)
-				loadPlugin();
-	}
+   if(firstTime)
+   {
+      firstTime=FALSE;
+      if (SpecificHle)
+            loadPlugin();
+   }
 #endif
-	// Process DList
-	if( task->type == 1 && task->data_ptr != 0 && GraphicsHle) {
-		if (rsp.ProcessDlistList != NULL) {
-			rsp.ProcessDlistList();
-		}
-		*rsp.SP_STATUS_REG |= 0x0203;
-		if ((*rsp.SP_STATUS_REG & 0x40) != 0 ) {
-			*rsp.MI_INTR_REG |= 0x1;
-			rsp.CheckInterrupts();
-		}
 
-		*rsp.DPC_STATUS_REG &= ~0x0002;
-		return Cycles;
-	} 
-	// Process AList
-	else if (task->type == 2 && AudioHle) {
+   if( task->type == 1 && task->data_ptr != 0 && GraphicsHle) {
+      if (rsp.ProcessDlistList != NULL) {
+	 rsp.ProcessDlistList();
+      }
+      *rsp.SP_STATUS_REG |= 0x0203;
+      if ((*rsp.SP_STATUS_REG & 0x40) != 0 ) {
+	 *rsp.MI_INTR_REG |= 0x1;
+	 rsp.CheckInterrupts();
+      }
+
+      *rsp.DPC_STATUS_REG &= ~0x0002;
+      return Cycles;
+   } else if (task->type == 2 && AudioHle) {
 #ifdef __WIN32__
-		if (SpecificHle)
-				processAList();
-		else
+      if (SpecificHle)
+            processAList();
+      else
 #endif
-		if (rsp.ProcessAlistList != NULL) {
-			rsp.ProcessAlistList();
-		}
-		*rsp.SP_STATUS_REG |= 0x0203;
-		if ((*rsp.SP_STATUS_REG & 0x40) != 0 ) {
-			*rsp.MI_INTR_REG |= 0x1;
-			rsp.CheckInterrupts();
-		}
-		return Cycles;
-	} 
-	// Process CPU Framebuffer
-	else if (task->type == 7) {
-		rsp.ShowCFB();
-	}
+      if (rsp.ProcessAlistList != NULL) {
+	 rsp.ProcessAlistList();
+      }
+      *rsp.SP_STATUS_REG |= 0x0203;
+      if ((*rsp.SP_STATUS_REG & 0x40) != 0 ) {
+	 *rsp.MI_INTR_REG |= 0x1;
+	 rsp.CheckInterrupts();
+      }
+      return Cycles;
+   } else if (task->type == 7) {
+      rsp.ShowCFB();
+   }
 
-	// Check for Interrupts if required
-	*rsp.SP_STATUS_REG |= 0x203;
-	if ((*rsp.SP_STATUS_REG & 0x40) != 0 ) {
-		*rsp.MI_INTR_REG |= 0x1;
-		rsp.CheckInterrupts();
-	 } 
+   *rsp.SP_STATUS_REG |= 0x203;
+   if ((*rsp.SP_STATUS_REG & 0x40) != 0 )
+     {
+	*rsp.MI_INTR_REG |= 0x1;
+	rsp.CheckInterrupts();
+     }
 
-	// Boot code task (TODO why is ucode_size messed up for Pokemon Stadium? 0x8000D48C)
-	if ((task->ucode_size > 0x1000) && (task->ucode_size != 0x8000D48C)) {
-		switch(rsp.IMEM[4]) {
-			case 0x16: // banjo tooie (U) boot code
-			{
-#ifdef DEBUG_RSP
-				DEBUG_print("RSP: Tooie (U) Boot\r\n", DBG_USBGECKO);
-#endif
-				int i,j;
-			 	memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
-			 	for (j=0; j<0xfc; j++) {
-					for (i=0; i<8; i++) {
-						*(rsp.RDRAM+((0x2fb1f0+j*0xff0+i)^S8))=*(rsp.IMEM+((0x120+j*8+i)^S8));
-					}
-				}
-			 	return Cycles;
-			}
-			case 0x26: // banjo tooie (E) + zelda oot (E) boot code
-			{
-#ifdef DEBUG_RSP
-				DEBUG_print("RSP: Tooie,OOT (E) Boot\r\n", DBG_USBGECKO);
-#endif
-				int i,j;
-			 	memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
-			 	for (j=0; j<0xfc; j++) {
-					for (i=0; i<8; i++) {
-						*(rsp.RDRAM+((0x2fb1f0+j*0xff0+i)^S8))=*(rsp.IMEM+((0x120+j*8+i)^S8));
-					}
-				}
-			 	return Cycles;
-			}
-			default:
-			{
-#ifdef DEBUG_RSP
-				unsigned int sum = 0, i = 0;
-				// Calculate the sum of the task
-				for (i=0; i<(0x1000/2); i++) {
-					sum += *(rsp.IMEM + i);
-				}
-				sprintf(txtbuffer, "RSP: Unknown Boot code task! size: %08X sum: %08X\r\n",(task->ucode_size),sum);
-				DEBUG_print(txtbuffer, DBG_USBGECKO);
-#endif
-			}
-				break;
-		}
-	}
-	// Audio / JPEG task
-	else {
-		switch(task->type) {
-			case 2: // audio
-#ifdef DEBUG_RSP
-					DEBUG_print("RSP: Audio ucode\r\n", DBG_USBGECKO);
-#endif
-				if (!audio_ucode(task)) {
-					return Cycles;
-				} 
-#ifdef DEBUG_RSP
-				else {
-					unsigned int sum = 0, i = 0;
-					for (i=0; i<(task->ucode_size/2); i++) {
-						sum += *(rsp.RDRAM + task->ucode + i);
-					}
-					sprintf(txtbuffer, "RSP: Unknown Audio task sum: %08X\r\n",sum);
-					DEBUG_print(txtbuffer, DBG_USBGECKO);
-				}
-				break;
-#endif
-			case 4: // jpeg
-		 	{
-			 	
-			 	switch(*(u8*)(rsp.RDRAM + task->ucode)) {
-					case 0xE8: // used by zelda during boot
-#ifdef DEBUG_RSP
-		 				DEBUG_print("RSP: Zelda Boot\r\n", DBG_USBGECKO);
-#endif
-		 				*rsp.SP_STATUS_REG |= 0x200;
-		 				return Cycles;
-					case 0x8C: // uncompress
-#ifdef DEBUG_RSP
-		 				DEBUG_print("RSP: JPEG Uncompress\r\n", DBG_USBGECKO);
-#endif
-		 				jpg_uncompress(task);
-		 				return Cycles;
-					default:	// unknown
-					{
-#ifdef DEBUG_RSP
-						unsigned int sum = 0, i = 0;
-						for (i=0; i<(task->ucode_size/2); i++) {
-							sum += *(rsp.RDRAM + task->ucode + i);
-						}
-						sprintf(txtbuffer, "RSP: Unknown JPEG task sum: %08X\r\n",sum);
-						DEBUG_print(txtbuffer, DBG_USBGECKO);
-#endif
-						break;
-					}
-				}
-			}
-			default:
-			{
-#ifdef DEBUG_RSP
-				unsigned int sum = 0, i = 0;
-				for (i=0; i<(task->ucode_size/2); i++) {
-					sum += *(rsp.RDRAM + task->ucode + i);
-				}
-				sprintf(txtbuffer, "Unknown task! type: %i sum: %08X\r\n",task->type, sum);
-				DEBUG_print(txtbuffer, DBG_USBGECKO);
-#endif
-			}
-				break;
-		}
-		memcpy(rsp.DMEM, rsp.RDRAM+task->ucode_data, task->ucode_data_size);
-	    memcpy(rsp.IMEM+0x80, rsp.RDRAM+task->ucode, 0xF7F);
-	}
+   if (task->ucode_size <= 0x1000)
+     for (i=0; i<(task->ucode_size/2); i++)
+       sum += *(rsp.RDRAM + task->ucode + i);
+   else
+     for (i=0; i<(0x1000/2); i++)
+       sum += *(rsp.IMEM + i);
 
 
-	return Cycles;
+   if (task->ucode_size > 0x1000)
+     {
+	switch(sum)
+	  {
+	   case 0x9E2: // banjo tooie (U) boot code
+	       {
+		  int i,j;
+		  memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
+		  for (j=0; j<0xfc; j++)
+		    for (i=0; i<8; i++)
+		      *(rsp.RDRAM+((0x2fb1f0+j*0xff0+i)^S8))=*(rsp.IMEM+((0x120+j*8+i)^S8));
+	       }
+	     return Cycles;
+	     break;
+	   case 0x9F2: // banjo tooie (E) + zelda oot (E) boot code
+	       {
+		  int i,j;
+		  memcpy(rsp.IMEM + 0x120, rsp.RDRAM + 0x1e8, 0x1e8);
+		  for (j=0; j<0xfc; j++)
+		    for (i=0; i<8; i++)
+		      *(rsp.RDRAM+((0x2fb1f0+j*0xff0+i)^S8))=*(rsp.IMEM+((0x120+j*8+i)^S8));
+	       }
+	     return Cycles;
+	     break;
+	  }
+     }
+   else
+     {
+	switch(task->type)
+	  {
+	   case 2: // audio
+		 if (audio_ucode(task) == 0)
+		   return Cycles;
+		 break;
+	   case 4: // jpeg
+	     switch(sum)
+	       {
+		case 0x278: // used by zelda during boot
+		  *rsp.SP_STATUS_REG |= 0x200;
+		  return Cycles;
+		  break;
+		case 0x2e4fc: // uncompress
+		  jpg_uncompress(task);
+		  return Cycles;
+		  break;
+		default:
+		    {
+		       char s[1024];
+		       sprintf(s, "unknown jpeg:\n\tsum:%x", sum);
+#ifdef __WIN32__
+		       MessageBox(NULL, s, "unknown task", MB_OK);
+#else
+//		       printf("%s\n", s);
+#endif
+		    }
+	       }
+	     break;
+	  }
+     }
+
+   return Cycles;
 }
 
 __declspec(dllexport) void GetDllInfo ( PLUGIN_INFO * PluginInfo )
 {
-	PluginInfo->Version = 0x0101;
-	PluginInfo->Type = PLUGIN_TYPE_RSP;
-	strcpy(PluginInfo->Name, "Hacktarux/Azimer hle rsp plugin");
-	PluginInfo->NormalMemory = TRUE;
-	PluginInfo->MemoryBswaped = TRUE;
+   PluginInfo->Version = 0x0101;
+   PluginInfo->Type = PLUGIN_TYPE_RSP;
+   strcpy(PluginInfo->Name, "Hacktarux/Azimer hle rsp plugin");
+   PluginInfo->NormalMemory = TRUE;
+   PluginInfo->MemoryBswaped = TRUE;
 }
 
 __declspec(dllexport) void InitiateRSP ( RSP_INFO Rsp_Info, DWORD * CycleCount)
 {
-	rsp = Rsp_Info;
+   rsp = Rsp_Info;
 }
 
 __declspec(dllexport) void RomClosed (void)
 {
-	int i;
-	for (i=0; i<0x1000; i++) {
-		rsp.DMEM[i] = rsp.IMEM[i] = 0;
-	}
-	init_ucode2();
+   int i;
+   for (i=0; i<0x1000; i++)
+     {
+	rsp.DMEM[i] = rsp.IMEM[i] = 0;
+     }
+   //init_ucode1();
+   init_ucode2();
 #ifdef __WIN32__
-	firstTime = TRUE;
+   firstTime = TRUE;
 #endif
 }

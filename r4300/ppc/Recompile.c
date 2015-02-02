@@ -320,31 +320,17 @@ void init_block(PowerPC_block* ppc_block, unsigned int paddr){
 		}
 
 	} else {
-		unsigned int start = ppc_block->start_address;
-		unsigned int end   = ppc_block->end_address;
-		if(start >= 0x80000000 && end < 0xa0000000 &&
-		   invalid_code_get((start+0x20000000)>>12)){
-			invalid_code_set((start+0x20000000)>>12, 0);
-			if(!blocks[(start+0x20000000)>>12]){
-				blocks[(start+0x20000000)>>12] = malloc(sizeof(PowerPC_block));
-				//blocks[(start+0x20000000)>>12]->code_addr = ppc_block->code_addr;
-				blocks[(start+0x20000000)>>12]->funcs = NULL;
-				blocks[(start+0x20000000)>>12]->start_address = (start+0x20000000) & ~0xFFF;
-				blocks[(start+0x20000000)>>12]->end_address		= ((start+0x20000000) & ~0xFFF) + 0x1000;
-				init_block(blocks[(start+0x20000000)>>12], paddr);
-			}
-		}
-		if(start >= 0xa0000000 && end < 0xc0000000 &&
-		   invalid_code_get((start-0x20000000)>>12)){
-			invalid_code_set((start-0x20000000)>>12, 0);
-			if(!blocks[(start-0x20000000)>>12]){
-				blocks[(start-0x20000000)>>12] = malloc(sizeof(PowerPC_block));
-				//blocks[(start-0x20000000)>>12]->code_addr = ppc_block->code_addr;
-				blocks[(start-0x20000000)>>12]->funcs = NULL;
-				blocks[(start-0x20000000)>>12]->start_address		= (start-0x20000000) & ~0xFFF;
-				blocks[(start-0x20000000)>>12]->end_address			= ((start-0x20000000) & ~0xFFF) + 0x1000;
-				init_block(blocks[(start-0x20000000)>>12], paddr);
-			}
+		unsigned long paddr;
+
+		paddr = ppc_block->start_address ^ 0x20000000;
+		invalid_code_set(paddr>>12, 0);
+		if(!blocks[paddr>>12]){
+		     blocks[paddr>>12] = malloc(sizeof(PowerPC_block));
+		     //blocks[paddr>>12]->code_addr = ppc_block->code_addr;
+		     blocks[paddr>>12]->funcs = NULL;
+		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
+		     blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
+		     init_block(blocks[paddr>>12], paddr);
 		}
 	}
 	invalid_code_set(ppc_block->start_address>>12, 0);
@@ -372,15 +358,10 @@ void deinit_block(PowerPC_block* ppc_block){
 		}
 
 	} else {
-		unsigned int start = ppc_block->start_address;
-		unsigned int end   = ppc_block->end_address;
-		if(start >= 0x80000000 && end < 0xa0000000 && blocks[(start+0x20000000)>>12]){
-			invalid_code_set((start+0x20000000)>>12, 1);
+		unsigned long paddr = ppc_block->start_address ^ 0x20000000;
+		if(blocks[paddr>>12]){
+		     invalid_code_set(paddr>>12, 1);
 		}
-		if(start >= 0xa0000000 && end < 0xc0000000 && blocks[(start-0x20000000)>>12]){
-			invalid_code_set((start-0x20000000)>>12, 1);
-		}
-		init_block(ppc_block, start);
 	}
 }
 
@@ -466,11 +447,10 @@ static int pass0(PowerPC_block* ppc_block){
 	// If the function continues into the next block, we'll need to use
 	//   a jump pad at the end of the block.
 	unsigned int pc = addr_first >> 2;
-	int i;
 	// Set this to the end address of the block for is_j_out
 	addr_last = ppc_block->end_address;
 	// Zero out the jump destinations table
-	for(i=0; i<1024; ++i) isJmpDst[i] = 0;
+	memset(isJmpDst, 0, 1024);
 	// Go through each instruction and map every branch instruction's destination
 	for(src = src_first; (pc < addr_last >> 2); ++src, ++pc){
 		int opcode = MIPS_GET_OPCODE(*src);
@@ -497,7 +477,7 @@ static int pass0(PowerPC_block* ppc_block){
 		          opcode == MIPS_OPCODE_B     ||
 		          (opcode == MIPS_OPCODE_COP1 &&
 		           MIPS_GET_RS(*src) == MIPS_FRMT_BC)){
-			int bd = MIPS_GET_IMMED(*src);
+			short bd = MIPS_GET_IMMED(*src);
 			src+=2; ++pc;
 			bd |= (bd & 0x8000) ? 0xFFFF0000 : 0; // sign extend
 			if(!is_j_out(bd, 0)){
@@ -537,18 +517,16 @@ unsigned long jump_target;
 
 static void genJumpPad(void){
 	// noCheckInterrupt = 1
-	GEN_LIS(3, extractUpper16(&noCheckInterrupt));
-	GEN_ADDI(3, 3, extractLower16(&noCheckInterrupt));
-	GEN_LI(0, 0, 1);
-	GEN_STW(0, 0, 3);
+	GEN_LI(R0, 1);
+	GEN_STW(R0, R4300OFF_NOCHKINTR, DYNAREG_R4300);
 	
 	// TODO: I could link to the next block here
-	//       When I do, I need to ensure that noCheckInterrupt is cleared
+	//       When I do, I need to ensure that r4300.noCheckInterrupt is cleared
 	
 	// Set the next address to the first address in the next block if
 	//   we've really reached the end of the block, not jumped to the pad
-	GEN_LIS(3, extractUpper16((void*)(get_src_pc()+4)));
-	GEN_ADDI(3, 3, extractLower16((void*)(get_src_pc()+4)));
+	GEN_LIS(R3, extractUpper16((void*)(get_src_pc()+4)));
+	GEN_ADDI(R3, R3, extractLower16((void*)(get_src_pc()+4)));
 
 	// return destination
 	GEN_BLR(0);

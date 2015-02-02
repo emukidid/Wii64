@@ -8,7 +8,7 @@
 #else
 #include "../gc_memory/MEM2.h"
 #endif
-unsigned char *invalid_code = (unsigned char *)(INVCODE_LO);
+unsigned char *const invalid_code = (unsigned char *)(INVCODE_LO);
 
 int inline invalid_code_get(int block_num){
 	return invalid_code[block_num];

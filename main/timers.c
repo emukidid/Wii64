@@ -13,12 +13,12 @@
 #include "gamehacks.h"
 
 timers Timers = {0.0, 0.0, 0, 1, 0, 100};
-static float VILimit = 60.0;
-static double VILimitMicroseconds = 1000000.0/60.0;
+float VILimit = 60.0;
+double VILimitMicroseconds = 1000000.0/60.0;
 
 int GetVILimit(void)
 {
-	switch (ROM_HEADER->Country_code&0xFF)
+	switch (ROM_HEADER.Country_code&0xFF)
 	{
 		// PAL codes
 		case 0x44:
@@ -64,9 +64,14 @@ typedef void (*GameSpecificHack) (void);
 
 void new_frame(void) {
 	DWORD CurrentFPSTime;
-	static DWORD LastFPSTime;
 	static DWORD CounterTime;
 	static int Fps_Counter=0;
+	
+	if (r4300.stop) {
+		CounterTime = ticks_to_microsecs(gettick());
+		Fps_Counter = 0;
+		return;
+	}
 	
 	//if (!Config.showFPS) return;
 	Fps_Counter++;
@@ -83,9 +88,6 @@ void new_frame(void) {
 		CounterTime = ticks_to_microsecs(gettick());
 		Fps_Counter = 0;
 	}
-
-	LastFPSTime = CurrentFPSTime;
-	Timers.lastFrameTime = CurrentFPSTime;
 	// Apply game specific hacks until we resolve actual issues in the core!
 	if(GetGameSpecificHack()) {
 		GameSpecificHack hack = (GameSpecificHack)GetGameSpecificHack();
@@ -102,6 +104,12 @@ void new_vi(void) {
 	static int VI_Counter = 0;
 	static int VI_WaitCounter = 0;
 	long time;
+	
+	if (r4300.stop) {
+		CounterTime = ticks_to_microsecs(gettick());
+		VI_Counter = 0;
+		return;
+	}
 
 	start_section(IDLE_SECTION);
 //	if ( (!Config.showVIS) && (!Config.limitFps) ) return;
@@ -143,14 +151,6 @@ void new_vi(void) {
 	}
 
 	LastFPSTime = CurrentFPSTime ;
-	Timers.lastViTime = CurrentFPSTime;
     end_section(IDLE_SECTION);
 }
 
-void TimerUpdate(void) {
-	DWORD CurrentTime = ticks_to_microsecs(gettick());
-	if (CurrentTime - Timers.lastFrameTime > 1000000)
-		Timers.fps = 0.0f;
-	if (CurrentTime - Timers.lastViTime > 1000000) 
-		Timers.vis = 0.0f;
-}

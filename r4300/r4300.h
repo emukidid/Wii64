@@ -55,11 +55,13 @@ typedef struct {
 	unsigned int  next_interrupt, cic_chip;	//944->952
 	unsigned long delay_slot, skip_jump;	//952->960
 	int           stop, llbit;				//960->968
-	tlb	          tlb_e[32];				//968->2504
-	int			  vi_field;			//2504->2508
-	unsigned long next_vi;			//2508->2512
+	tlb	          tlb_e[32];				//968->2760
+	int			  vi_field;			//2760
+	unsigned long next_vi;			//2764
+	unsigned int  nextLRU;			//2768
+	int           noCheckInterrupt; //2772
 } R4300;
-extern R4300 r4300;
+extern R4300 r4300 __attribute__((section(".sbss")));	//Why?
 
 #define local_rs (r4300.local_gpr[0])
 #define local_rt (r4300.local_gpr[1])
@@ -69,7 +71,7 @@ extern R4300 r4300;
 extern precomp_instr *PC;
 #ifdef PPC_DYNAREC
 #include "ppc/Recompile.h"
-extern PowerPC_block **blocks;
+extern PowerPC_block **const blocks;
 extern PowerPC_block *actual;
 #else
 extern precomp_block *blocks[0x100000], *actual;

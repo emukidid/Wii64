@@ -114,6 +114,18 @@ enum screenMode
 	SCREENMODE_16x9_PILLARBOX
 };
 
+extern char videoMode;
+enum videoMode
+{
+	VIDEOMODE_AUTO=0,
+	VIDEOMODE_PAL60,
+	VIDEOMODE_240P,
+	VIDEOMODE_480P,
+	VIDEOMODE_PAL,
+	VIDEOMODE_288P,
+	VIDEOMODE_576P
+};
+
 extern char padAutoAssign;
 enum padAutoAssign
 {

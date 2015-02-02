@@ -42,6 +42,7 @@ extern "C" {
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-CARD.h"
+#include "../main/guifuncs.h"
 }
 
 void Func_LoadROM();
@@ -252,6 +253,8 @@ void Func_PlayGame()
 #ifdef DEBUGON
 	_break();
 #endif
+	new_frame();
+	new_vi();
 	go();
 #ifdef DEBUGON
 	_break();
@@ -264,7 +267,6 @@ void Func_PlayGame()
 	menuActive = 1;
 	pauseInput();
 	pauseAudio();
-  continueRemovalThread();
 	
   if(autoSave==AUTOSAVE_ENABLE) {
     if(flashramWritten || sramWritten || eepromWritten || mempakWritten) {  //something needs saving
@@ -321,6 +323,7 @@ void Func_PlayGame()
       
     }
   }
+	continueRemovalThread();
 	FRAME_BUTTONS[5].buttonString = FRAME_STRINGS[6];
 	menu::Cursor::getInstance().clearCursorFocus();
 }

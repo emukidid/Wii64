@@ -97,6 +97,7 @@ static button_t analog_sources[] = {
 static button_t menu_combos[] = {
 	{ 0, CLASSIC_CTRL_BUTTON_X|CLASSIC_CTRL_BUTTON_Y, "X+Y" },
 	{ 1, CLASSIC_CTRL_BUTTON_ZL|CLASSIC_CTRL_BUTTON_ZR, "ZL+ZR" },
+	{ 2, CLASSIC_CTRL_BUTTON_HOME, "Home" },
 };
 
 static unsigned int getButtons(classic_ctrl_t* controller, float maxLMag, float maxRMag)
@@ -288,8 +289,8 @@ controller_t controller_Classic =
 	    .DL        = &buttons[2],  // D-Pad Left
 	    .DR        = &buttons[3],  // D-Pad Right
 	    .DD        = &buttons[4],  // D-Pad Down
-	    .Z         = &buttons[7],  // Left Z
-	    .L         = &buttons[5],  // Left Trigger
+	    .Z         = &buttons[5],  // Left Z
+	    .L         = &buttons[8],  // Left Trigger
 	    .R         = &buttons[6],  // Right Trigger
 	    .A         = &buttons[9],  // A
 	    .B         = &buttons[10], // B
@@ -299,7 +300,7 @@ controller_t controller_Classic =
 	    .CR        = &buttons[18], // Right Stick Right
 	    .CD        = &buttons[19], // Right Stick Down
 	    .analog    = &analog_sources[0],
-	    .exit      = &menu_combos[0],
+	    .exit      = &menu_combos[2],
 	    .invertedY = 0,
 	  }
 	 };
