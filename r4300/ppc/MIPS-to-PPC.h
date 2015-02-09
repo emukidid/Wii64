@@ -40,7 +40,7 @@ extern void       set_next_dst(PowerPC_instr);
 extern PowerPC_instr* get_curr_dst(void);
 extern void unget_last_src(void);
 extern void nop_ignored(void);
-extern int is_j_dst(void);
+extern int is_j_dst(int i);
 extern unsigned int get_src_pc(void);
 // Adjust code_addr to not include flushing of previous mappings
 void reset_code_addr(void);

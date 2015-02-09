@@ -82,7 +82,7 @@ int has_next_src(void){ return (src_last-src) > 0; }
  //   NOP in a delay slot
  void nop_ignored(void){ if(src<src_last) code_addr[src-1-src_first] = ppc_dst; }
  // Returns whether the current src instruction is branched to
- int is_j_dst(void){ return isJmpDst[(get_src_pc()&0xfff)>>2]; }
+ int is_j_dst(int i){ return isJmpDst[i + ((get_src_pc()&0xfff)>>2)]; }
 // Returns the MIPS PC
 unsigned int get_src_pc(void){ return addr_first + ((src-1-src_first)<<2); }
 void set_next_dst(PowerPC_instr i){ *(ppc_dst++) = i; ++code_length; }
@@ -138,14 +138,9 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 	code_length = 0;
 
 	// Create a PowerPC_func for this function
-	PowerPC_func* func = malloc(sizeof(PowerPC_func));
+	PowerPC_func* func = calloc(1, sizeof(PowerPC_func));
 	func->start_addr = addr_first;
 	func->end_addr = addr_last;
-	func->code = NULL;
-	func->holes = NULL;
-	func->links_in = NULL;
-	func->links_out = NULL;
-	func->code_addr = NULL;
 	// We'll need to insert this func into the block
 	int needInsert = 1;
 
@@ -287,66 +282,49 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 	return func;
 }
 
-void init_block(PowerPC_block* ppc_block, unsigned int paddr){
-	unsigned int offset = (paddr & 0x03FFFFFF) >> 2;
-	if(paddr > 0xb0000000) ppc_block->mips_code = 0;	// ROM Cache in use.
-	else if(paddr >= 0xa4000000) ppc_block->mips_code = (MIPS_instr*)(&SP_DMEM + offset);
-	else ppc_block->mips_code = (MIPS_instr*)(&rdram[0] + offset);
+void init_block(PowerPC_block* ppc_block){
+	PowerPC_block* temp_block;
 	
 	// FIXME: Equivalent addresses should point to the same code/funcs?
 	if(ppc_block->end_address < 0x80000000 || ppc_block->start_address >= 0xc0000000){
-		unsigned long paddr;
-
-		paddr = virtual_to_physical_address(ppc_block->start_address, 2);
+		unsigned long paddr = virtual_to_physical_address(ppc_block->start_address, 2);
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
-  		   blocks[paddr>>12] = malloc(sizeof(PowerPC_block));
-		     //blocks[paddr>>12]->code_addr = ppc_block->code_addr;
-		     blocks[paddr>>12]->funcs = NULL;
-		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
-		     blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
-		     init_block(blocks[paddr>>12], paddr);
+			blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			blocks[paddr>>12]->start_address = paddr & ~0xFFF;
+			blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
+			init_block(blocks[paddr>>12]);
 		}
 
 		paddr += ppc_block->end_address - ppc_block->start_address - 4;
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
-  		   blocks[paddr>>12] = malloc(sizeof(PowerPC_block));
-		     //blocks[paddr>>12]->code_addr = ppc_block->code_addr;
-		     blocks[paddr>>12]->funcs = NULL;
-		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
-		     blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
-		     init_block(blocks[paddr>>12], paddr + 0xffc);
+			blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			blocks[paddr>>12]->start_address = paddr & ~0xFFF;
+			blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
+			init_block(blocks[paddr>>12]);
 		}
-
 	} else {
-		unsigned long paddr;
-
-		paddr = ppc_block->start_address ^ 0x20000000;
+		unsigned long paddr = ppc_block->start_address ^ 0x20000000;
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
-		     blocks[paddr>>12] = malloc(sizeof(PowerPC_block));
-		     //blocks[paddr>>12]->code_addr = ppc_block->code_addr;
-		     blocks[paddr>>12]->funcs = NULL;
+		     blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
 		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
 		     blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
-		     init_block(blocks[paddr>>12], paddr);
+		     init_block(blocks[paddr>>12]);
 		}
 	}
+
 	invalid_code_set(ppc_block->start_address>>12, 0);
 }
 
 void deinit_block(PowerPC_block* ppc_block){
 
 	invalidate_block(ppc_block);
-	invalid_code_set(ppc_block->start_address>>12, 1);
 
 	// We need to mark all equivalent addresses as invalid
 	if(ppc_block->end_address < 0x80000000 || ppc_block->start_address >= 0xc0000000){
-		unsigned long paddr;
-
-		paddr = virtual_to_physical_address(ppc_block->start_address, 2);
-		init_block(ppc_block, paddr);
+		unsigned long paddr = virtual_to_physical_address(ppc_block->start_address, 2);
 		
 		if(blocks[paddr>>12]){
 		     invalid_code_set(paddr>>12, 1);
@@ -356,7 +334,6 @@ void deinit_block(PowerPC_block* ppc_block){
 		if(blocks[paddr>>12]){
 		     invalid_code_set(paddr>>12, 1);
 		}
-
 	} else {
 		unsigned long paddr = ppc_block->start_address ^ 0x20000000;
 		if(blocks[paddr>>12]){
@@ -454,6 +431,7 @@ static int pass0(PowerPC_block* ppc_block){
 	// Go through each instruction and map every branch instruction's destination
 	for(src = src_first; (pc < addr_last >> 2); ++src, ++pc){
 		int opcode = MIPS_GET_OPCODE(*src);
+		int func = MIPS_GET_FUNC(*src);
 		int index = pc - (ppc_block->start_address >> 2);
 		if(opcode == MIPS_OPCODE_J || opcode == MIPS_OPCODE_JAL){
 			unsigned int li = MIPS_GET_LI(*src);
@@ -490,10 +468,12 @@ static int pass0(PowerPC_block* ppc_block){
 		} else if(opcode == MIPS_OPCODE_R &&
 		          (MIPS_GET_FUNC(*src) == MIPS_FUNC_JR ||
 		           MIPS_GET_FUNC(*src) == MIPS_FUNC_JALR)){
-			src+=2, pc+=2;
-			break;
+			++src, ++pc;
+			if(func == MIPS_FUNC_JALR && index + 2 < 1024)
+				isJmpDst[ index + 2 ] = 1;
+				if(func == MIPS_FUNC_JR){ ++src, ++pc; break; }
 		} else if(opcode == MIPS_OPCODE_COP0 &&
-		          MIPS_GET_FUNC(*src) == MIPS_FUNC_ERET){
+		          func == MIPS_FUNC_ERET){
 			++src, ++pc;
 			break;
 		}
@@ -518,7 +498,7 @@ unsigned long jump_target;
 static void genJumpPad(void){
 	// noCheckInterrupt = 1
 	GEN_LI(R0, 1);
-	GEN_STW(R0, R4300OFF_NOCHKINTR, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,noCheckInterrupt), DYNAREG_R4300);
 	
 	// TODO: I could link to the next block here
 	//       When I do, I need to ensure that r4300.noCheckInterrupt is cleared
@@ -542,6 +522,7 @@ void invalidate_block(PowerPC_block* ppc_block){
 		return NULL;
 	}
 	ppc_block->funcs = free_tree(ppc_block->funcs);
+	init_block(ppc_block);
 }
 
 int func_was_freed(PowerPC_func* func){

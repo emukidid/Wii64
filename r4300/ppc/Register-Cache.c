@@ -52,18 +52,18 @@ static int availableRegs[32];
 // Actually perform the store for a dirty register mapping
 static void _flushRegister(int gpr){
 	// Store the LSW
-	GEN_STW(regMap[gpr].map.lo, (gpr*8+4)+R4300OFF_GPR, DYNAREG_R4300);
+	GEN_STW(regMap[gpr].map.lo, (gpr*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
 	
 	if(regMap[gpr].map.hi >= 0){
 		// Simply store the mapped MSW
-		GEN_STW(regMap[gpr].map.hi, (gpr*8)+R4300OFF_GPR, DYNAREG_R4300);
+		GEN_STW(regMap[gpr].map.hi, (gpr*8)+offsetof(R4300,gpr), DYNAREG_R4300);
 	} else if(regMap[gpr].sign){
 		// Sign extend to 64-bits
 		GEN_SRAWI(R0, regMap[gpr].map.lo, 31);
 		// Store the MSW
-		GEN_STW(R0, (gpr*8)+R4300OFF_GPR, DYNAREG_R4300);
+		GEN_STW(R0, (gpr*8)+offsetof(R4300,gpr), DYNAREG_R4300);
 	} else {
-		GEN_STW(DYNAREG_ZERO, (gpr*8)+R4300OFF_GPR, DYNAREG_R4300);
+		GEN_STW(DYNAREG_ZERO, (gpr*8)+offsetof(R4300,gpr), DYNAREG_R4300);
 	}
 }
 // Find an available HW reg or -1 for none
@@ -182,14 +182,14 @@ int mapRegister(int reg){
 	// Iterate over the HW registers and find one that's available
 	int available = getAvailableHWReg();
 	if(available >= 0){
-		GEN_LWZ(available, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
+		GEN_LWZ(available, (reg*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
 		return regMap[reg].map.lo = available;
 	}
 	// We didn't find an available register, so flush one
 	RegMapping lru = flushLRURegister();
 	if(lru.hi >= 0) availableRegs[lru.hi] = 1;
 	// And load the registers value to the register we flushed
-	GEN_LWZ(lru.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
+	GEN_LWZ(lru.lo, (reg*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
 	return regMap[reg].map.lo = lru.lo;
 }
 
@@ -240,8 +240,8 @@ RegMapping mapRegister64(int reg){
 		regMap[reg].map.hi = lru.lo;
 	}
 	// Load the values into the registers
-	GEN_LWZ(regMap[reg].map.hi, (reg*8)+R4300OFF_GPR, DYNAREG_R4300);
-	GEN_LWZ(regMap[reg].map.lo, (reg*8+4)+R4300OFF_GPR, DYNAREG_R4300);
+	GEN_LWZ(regMap[reg].map.hi, (reg*8)+offsetof(R4300,gpr), DYNAREG_R4300);
+	GEN_LWZ(regMap[reg].map.lo, (reg*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
 	// Return the mapping
 	return regMap[reg].map;
 }
@@ -317,10 +317,10 @@ static int availableFPRs[32];
 static void _flushFPR(int reg){
 	// Store the register to memory (indirectly)
 	if(fprMap[reg].dbl){
-		GEN_LWZ(R0, (reg*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+		GEN_LWZ(R0, (reg*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 		GEN_STFDX(fprMap[reg].map, 0, R0);
 	} else {
-		GEN_LWZ(R0, (reg*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+		GEN_LWZ(R0, (reg*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 		GEN_STFSX(fprMap[reg].map, 0, R0);
 	}
 }
@@ -386,10 +386,10 @@ int mapFPR(int fpr, int dbl){
 	
 	// Load the register from memory (indirectly)
 	if(dbl){
-		GEN_LWZ(R0, (fpr*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+		GEN_LWZ(R0, (fpr*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 		GEN_LFDX(fprMap[fpr].map, 0, R0);
 	} else {
-		GEN_LWZ(R0, (fpr*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+		GEN_LWZ(R0, (fpr*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 		GEN_LFSX(fprMap[fpr].map, 0, R0);
 	}
 	

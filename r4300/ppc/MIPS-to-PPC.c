@@ -264,7 +264,7 @@ static int branch(short offset, condition cond, int link, int likely){
 		}
 		GEN_LIS(R3, extractUpper16(get_src_pc() + (offset<<2)));
 		GEN_ADDI(R3, R3, extractLower16(get_src_pc() + (offset<<2)));
-		GEN_STW(R3, 0+R4300OFF_LADDR, DYNAREG_R4300);
+		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 
 		// If taking the interrupt, return to the trampoline
 		GEN_BLELR(CR3, 0);
@@ -285,7 +285,7 @@ static int branch(short offset, condition cond, int link, int likely){
 	// Unless the delay slot is in the next block, in which case there's nothing to skip
 	//   Testing is_j_out with an offset of 0 checks whether the delay slot is out
 	if(delaySlot){
-		if(is_j_dst() && !is_j_out(0, 0)){
+		if(is_j_dst(0) && !is_j_out(0, 0)){
 			// Step over the already executed delay slot if the branch isn't taken
 			// b delaySlot+1
 			GEN_B(delaySlot+1, 0, 0);
@@ -355,7 +355,7 @@ static int J(MIPS_instr mips){
 		// r4300.last_pc = naddr
 		GEN_LIS(R3, extractUpper16(naddr));
 		GEN_ADDI(R3, R3, extractLower16(naddr));
-		GEN_STW(R3, 0+R4300OFF_LADDR, DYNAREG_R4300);
+		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 
 		// if(r4300.next_interrupt <= Count) return;
 		GEN_BLELR(CR3, 0);
@@ -367,7 +367,7 @@ static int J(MIPS_instr mips){
 #endif
 
 	// Let's still recompile the delay slot in place in case its branched to
-	if(delaySlot){ if(is_j_dst()){ unget_last_src(); delaySlotNext = 2; } }
+	if(delaySlot){ if(is_j_dst(0)){ unget_last_src(); delaySlotNext = 2; } }
 	else nop_ignored();
 
 #ifdef INTERPRET_J
@@ -418,7 +418,7 @@ static int JAL(MIPS_instr mips){
 		// r4300.last_pc = naddr
 		GEN_LIS(R3, extractUpper16(naddr));
 		GEN_ADDI(R3, R3, extractLower16(naddr));
-		GEN_STW(R3, 0+R4300OFF_LADDR, DYNAREG_R4300);
+		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 
 		/// if(r4300.next_interrupt <= Count) return;
 		GEN_BLELR(CR3, 0);
@@ -430,7 +430,7 @@ static int JAL(MIPS_instr mips){
 #endif
 
 	// Let's still recompile the delay slot in place in case its branched to
-	if(delaySlot){ if(is_j_dst()){ unget_last_src(); delaySlotNext = 2; } }
+	if(delaySlot){ if(is_j_dst(0)){ unget_last_src(); delaySlotNext = 2; } }
 	else nop_ignored();
 
 #ifdef INTERPRET_JAL
@@ -680,13 +680,13 @@ static int LB(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LB && MIPS_GET_RS(peek) == _rs && MIPS_GET_RS(peek) != _rt){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 1){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LB)
 						break;
@@ -704,7 +704,7 @@ static int LB(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 1){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LB)
 						break;
@@ -741,13 +741,13 @@ static int LH(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LH && MIPS_GET_RS(peek) == _rs && MIPS_GET_RS(peek) != _rt){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 2){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LH)
 						break;
@@ -765,7 +765,7 @@ static int LH(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 2){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LH)
 						break;
@@ -812,13 +812,13 @@ static int LW(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LW && MIPS_GET_RS(peek) == _rs && MIPS_GET_RS(peek) != _rt){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LW)
 						break;
@@ -836,7 +836,7 @@ static int LW(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LW)
 						break;
@@ -873,13 +873,13 @@ static int LBU(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LBU && MIPS_GET_RS(peek) == _rs && MIPS_GET_RS(peek) != _rt){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 1){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LBU)
 						break;
@@ -897,7 +897,7 @@ static int LBU(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 1){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LBU)
 						break;
@@ -934,13 +934,13 @@ static int LHU(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LHU && MIPS_GET_RS(peek) == _rs && MIPS_GET_RS(peek) != _rt){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 2){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LHU)
 						break;
@@ -958,7 +958,7 @@ static int LHU(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 2){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LHU)
 						break;
@@ -1005,13 +1005,13 @@ static int LWU(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LWU && MIPS_GET_RS(peek) == _rs && MIPS_GET_RS(peek) != _rt){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LWU)
 						break;
@@ -1029,7 +1029,7 @@ static int LWU(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LWU)
 						break;
@@ -1066,13 +1066,13 @@ static int SB(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_SB && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 1){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SB)
 						break;
@@ -1088,7 +1088,7 @@ static int SB(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 1){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SB)
 						break;
@@ -1123,13 +1123,13 @@ static int SH(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_SH && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 2){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SH)
 						break;
@@ -1145,7 +1145,7 @@ static int SH(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 2){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SH)
 						break;
@@ -1190,13 +1190,13 @@ static int SW(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_SW && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SW)
 						break;
@@ -1212,7 +1212,7 @@ static int SW(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SW)
 						break;
@@ -1277,13 +1277,13 @@ static int LD(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LD && MIPS_GET_RS(peek) == _rs && MIPS_GET_RS(peek) != _rt){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LD)
 						break;
@@ -1301,7 +1301,7 @@ static int LD(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LD)
 						break;
@@ -1338,13 +1338,13 @@ static int SD(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_SD && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 1 && MIPS_GET_IMMED(peek) == immed + 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SD)
 						break;
@@ -1360,7 +1360,7 @@ static int SD(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SD)
 						break;
@@ -1395,13 +1395,13 @@ static int LWC1(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LWC1 && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 2 && MIPS_GET_IMMED(peek) == immed + 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LWC1)
 						break;
@@ -1417,7 +1417,7 @@ static int LWC1(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 2 && MIPS_GET_IMMED(peek) == immed - 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LWC1)
 						break;
@@ -1452,13 +1452,13 @@ static int LDC1(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_LDC1 && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 2 && MIPS_GET_IMMED(peek) == immed + 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LDC1)
 						break;
@@ -1474,7 +1474,7 @@ static int LDC1(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 2 && MIPS_GET_IMMED(peek) == immed - 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_LDC1)
 						break;
@@ -1509,13 +1509,13 @@ static int SWC1(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_SWC1 && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 2 && MIPS_GET_IMMED(peek) == immed + 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SWC1)
 						break;
@@ -1531,7 +1531,7 @@ static int SWC1(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 2 && MIPS_GET_IMMED(peek) == immed - 4){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SWC1)
 						break;
@@ -1566,13 +1566,13 @@ static int SDC1(MIPS_instr mips){
 	short immed = MIPS_GET_IMMED(mips);
 
 #ifdef FASTMEM
-	if(!isDelaySlot && !is_j_dst()){
+	if(!isDelaySlot && !is_j_dst(1)){
 		MIPS_instr peek = peek_next_src();
 		if(MIPS_GET_OPCODE(peek) == MIPS_OPCODE_SDC1 && MIPS_GET_RS(peek) == _rs){
 			if(MIPS_GET_RT(peek) == _rt + 2 && MIPS_GET_IMMED(peek) == immed + 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SDC1)
 						break;
@@ -1588,7 +1588,7 @@ static int SDC1(MIPS_instr mips){
 			} else if(MIPS_GET_RT(peek) == _rt - 2 && MIPS_GET_IMMED(peek) == immed - 8){
 				mips = get_next_src();
 				count++;
-				while(has_next_src() && !is_j_dst()){
+				while(has_next_src() && !is_j_dst(1)){
 					peek = peek_next_src();
 					if(MIPS_GET_OPCODE(peek) != MIPS_OPCODE_SDC1)
 						break;
@@ -1702,9 +1702,7 @@ static int JR(MIPS_instr mips){
 	flushRegisters();
 	reset_code_addr();
 	
-	GEN_STW(mapRegister(MIPS_GET_RS(mips)),
-			(REG_LOCALRS*8+4)+R4300OFF_GPR, DYNAREG_R4300);
-	invalidateRegisters();
+	GEN_STW(mapRegister(MIPS_GET_RS(mips)), offsetof(R4300,local_gpr)+4, DYNAREG_R4300);
 
 	// Check the delay slot, and note how big it is
 	PowerPC_instr* preDelay = get_curr_dst();
@@ -1715,6 +1713,7 @@ static int JR(MIPS_instr mips){
 	GEN_LI(R4, 1);
 #endif
 	genUpdateCount(0);
+	invalidateRegisters();
 
 #ifdef INTERPRET_JR
 	genJumpTo(REG_LOCALRS, JUMPTO_REG);
@@ -1723,7 +1722,7 @@ static int JR(MIPS_instr mips){
 #endif
 
 	// Let's still recompile the delay slot in place in case its branched to
-	if(delaySlot){ if(is_j_dst()){ unget_last_src(); delaySlotNext = 2; } }
+	if(delaySlot){ if(is_j_dst(0)){ unget_last_src(); delaySlotNext = 2; } }
 	else nop_ignored();
 
 #ifdef INTERPRET_JR
@@ -1742,9 +1741,7 @@ static int JALR(MIPS_instr mips){
 	flushRegisters();
 	reset_code_addr();
 	
-	GEN_STW(mapRegister(MIPS_GET_RS(mips)),
-			(REG_LOCALRS*8+4)+R4300OFF_GPR, DYNAREG_R4300);
-	invalidateRegisters();
+	GEN_STW(mapRegister(MIPS_GET_RS(mips)), offsetof(R4300,local_gpr)+4, DYNAREG_R4300);
 
 	// Check the delay slot, and note how big it is
 	PowerPC_instr* preDelay = get_curr_dst();
@@ -1772,7 +1769,7 @@ static int JALR(MIPS_instr mips){
 #endif
 
 	// Let's still recompile the delay slot in place in case its branched to
-	if(delaySlot){ if(is_j_dst()){ unget_last_src(); delaySlotNext = 2; } }
+	if(delaySlot){ if(is_j_dst(0)){ unget_last_src(); delaySlotNext = 2; } }
 	else nop_ignored();
 
 #ifdef INTERPRET_JALR
@@ -2104,7 +2101,7 @@ static int DDIV(MIPS_instr mips){
 	GEN_CRXOR(CR2*4+2, CR1*4+0, CR2*4+0);
 
 	// r7 = &reg[hi]
-	GEN_ADDI(R7, DYNAREG_R4300, R4300OFF_HI);
+	GEN_ADDI(R7, DYNAREG_R4300, offsetof(R4300,hi));
 
 	// divide
 	GEN_B(add_jump((unsigned long)&__udivmoddi4, 1, 1), 0, 1);
@@ -2139,7 +2136,7 @@ static int DDIVU(MIPS_instr mips){
 	invalidateRegisters();
 
 	// r7 = &reg[hi]
-	GEN_ADDI(R7, DYNAREG_R4300, R4300OFF_HI);
+	GEN_ADDI(R7, DYNAREG_R4300, offsetof(R4300,hi));
 
 	// divide
 	GEN_B(add_jump((unsigned long)&__udivmoddi4, 1, 1), 0, 1);
@@ -2537,19 +2534,19 @@ static int ERET(MIPS_instr mips){
 	get_next_src();
 #endif
 	// Load Status
-	GEN_LWZ(R3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
+	GEN_LWZ(R3, (12*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	// Status & 0xFFFFFFFD
 	GEN_RLWINM(R3, R3, 0, 31, 29);
 	// llbit = 0
-	GEN_STW(DYNAREG_ZERO, R4300OFF_LLBIT, DYNAREG_R4300);
+	GEN_STW(DYNAREG_ZERO, offsetof(R4300, llbit), DYNAREG_R4300);
 	// Store updated Status 
-	GEN_STW(R3, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
+	GEN_STW(R3, (12*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	// check_interupt()
 	GEN_B(add_jump((unsigned long)(&check_interupt), 1, 1), 0, 1);
 	// Load the old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// r4300.pc = EPC
-	GEN_LWZ(R3, (14*4)+R4300OFF_COP0, DYNAREG_R4300);
+	GEN_LWZ(R3, (14*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	// Restore the LR
 	GEN_MTLR(R0);
 	// Return to trampoline with EPC
@@ -2577,7 +2574,7 @@ static int MFC0(MIPS_instr mips){
 #else
 	int rt = mapRegisterNew(MIPS_GET_RT(mips), 1);
 	// *rt = r4300.reg_cop0[rd]
-	GEN_LWZ(rt, (MIPS_GET_RD(mips)*4)+R4300OFF_COP0, DYNAREG_R4300);
+	GEN_LWZ(rt, (MIPS_GET_RD(mips)*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -2597,7 +2594,7 @@ static int MTC0(MIPS_instr mips){
 		// r0 = rt & 0x8000003F
 		GEN_RLWINM(R0, rrt, 0, 26, 0);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(R0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(R0, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 2: // EntryLo0
@@ -2606,17 +2603,17 @@ static int MTC0(MIPS_instr mips){
 		// r0 = rt & 0x3FFFFFFF
 		GEN_RLWINM(R0, rrt, 0, 2, 31);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(R0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(R0, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 4: // Context
 		rrt = mapRegister(rt);
 		// r0 = r4300.reg_cop0[rd]
-		GEN_LWZ(R0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_LWZ(R0, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		// r0 = (rt & 0xFF800000) | (r0 & 0x007FFFFF)
 		GEN_RLWIMI(R0, rrt, 0, 0, 8);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(R0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(R0, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 5: // PageMask
@@ -2624,7 +2621,7 @@ static int MTC0(MIPS_instr mips){
 		// r0 = rt & 0x01FFE000
 		GEN_RLWINM(R0, rrt, 0, 7, 18);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(R0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(R0, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 6: // Wired
@@ -2632,9 +2629,9 @@ static int MTC0(MIPS_instr mips){
 		// r0 = 31
 		GEN_LI(R0, 31);
 		// r4300.reg_cop0[rd] = rt
-		GEN_STW(rrt, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(rrt, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		// r4300.reg_cop0[1] = r0
-		GEN_STW(R0, (1*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(R0, (1*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 10: // EntryHi
@@ -2642,7 +2639,7 @@ static int MTC0(MIPS_instr mips){
 		// r0 = rt & 0xFFFFE0FF
 		GEN_RLWINM(R0, rrt, 0, 24, 18);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(R0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(R0, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 13: // Cause
@@ -2652,7 +2649,7 @@ static int MTC0(MIPS_instr mips){
 	case 19: // WatchHi
 		rrt = mapRegister(rt);
 		// r4300.reg_cop0[rd] = rt
-		GEN_STW(rrt, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(rrt, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 28: // TagLo
@@ -2660,12 +2657,12 @@ static int MTC0(MIPS_instr mips){
 		// r0 = rt & 0x0FFFFFC0
 		GEN_RLWINM(R0, rrt, 0, 4, 25);
 		// r4300.reg_cop0[rd] = r0
-		GEN_STW(R0, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(R0, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 29: // TagHi
 		// r4300.reg_cop0[rd] = 0
-		GEN_STW(DYNAREG_ZERO, (rd*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_STW(DYNAREG_ZERO, (rd*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		return CONVERT_SUCCESS;
 	
 	case 1: // Random
@@ -2727,7 +2724,7 @@ static int MFC1(MIPS_instr mips){
 	flushFPR(fs);
 
 	// rt = r4300.fpr_single[fs]
-	GEN_LWZ(rt, (fs*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	GEN_LWZ(rt, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// rt = *rt
 	GEN_LWZ(rt, 0, rt);
 
@@ -2749,7 +2746,7 @@ static int DMFC1(MIPS_instr mips){
 	flushFPR(fs);
 
 	// addr = r4300.fpr_double[fs]
-	GEN_LWZ(addr, (fs*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	GEN_LWZ(addr, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	// rt[r4300.hi] = *addr
 	GEN_LWZ(rt.hi, 0, addr);
 	// rt[r4300.lo] = *(addr+4)
@@ -2772,7 +2769,7 @@ static int CFC1(MIPS_instr mips){
 	if(MIPS_GET_FS(mips) == 31){
 		int rt = mapRegisterNew( MIPS_GET_RT(mips), 1 );
 
-		GEN_LWZ(rt, 0+R4300OFF_FCR31, DYNAREG_R4300);
+		GEN_LWZ(rt, offsetof(R4300,fcr31), DYNAREG_R4300);
 	} else if(MIPS_GET_FS(mips) == 0){
 		int rt = mapRegisterNew( MIPS_GET_RT(mips), 0 );
 
@@ -2797,7 +2794,7 @@ static int MTC1(MIPS_instr mips){
 	invalidateFPR(fs);
 
 	// addr = r4300.fpr_single[fs]
-	GEN_LWZ(addr, (fs*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	GEN_LWZ(addr, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// *addr = rt
 	GEN_STW(rt, 0, addr);
 
@@ -2820,7 +2817,7 @@ static int DMTC1(MIPS_instr mips){
 	int addr = mapRegisterTemp();
 	invalidateFPR(fs);
 
-	GEN_LWZ(addr, (fs*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	GEN_LWZ(addr, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	GEN_STW(rt.hi, 0, addr);
 	GEN_STW(rt.lo, 4, addr);
 
@@ -2840,7 +2837,7 @@ static int CTC1(MIPS_instr mips){
 
 	if(MIPS_GET_FS(mips) == 31){
 		int rt = mapRegister( MIPS_GET_RT(mips) );
-		GEN_STW(rt, 0+R4300OFF_FCR31, DYNAREG_R4300);
+		GEN_STW(rt, offsetof(R4300,fcr31), DYNAREG_R4300);
 	}
 	return CONVERT_SUCCESS;
 #endif
@@ -2862,7 +2859,7 @@ static int BC(MIPS_instr mips){
 	int cond   = mips & 0x00010000;
 	int likely = mips & 0x00020000;
 	
-	GEN_LWZ(R0, R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_RLWINM(R0, R0, 9, 31, 31);
 	GEN_CMPI(CR4, R0, 0);
 	
@@ -3045,7 +3042,7 @@ static int ROUND_L_FP(MIPS_instr mips, int dbl){
 	//TODO Tehpola check if we should use tmp register?
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3076,7 +3073,7 @@ static int TRUNC_L_FP(MIPS_instr mips, int dbl){
 	// TODO Tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3109,7 +3106,7 @@ static int CEIL_L_FP(MIPS_instr mips, int dbl){
 	//TODO tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3142,7 +3139,7 @@ static int FLOOR_L_FP(MIPS_instr mips, int dbl){
 	//TODO tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3170,7 +3167,7 @@ static int ROUND_W_FP(MIPS_instr mips, int dbl){
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
 	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 
@@ -3193,7 +3190,7 @@ static int TRUNC_W_FP(MIPS_instr mips, int dbl){
 	// fctiwz f0, fs
 	GEN_FCTIWZ(F0, fs);
 	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 	
@@ -3218,7 +3215,7 @@ static int CEIL_W_FP(MIPS_instr mips, int dbl){
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
 	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 
@@ -3244,7 +3241,7 @@ static int FLOOR_W_FP(MIPS_instr mips, int dbl){
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
 	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 	
@@ -3294,7 +3291,7 @@ static int CVT_W_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// Set rounding mode according to r4300.fcr31
-	GEN_LFD(F0, -4+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LFD(F0, -4+offsetof(R4300,fcr31), DYNAREG_R4300);
 
 	// FIXME: Here I have the potential to disable IEEE mode
 	//          and enable inexact exceptions
@@ -3308,7 +3305,7 @@ static int CVT_W_FP(MIPS_instr mips, int dbl){
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
 	// addr = r4300.fpr_single[fd]
-	GEN_LWZ(addr, (fd*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// stfiwx f0, 0, addr
 	GEN_STFIWX(F0, 0, addr);
 
@@ -3338,7 +3335,7 @@ static int CVT_L_FP(MIPS_instr mips, int dbl){
 	// TODO Tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
 	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3361,11 +3358,11 @@ static int C_F_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	// and r0, r0, 0xff7fffff (clear cond)
 	GEN_RLWINM(R0, R0, 0, 9, 7);
 	// stw r0, 0(&fcr31)
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -3383,10 +3380,10 @@ static int C_UN_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 31, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	
 	unmapRegisterTemp(sa);
 	return CONVERT_SUCCESS;
@@ -3406,10 +3403,10 @@ static int C_EQ_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, 0+offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 
 	return CONVERT_SUCCESS;
@@ -3429,11 +3426,11 @@ static int C_UEQ_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_CROR(CR1*4+2, CR1*4+3, CR1*4+2);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	
 	return CONVERT_SUCCESS;
@@ -3453,10 +3450,10 @@ static int C_OLT_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 28, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	
 	return CONVERT_SUCCESS;
@@ -3476,11 +3473,11 @@ static int C_ULT_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_CROR(CR1*4+0, CR1*4+3, CR1*4+0);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 28, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	
 	return CONVERT_SUCCESS;
@@ -3500,11 +3497,11 @@ static int C_OLE_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_CRNOR(CR1*4+2, CR1*4+3, CR1*4+1);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	
 	return CONVERT_SUCCESS;
@@ -3524,11 +3521,11 @@ static int C_ULE_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_CRORC(CR1*4+2, CR1*4+3, CR1*4+1);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	
 	return CONVERT_SUCCESS;
@@ -3544,11 +3541,11 @@ static int C_SF_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	// and r0, r0, 0xff7fffff (clear cond)
 	GEN_RLWINM(R0, R0, 0, 9, 7);
 	// stw r0, 0(&fcr31)
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -3562,11 +3559,11 @@ static int C_NGLE_FP(MIPS_instr mips, int dbl){
 	genCheckFP();
 
 	// lwz r0, 0(&fcr31)
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	// and r0, r0, 0xff7fffff (clear cond)
 	GEN_RLWINM(R0, R0, 0, 9, 7);
 	// stw r0, 0(&fcr31)
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -3584,10 +3581,10 @@ static int C_SEQ_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	return CONVERT_SUCCESS;
 #endif
@@ -3606,10 +3603,10 @@ static int C_NGL_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	return CONVERT_SUCCESS;
 #endif
@@ -3628,10 +3625,10 @@ static int C_LT_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 28, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	return CONVERT_SUCCESS;
 #endif
@@ -3650,10 +3647,10 @@ static int C_NGE_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 28, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	return CONVERT_SUCCESS;
 #endif
@@ -3672,11 +3669,11 @@ static int C_LE_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 	
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_CRNOR(CR1*4+2, CR1*4+3, CR1*4+1);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	return CONVERT_SUCCESS;
 #endif
@@ -3695,11 +3692,11 @@ static int C_NGT_FP(MIPS_instr mips, int dbl){
 	int sa = mapRegisterTemp();
 
 	GEN_FCMPU(CR1, fs, ft);
-	GEN_LWZ(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	GEN_CRNOR(CR1*4+2, CR1*4+3, CR1*4+1);
 	GEN_MFCR(sa);
 	GEN_RLWIMI(R0, sa, 30, 8, 8);
-	GEN_STW(R0, 0+R4300OFF_FCR31, DYNAREG_R4300);
+	GEN_STW(R0, offsetof(R4300,fcr31), DYNAREG_R4300);
 	unmapRegisterTemp(sa);
 	return CONVERT_SUCCESS;
 #endif
@@ -3744,8 +3741,8 @@ static int CVT_FP_W(MIPS_instr mips, int dbl){
 	int tmp = mapRegisterTemp();
 
 	// Get the integer value into a GPR
-	// tmp = fpr32[fs]
-	GEN_LWZ(tmp, (fs*4)+R4300OFF_FPR_32, DYNAREG_R4300);
+	// tmp = r4300.fpr_single[fs]
+	GEN_LWZ(tmp, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
 	// tmp = *tmp (src)
 	GEN_LWZ(tmp, 0, tmp);
 
@@ -3796,8 +3793,8 @@ static int CVT_FP_L(MIPS_instr mips, int dbl){
 	int lo = mapRegisterTemp(); // r4
 
 	// Get the long value into GPRs
-	// lo = fpr64[fs]
-	GEN_LWZ(lo, (fs*4)+R4300OFF_FPR_64, DYNAREG_R4300);
+	// lo = r4300.fpr_double[fs]
+	GEN_LWZ(lo, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
 	// hi = *lo (hi word)
 	GEN_LWZ(hi, 0, lo);
 	// lo = *(lo+4) (lo word)
@@ -3888,7 +3885,7 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 
 	if(type == JUMPTO_REG){
 		// Load the register as the return value
-		GEN_LWZ(R3, (loc*8+4)+R4300OFF_GPR, DYNAREG_R4300);
+		GEN_LWZ(R3, (loc*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
 		GEN_BLR(0);
 	} else {
 		// Calculate the destination address
@@ -3899,17 +3896,17 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 		set_next_dst(PPC_NOP);
 		set_next_dst(PPC_NOP);
 		// Make this function the LRU
-		GEN_LWZ(R3, R4300OFF_NEXTLRU, DYNAREG_R4300);
+		GEN_LWZ(R3, offsetof(R4300,nextLRU), DYNAREG_R4300);
 		GEN_STW(R3, offsetof(PowerPC_func, lru), DYNAREG_FUNC);
 		GEN_ADDI(R0, R3, 1);
-		GEN_STW(R0, R4300OFF_NEXTLRU, DYNAREG_R4300);
+		GEN_STW(R0, offsetof(R4300,nextLRU), DYNAREG_R4300);
 		// Load the address as the return value
 		GEN_LIS(R3, extractUpper16(loc));
 		GEN_ADDI(R3, R3, extractLower16(loc));
 		// Since we could be linking, return on interrupt
 		GEN_BLELR(CR3, 0);
 		// Store r4300.last_pc for linking
-		GEN_STW(R3, 0+R4300OFF_LADDR, DYNAREG_R4300);
+		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 		GEN_BLR(1);
 	}
 }
@@ -3922,25 +3919,25 @@ static void genUpdateCount(int checkCount){
 	// lis    tmp, pc >> 16
 	GEN_LIS(tmp, extractUpper16(get_src_pc()+4));
 	// lwz    r0,  0(&r4300.last_pc)     // r0 = r4300.last_pc
-	GEN_LWZ(R0, 0+R4300OFF_LADDR, DYNAREG_R4300);
+	GEN_LWZ(R0, offsetof(R4300,last_pc), DYNAREG_R4300);
 	// addi    tmp, tmp, pc & 0xffff  // tmp = pc
 	GEN_ADDI(tmp, tmp, extractLower16(get_src_pc()+4));
 	// stw    tmp, 0(&r4300.last_pc)     // r4300.last_pc = pc
-	GEN_STW(tmp, 0+R4300OFF_LADDR, DYNAREG_R4300);
+	GEN_STW(tmp, offsetof(R4300,last_pc), DYNAREG_R4300);
 	// subf   r0,  r0, tmp           // r0 = pc - r4300.last_pc
 	GEN_SUBF(R0, R0, tmp);
 	// lwz    tmp, 9*4(r4300.reg_cop0)     // tmp = Count
-	GEN_LWZ(tmp, (9*4)+R4300OFF_COP0, DYNAREG_R4300);
+	GEN_LWZ(tmp, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	// srwi r0, r0, 1                // r0 = (pc - r4300.last_pc)/2
 	GEN_SRWI(R0, R0, 1);
 	// add    r0,  r0, tmp           // r0 += Count
 	GEN_ADD(R0, R0, tmp);
 	if(checkCount){
 		// lwz    tmp, 0(&r4300.next_interrupt) // tmp = r4300.next_interrupt
-		GEN_LWZ(tmp, 0+R4300OFF_NINTR, DYNAREG_R4300);
+		GEN_LWZ(tmp, 0+offsetof(R4300,next_interrupt), DYNAREG_R4300);
 	}
 	// stw    r0,  9*4(r4300.reg_cop0)    // Count = r0
-	GEN_STW(R0, (9*4)+R4300OFF_COP0, DYNAREG_R4300);
+	GEN_STW(R0, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	if(checkCount){
 		// cmpl   cr3,  tmp, r0  // cr3 = r4300.next_interrupt ? Count
 		GEN_CMPL(CR3, tmp, R0);
@@ -3969,7 +3966,7 @@ static void genCheckFP(void){
 		flushRegisters();
 		if(!isDelaySlot) reset_code_addr(); // Calling this makes no sense in the context of the delay slot
 		// lwz r0, 12*4(r4300.reg_cop0)
-		GEN_LWZ(R0, (12*4)+R4300OFF_COP0, DYNAREG_R4300);
+		GEN_LWZ(R0, (12*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 		// andis. r0, r0, 0x2000
 		GEN_ANDIS(R0, R0, 0x2000);
 		// bne cr0, end
@@ -4003,10 +4000,11 @@ static void genCheckFP(void){
 static void genCallDynaMem(memType type, int count, int _rs, int _rt, short immed){
 	int isPhysical = 1, isVirtual = 1;
 	int isConstant = isRegisterConstant(_rs);
+	int constant = getRegisterConstant(_rs) + immed;
 	int i;
 
+#ifdef FASTMEM	
 	if(isConstant){
-		int constant = getRegisterConstant(_rs) + immed;
 	#ifdef USE_EXPANSION
 		if(constant >= 0x80000000 && constant < 0x80800000)
 			isVirtual = 0;
@@ -4021,6 +4019,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 		else
 			isPhysical = 0;
 	}
+#endif
 
 	if(type == MEM_LDL || type == MEM_LDR || type == MEM_SDL || type == MEM_SDR){
 		isPhysical = 0;
@@ -4183,7 +4182,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 				GEN_RLWINM(tmp, R3, 0, 8, 29);
 				GEN_LI(R0, 1);
 				GEN_LWZUX(rt, tmp, DYNAREG_RDRAM);
-				GEN_STW(R0, R4300OFF_LLBIT, DYNAREG_R4300);
+				GEN_STW(R0, offsetof(R4300,llbit), DYNAREG_R4300);
 				break;
 			}
 			case MEM_LWL:
@@ -4311,7 +4310,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 			case MEM_SC:
 			{
 				int rt = mapRegister(_rt);
-				GEN_LWZ(R0, R4300OFF_LLBIT, DYNAREG_R4300);
+				GEN_LWZ(R0, offsetof(R4300,llbit), DYNAREG_R4300);
 				GEN_CMPLI(CR2, R0, 0);
 				GEN_BEQ(CR2, 6, 0, 0);
 				GEN_RLWINM(tmp, R3, 0, 8, 29);
@@ -4319,7 +4318,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 				check_memory();
 				GEN_MFCR(tmp);
 				GEN_RLWINM(mapRegisterNew(_rt, 0), tmp, 10, 31, 31);
-				GEN_STW(DYNAREG_ZERO, R4300OFF_LLBIT, DYNAREG_R4300);
+				GEN_STW(DYNAREG_ZERO, offsetof(R4300,llbit), DYNAREG_R4300);
 				break;
 			}
 			case MEM_SWL:

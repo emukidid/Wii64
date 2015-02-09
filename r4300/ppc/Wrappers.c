@@ -103,17 +103,16 @@ void dynarec(unsigned int address){
 		*/
 		if(!paddr){ 
 			link_branch = NULL;
-			address = paddr = update_invalid_addr(r4300.pc);
+			address = r4300.pc;
+			paddr = update_invalid_addr(address);
 		}
 		
 		if(!blocks[address>>12]){
-			blocks[address>>12] = malloc(sizeof(PowerPC_block));
-			//dst_block->code_addr     = NULL;
-			blocks[address>>12]->funcs         = NULL;
+			blocks[address>>12] = calloc(1, sizeof(PowerPC_block));
 			blocks[address>>12]->start_address = address & ~0xFFF;
 			blocks[address>>12]->end_address   = (address & ~0xFFF) + 0x1000;
 			
-			init_block(blocks[address>>12], NULL);
+			init_block(blocks[address>>12]);
 
 		} else if(invalid_code_get(address>>12)){
 			invalidate_block(blocks[address>>12]);

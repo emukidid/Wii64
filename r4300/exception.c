@@ -42,33 +42,6 @@
 #define doBreak()
 #endif
 
-void address_error_exception()
-{
-  printf("address_error_exception\n");
-  r4300.stop=1;
-  doBreak();     
-}
-
-void TLB_invalid_exception()
-{
-  if (r4300.delay_slot) {
-    r4300.skip_jump = 1;
-    printf("delay slot\nTLB refill exception\n");
-    r4300.stop=1;
-    doBreak();
-  }
-  printf("TLB invalid exception\n");
-  r4300.stop=1;
-  doBreak();
-}
-
-void XTLB_refill_exception(unsigned long long int addresse)
-{
-  printf("XTLB refill exception\n");
-  r4300.stop=1;
-  doBreak();   
-}
-
 void TLB_refill_exception(unsigned long address, int w)
 {
   int usual_handler = 0, i = 0;
@@ -136,27 +109,6 @@ void TLB_refill_exception(unsigned long address, int w)
     r4300.skip_jump = r4300.pc;
     r4300.next_interrupt = 0;
   }
-}
-
-void TLB_mod_exception()
-{
-  printf("TLB mod exception\n");
-  r4300.stop=1;
-  doBreak();
-}
-
-void integer_overflow_exception()
-{
-  printf("integer overflow exception\n");
-  r4300.stop=1;
-  doBreak();
-}
-
-void coprocessor_unusable_exception()
-{
-  printf("coprocessor_unusable_exception\n");
-  r4300.stop=1;
-  doBreak();
 }
 
 void exception_general()

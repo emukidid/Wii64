@@ -221,20 +221,15 @@ void init_blocks()
 	blocks[i] = NULL;
      }
 #ifndef PPC_DYNAREC
-   blocks[0xa4000000>>12] = malloc(sizeof(precomp_block));
-   blocks[0xa4000000>>12]->code = NULL;
-   blocks[0xa4000000>>12]->block = NULL;
-   blocks[0xa4000000>>12]->jumps_table = NULL;
+   blocks[0xa4000000>>12] = calloc(1, sizeof(precomp_block));
    blocks[0xa4000000>>12]->start = 0xa4000000;
    blocks[0xa4000000>>12]->end = 0xa4001000;
 #else
-   blocks[0xa4000000>>12] = malloc(sizeof(PowerPC_block));
-   blocks[0xa4000000>>12]->funcs = NULL;
+   blocks[0xa4000000>>12] = calloc(1, sizeof(PowerPC_block));
    blocks[0xa4000000>>12]->start_address = 0xa4000000;
    blocks[0xa4000000>>12]->end_address = 0xa4001000;
 #endif
-   invalid_code_set(0xa4000000>>12, 1);
-   init_block(blocks[0xa4000000>>12], 0xa4000000);
+   init_block(blocks[0xa4000000>>12]);
 
 #ifdef DBG
    if (debugger_mode) // debugger shows initial state (before 1st instruction).
