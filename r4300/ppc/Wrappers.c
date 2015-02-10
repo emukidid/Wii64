@@ -111,9 +111,7 @@ void dynarec(unsigned int address){
 			blocks[address>>12] = calloc(1, sizeof(PowerPC_block));
 			blocks[address>>12]->start_address = address & ~0xFFF;
 			blocks[address>>12]->end_address   = (address & ~0xFFF) + 0x1000;
-			
 			init_block(blocks[address>>12]);
-
 		} else if(invalid_code_get(address>>12)){
 			invalidate_block(blocks[address>>12]);
 		}
@@ -121,7 +119,7 @@ void dynarec(unsigned int address){
 		PowerPC_func* func = find_func(&blocks[address>>12]->funcs, address);
 
 		if(!func || !func->code_addr[(address-func->start_addr)>>2]){
-			blocks[address>>12]->mips_code = fast_mem_access(paddr & ~0xFFF);
+			blocks[address>>12]->mips_code = (MIPS_instr*)fast_mem_access(paddr & ~0xFFF);
 #ifdef PROFILE
 			start_section(COMPILER_SECTION);
 #endif
@@ -215,8 +213,7 @@ unsigned int dyna_check_cop1_unusable(unsigned int pc, int isDelaySlot){
 
 void invalidate_func(unsigned int addr){
 	if(!invalid_code_get(addr>>12)){
-		PowerPC_block* block = blocks[addr>>12];
-		PowerPC_func* func = find_func(&block->funcs, addr);
+		PowerPC_func* func = find_func(&blocks[addr>>12]->funcs, addr);
 		if(func)
 			RecompCache_Free(func->start_addr);
 	}

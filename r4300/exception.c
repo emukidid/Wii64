@@ -125,8 +125,8 @@ void exception_general()
   else {
     Cause &= 0x7FFFFFFF;
   }
-  r4300.pc = 0x80000180;
-  r4300.last_pc = r4300.pc;
+
+  r4300.last_pc = r4300.pc = 0x80000180;
   
   if (r4300.delay_slot) {
     r4300.skip_jump = r4300.pc;

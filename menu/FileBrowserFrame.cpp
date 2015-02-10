@@ -19,6 +19,7 @@
 **/
 
 #include <math.h>
+#include <cstring>
 #include <cstdlib>
 #include "MenuContext.h"
 #include "FileBrowserFrame.h"
@@ -321,7 +322,7 @@ static int dir_comparator(const void* _x, const void* _y){
 	if(xIsDir != yIsDir)
 		return yIsDir - xIsDir;
 	else
-		return stricmp(x->name, y->name);
+		return strcasecmp(x->name, y->name);
 }
 
 void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir)

@@ -4,8 +4,8 @@ CC		= powerpc-eabi-gcc
 CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
-LTO			 = -flto -DRELEASE # Uncomment to use link-time optimization
-DEBUG_FLAGS += #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
+LTO			 = -flto # Uncomment to use link-time optimization
+DEBUG_FLAGS += #-DPROFILE #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
 FEATURES	+= #-DUSE_EXPANSION #-DUSE_TLB_CACHE #-DUSE_ROM_CACHE_L1 #-DEMBEDDED_FONTS
 
 MACHDEP		+= -mcpu=750 -meabi -mhard-float 
@@ -165,4 +165,4 @@ menu/MenuResources.o:		menu/MenuResources.s
 		$(CC) -x assembler-with-cpp $(CFLAGS) -c -o $@ $<
 
 vm/dsihandler.o:		vm/dsihandler.s
-		$(CC) -x assembler-with-cpp $(CFLAGS) -c -o $@ $<
+		$(CC) -x assembler-with-cpp $(CFLAGS) -D_LANGUAGE_ASSEMBLY -c -o $@ $<

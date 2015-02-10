@@ -126,9 +126,9 @@ void dma_pi_read()
 					&rdramb[(pi_register.pi_dram_addr_reg)^S8],
 					(pi_register.pi_rd_len_reg & 0xFFFFFF)+1);
 			flashRAMInfo.use_flashram = -1;
-	}
-	else
-		dma_write_flashram();
+		}
+		else
+			dma_write_flashram();
 	}
  //  else
  //    printf("unknown dma read\n");

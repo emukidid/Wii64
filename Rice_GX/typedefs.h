@@ -40,8 +40,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef unsigned char               uint8;
 
 typedef signed char                 s8; 
-typedef int                         s32;
-typedef unsigned int                u32;
+typedef int32_t                     s32;
+typedef uint32_t                	u32;
 typedef unsigned char               u8;
 
 

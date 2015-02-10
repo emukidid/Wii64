@@ -168,7 +168,7 @@ extern "C" void gfx_set_fb(unsigned int* fb1, unsigned int* fb2);
 void gfx_set_window(int x, int y, int width, int height);
 // -- End plugin data --
 
-static u32* xfb[2] = { NULL, NULL };	/*** Framebuffers ***/
+static unsigned int* xfb[2] = { NULL, NULL };	/*** Framebuffers ***/
 //static GXRModeObj *vmode;				/*** Graphics Mode Object ***/
 GXRModeObj *vmode, *rmode;				/*** Graphics Mode Object ***/
 GXRModeObj vmode_phys, rmode_phys;		/*** Graphics Mode Object ***/

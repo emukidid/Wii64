@@ -58,7 +58,7 @@ void stripInvalidChars(char *str) {
 	}
 }
 
-int init_byte_swap(u32 magicWord){
+int init_byte_swap(unsigned int magicWord){
 
 	switch(magicWord){
 		case 0x37804012:					//37804012 aka byteswapped
