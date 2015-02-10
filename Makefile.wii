@@ -8,6 +8,8 @@ LIBPATHS 	+= -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
 
 OBJ		+= \
 		gc_memory/TLB-Cache-hash.o \
+		vm/dsihandler.o \
+		vm/wii_vm.o
 
 OBJ_INPUT	+= \
 		gc_input/controller-Classic.o \

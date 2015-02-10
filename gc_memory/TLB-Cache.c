@@ -32,7 +32,7 @@
 #include "TLB-Cache.h"
 #include "../gui/DEBUG.h"
 
-#define TLB_NUM_BLOCKS                           16
+#define TLB_NUM_BLOCKS                           128
 #define TLB_W_TYPE                                1
 #define TLB_R_TYPE                                2
 #define CACHED_TLB_ENTRIES                     1024

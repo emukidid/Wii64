@@ -39,7 +39,8 @@ FUNC_START(dsi_handler)
 	ori         r3,r3,MSR_RI
 	mtmsr       r3
 	
-	addi        r3,sp,8
+	mfdsisr		r3
+	mfdar		r4
 	bl          vm_dsi_handler
 	
 	# check if it was handled correctly

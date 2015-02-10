@@ -49,7 +49,7 @@ extern "C" {
 #include "rom.h"
 #include "plugin.h"
 #include "../gc_input/controller.h"
-
+#include <aesndlib.h>
 #include "../r4300/interupt.h"
 #include "../r4300/r4300.h"
 #include "../gc_memory/memory.h"
@@ -236,6 +236,7 @@ void load_config(char *loaded_path) {
 int main(int argc, char* argv[]) {
 	/* INITIALIZE */
 #ifdef HW_DOL
+	AESND_Init();
 	VM_Init(ARAM_SIZE, MRAM_BACKING);		// Setup Virtual Memory with the entire ARAM
 #endif
 #ifdef HW_RVL
