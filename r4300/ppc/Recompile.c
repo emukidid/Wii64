@@ -286,22 +286,20 @@ void init_block(PowerPC_block* ppc_block){
 	PowerPC_block* temp_block;
 	
 	// FIXME: Equivalent addresses should point to the same code/funcs?
-	if(ppc_block->end_address < 0x80000000 || ppc_block->start_address >= 0xc0000000){
+	if(ppc_block->start_address+0x1000 < 0x80000000 || ppc_block->start_address >= 0xc0000000){
 		unsigned long paddr = virtual_to_physical_address(ppc_block->start_address, 2);
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
 			blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
 			blocks[paddr>>12]->start_address = paddr & ~0xFFF;
-			blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
 			init_block(blocks[paddr>>12]);
 		}
 
-		paddr += ppc_block->end_address - ppc_block->start_address - 4;
+		paddr += 0x1000 - 4;
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
 			blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
 			blocks[paddr>>12]->start_address = paddr & ~0xFFF;
-			blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
 			init_block(blocks[paddr>>12]);
 		}
 	} else {
@@ -310,7 +308,6 @@ void init_block(PowerPC_block* ppc_block){
 		if(!blocks[paddr>>12]){
 		     blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
 		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
-		     blocks[paddr>>12]->end_address = (paddr & ~0xFFF) + 0x1000;
 		     init_block(blocks[paddr>>12]);
 		}
 	}
@@ -323,14 +320,14 @@ void deinit_block(PowerPC_block* ppc_block){
 	invalidate_block(ppc_block);
 
 	// We need to mark all equivalent addresses as invalid
-	if(ppc_block->end_address < 0x80000000 || ppc_block->start_address >= 0xc0000000){
+	if(ppc_block->start_address+0x1000 < 0x80000000 || ppc_block->start_address >= 0xc0000000){
 		unsigned long paddr = virtual_to_physical_address(ppc_block->start_address, 2);
 		
 		if(blocks[paddr>>12]){
 		     invalid_code_set(paddr>>12, 1);
 		}
 
-		paddr += ppc_block->end_address - ppc_block->start_address - 4;
+		paddr += 0x1000 - 4;
 		if(blocks[paddr>>12]){
 		     invalid_code_set(paddr>>12, 1);
 		}
@@ -425,7 +422,7 @@ static int pass0(PowerPC_block* ppc_block){
 	//   a jump pad at the end of the block.
 	unsigned int pc = addr_first >> 2;
 	// Set this to the end address of the block for is_j_out
-	addr_last = ppc_block->end_address;
+	addr_last = ppc_block->start_address+0x1000;
 	// Zero out the jump destinations table
 	memset(isJmpDst, 0, 1024);
 	// Go through each instruction and map every branch instruction's destination
@@ -484,7 +481,7 @@ static int pass0(PowerPC_block* ppc_block){
 		return 0;
 	} else {
 		src_last = ppc_block->mips_code + 1024;
-		addr_last = ppc_block->end_address;
+		addr_last = ppc_block->start_address+0x1000;
 		return 1;
 	}
 }

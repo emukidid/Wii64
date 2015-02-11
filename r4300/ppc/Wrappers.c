@@ -110,7 +110,6 @@ void dynarec(unsigned int address){
 		if(!blocks[address>>12]){
 			blocks[address>>12] = calloc(1, sizeof(PowerPC_block));
 			blocks[address>>12]->start_address = address & ~0xFFF;
-			blocks[address>>12]->end_address   = (address & ~0xFFF) + 0x1000;
 			init_block(blocks[address>>12]);
 		} else if(invalid_code_get(address>>12)){
 			invalidate_block(blocks[address>>12]);

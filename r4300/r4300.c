@@ -227,7 +227,6 @@ void init_blocks()
 #else
    blocks[0xa4000000>>12] = calloc(1, sizeof(PowerPC_block));
    blocks[0xa4000000>>12]->start_address = 0xa4000000;
-   blocks[0xa4000000>>12]->end_address = 0xa4001000;
 #endif
    init_block(blocks[0xa4000000>>12]);
 
