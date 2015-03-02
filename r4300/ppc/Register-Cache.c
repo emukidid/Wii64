@@ -96,7 +96,7 @@ static RegMapping flushLRURegister(void){
 	return map;
 }
 
-int mapRegisterNew(int gpr, int sign){
+int mapRegisterNew_Impl(int gpr, int sign){
 	if(!gpr) return 0; // Discard any writes to r0
 	regMap[gpr].lru = nextLRUVal++;
 	regMap[gpr].sign = sign;
@@ -121,6 +121,14 @@ int mapRegisterNew(int gpr, int sign){
 	if(lru.hi >= 0) availableRegs[lru.hi] = 1;
 	
 	return regMap[gpr].map.lo = lru.lo;
+}
+
+int mapRegisterNew(int reg){
+	return mapRegisterNew_Impl(reg, 1);
+}
+
+int mapRegisterNewUnsigned(int reg){
+	return mapRegisterNew_Impl(reg, 0);
 }
 
 RegMapping mapRegister64New(int gpr){

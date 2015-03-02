@@ -31,7 +31,8 @@ typedef enum { MAPPING_NONE, MAPPING_32, MAPPING_64 } RegMappingType;
 int mapRegister(int reg);
 // Create a mapping for a 32-bit register (reg) to a HW register (returned)
 // Marking the mapping dirty so that it is stored when flushed
-int mapRegisterNew(int reg, int sign);
+int mapRegisterNew(int reg);
+int mapRegisterNewUnsigned(int reg);
 // Create a mapping for a 64-bit register (reg) to 2 HW registers (returned)
 // Loading the register's value if the mapping doesn't already exist
 RegMapping mapRegister64(int reg);
