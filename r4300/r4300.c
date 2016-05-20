@@ -359,6 +359,10 @@ void cpu_init(void){
     case 0x000000D6D5BE5580LL:
       r4300.cic_chip = 6;
       break;
+	case 0x000001053BC19870LL:
+	case 0x000001053B8A9870LL:
+	  r4300.cic_chip = 7;
+	  break;
     default:
       r4300.cic_chip = 2;
    }
@@ -475,6 +479,9 @@ void cpu_init(void){
       r4300.gpr[22]= 0x0000000000000085LL;
       r4300.gpr[25]= 0x00000000465E3F72LL;
       break;
+	case 7:
+	  r4300.gpr[22]= 0x00000000000000DDLL;
+	  break;
    }
 
    rounding_mode = 0x33F;

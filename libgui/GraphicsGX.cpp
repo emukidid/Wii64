@@ -119,7 +119,7 @@ void Graphics::init()
 	GX_SetFieldMode(GX_DISABLE,((vmode->viHeight==2*vmode->xfbHeight)?GX_ENABLE:GX_DISABLE));
  
 	if (vmode->aa)
-		GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_LINEAR);
+		GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_MID);
 }
 
 void Graphics::drawInit()
