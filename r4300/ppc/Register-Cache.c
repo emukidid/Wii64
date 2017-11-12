@@ -284,7 +284,7 @@ RegMappingType getRegisterMapping(int reg){
 }
 
 int mapConstantNew(int reg, int isConstant){
-	int mapping = mapRegisterNew(reg, 1); // Get the normal mapping
+	int mapping = mapRegisterNew_Impl(reg, 1); // Get the normal mapping
 	regMap[reg].constant = isConstant; // Set the constant field
 	return mapping;
 }

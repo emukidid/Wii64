@@ -203,10 +203,10 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 
 	//Look up BT address
 	//wiimote* WPAD_GetWiimotes(s32 chan)
-	wiimote* wm = WPAD_GetWiimote(Control);
+	//wiimote* wm = WPAD_GetWiimote(Control);
 	float maxLMag = DEFAULT_MAX_MAG;
 	float maxRMag = DEFAULT_MAX_MAG; 
-	if(wm) SetMaxMag(&wm->bdaddr, wpad->exp.classic.ljs.mag, wpad->exp.classic.rjs.mag, &maxLMag, &maxRMag);
+	//if(wm) SetMaxMag(&wm->bdaddr, wpad->exp.classic.ljs.mag, wpad->exp.classic.rjs.mag, &maxLMag, &maxRMag);
 	
 	unsigned int b = getButtons(&wpad->exp.classic, maxLMag, maxRMag);
 	inline int isHeld(button_tp button){
