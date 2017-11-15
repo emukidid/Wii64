@@ -263,7 +263,7 @@ int ROMCache_load(fileBrowser_file* file){
 		if(bytes_read < 0){		// Read fail!
 
 			SETLOADPROG( -1.0f );
-			return -1;
+			return ROM_CACHE_ERROR_READ;
 		}
 		//initialize byteswapping if it isn't already
 		if(!readBefore)
@@ -271,7 +271,7 @@ int ROMCache_load(fileBrowser_file* file){
 			byte_swap_type = init_byte_swap(*(unsigned int*)ROMCACHE_LO);
  			if(byte_swap_type == BYTE_SWAP_BAD) {
  			  romFile_deinit(&ROMFile);
- 			  return -2;
+ 			  return ROM_CACHE_INVALID_ROM;
 		  }
  			readBefore = 1;
 		}
