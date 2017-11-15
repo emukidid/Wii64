@@ -192,7 +192,7 @@ void dma_read_flashram()
 			rdram[pi_register.pi_dram_addr_reg/4+1] = (unsigned long)(flashRAMInfo.status);
 		break;
 		case READ_MODE:
-			for (i=0; i<(pi_register.pi_wr_len_reg & 0x0FFFFFF)+1; i++)
+			for (i=0; i<(pi_register.pi_wr_len_reg & 0x0FFFFFE)+2; i++)
 				((unsigned char*)rdram)[(pi_register.pi_dram_addr_reg+i)^S8] =
 				flashram[(((pi_register.pi_cart_addr_reg-0x08000000)&0xFFFF)*2+i)^S8];
 		break;

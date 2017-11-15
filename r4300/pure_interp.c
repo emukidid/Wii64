@@ -1216,6 +1216,9 @@ static void MTC0()
       case 29: // TagHi
 	TagHi =0;
 	break;
+	  case 30: // ErrorEPC
+	ErrorEPC = rrt;
+	break;
       default:
 	printf("unknown mtc0 write : %d\n", PC->f.r.nrd);
 	r4300.stop=1;
