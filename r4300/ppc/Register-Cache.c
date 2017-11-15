@@ -34,11 +34,11 @@ static struct {
 	int dirty; // Nonzero means the register must be flushed to memory
 	int lru;   // LRU value for flushing; higher is newer
 	int constant; // Nonzero means there is a constant value mapped
-	unsigned int value; // Value if this mapping holds a constant
+	long long value; // Value if this mapping holds a constant
 } regMap[34];
 
-static unsigned int nextLRUVal;
-static int availableRegsDefault[32] = {
+static int nextLRUVal;
+static char availableRegsDefault[32] = {
 	0, /* r0 is mostly used for saving/restoring lr: used as a temp */
 	0, /* sp: leave alone! */
 	0, /* gp: leave alone! */
@@ -47,7 +47,7 @@ static int availableRegsDefault[32] = {
 	/* Non-volatile registers: using might be too costly */
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	};
-static int availableRegs[32];
+static char availableRegs[32];
 
 // Actually perform the store for a dirty register mapping
 static void _flushRegister(int gpr){
@@ -163,7 +163,7 @@ RegMapping mapRegister64New(int gpr){
 	if(regMap[gpr].map.lo < 0){
 		// We didn't find any available registers, so flush one
 		RegMapping lru = flushLRURegister();
-		if(lru.hi >= 0) regMap[gpr].map.hi = lru.hi;
+		if(lru.hi >= 0) availableRegs[lru.hi] = 1;
 		regMap[gpr].map.lo = lru.lo;
 	}
 	if(regMap[gpr].map.hi < 0){
@@ -238,7 +238,7 @@ RegMapping mapRegister64(int reg){
 	if(regMap[reg].map.lo < 0){
 		// We didn't find any available registers, so flush one
 		RegMapping lru = flushLRURegister();
-		if(lru.hi >= 0) regMap[reg].map.hi = lru.hi;
+		if(lru.hi >= 0) availableRegs[lru.hi] = 1;
 		regMap[reg].map.lo = lru.lo;
 	}
 	if(regMap[reg].map.hi < 0){
@@ -283,9 +283,15 @@ RegMappingType getRegisterMapping(int reg){
 		return MAPPING_NONE;
 }
 
-int mapConstantNew(int reg, int isConstant){
-	int mapping = mapRegisterNew_Impl(reg, 1); // Get the normal mapping
-	regMap[reg].constant = isConstant; // Set the constant field
+int mapConstantNew(int gpr, int constant, int sign){
+	int mapping = mapRegisterNew_Impl(gpr, sign); // Get the normal mapping
+	regMap[gpr].constant = constant; // Set the constant field
+	return mapping;
+}
+
+RegMapping mapConstant64New(int gpr, int constant){
+	RegMapping mapping = mapRegister64New(gpr); // Get the normal mapping
+	regMap[gpr].constant = constant; // Set the constant field
 	return mapping;
 }
 
@@ -294,13 +300,21 @@ int isRegisterConstant(int reg){
 	return reg ? regMap[reg].constant : 1;
 }
 
-unsigned int getRegisterConstant(int reg){
-	// Always return 0 for r0 
-	return reg ? regMap[reg].value : 0;
+long getRegisterConstant(int gpr){
+	return getRegisterConstant64(gpr);
 }
 
-void setRegisterConstant(int reg, unsigned int constant){
-	regMap[reg].value = constant;
+long long getRegisterConstant64(int gpr){
+	// Always return 0 for r0 
+	return gpr ? regMap[gpr].value : 0;
+}
+
+void setRegisterConstant(int gpr, long value){
+	setRegisterConstant64(gpr, value);
+}
+
+void setRegisterConstant64(int gpr, long long value){
+	regMap[gpr].value = value;
 }
 
 // -- FPR mappings --
@@ -311,15 +325,15 @@ static struct {
 	int lru;   // LRU value for flushing; higher is newer
 } fprMap[32];
 
-static unsigned int nextLRUValFPR;
-static int availableFPRsDefault[32] = {
+static int nextLRUValFPR;
+static char availableFPRsDefault[32] = {
 	0, /* Volatile: used as a temp */
 	1,1,1,1,1,1,1,1, /* Volatile argument registers */
 	1,1,1,1,1, /* Volatile registers */
 	/* Non-volatile registers: using might be too costly */
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	};
-static int availableFPRs[32];
+static char availableFPRs[32];
 
 // Actually perform the store for a dirty register mapping
 static void _flushFPR(int reg){
@@ -379,6 +393,11 @@ int mapFPRNew(int fpr, int dbl){
 
 int mapFPR(int fpr, int dbl){
 
+	if(fprMap[fpr].dbl ^ dbl)
+		flushFPR(fpr);
+	if(fprMap[fpr ^ 1].dbl ^ dbl)
+		flushFPR(fpr ^ 1);
+
 	fprMap[fpr].lru = nextLRUValFPR++;
 	fprMap[fpr].dbl = dbl; // Set whether this is a double-precision
 	
@@ -408,7 +427,8 @@ void invalidateFPR(int fpr){
 	if(fprMap[fpr].map >= 0)
 		availableFPRs[ fprMap[fpr].map ] = 1;
 	fprMap[fpr].map = -1;
-	if(fprMap[fpr ^ 1].dbl) flushFPR(fpr ^ 1);
+	if(fprMap[fpr ^ 1].dbl ^ fprMap[fpr].dbl)
+		flushFPR(fpr ^ 1);
 }
 
 void flushFPR(int fpr){
@@ -425,11 +445,11 @@ void flushRegisters(void){
 	int i;
 	// Flush GPRs
 	for(i=1; i<34; ++i) flushRegister(i);
-	memcpy(availableRegs, availableRegsDefault, 32*sizeof(int));
+	memcpy(availableRegs, availableRegsDefault, 32);
 	nextLRUVal = 0;
 	// Flush FPRs
 	for(i=0; i<32; ++i) flushFPR(i);
-	memcpy(availableFPRs, availableFPRsDefault, 32*sizeof(int));
+	memcpy(availableFPRs, availableFPRsDefault, 32);
 	nextLRUValFPR = 0;
 }
 
@@ -437,11 +457,11 @@ void invalidateRegisters(void){
 	int i;
 	// Invalidate GPRs
 	for(i=0; i<34; ++i) invalidateRegister(i);
-	memcpy(availableRegs, availableRegsDefault, 32*sizeof(int));
+	memcpy(availableRegs, availableRegsDefault, 32);
 	nextLRUVal = 0;
 	// Invalidate FPRs
 	for(i=0; i<32; ++i) invalidateFPR(i);
-	memcpy(availableFPRs, availableFPRsDefault, 32*sizeof(int));
+	memcpy(availableFPRs, availableFPRsDefault, 32);
 	nextLRUValFPR = 0;
 }
 

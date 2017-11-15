@@ -81,11 +81,11 @@ DPS_register dps_register;
 
 unsigned long rdram[MEM_SIZE/4]  __attribute__((aligned(32)));
 unsigned char *const rdramb = (unsigned char *)(rdram);
-unsigned long SP_DMEM[0x1000/4*2];
+unsigned long SP_DMEM[0x1000/4*2] __attribute__((aligned(32)));
 unsigned long *const SP_IMEM = SP_DMEM+0x1000/4;
 unsigned char *const SP_DMEMb = (unsigned char *)(SP_DMEM);
 unsigned char *const SP_IMEMb = (unsigned char*)(SP_DMEM+0x1000/4);
-unsigned long PIF_RAM[0x40/4];
+unsigned long PIF_RAM[0x40/4] __attribute__((aligned(32)));
 unsigned char *const PIF_RAMb = (unsigned char *)(PIF_RAM);
 
 // values that are being written are stored in these variables
@@ -749,24 +749,22 @@ void update_DPC(void)
 
 void read_nothing()
 {
-   if (address == 0xa5000508) word = 0xFFFFFFFF;
-   else
-    word = 0;
+   word = (*address_low << 16) | *address_low;
 }
 
 void read_nothingb()
 {
-   byte = 0;
+   byte = *address_low;
 }
 
 void read_nothingh()
 {
-   hword = 0;
+   hword = *address_low;
 }
 
 void read_nothingd()
 {
-   dword = 0;
+   dword = (*address_low << 16) | *address_low;
 }
 
 void write_nothing()
@@ -2810,19 +2808,18 @@ void write_flashram_commandb(){}
 void write_flashram_commandh(){}
 void write_flashram_commandd(){}
 
-static unsigned long lastwrite = 0;
+static unsigned long last_write;
+static unsigned long rom_written;
 
 void read_rom()
 {
-	if (lastwrite)
+	if (rom_written)
 	{
-		unsigned long tmp = lastwrite;
-		lastwrite = 0;
-		word = tmp;
+		word = last_write;
+		rom_written = 0;
 	}
-	else {
+	else
 		word = sign_extended(*(unsigned long *)ROMCache_pointer(address & 0x3FFFFFF));
-	}
 }
 
 void read_romb()
@@ -2842,7 +2839,8 @@ void read_romd()
 
 void write_rom()
 {
-	lastwrite = word;
+	last_write = word;
+	rom_written = 1;
 }
 
 void read_pif()

@@ -50,13 +50,20 @@ RegMappingType getRegisterMapping(int reg);
 // Constant Propagation
 // Create a mapping for a 32-bit register (reg) to a HW register (returned)
 // The value mapped may have a constant value (isConstant) to be set later
-int mapConstantNew(int reg, int isConstant);
+int mapConstantNew(int gpr, int constant, int sign);
+// Create a mapping for a 64-bit register (gpr) to 2 HW registers (returned)
+// The value mapped may have a constant value (constant) to be set later
+RegMapping mapConstant64New(int gpr, int constant);
 // Return whether a register (reg) has a constant value mapped to it
 int isRegisterConstant(int reg);
-// Get the constant value held by a register (reg)
-unsigned int getRegisterConstant(int reg);
-// Set the constant value (constant) held by a register (reg)
-void setRegisterConstant(int reg, unsigned int constant);
+// Get the constant value held by a 32-bit register (gpr)
+long getRegisterConstant(int gpr);
+// Get the constant value held by a 64-bit register (gpr)
+long long getRegisterConstant64(int gpr);
+// Set the constant value (value) held by a 32-bit register (gpr)
+void setRegisterConstant(int gpr, long value);
+// Set the constant value (value) held by a 64-bit register (gpr)
+void setRegisterConstant64(int gpr, long long value);
 
 
 // -- FPRs --
