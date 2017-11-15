@@ -1174,11 +1174,8 @@ static void MTC0()
 	Cause = Cause & 0xFFFF7FFF; //Timer interupt is clear
 	break;
       case 12:   // Status
-	if((rrt & 0x04000000) != (Status & 0x04000000))
-	{
-		shuffle_fpr_data(Status, rrt);
-		set_fpr_pointers(rrt);
-	}
+	if ((rrt & 0x04000000) != (Status & 0x04000000))
+	  set_fpr_pointers(rrt);
 	Status = rrt;
 	update_count();
 	r4300.pc+=4;

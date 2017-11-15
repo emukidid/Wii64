@@ -1,6 +1,6 @@
 # Makefile for glN64_GX
 
-CFLAGS	+= -DGLN64_GX -D__LINUX__
+CXXFLAGS	+= -DGLN64_GX -D__LINUX__
 
 OBJ_GLN64_GX	=glN64_GX/glN64.o \
 		glN64_GX/Config_linux.o \

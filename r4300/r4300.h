@@ -60,6 +60,7 @@ typedef struct {
 	unsigned long next_vi;			//2764
 	unsigned int  nextLRU;			//2768
 	int           noCheckInterrupt; //2772
+	float         two16;
 } R4300;
 extern R4300 r4300 __attribute__((section(".sbss")));	//Why?
 
@@ -96,7 +97,6 @@ void compare_core();
 inline void jump_to_func();
 void update_count();
 int check_cop1_unusable();
-void shuffle_fpr_data(int oldStatus, int newStatus);
 void set_fpr_pointers(int newStatus);
 
 #ifndef PPC_DYNAREC

@@ -202,16 +202,7 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	gzwrite(f, PIF_RAM, 0x40);
 	gzwrite(f, &flashRAMInfo, sizeof(_FlashRAMInfo));
 	gzwrite(f, &r4300, sizeof(r4300));
-	if ((Status & 0x04000000) == 0)
-	{   // FR bit == 0 means 32-bit (MIPS I) FGR mode
-		shuffle_fpr_data(0, 0x04000000);  // shuffle data into 64-bit register format for storage
-		gzwrite(f, r4300.fpr_data, 32*8);
-		shuffle_fpr_data(0x04000000, 0);  // put it back in 32-bit mode
-	}
-	else
-	{
-		gzwrite(f, r4300.fpr_data, 32*8);
-	}
+	gzwrite(f, r4300.fpr_data, 32*8);
 	
 	len = save_eventqueue_infos(buf);
 	gzwrite(f, buf, len);
@@ -323,9 +314,7 @@ int savestates_load(unsigned int slot)
 	gzread(f, &r4300, sizeof(r4300));
 	set_fpr_pointers(Status);  // Status is r4300.reg_cop0[12]
 	gzread(f, r4300.fpr_data, 32*8);
-	if ((Status & 0x04000000) == 0)  // 32-bit FPR mode requires data shuffling because 64-bit layout is always stored in savestate file
-		shuffle_fpr_data(0x04000000, 0);
-		
+
 	len = 0;
 	while(1)
 	{

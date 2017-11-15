@@ -3,13 +3,6 @@
 ELF		= wii64-glN64.elf
 DOL		= wii64-glN64.dol
 
-#CFLAGS		=
-INCLUDE 	=
-#LD			= 
-#LDFLAGS 	=
-#LIBPATHS	= 
-LIB			= 
-
 include Makefile.glN64
 include Makefile.wii
 include Makefile.base

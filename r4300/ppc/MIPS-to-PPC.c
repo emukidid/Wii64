@@ -63,8 +63,6 @@ double __ieee754_sqrt(double);
 float __ieee754_sqrtf(float);
 long long __fixdfdi(double);
 long long __fixsfdi(float);
-double __floatdidf(long long);
-float __floatdisf(long long);
 
 #define CANT_COMPILE_DELAY() \
 	((get_src_pc()&0xFFF) == 0xFFC && \
@@ -3732,40 +3730,29 @@ static int D(MIPS_instr mips){
 #endif
 }
 
+static const float two16 = 0x1p16;
+
 static int CVT_FP_W(MIPS_instr mips, int dbl){
+	r4300.two16 = two16;
 	genCheckFP();
 
 	int fs = MIPS_GET_FS(mips);
 	flushFPR(fs);
 	int fd = mapFPRNew( MIPS_GET_FD(mips), dbl );
-	int tmp = mapRegisterTemp();
+	int r2 = mapRegisterTemp();
+	int tmp = mapFPRTemp();
 
 	// Get the integer value into a GPR
-	// tmp = r4300.fpr_single[fs]
-	GEN_LWZ(tmp, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
-	// tmp = *tmp (src)
-	GEN_LWZ(tmp, 0, tmp);
+	// r2 = r4300.fpr_single[fs]
+	GEN_LWZ(r2, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	GEN_LFS(F0, offsetof(R4300,two16), DYNAREG_R4300);
 
-	// lis r0, 0x4330
-	GEN_LIS(0, 0x4330);
-	// stw r0, -8(r1)
-	GEN_STW(0, -8, 1);
-	// lis r0, 0x8000
-	GEN_LIS(0, 0x8000);
-	// stw r0, -4(r1)
-	GEN_STW(0, -4, 1);
-	// xor r0, src, 0x80000000
-	GEN_XOR(0, tmp, 0);
-	// lfd f0, -8(r1)
-	GEN_LFD(0, -8, 1);
-	// stw r0 -4(r1)
-	GEN_STW(0, -4, 1);
-	// lfd fd, -8(r1)
-	GEN_LFD(fd, -8, 1);
-	// fsub fd, fd, f0
-	GEN_FSUB(fd, fd, 0, dbl);
+	GEN_PSQ_L(fd, 0, r2, QR7);
+	GEN_PSQ_L(tmp, 2, r2, QR5);
+	GEN_FMADD(fd, fd, F0, tmp, dbl);
 
-	unmapRegisterTemp(tmp);
+	unmapFPRTemp(tmp);
+	unmapRegisterTemp(r2);
 	return CONVERT_SUCCESS;
 }
 
@@ -3784,33 +3771,31 @@ static int W(MIPS_instr mips){
 }
 
 static int CVT_FP_L(MIPS_instr mips, int dbl){
+	r4300.two16 = two16;
 	genCheckFP();
 
-	flushRegisters();
 	int fs = MIPS_GET_FS(mips);
+	flushFPR(fs);
 	mapFPRNew( MIPS_GET_FD(mips), dbl ); // f1
-	int hi = mapRegisterTemp(); // r3
-	int lo = mapRegisterTemp(); // r4
+	int fd = mapFPRNew( MIPS_GET_FD(mips), dbl );
+	int r2 = mapRegisterTemp();
+	int tmp = mapFPRTemp();
 
 	// Get the long value into GPRs
-	// lo = r4300.fpr_double[fs]
-	GEN_LWZ(lo, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
-	// hi = *lo (hi word)
-	GEN_LWZ(hi, 0, lo);
-	// lo = *(lo+4) (lo word)
-	GEN_LWZ(lo, 4, lo);
-
-	// convert
-	GEN_B(add_jump(dbl ? (unsigned long)(&__floatdidf) : (unsigned long)(&__floatdisf), 1, 1), 0, 1);
+	// r2 = r4300.fpr_double[fs]
+	GEN_LWZ(r2, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	GEN_LFS(F0, offsetof(R4300,two16), DYNAREG_R4300);
+	GEN_PSQ_L(fd, 0, r2, QR7);
+	GEN_PSQ_L(tmp, 2, r2, QR5);
+	GEN_FMADD(fd, fd, F0, tmp, dbl);
+	GEN_PSQ_L(tmp, 4, r2, QR5);
+	GEN_FMADD(fd, fd, F0, tmp, dbl);
+	GEN_PSQ_L(tmp, 6, r2, QR5);
+	GEN_FMADD(fd, fd, F0, tmp, dbl);
 	
-	// Load old LR
-	GEN_LWZ(0, DYNAOFF_LR, 1);
-	// Restore LR
-	GEN_MTLR(0);
+	unmapRegisterTemp(r2);
+	unmapFPRTemp(tmp);
 	
-	unmapRegisterTemp(hi);
-	unmapRegisterTemp(lo);
-
 	return CONVERT_SUCCESS;
 }
 

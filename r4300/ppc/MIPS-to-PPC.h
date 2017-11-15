@@ -383,8 +383,8 @@ int convert(void);
 { PowerPC_instr ppc; _STHX(ppc,rd,ra,rb); set_next_dst(ppc); }
 #define GEN_STWX(rd,ra,rb) \
 { PowerPC_instr ppc; _STWX(ppc,rd,ra,rb); set_next_dst(ppc); }
-
-
+#define GEN_PSQ_L(fd,imm12,ra,qri) \
+{ PowerPC_instr ppc; _PSQ_L(ppc,fd,imm12,ra,qri); set_next_dst(ppc); }
 
 
 #endif

@@ -35,12 +35,6 @@
 #endif // __GX__
 
 #ifdef __LINUX__
-# ifndef min
-#  define min(a,b) ((a) < (b) ? (a) : (b))
-# endif
-# ifndef max
-#  define max(a,b) ((a) > (b) ? (a) : (b))
-# endif
 #include <stdlib.h>
 #endif
 
@@ -82,7 +76,7 @@ void gDPSetOtherMode( u32 mode0, u32 mode1 )
 
 void gDPSetPrimDepth( u16 z, u16 dz )
 {
-	gDP.primDepth.z = min( 1.0f, max( 0.0f, (_FIXED2FLOAT( z, 15 ) - gSP.viewport.vtrans[2]) / gSP.viewport.vscale[2] ) );
+	gDP.primDepth.z = MIN( 1.0f, MAX( 0.0f, (_FIXED2FLOAT( z, 15 ) - gSP.viewport.vtrans[2]) / gSP.viewport.vscale[2] ) );
 	gDP.primDepth.deltaZ = dz;
 
 #ifdef __GX__
@@ -858,7 +852,7 @@ void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
 	gDP.colorImage.changed = TRUE;
-	gDP.colorImage.height = max( gDP.colorImage.height, (unsigned int)lry );
+	gDP.colorImage.height = MAX( gDP.colorImage.height, (unsigned int)lry );
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPFillRectangle( %i, %i, %i, %i );\n",
@@ -911,8 +905,8 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	if (gDP.textureMode == TEXTUREMODE_NORMAL)
 		gDP.textureMode = TEXTUREMODE_TEXRECT;
 
-	gDP.texRect.width = (unsigned long)(max( lrs, s ) + dsdx);
-	gDP.texRect.height = (unsigned long)(max( lrt, t ) + dtdy);
+	gDP.texRect.width = (unsigned long)(MAX( lrs, s ) + dsdx);
+	gDP.texRect.height = (unsigned long)(MAX( lrt, t ) + dtdy);
 
 	if (lrs > s)
 	{
@@ -934,7 +928,7 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
 	gDP.colorImage.changed = TRUE;
-	gDP.colorImage.height = (unsigned long)(max( gDP.colorImage.height, gDP.scissor.lry ));
+	gDP.colorImage.height = (unsigned long)(MAX( gDP.colorImage.height, gDP.scissor.lry ));
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPTextureRectangle( %f, %f, %f, %f, %i, %i, %f, %f, %f, %f );\n",
