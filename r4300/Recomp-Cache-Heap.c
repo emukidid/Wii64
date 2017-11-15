@@ -215,6 +215,10 @@ static void release(int minNeeded){
 	}
 }
 
+void RecompCache_Release(int bytesRequired) {
+	release(bytesRequired);
+}
+
 void RecompCache_Alloc(unsigned int size, unsigned int address, PowerPC_func* func){
 	CacheMetaNode* newBlock = malloc( sizeof(CacheMetaNode) );
 	newBlock->addr = address;

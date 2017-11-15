@@ -1,9 +1,0 @@
-# Makefile MUPEN64 for glN64 + MenuV2 + Wii 
-
-ELF		= wii64-glN64.elf
-DOL		= wii64-glN64.dol
-
-include Makefile.menu2
-include Makefile.wii
-include Makefile.base
-

@@ -38,7 +38,7 @@ CTextureManager gTextureManager;
 #ifdef __GX__
 //Note: Rice's tex mem usage isn't calculated correctly because it assumes 32bit textures.
 //TODO: Revisit cache handling once Enhanced & Framebuffer textures are implemented.
-DWORD g_maxTextureMemUsage = 2*GX_TEXTURE_CACHE_SIZE;
+DWORD g_maxTextureMemUsage = GX_TEXTURE_CACHE_SIZE;
 DWORD g_amountToFree = (512*1024);
 bool g_bUseSetTextureMem = true;
 #else //__GX__

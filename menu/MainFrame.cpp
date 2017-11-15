@@ -43,6 +43,7 @@ extern "C" {
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-CARD.h"
 #include "../main/guifuncs.h"
+#include "../r4300/Recomp-Cache.h"
 }
 
 void Func_LoadROM();
@@ -256,6 +257,7 @@ void Func_PlayGame()
 	new_frame();
 	new_vi();
 	go();
+	RecompCache_Release(4*1024*1024);
 #ifdef DEBUGON
 	_break();
 #endif
