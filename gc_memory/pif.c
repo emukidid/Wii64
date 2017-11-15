@@ -63,6 +63,8 @@
 static unsigned char eeprom[0x800] __attribute__((aligned(32)));
 static unsigned char (*const mempack)[0x8000] = (unsigned char(*)[])(MEMPACK_LO);
 
+static unsigned long cic_challenge;
+
 BOOL eepromWritten = FALSE;
 BOOL mempakWritten = FALSE;
 
@@ -472,6 +474,7 @@ void update_pif_write()
 				PIF_RAMb[0x3F] = 0;
 			break;
 		}
+		cic_challenge=1;
 		return;
 	}
 	while (i<0x40)
@@ -505,7 +508,7 @@ void update_pif_write()
 		}
 		i++;
 	}
-	//PIF_RAMb[0x3F] = 0;
+	cic_challenge=0;
 	controllerCommand(-1, NULL);
 #ifdef DEBUG_PIF
 	print_pif();
@@ -515,6 +518,7 @@ void update_pif_write()
 void update_pif_read()
 {
 	int i=0, channel=0;
+	if (cic_challenge) return;
 #ifdef DEBUG_PIF
 	//   printf("read\n");
 	print_pif();
