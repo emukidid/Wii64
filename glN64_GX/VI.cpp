@@ -473,11 +473,11 @@ void VI_GX_renderCpuFramebuffer()
 		__lwp_heap_init(GXtexCache, memalign(32,GX_TEXTURE_CACHE_SIZE),GX_TEXTURE_CACHE_SIZE, 32);
 #endif //!HW_RVL
 	}
-	u16* FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2);
+	u16* FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2+32);
 	while(!FBtex)
 	{
 		TextureCache_FreeNextTexture();
-		FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2);
+		FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2+32);
 	}
 	GXTexObj	FBtexObj;
 
@@ -503,7 +503,7 @@ void VI_GX_renderCpuFramebuffer()
 
 		do {
 			__asm__ volatile(
-				"lwzu    2, 8(%0) \n"
+				"lwzu    0, 8(%0) \n"
 				"lwz     3, 4(%0) \n"
 				"lwzu    4, 8(%1) \n"
 				"lwz     5, 4(%1) \n"
@@ -512,7 +512,7 @@ void VI_GX_renderCpuFramebuffer()
 				"lwzu    8, 8(%3) \n"
 				"lwz     9, 4(%3) \n"
 
-				"rotrwi  2, 2, 1 \n"
+				"rotrwi  0, 0, 1 \n"
 				"rotrwi  3, 3, 1 \n"
 				"rotrwi  4, 4, 1 \n"
 				"rotrwi  5, 5, 1 \n"
@@ -521,7 +521,7 @@ void VI_GX_renderCpuFramebuffer()
 				"rotrwi  8, 8, 1 \n"
 				"rotrwi  9, 9, 1 \n"
 
-				"or  2, 2, %4 \n"
+				"or  0, 0, %4 \n"
 				"or  3, 3, %4 \n"
 				"or  4, 4, %4 \n"
 				"or  5, 5, %4 \n"
@@ -530,7 +530,7 @@ void VI_GX_renderCpuFramebuffer()
 				"or  8, 8, %4 \n"
 				"or  9, 9, %4 \n"
 
-				"stw     2, 0(%5) \n"
+				"stw     0, 0(%5) \n"
 				"stw     3, 0(%5) \n"
 				"stw     4, 0(%5) \n"
 				"stw     5, 0(%5) \n"
@@ -540,7 +540,7 @@ void VI_GX_renderCpuFramebuffer()
 				"stw     9, 0(%5) \n"
 				: "+b" (src1), "+b" (src2), "+b" (src3), "+b" (src4)
 				: "r" (0x80008000), "b" (wgPipe)
-				: "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9",
+				: "r0", "r3", "r4", "r5", "r6", "r7", "r8", "r9",
 				  "memory");
 		} while (--tiles);
 
