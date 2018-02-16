@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="texpacker:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/texpacker_jar</output-path>
+    <root id="archive" name="texpacker.jar">
+      <element id="module-output" name="texpacker" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/commons-lang-2.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/log4j-api-2.0-rc1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/log4j-core-2.0-rc1.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
