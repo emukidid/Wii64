@@ -19,6 +19,7 @@
 char *boxartFileName = "sd:/wii64/boxart.bin";
 FILE* boxartFile = NULL;
 u32 *boxartHeader = NULL;
+extern u32 missBoxArt_length;
 extern u8 missBoxArt[];	//default "no boxart" texture
 
 /* Call this in the menu to set things up */
@@ -62,9 +63,10 @@ void BOXART_DeInit()
 	- a RGB565 image will be returned */
 void BOXART_LoadTexture(u32 CRC, char *buffer)
 {
+	memset(buffer, 0x5A, BOXART_TEX_SIZE);
 	if(!boxartFile)
 	{
-		memcpy(buffer,&missBoxArt,BOXART_TEX_SIZE);
+		memcpy(buffer,&missBoxArt,missBoxArt_length);
 		return;
 	}
 		
@@ -81,6 +83,6 @@ void BOXART_LoadTexture(u32 CRC, char *buffer)
 	// if we didn't find it, then return the default image
 	if(!found)
 	{
-		memcpy(buffer,&missBoxArt,BOXART_TEX_SIZE);
+		memcpy(buffer,&missBoxArt,missBoxArt_length);
 	}
 }

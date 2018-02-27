@@ -20,14 +20,8 @@ static void readBinaryWithSize(FILE* file, T& data, int size) {
 	swap(data);
 }
 
-ArchiveReader::ArchiveReader(const char* filename) :
-		file(fopen(filename, "rb")), table(readMetadata()) {
+ArchiveReader::ArchiveReader() {
 	stream.zalloc = NULL; stream.zfree = NULL; stream.opaque = NULL;
-}
-
-ArchiveReader::~ArchiveReader() {
-	fclose(file);
-	delete table;
 }
 
 char* ArchiveReader::getDescription() { return &description[0]; }
@@ -35,6 +29,17 @@ char* ArchiveReader::getAuthor() { return &author[0]; }
 char* ArchiveReader::getPacker() { return &packer[0]; }
 char* ArchiveReader::getDatepacked() { return &datepacked[0]; }
 unsigned char* ArchiveReader::getIcon() { return &icon[0]; }
+
+void ArchiveReader::setArchiveFile(const char* filename) {
+	file = fopen(filename, "rb");
+	table = readMetadata();
+	stream.zalloc = NULL; stream.zfree = NULL; stream.opaque = NULL;
+}
+
+void ArchiveReader::reset() {
+	fclose(file);
+	delete table;
+}
 
 ArchiveTable* ArchiveReader::readMetadata() {
 	unsigned int magic, tableOffset, tableSize = 0;

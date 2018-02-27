@@ -51,8 +51,11 @@ typedef SortedArray<ArchiveEntry> ArchiveTable;
 
 class ArchiveReader {
 public:
-	ArchiveReader(const char* filename);
-	~ArchiveReader();
+	static ArchiveReader& getInstance()
+	{
+		static ArchiveReader instance;
+		return instance;
+	}
 
 	bool find(ArchiveEntry& entry) { return table->find(entry); }
 	ArchiveEntryInfo readInfo(const ArchiveEntry&);
@@ -64,8 +67,14 @@ public:
 	char *getPacker();
 	char *getDatepacked();
 	unsigned char *getIcon();
+	void setArchiveFile(const char* filename);
+	void reset();
 
 private:
+	ArchiveReader();	// Private Constructor
+	ArchiveReader(ArchiveReader const& copy);            // for singleton
+	ArchiveReader& operator=(ArchiveReader const& copy); // for singleton
+
 	FILE* file;
 	ArchiveTable* table;
 	
