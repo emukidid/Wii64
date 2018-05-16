@@ -88,6 +88,7 @@ extern int rounding_mode, trunc_mode, round_mode, ceil_mode, floor_mode;
 extern unsigned long jump_to_address;
 extern int no_audio_delay;
 extern int no_compiled_jump;
+extern unsigned long count_per_op;
 
 void cpu_init(void);
 void cpu_deinit(void);

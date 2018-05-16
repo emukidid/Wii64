@@ -183,7 +183,7 @@ int dyna_update_count(unsigned int pc, int isDelaySlot){
 #else
 int dyna_update_count(unsigned int pc){
 #endif
-	Count += (pc - r4300.last_pc)/2;
+	Count += ((pc - r4300.last_pc) >> 2) * count_per_op;
 	r4300.last_pc = pc;
 
 #ifdef COMPARE_CORE

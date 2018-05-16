@@ -57,6 +57,7 @@ void RecompCache_Update(PowerPC_func*);
 static int inline mips_is_jump(MIPS_instr);
 void jump_to(unsigned int);
 void check_interupt();
+extern unsigned long count_per_op;
 
 unsigned long long __udivmoddi4(unsigned long long, unsigned long long, unsigned long long*);
 double __ieee754_sqrt(double);
@@ -4038,6 +4039,8 @@ static void genUpdateCount(int checkCount){
 	GEN_LWZ(tmp, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	// srwi r0, r0, 1                // r0 = (pc - r4300.last_pc)/2
 	GEN_SRWI(R0, R0, 1);
+	// mulli r0, r0, count_per_op    // r0 *= count_per_op
+	GEN_MULLI(R0, R0, count_per_op);
 	// add    r0,  r0, tmp           // r0 += Count
 	GEN_ADD(R0, R0, tmp);
 	if(checkCount){

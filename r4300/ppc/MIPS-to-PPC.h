@@ -197,6 +197,8 @@ int convert(void);
 { PowerPC_instr ppc; _XORI(ppc,rd,ra,immed); set_next_dst(ppc); }
 #define GEN_XORIS(rd,ra,immed) \
 { PowerPC_instr ppc; _XORIS(ppc,rd,ra,immed); set_next_dst(ppc); }
+#define GEN_MULLI(rd,ra,immed) \
+{ PowerPC_instr ppc; _MULLI(ppc,rd,ra,immed); set_next_dst(ppc); }
 #define GEN_MULLW(rd,ra,rb) \
 { PowerPC_instr ppc; _MULLW(ppc,rd,ra,rb); set_next_dst(ppc); }
 #define GEN_MULHW(rd,ra,rb) \

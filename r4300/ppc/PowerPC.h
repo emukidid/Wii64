@@ -930,6 +930,13 @@ PowerPC_instr Instruction(int opcode, ...);
 	  PPC_SET_RA    (ppc, (rd)); \
 	  PPC_SET_RD    (ppc, (ra)); \
 	  PPC_SET_IMMED (ppc, (immed)); }
+	  
+#define _MULLI(ppc,rd,ra,immed) \
+	{ ppc = NEW_PPC_INSTR(); \
+	  PPC_SET_OPCODE(ppc, PPC_OPCODE_MULLI); \
+	  PPC_SET_RD    (ppc, (rd)); \
+	  PPC_SET_RA    (ppc, (ra)); \
+	  PPC_SET_IMMED (ppc, (immed)); }
 
 #define _MULLW(ppc,rd,ra,rb) \
 	{ ppc = NEW_PPC_INSTR(); \

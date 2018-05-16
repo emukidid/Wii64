@@ -50,6 +50,7 @@ R4300 r4300;
 unsigned long i, dynacore = 0, interpcore = 0;
 int no_audio_delay = 0;
 int no_compiled_jump = 0;
+unsigned long count_per_op = 2;
 unsigned long dyna_interp = 0;
 
 precomp_instr *PC = NULL;
@@ -145,7 +146,7 @@ void update_count()
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
 	}
 #endif
-	Count = Count + (r4300.pc - r4300.last_pc) / 2;
+	Count += ((r4300.pc - r4300.last_pc) / 2) * count_per_op;
 	r4300.last_pc = r4300.pc;
 	
 #ifdef COMPARE_CORE
