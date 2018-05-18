@@ -68,6 +68,10 @@ extern "C" {
 #include "../vm/vm.h"
 #include "../gc_memory/ARAM.h"
 #endif
+
+#ifdef HW_RVL
+extern f32 SYS_GetCoreMultiplier();
+#endif
 }
 
 #ifdef WII
@@ -129,7 +133,7 @@ char miniMenuActive;
 	   char loadButtonSlot;
 
 static struct {
-	char* key;
+	const char* key;
 	char* value; // Not a string, but a char pointer
 	char  min, max;
 } OPTIONS[] =
