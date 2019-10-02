@@ -4,7 +4,7 @@ CC		= powerpc-eabi-gcc
 CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
-LTO			 = -flto # Uncomment to use link-time optimization
+LTO			 = #-flto # Uncomment to use link-time optimization
 DEBUG_FLAGS += #-DPROFILE #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DSHOW_STATS #-DNO_BT
 FEATURES	+= #-DUSE_EXPANSION #-DUSE_TLB_CACHE #-DUSE_ROM_CACHE_L1 #-DEMBEDDED_FONTS
 
@@ -15,7 +15,7 @@ INCLUDE 	+= -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -
 LIBPATHS	+= -L$(DEVKITPRO)/portlibs/ppc/lib
 
 CXXFLAGS		+= \
-		-g -O3 $(LTO) -Wall -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
+		-g -O3 $(LTO) -Wall -Wno-parentheses -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
 		-DGEKKO -D__GX__ -DUSE_GUI -DRELEASE -DMENU_V2 \
 		-DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DNO_ASM \
 		$(DEBUG_FLAGS) $(FEATURES) #-fno-exceptions

@@ -283,7 +283,6 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 }
 
 void init_block(PowerPC_block* ppc_block){
-	PowerPC_block* temp_block;
 	
 	// FIXME: Equivalent addresses should point to the same code/funcs?
 	if(ppc_block->start_address+0x1000 < 0x80000000 || ppc_block->start_address >= 0xc0000000){
@@ -468,7 +467,7 @@ static int pass0(PowerPC_block* ppc_block){
 			++src, ++pc;
 			if(func == MIPS_FUNC_JALR && index + 2 < 1024)
 				isJmpDst[ index + 2 ] = 1;
-				if(func == MIPS_FUNC_JR){ ++src, ++pc; break; }
+			if(func == MIPS_FUNC_JR){ ++src, ++pc; break; }
 		} else if(opcode == MIPS_OPCODE_COP0 &&
 		          func == MIPS_FUNC_ERET){
 			++src, ++pc;

@@ -3209,7 +3209,6 @@ void prefetch()
 	}
 	else
     {
-	     print_gecko("execution &#65533; l'addresse :%x\n", (int)r4300.pc);
 	     r4300.stop=1;
 #ifdef DEBUGON
        _break();

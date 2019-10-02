@@ -4037,8 +4037,8 @@ static void genUpdateCount(int checkCount){
 	GEN_SUBF(R0, R0, tmp);
 	// lwz    tmp, 9*4(r4300.reg_cop0)     // tmp = Count
 	GEN_LWZ(tmp, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
-	// srwi r0, r0, 1                // r0 = (pc - r4300.last_pc)/2
-	GEN_SRWI(R0, R0, 1);
+	// srwi r0, r0, 2                // r0 = (pc - r4300.last_pc)>>2
+	GEN_SRWI(R0, R0, 2);
 	// mulli r0, r0, count_per_op    // r0 *= count_per_op
 	GEN_MULLI(R0, R0, count_per_op);
 	// add    r0,  r0, tmp           // r0 += Count

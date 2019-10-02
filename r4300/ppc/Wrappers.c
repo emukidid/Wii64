@@ -51,7 +51,7 @@ static PowerPC_func* last_func;
  *  $sp	    | old sp
  */
 
-inline unsigned int dyna_run(PowerPC_func* func, PowerPC_instr *code){
+inline u32 dyna_run(PowerPC_func* func, PowerPC_instr *code){
 	
 	PowerPC_instr* return_addr;
 
@@ -85,7 +85,7 @@ inline unsigned int dyna_run(PowerPC_func* func, PowerPC_instr *code){
 	last_func = r30;
 	link_branch = link_branch == return_addr ? NULL : link_branch - 1;
 
-	return r3;
+	return (u32)r3;
 }
 
 void dynarec(unsigned int address){

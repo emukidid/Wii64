@@ -1238,11 +1238,12 @@ void OGL_DrawTriangles()
 
 
 #ifdef SHOW_DEBUG
-	if (OGL.GXuseCombW) CntTriProjW += OGL.numTriangles;
+/*	if (OGL.GXuseCombW) CntTriProjW += OGL.numTriangles;
 	else CntTriOther += OGL.numTriangles;
 	if (OGL.GXuseCombW && OGL.GXuseProjWnear) CntTriNear += OGL.numTriangles;
-	if (OGL.GXpolyOffset) CntTriPolyOffset += OGL.numTriangles;
+	if (OGL.GXpolyOffset) CntTriPolyOffset += OGL.numTriangles;*/
 #endif
+
 
 	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, OGL.numVertices);
 	for (int i = 0; i < OGL.numVertices; i++) {

@@ -146,7 +146,7 @@ void update_count()
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
 	}
 #endif
-	Count += ((r4300.pc - r4300.last_pc) / 2) * count_per_op;
+	Count += ((r4300.pc - r4300.last_pc) >> 2) * count_per_op;
 	r4300.last_pc = r4300.pc;
 	
 #ifdef COMPARE_CORE

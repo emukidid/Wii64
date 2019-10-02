@@ -27,7 +27,6 @@
 #include "OpenGL.h"
 #include "CRC.h"
 #include <string.h>
-#include "convert.h"
 #include "S2DEX.h"
 #include "VI.h"
 #include "DepthBuffer.h"

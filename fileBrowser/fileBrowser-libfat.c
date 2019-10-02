@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/dir.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include "fileBrowser.h"
 #include <sdcard/gcsd.h>
