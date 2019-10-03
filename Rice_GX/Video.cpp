@@ -35,6 +35,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <sys/syslimits.h> // PATH_MAX
 #include <malloc.h>
 #include "version.h"
+#include "../fileBrowser/fileBrowser.h"
+#include "../fileBrowser/fileBrowser-libfat.h"
 #endif //__GX__
 
 #ifdef DEBUGON
@@ -171,7 +173,17 @@ void GetPluginDir( char * Directory )
       strcpy(Directory, path);
    }
 #else //!__GX__
+	
+#ifdef WII
+	if(romFile_topLevel == &topLevel_libfat_Default) {
+		strcpy(Directory, "sd:/wii64/");
+	}
+	else if(romFile_topLevel == &topLevel_libfat_USB) {
+		strcpy(Directory, "usb:/wii64/");
+	}
+#else
 	strcpy(Directory, "sd:/wii64/");
+#endif
 #endif //__GX__
 }
 

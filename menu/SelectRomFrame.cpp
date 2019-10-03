@@ -151,7 +151,7 @@ extern "C" {
 }
 
 SelectRomFrame::SelectRomFrame()
-		: activeSubmenu(SUBMENU_SD)
+		: activeSubmenu(SUBMENU_DEFAULT)
 {
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
 		FRAME_BUTTONS[i].button = new menu::Button(FRAME_BUTTONS[i].buttonStyle, &FRAME_BUTTONS[i].buttonString, 
@@ -246,21 +246,40 @@ void SelectRomFrame::activateSubmenu(int submenu)
 	}
 	GX_InvalidateTexAll();
 	
+	menu::MessageBox::getInstance().fadeMessage("Searching for ROMs");
+
+#ifdef WII	
+	// Work out which device we have
+	if(activeSubmenu == SUBMENU_DEFAULT) {
+		romFile_init     = fileBrowser_libfat_init;
+		romFile_topLevel = &topLevel_libfat_Default;
+		romFile_deinit   = fileBrowser_libfatROM_deinit;
+		activeSubmenu = SUBMENU_SD;
+
+		if(!romFile_init( romFile_topLevel )) {
+			if(romFile_deinit) romFile_deinit( romFile_topLevel );
+			romFile_topLevel = &topLevel_libfat_USB;
+			if(romFile_init( romFile_topLevel )) {
+				activeSubmenu = SUBMENU_USB;
+			}
+		}
+	}
+#else
+	activeSubmenu = SUBMENU_SD;
+#endif
+	
 	switch (activeSubmenu)	//Display message saying which device we're opening
 	{						
 		case SUBMENU_SD:
 			FRAME_BUTTONS[0].button->setSelected(true);
-			menu::MessageBox::getInstance().fadeMessage("Searching SD for ROMs");
 			break;
 		case SUBMENU_USB:
 #ifdef WII
 			FRAME_BUTTONS[1].button->setSelected(true);
-			menu::MessageBox::getInstance().fadeMessage("Searching USB for ROMs");
 #endif
 			break;
 		case SUBMENU_DVD:
 			FRAME_BUTTONS[2].button->setSelected(true);
-			menu::MessageBox::getInstance().fadeMessage("Searching DVD for ROMs");
 			break;
 	}
 	//Draw one frame with message

@@ -196,11 +196,25 @@ void load_config(char *loaded_path) {
 	if(loaded_path[0] == 'u') {  
 		memcpy(&configFile_file, &saveDir_libfat_USB, sizeof(fileBrowser_file));
 		strcpy(prefix,"usb:/wii64/");
+		romFile_topLevel = &topLevel_libfat_USB;
 	}
-	else
-	{
+	else if(loaded_path[0] == 's') {
 		memcpy(&configFile_file, &saveDir_libfat_Default, sizeof(fileBrowser_file));
 		strcpy(prefix,"sd:/wii64/");
+		romFile_topLevel = &topLevel_libfat_Default;
+	}
+	else {
+		// Loaded over network or USBGecko, or a loader that doesn't set argv properly, try SD then USB.
+		memcpy(&configFile_file, &saveDir_libfat_Default, sizeof(fileBrowser_file));
+		strcpy(prefix,"sd:/wii64/");
+		romFile_topLevel = &topLevel_libfat_Default;
+#ifdef HW_RVL
+		if(!configFile_init(&configFile_file)) {
+			memcpy(&configFile_file, &saveDir_libfat_USB, sizeof(fileBrowser_file));
+			strcpy(prefix,"usb:/wii64/");
+			romFile_topLevel = &topLevel_libfat_USB;
+		}
+#endif
 	}
 	if(configFile_init(&configFile_file)) {                	//only if device initialized ok
 		sprintf(configFile_file.name, "%s%s", prefix, "settings.cfg");
