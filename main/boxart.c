@@ -11,12 +11,11 @@
 #include <malloc.h>
 #include <sys/dir.h>
 #include "boxart.h"
+#include "../fileBrowser/fileBrowser.h"
+#include "../fileBrowser/fileBrowser-libfat.h"
 
 
 #define MAX_HEADER_SIZE 0x2000
-//TODO: Set path based on load from SD or USB
-//char *boxartFileName = "boxart.bin";
-char *boxartFileName = "sd:/wii64/boxart.bin";
 FILE* boxartFile = NULL;
 u32 *boxartHeader = NULL;
 extern u32 missBoxArt_length;
@@ -26,8 +25,20 @@ extern u8 missBoxArt[];	//default "no boxart" texture
 void BOXART_Init()
 {
 	// open boxart file
-	if(!boxartFile)
-		boxartFile = fopen( boxartFileName, "rb" );
+	if(!boxartFile) {
+#ifdef WII
+		if(romFile_topLevel == &topLevel_libfat_Default) {
+			boxartFile = fopen( "sd:/wii64/boxart.bin", "rb" );
+		}
+		else if(romFile_topLevel == &topLevel_libfat_USB) {
+			boxartFile = fopen( "usb:/wii64/boxart.bin", "rb" );
+		}
+#else
+		if(romFile_topLevel == &topLevel_libfat_Default) {
+			boxartFile = fopen( "sd:/wii64/boxart.bin", "rb" );
+		}
+#endif
+	}
 	
 	// file wasn't found	
 	if(!boxartFile)
@@ -70,19 +81,16 @@ void BOXART_LoadTexture(u32 CRC, char *buffer)
 		return;
 	}
 		
-	int i = 0,found = 0;
+	int i = 0;
 	for(i = 0; i < (MAX_HEADER_SIZE/4); i+=2)
 	{
 		if(boxartHeader[i] == CRC)
 		{
 			fseek(boxartFile,boxartHeader[i+1],SEEK_SET);
 			fread(buffer, 1, BOXART_TEX_SIZE, boxartFile);
-			found = 1;
+			return;
 		}
 	}
 	// if we didn't find it, then return the default image
-	if(!found)
-	{
-		memcpy(buffer,&missBoxArt,missBoxArt_length);
-	}
+	memcpy(buffer,&missBoxArt,missBoxArt_length);
 }
