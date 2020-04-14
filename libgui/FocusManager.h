@@ -64,6 +64,9 @@ private:
 	int buttonsPressed, previousButtonsPressed;
 	u32 previousButtonsWii[4];
 	u16 previousButtonsGC[4];
+#ifdef RVL_LIBWIIDRC
+	u32 previousButtonsDRC[4];
+#endif
 	ComponentList focusList;
 	Component *primaryFocusOwner, *secondaryFocusOwner;
 	Frame *currentFrame;

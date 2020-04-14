@@ -1,0 +1,9 @@
+#Makefile MUPEN64 for Rice + MenuV2 + WiiVC
+
+ELF		= wii64-Rice-wiivc.elf
+DOL		= wii64-Rice-wiivc.dol
+
+include Makefile.Rice
+include Makefile.wii
+include Makefile.wiivc
+include Makefile.base

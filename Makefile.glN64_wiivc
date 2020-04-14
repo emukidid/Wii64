@@ -1,0 +1,9 @@
+#Makefile MUPEN64 for glN64_GX + MenuV2 + WiiVC
+
+ELF		= wii64-glN64-wiivc.elf
+DOL		= wii64-glN64-wiivc.dol
+
+include Makefile.glN64
+include Makefile.wii
+include Makefile.wiivc
+include Makefile.base

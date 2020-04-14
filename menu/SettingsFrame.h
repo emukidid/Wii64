@@ -45,7 +45,9 @@ private:
 	int activeSubmenu;
 	u16 previousButtonsGC[4];
 	u32 previousButtonsWii[4];
-
+#ifdef RVL_LIBWIIDRC
+	u32 previousButtonsDRC[4];
+#endif
 };
 
 #endif

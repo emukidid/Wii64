@@ -120,6 +120,7 @@ char miniMenuActive;
        char creditsScrolling;
        char padNeedScan;
        char wpadNeedScan;
+	   char drcNeedScan;
        char shutdown = 0;
 	   char nativeSaveDevice;
 	   char saveStateDevice;
@@ -236,6 +237,14 @@ void load_config(char *loaded_path) {
 			load_configurations(f, &controller_Classic);			//write out Classic controller mappings
 			fclose(f);
 		}
+#ifdef RVL_LIBWIIDRC
+		sprintf(configFile_file.name, "%s%s", prefix, "controlD.cfg");
+		f = fopen( configFile_file.name, "r" );  //attempt to open file
+		if(f) {
+			load_configurations(f, &controller_DRC);			//write out DRC controller mappings
+			fclose(f);
+		}
+#endif
 		sprintf(configFile_file.name, "%s%s", prefix, "controlN.cfg");
 		f = fopen( configFile_file.name, "r" );  //attempt to open file
 		if(f) {
@@ -362,7 +371,21 @@ u16 readWPAD(void){
 	   	b |= (w & CLASSIC_CTRL_BUTTON_A) ? PAD_BUTTON_A : 0;
 	   	b |= (w & CLASSIC_CTRL_BUTTON_B) ? PAD_BUTTON_B : 0;
 	}
+#ifdef RVL_LIBWIIDRC
+	if(drcNeedScan){ WiiDRC_ScanPads(); drcNeedScan = 0; }
 
+	if(WiiDRC_Inited() && WiiDRC_Connected())
+	{
+		const WiiDRCData* drc = WiiDRC_Data();
+	   	u16 w = drc->button;
+	   	b |= (w & WIIDRC_BUTTON_UP)    ? PAD_BUTTON_UP    : 0;
+	   	b |= (w & WIIDRC_BUTTON_DOWN)  ? PAD_BUTTON_DOWN  : 0;
+	   	b |= (w & WIIDRC_BUTTON_LEFT)  ? PAD_BUTTON_LEFT  : 0;
+	   	b |= (w & WIIDRC_BUTTON_RIGHT) ? PAD_BUTTON_RIGHT : 0;
+		b |= (w & WIIDRC_BUTTON_A) ? PAD_BUTTON_A : 0;
+	   	b |= (w & WIIDRC_BUTTON_B) ? PAD_BUTTON_B : 0;
+	}
+#endif
 	return b;
 }
 #else
@@ -580,7 +603,7 @@ static void rsp_info_init(void){
 void stop_it() { r4300.stop = 1; }
 
 void ScanPADSandReset(u32 dummy) {
-	padNeedScan = wpadNeedScan = 1;
+	drcNeedScan = padNeedScan = wpadNeedScan = 1;
 	if(!((*(u32*)0xCC003000)>>16))
 		stop_it();
 }

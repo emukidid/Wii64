@@ -31,7 +31,7 @@
 #include "Controller_#1.1.h"
 #endif
 
-extern char padNeedScan, wpadNeedScan;
+extern char padNeedScan, wpadNeedScan, drcNeedScan;
 extern u32 gc_connected;
 
 void control_info_init(void);
@@ -107,22 +107,24 @@ typedef struct _virtualControllers_t {
 extern virtualControllers_t virtualControllers[4];
 
 // List of all the defined controller_t's
-#if defined(WII) && !defined(NO_BT)
-
-#define num_controller_t 4
+#if defined(WII) 
 extern controller_t controller_GC;
 extern controller_t controller_Classic;
 extern controller_t controller_WiimoteNunchuk;
 extern controller_t controller_Wiimote;
-extern controller_t* controller_ts[num_controller_t];
 
-#else // WII && !NO_BT
+#if !defined(RVL_LIBWIIDRC)	// Wii
+#define num_controller_t 4
+#else
+extern controller_t controller_DRC;
+#define num_controller_t 5	// WiiVC
+#endif
 
-#define num_controller_t 1
+#else // GameCube
 extern controller_t controller_GC;
+#define num_controller_t 1
+#endif
 extern controller_t* controller_ts[num_controller_t];
-
-#endif // WII && !NO_BT
 
 void init_controller_ts(void);
 void assign_controller(int whichVirtual, controller_t*, int whichPhysical);

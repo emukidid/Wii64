@@ -1,0 +1,8 @@
+# Makefile for WiiVC-specific code
+
+CXXFLAGS	+= -DRVL_LIBWIIDRC
+
+OBJ_INPUT	+= \
+		gc_input/controller-DRC.o
+
+LIB		+= -lwiidrc
