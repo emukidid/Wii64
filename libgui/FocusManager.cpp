@@ -38,7 +38,9 @@ Focus::Focus()
 {
 	for (int i=0; i<4; i++) {
 		previousButtonsWii[i] = 0;
+#ifdef RVL_LIBWIIDRC
 		previousButtonsDRC[i] = 0;
+#endif
 		previousButtonsGC[i] = 0;
 	}
 }
