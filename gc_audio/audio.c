@@ -56,7 +56,11 @@
 AUDIO_INFO AudioInfo;
 extern float VILimit;
 #define DEFAULT_FREQUENCY 33600
+#ifdef RVL_LIBWIIDRC
 #define BUFFER_SIZE (DSP_STREAMBUFFER_SIZE * 32)
+#else
+#define BUFFER_SIZE (DSP_STREAMBUFFER_SIZE * 64)
+#endif
 static char buffer[BUFFER_SIZE];
 static const char *end_ptr = buffer + BUFFER_SIZE;
 static char *write_ptr, *read_ptr;
@@ -111,8 +115,10 @@ EXPORT void CALL AiDacrateChanged(int SystemType)
 EXPORT void CALL AiLenChanged(void)
 {
 	if (audioEnabled) {
+#ifdef RVL_LIBWIIDRC
 		while(buffered > (DSP_STREAMBUFFER_SIZE * 24))
 			usleep(100);
+#endif
 		uint32_t level = IRQ_Disable();
 		
 		char *stream = AudioInfo.RDRAM + (*AudioInfo.AI_DRAM_ADDR_REG & 0xFFFFFF);
@@ -131,8 +137,12 @@ EXPORT void CALL AiLenChanged(void)
 				buffered += size;
 			} while (length > 0);
 		}
-	
+
+#ifdef RVL_LIBWIIDRC
 		if (scalePitch)
+#else
+		if (scalePitch || Timers.vis > VILimit)
+#endif
 			AESND_SetVoiceFrequency(voice, freq * (Timers.vis / VILimit));
 			
 		IRQ_Restore(level);
