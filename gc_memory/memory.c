@@ -2039,6 +2039,7 @@ void write_ai()
 				case 0x41:
 				case 0x45:
 				case 0x4a:
+				default:
 				{
 					unsigned long f = 48681812/(ai_register.ai_dacrate+1);
 					if (f)
@@ -2088,6 +2089,7 @@ void write_ai()
 				case 0x41:
 				case 0x45:
 				case 0x4a:
+				default:
 					aiDacrateChanged(SYSTEM_NTSC);
 				break;
 				}
@@ -2128,6 +2130,7 @@ void write_aib()
 				case 0x41:
 				case 0x45:
 				case 0x4a:
+				default:
 					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*vi_register.vi_delay*60)/48681812;
 				break;
 			}
@@ -2181,6 +2184,7 @@ void write_aib()
 					case 0x41:
 					case 0x45:
 					case 0x4a:
+					default:
 						aiDacrateChanged(SYSTEM_NTSC);
 					break;
 				}
@@ -2219,6 +2223,7 @@ void write_aih()
 				case 0x41:
 				case 0x45:
 				case 0x4a:
+				default:
 					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*vi_register.vi_delay*60)/48681812;
 				break;
 			}
@@ -2268,6 +2273,7 @@ void write_aih()
 					case 0x41:
 					case 0x45:
 					case 0x4a:
+					default:
 						aiDacrateChanged(SYSTEM_NTSC);
 					break;
 				}
@@ -2304,6 +2310,7 @@ void write_aid()
 				case 0x41:
 				case 0x45:
 				case 0x4a:
+				default:
 					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*
 					vi_register.vi_delay*60)/48681812;
 				break;
@@ -2351,6 +2358,7 @@ void write_aid()
 					case 0x41:
 					case 0x45:
 					case 0x4a:
+					default:
 					aiDacrateChanged(SYSTEM_NTSC);
 					break;
 				}
