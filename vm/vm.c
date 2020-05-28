@@ -199,6 +199,8 @@ void* VM_Init(u32 VMSize, u32 MEMSize)
 		return NULL;
 	}
 
+	AR_Clear(AR_ARAMINTUSER);
+
 	tlbia();
 	DCZeroRange(MEM_Base, MEMSize);
 	HTABORG = (PTE*)(((u32)MEM_Base+0xFFFF)&~0xFFFF);

@@ -50,6 +50,7 @@ static char* ROMBase = ROMCACHE_LO;
 static char* ROMBlocks[NUM_BLOCKS];
 static int   ROMBlocksLRU[NUM_BLOCKS];
 static void ensure_block(u32 block);
+int enableLoadIcon = 0;
 #endif
 
 #ifdef MENU_V2
@@ -70,7 +71,6 @@ static char readBefore = 0;
 
 static int byte_swap_type = 0;
 
-extern void showLoadIcon(void);
 extern void pauseAudio(void);
 extern void resumeAudio(void);
 extern BOOL hasLoadedROM;
@@ -127,7 +127,7 @@ void* ROMCache_pointer(u32 rom_offset){
 static void ROMCache_load_block(char* dst, u32 rom_offset){
   if((hasLoadedROM) && (!r4300.stop))
     pauseAudio();
-	showLoadIcon();
+	enableLoadIcon = 1;
 	u32 offset = 0, bytes_read, loads_til_update = 0;
 	romFile_seekFile(&ROMFile, rom_offset, FILE_BROWSER_SEEK_SET);
 	while(offset < BLOCK_SIZE){

@@ -63,10 +63,6 @@ void gfx_set_fb(unsigned int* fb1, unsigned int* fb2){
 	VI_GX_setFB(fb1, fb2);
 }
 
-void showLoadIcon(void){
-	VI.enableLoadIcon = true;
-}
-
 void gfx_set_window(int x, int y, int width, int height){
 	//Note: this will break FB tex for x|y < 0
 	OGL.GXorigX = x;

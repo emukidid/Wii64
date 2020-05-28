@@ -87,10 +87,7 @@ std::vector<uint32> frameWriteRecord;
 //TODO: Move to VI?
 char printToScreen;
 char showFPSonScreen;
-/*bool updateDEBUGflag;
-bool new_fb;
-unsigned int* xfb[2];
-int which_fb;*/
+
 
 void VI_GX_setFB(unsigned int* fb1, unsigned int* fb2);
 
@@ -99,9 +96,7 @@ void gfx_set_fb(unsigned int* fb1, unsigned int* fb2){
 	VI_GX_setFB(fb1, fb2);
 }
 
-void showLoadIcon(void){
-//	VI_GX_showLoadProg(percent);
-}
+
 }
 
 void gfx_set_window(int x, int y, int width, int height){

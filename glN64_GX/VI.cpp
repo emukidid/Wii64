@@ -135,7 +135,9 @@ void VI_UpdateScreen()
 		//Only render N64 framebuffer in RDRAM and not EFB
 		VI_GX_cleanUp();
 		VI_GX_renderCpuFramebuffer();
+#ifdef HW_DOL
 		VI_GX_showLoadIcon();
+#endif
 		VI_GX_showFPS();
 		VI_GX_showDEBUG();
 		GX_CopyDisp(VI.xfb[VI.which_fb], GX_TRUE);
@@ -158,7 +160,9 @@ void VI_UpdateScreen()
 
 			//Draw DEBUG to screen
 			VI_GX_cleanUp();
+#ifdef HW_DOL
 			VI_GX_showLoadIcon();
+#endif
 			VI_GX_showFPS();
 			VI_GX_showDEBUG();
 			//Copy EFB->XFB
@@ -177,7 +181,9 @@ void VI_UpdateScreen()
 		if (gSP.changed & CHANGED_COLORBUFFER)
 		{
 			VI_GX_cleanUp();
+#ifdef HW_DOL
 			VI_GX_showLoadIcon();
+#endif
 			VI_GX_showFPS();
 			VI_GX_showDEBUG();
 			GX_CopyDisp(VI.xfb[VI.which_fb], GX_TRUE);
@@ -191,6 +197,7 @@ void VI_UpdateScreen()
 
 #ifdef __GX__
 extern "C" {
+extern int enableLoadIcon;
 extern long long gettime();
 extern unsigned int diff_sec(long long start,long long end);
 };
@@ -201,7 +208,6 @@ void VI_GX_init() {
 	new_fb = false;
 	which_fb = 1;*/
 	VI.updateOSD = true;
-	VI.enableLoadIcon = false;
 	VI.EFBcleared = true;
 	VI.copy_fb = false;
 	VI.which_fb = 1;
@@ -245,10 +251,11 @@ void VI_GX_showFPS(){
 	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
 }
 
+#ifdef HW_DOL
 void VI_GX_showLoadIcon()
 {
-	if (!VI.enableLoadIcon) return;
-	VI.enableLoadIcon = false;
+	if (enableLoadIcon == 0) return;
+	enableLoadIcon = 0;
 
 #ifndef MENU_V2
 	GXColor GXcol1 = {0,128,255,255};
@@ -368,6 +375,7 @@ void VI_GX_showLoadIcon()
 
 #endif //MENU_V2
 }
+#endif
 
 void VI_GX_updateDEBUG()
 {

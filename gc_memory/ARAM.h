@@ -64,10 +64,10 @@
 #define RECOMPMETA_SIZE	(2*MB)
 #define RECOMPMETA_HI   (RECOMPMETA_LO + RECOMPMETA_SIZE)
 
-// ~8MB ROM Cache (fill up the rest of ARAM)
+// 8MB ROM Cache (fill up the rest of ARAM)
 #define ROMCACHE_LO		(RECOMPMETA_HI)
-#define ROMCACHE_HI		(ARAM_START+ARAM_SIZE)
-#define ROMCACHE_SIZE	(ROMCACHE_HI-ROMCACHE_LO)
+#define ROMCACHE_SIZE	(8*MB)
+#define ROMCACHE_HI		(ROMCACHE_LO + ROMCACHE_SIZE)
 
 #endif
 

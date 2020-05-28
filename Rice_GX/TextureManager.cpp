@@ -26,9 +26,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef __GX__
 # ifdef HW_RVL
 # include "../gc_memory/MEM2.h"
-# define GX_TEXTURE_CACHE_SIZE TEXCACHE_SIZE //8MB for Wii
+# define GX_TEXTURE_CACHE_SIZE TEXCACHE_SIZE //8 MB for Wii
 # else //HW_RVL
-# define GX_TEXTURE_CACHE_SIZE (3*1024*1024) //3MB for GC
+# define GX_TEXTURE_CACHE_SIZE (2*1024*1024) //2 MB for GC
 # endif //!HW_RVL
 	heap_cntrl* GXtexCache = NULL;
 #endif //__GX__
@@ -36,7 +36,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 CTextureManager gTextureManager;
 
 #ifdef __GX__
-//Note: Rice's tex mem usage isn't calculated correctly because it assumes 32bit textures.
 //TODO: Revisit cache handling once Enhanced & Framebuffer textures are implemented.
 DWORD g_maxTextureMemUsage = GX_TEXTURE_CACHE_SIZE;
 DWORD g_amountToFree = (512*1024);
@@ -47,52 +46,6 @@ DWORD g_amountToFree = (512*1024);
 bool g_bUseSetTextureMem = false;
 #endif //!__GX__
 
-// Returns the first prime greater than or equal to nFirst
-inline LONG GetNextPrime(LONG nFirst)
-{
-    LONG nCurrent;
-
-    LONG i;
-
-    nCurrent = nFirst;
-
-    // Just make sure it's odd
-    if ((nCurrent % 2) == 0)
-        nCurrent++;
-
-    for (;;)
-    {
-        LONG nSqrtCurrent;
-        BOOL bIsComposite;
-
-        // nSqrtCurrent = nCurrent^0.5 + 1 (round up)
-        nSqrtCurrent = (LONG)sqrt((double)nCurrent) + 1;
-
-
-        bIsComposite = FALSE;
-        
-        // Test all odd numbers from 3..nSqrtCurrent
-        for (i = 3; i <= nSqrtCurrent; i+=2)
-        {
-            if ((nCurrent % i) == 0)
-            {
-                bIsComposite = TRUE;
-                break;
-            }
-        }
-
-        if (!bIsComposite)
-        {           
-            return nCurrent;
-        }
-
-        // Select next odd candidate...
-        nCurrent += 2;
-    }
-
-}
-
-
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -100,11 +53,8 @@ inline LONG GetNextPrime(LONG nFirst)
 CTextureManager::CTextureManager() :
     m_pHead(NULL),
     m_pCacheTxtrList(NULL),
-    m_numOfCachedTxtrList(809)
+    m_numOfCachedTxtrList(256)
 {
-    m_numOfCachedTxtrList = GetNextPrime(800);
-
-    m_currentTextureMemUsage    = 0;
     m_pYoungestTexture          = NULL;
     m_pOldestTexture            = NULL;
 
@@ -154,13 +104,13 @@ bool CTextureManager::CleanUp()
 
     if (!g_bUseSetTextureMem)
     {
-    while (m_pHead)
-    {
-        TxtrCacheEntry * pVictim = m_pHead;
-        m_pHead = pVictim->pNext;
+		while (m_pHead)
+		{
+			TxtrCacheEntry * pVictim = m_pHead;
+			m_pHead = pVictim->pNext;
 
-        delete pVictim;
-    }
+			delete pVictim;
+		}
     }
 
     if( m_blackTextureEntry.pTexture )      delete m_blackTextureEntry.pTexture;    
@@ -242,7 +192,7 @@ void CTextureManager::PurgeOldTextures()
             if (pPrev != NULL) pPrev->pNext        = pCurr->pNext;
             else               m_pHead = pCurr->pNext;
             
-            delete pCurr;
+			delete pCurr;
             pCurr = pNext;  
         }
         else
@@ -299,7 +249,7 @@ void CTextureManager::RecycleAllTextures()
             dwCount++;
 			if (g_bUseSetTextureMem)
 			{
-				m_currentTextureMemUsage -= (pTVictim->pTexture->m_dwWidth * pTVictim->pTexture->m_dwHeight * 4);
+				gGX.GXnumTexBytes -= (pTVictim->pTexture->GXtextureBytes);
 				delete pTVictim;
 			}
 			else
@@ -343,7 +293,7 @@ void CTextureManager::RecycleTexture(TxtrCacheEntry *pEntry)
     if (pEntry->pTexture == NULL)
     {
         // No point in saving!
-        delete pEntry;
+		delete pEntry;
     }
     else
     {
@@ -518,8 +468,7 @@ void CTextureManager::RemoveTexture(TxtrCacheEntry * pEntry)
                 }
 
                 // decrease the mem usage counter
-                m_currentTextureMemUsage -= (pEntry->pTexture->m_dwWidth * pEntry->pTexture->m_dwHeight * 4);
-            
+				gGX.GXnumTexBytes -= (pEntry->pTexture->GXtextureBytes);
                 delete pEntry;
             }
             else
@@ -547,7 +496,7 @@ TxtrCacheEntry * CTextureManager::CreateNewCacheEntry(uint32 dwAddr, uint32 dwWi
         DWORD freeUpSize = (widthToCreate * heightToCreate * 4) + g_amountToFree;
 
         // make sure there is enough room for the new texture by deleting old textures
-        while ((m_currentTextureMemUsage + freeUpSize) > g_maxTextureMemUsage && m_pOldestTexture != NULL)
+        while ((gGX.GXnumTexBytes + freeUpSize) > g_maxTextureMemUsage && m_pOldestTexture != NULL)
         {
             TxtrCacheEntry *nextYoungest = m_pOldestTexture->pNextYoungest;
 
@@ -557,8 +506,6 @@ TxtrCacheEntry * CTextureManager::CreateNewCacheEntry(uint32 dwAddr, uint32 dwWi
 
         //printf("Freeing Texture\n");
         }
-
-        m_currentTextureMemUsage += widthToCreate * heightToCreate * 4;
     }
     else
     {
