@@ -155,7 +155,7 @@ void dma_pi_read()
 	// Not that it matters, but actual N64 hardware will repeat pi_dram_addr_reg>>16 
 	// over the unmapped ROM region past the end of ROM, which we don't do.
 	dma_length = (pi_register.pi_wr_len_reg & 0xFFFFFE)+2;
-	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFF;
+	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
 	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEMMASK ?
 				 (MEMMASK - pi_register.pi_dram_addr_reg) : dma_length;
@@ -199,7 +199,7 @@ void dma_pi_write()
 			if (flashRAMInfo.use_flashram != 1)
 			{
 				memcpy(	&rdramb[(pi_register.pi_dram_addr_reg)^S8],
-						&sram[(((pi_register.pi_cart_addr_reg-0x08000000)&0xFFFF))^S8],
+						&sram[(((pi_register.pi_cart_addr_reg-0x08000000)&0xFFFE))^S8],
 						(pi_register.pi_wr_len_reg & 0xFFFFFE)+2);
 				flashRAMInfo.use_flashram = -1;
 			}
@@ -225,7 +225,7 @@ void dma_pi_write()
 	// Not that it matters, but actual N64 hardware will repeat pi_dram_addr_reg>>16 
 	// over the unmapped ROM region past the end of ROM, which we don't do.
 	dma_length = (pi_register.pi_wr_len_reg & 0xFFFFFE)+2;
-	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFF;
+	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
 	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEMMASK ?
 				 (MEMMASK - pi_register.pi_dram_addr_reg) : dma_length;
@@ -244,7 +244,7 @@ void dma_pi_write()
 		of length:	length
 	*/
 	ROMCache_read(((unsigned char*)rdram + ((unsigned int)(pi_register.pi_dram_addr_reg)^S8)), 
-				  ((pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFF)^S8, dma_length);
+				  i, dma_length);
 	
 	// Dynarec, invalidate any code we wrote over.
 	if(!interpcore)

@@ -46,12 +46,17 @@ const DISC_INTERFACE* usb = &__io_usbstorage;
 #endif
 const DISC_INTERFACE* carda = &__io_gcsda;
 const DISC_INTERFACE* cardb = &__io_gcsdb;
+#ifdef HW_DOL
+const DISC_INTERFACE* cardc = &__io_gcsdc;
+#endif
 
 // Threaded insertion/removal detection
 #define THREAD_SLEEP 100
 #define FRONTSD 1
 #define CARD_A  2
 #define CARD_B  3
+#define CARD_C  4
+
 #ifdef HW_RVL
 static lwp_t removalThread = LWP_THREAD_NULL;
 static int rThreadRunning = 0;
@@ -323,15 +328,18 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 #else
 	sdgecko_setSpeed(EXI_SPEED32MHZ);
 	if(!sdMounted) {           //GC has only SD
-		if(carda->startup()) {
-			res = fatMountSimple ("sd", carda);
-			if(res)
-				sdMounted = CARD_A;
+	
+		if(fatMountSimple ("sd", cardc))
+			res = 1;
+			sdMounted = CARD_C;
 		}
-		if(!res && cardb->startup()) {
-			res = fatMountSimple ("sd", cardb);
-			if(res)
-				sdMounted = CARD_B;
+		else if(fatMountSimple ("sd", cardb))
+			res = 1;
+			sdMounted = CARD_B;
+		}
+		else if(fatMountSimple ("sd", carda))
+			res = 1;
+			sdMounted = CARD_A;
 		}
 		sdgecko_setSpeed(EXI_SPEED32MHZ);
 		return res;
