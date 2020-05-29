@@ -192,6 +192,7 @@ static void SetMaxMag(const struct bd_addr *bdaddr, float magL, float magR, floa
 
 static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 {
+	if(wpadNeedScan){ WPAD_ScanPads(); wpadNeedScan = 0; }
 	WPADData* wpad = WPAD_Data(Control);
 	BUTTONS* c = Keys;
 	memset(c, 0, sizeof(BUTTONS));
