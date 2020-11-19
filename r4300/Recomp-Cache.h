@@ -23,15 +23,14 @@
 #ifndef RECOMP_CACHE_H
 #define RECOMP_CACHE_H
 
-// Hold 8MB worth of recompiled data max on Wii, 5 on GC
 #ifdef HW_RVL
-#ifdef MEM2XFB
-#define RECOMP_CACHE_SIZE (10*1024*1024)
+#ifdef GLN64_GX
+#define RECOMP_CACHE_SIZE (10*1024*1024)	// glN64
 #else
-#define RECOMP_CACHE_SIZE (8*1024*1024)
+#define RECOMP_CACHE_SIZE (9*1024*1024)		// Rice
 #endif
 #else
-#define RECOMP_CACHE_SIZE (7*1024*1024)
+#define RECOMP_CACHE_SIZE (7*1024*1024)		// GameCube
 #endif
 #include "ppc/Recompile.h"
 
@@ -42,7 +41,6 @@ void RecompCache_Init(void);
 void RecompCache_Alloc(unsigned int size, unsigned int address, PowerPC_func* func);
 void RecompCache_Realloc(PowerPC_func* func, unsigned int new_size);
 void RecompCache_Free(unsigned int addr);
-void RecompCache_Release(int bytesRequired);
 // Update the LRU info of the indicated block
 //   (call when the block is accessed)
 void RecompCache_Update(PowerPC_func* func);

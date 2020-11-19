@@ -8,8 +8,8 @@
 //#define SDPRINT
 
 #define DBG_RICE 12
-#define DBG_DLIST 0
-#define DBG_DLISTTYPE 1
+#define DBG_MEMFREEINFO 0
+#define DBG_DLIST 1
 #define DBG_RSPINFO 2
 #define DBG_RSPINFO1 3
 #define DBG_TXINFO 4
@@ -18,7 +18,6 @@
 #define DBG_CCINFO 7
 #define DBG_BLINFO 8
 #define DBG_AUDIOINFO 9
-#define DBG_MEMFREEINFO 10
 #define DBG_CACHEINFO 11
 #define DBG_PROFILE_GFX 19
 #define DBG_PROFILE_AUDIO 20
@@ -61,6 +60,8 @@ extern char txtbuffer[1024];
 extern "C" {
 #endif
 
+#include <ogc/lwp_heap.h>
+
 // Pre-formatted string (use sprintf before sending to print)
 void DEBUG_print(char* string,int pos);
 void DEBUG_stats(int stats_id, char *info, unsigned int stats_type, unsigned int adjustment_value);
@@ -71,6 +72,9 @@ void DEBUG_update(void);
 // Returns pointer to an array of char*
 char** DEBUG_get_text(void);
 
+void DEBUG_registerHeap(heap_cntrl *theHeap, const char *heapName);
+
+void print_gecko(const char* fmt, ...);
 #ifdef __cplusplus
 }
 #endif

@@ -480,6 +480,9 @@ void VI_GX_renderCpuFramebuffer()
 #else //HW_RVL
 		__lwp_heap_init(GXtexCache, memalign(32,GX_TEXTURE_CACHE_SIZE),GX_TEXTURE_CACHE_SIZE, 32);
 #endif //!HW_RVL
+#ifdef SHOW_DEBUG
+		DEBUG_registerHeap(GXtexCache, "TEX");
+#endif
 	}
 	u16* FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2+32);
 	while(!FBtex)

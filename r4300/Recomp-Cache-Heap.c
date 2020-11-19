@@ -29,6 +29,7 @@
 #include "ppc/Wrappers.h"
 #include "Invalid_Code.h"
 #include "Recomp-Cache.h"
+#include "../gui/DEBUG.h"
 
 #ifdef HW_RVL
 #include "../gc_memory/MEM2.h"
@@ -50,6 +51,7 @@ static int cacheSize = 0;
 #define HEAP_PARENT(i) ((i-1)>>2)
 
 #define INITIAL_HEAP_SIZE (64)
+#define MIN_RELEASE_SIZE (1*1024*1024)
 static unsigned int heapSize = 0;
 static unsigned int maxHeapSize = 0;
 static CacheMetaNode** cacheHeap = NULL;
@@ -199,7 +201,7 @@ static inline void update_lru(PowerPC_func* func){
 
 static void release(int minNeeded){
 	// Frees alloc'ed blocks so that at least minNeeded bytes are available
-	int toFree = minNeeded * 2; // Free 2x what is needed
+	int toFree = minNeeded * 2 > MIN_RELEASE_SIZE ? minNeeded * 2 : MIN_RELEASE_SIZE; // Free 2x or 1 MB
 	// Restore the heap properties to pop the LRU
 	heapify();
 	// Release nodes' memory until we've freed enough
@@ -213,10 +215,6 @@ static void release(int minNeeded){
 		// And the cache node itself
 		free(n);
 	}
-}
-
-void RecompCache_Release(int bytesRequired) {
-	release(bytesRequired);
 }
 
 void RecompCache_Alloc(unsigned int size, unsigned int address, PowerPC_func* func){
@@ -319,11 +317,17 @@ void RecompCache_Init(void){
 		cache = memalign(32,sizeof(heap_cntrl));
 		__lwp_heap_init(cache, memalign(32,RECOMP_CACHE_SIZE),
 		                RECOMP_CACHE_SIZE, 32);
+#ifdef SHOW_DEBUG
+		DEBUG_registerHeap(cache, "REC");
+#endif
 	}
 	if(!meta_cache){
 		meta_cache = memalign(32,sizeof(heap_cntrl));
 		__lwp_heap_init(meta_cache, (void*)RECOMPMETA_LO,
 		                RECOMPMETA_SIZE, 32);
+#ifdef SHOW_DEBUG
+		DEBUG_registerHeap(meta_cache, "META");
+#endif
 	}
 }
 

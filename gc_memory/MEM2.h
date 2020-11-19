@@ -39,21 +39,9 @@
 #define MEM2_HI   ((char*)0x933E0000)
 #define MEM2_SIZE (MEM2_HI - MEM2_LO)
 
-#ifdef MEM2XFB
-// Testing the xfb in MEM2 (reduce Texture Cache by 2MB to accomodate)
-#define XFB_SIZE (640*576*2) // XFB_SIZE*2 ~= 1.4MB but to keep things aligned, 2mb
-#define XFB0_LO	(MEM2_LO + 2*KB)
-#define XFB1_LO	(XFB0_LO + XFB_SIZE)
-#define XFB_HI	(XFB1_LO + XFB_SIZE)
-#endif
-
 // We want 16MB for our ROM Cache
 #define ROMCACHE_SIZE (16*MB)
-#ifdef MEM2XFB
-#define ROMCACHE_LO   (XFB_HI + 2*KB)
-#else
 #define ROMCACHE_LO   (MEM2_LO)
-#endif
 #define ROMCACHE_HI   (ROMCACHE_LO + ROMCACHE_SIZE)
 
 // We want 8MB for TLB lut's
@@ -61,12 +49,8 @@
 #define TLBLUT_LO   (ROMCACHE_HI)
 #define TLBLUT_HI   (TLBLUT_LO + TLBLUT_SIZE)
 
-// We want 16MB for a Texture Cache
-#ifdef MEM2XFB
-#define TEXCACHE_SIZE (14*MB)
-#else
-#define TEXCACHE_SIZE (16*MB)
-#endif
+// We want 12MB for a Texture Cache
+#define TEXCACHE_SIZE (12*MB)
 #define TEXCACHE_LO   (TLBLUT_HI)
 #define TEXCACHE_HI   (TEXCACHE_LO + TEXCACHE_SIZE)
 
@@ -105,16 +89,28 @@
 #define RECOMPMETA_LO   (BLOCKS_HI)
 #define RECOMPMETA_HI   (RECOMPMETA_LO + RECOMPMETA_SIZE)
 
+// We want 1MB for boxart menu images
+#define BOXART_ICON_SIZE (1*MB)
+#define BOXART_ICON_LO   (RECOMPMETA_HI)
+#define BOXART_ICON_HI   (BOXART_ICON_LO + BOXART_ICON_SIZE)
+
+// XFB
+#define XFB_SIZE (640*576*2)
+#define XFB0_LO	(BOXART_ICON_HI)
+#define XFB1_LO	(XFB0_LO + XFB_SIZE)
+#define XFB_HI	(XFB1_LO + XFB_SIZE)
+
 // Unclaimed MEM2
-#define UNCLAIMED_SIZE (MEM2_HI - BLOCKS_HI)
-#define UNCLAIMED_LO   (BLOCKS_HI)
+#define UNCLAIMED_SIZE (MEM2_HI - XFB_HI)
+#define UNCLAIMED_LO   (XFB_HI)
 #define UNCLAIMED_HI   (MEM2_HI)
 
 #define MEM2_USED_SIZE (ROMCACHE_SIZE + TLBLUT_SIZE \
                         + TEXCACHE_SIZE + INVCODE_SIZE \
                         + FONT_SIZE + FLASHRAM_SIZE \
                         + SRAM_SIZE + MEMPACK_SIZE \
-                        + BLOCKS_SIZE + RECOMPMETA_SIZE)
+                        + BLOCKS_SIZE + RECOMPMETA_SIZE\
+						+ BOXART_ICON_SIZE + (XFB_SIZE*2) )
 #if MEM2_USED_SIZE > (0x933E0000-0x90000000)
 #error Too much MEM2 used!
 #endif

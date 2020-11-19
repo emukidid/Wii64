@@ -257,7 +257,6 @@ void Func_PlayGame()
 	new_frame();
 	new_vi();
 	go();
-	RecompCache_Release(4*1024*1024);
 #ifdef DEBUGON
 	_break();
 #endif

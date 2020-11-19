@@ -512,7 +512,6 @@ void Func_MMPlayGame()
 	_break();
 #endif
 	go();
-	RecompCache_Release(4*1024*1024);
 #ifdef DEBUGON
 	_break();
 #endif

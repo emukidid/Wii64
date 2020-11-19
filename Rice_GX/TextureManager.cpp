@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # else //HW_RVL
 # define GX_TEXTURE_CACHE_SIZE (2*1024*1024) //2 MB for GC
 # endif //!HW_RVL
-	heap_cntrl* GXtexCache = NULL;
+heap_cntrl* GXtexCache = NULL;
 #endif //__GX__
 
 CTextureManager gTextureManager;
@@ -53,8 +53,30 @@ bool g_bUseSetTextureMem = false;
 CTextureManager::CTextureManager() :
     m_pHead(NULL),
     m_pCacheTxtrList(NULL),
-    m_numOfCachedTxtrList(256)
+#ifdef HW_RVL
+    m_numOfCachedTxtrList(809)
+#else
+	m_numOfCachedTxtrList(257)
+#endif
 {
+	
+#ifdef __GX__
+	//Init texture cache heap if not yet inited
+	if(!GXtexCache)
+	{
+		GXtexCache = (heap_cntrl*)malloc(sizeof(heap_cntrl));
+#ifdef HW_RVL
+		__lwp_heap_init(GXtexCache, TEXCACHE_LO,GX_TEXTURE_CACHE_SIZE, 32);
+#else //HW_RVL
+		__lwp_heap_init(GXtexCache, memalign(32,GX_TEXTURE_CACHE_SIZE),GX_TEXTURE_CACHE_SIZE, 32);
+#endif //!HW_RVL
+		gGX.GXnumTex = gGX.GXnumTexBytes = 0;
+#ifdef SHOW_DEBUG
+		DEBUG_registerHeap(GXtexCache, "TEX");
+#endif
+	}
+#endif //__GX__
+	
     m_pYoungestTexture          = NULL;
     m_pOldestTexture            = NULL;
 
@@ -70,21 +92,18 @@ CTextureManager::CTextureManager() :
     memset(&m_LODFracTextureEntry, 0, sizeof(TxtrCacheEntry));
     memset(&m_PrimLODFracTextureEntry, 0, sizeof(TxtrCacheEntry));
 
-#ifdef __GX__
-	//Init texture cache heap if not yet inited
-	if(!GXtexCache)
-	{
-		GXtexCache = (heap_cntrl*)malloc(sizeof(heap_cntrl));
-#ifdef HW_RVL
-		__lwp_heap_init(GXtexCache, TEXCACHE_LO,GX_TEXTURE_CACHE_SIZE, 32);
-#else //HW_RVL
-		__lwp_heap_init(GXtexCache, memalign(32,GX_TEXTURE_CACHE_SIZE),GX_TEXTURE_CACHE_SIZE, 32);
-#endif //!HW_RVL
-		gGX.GXnumTex = gGX.GXnumTexBytes = 0;
-	}
-#endif //__GX__
-
 }
+
+#ifdef HW_RVL
+void evictTex(TxtrCacheEntry *pEntry) 
+{
+	if (((CTexture*)g_curBoundTex[0] == pEntry->pTexture)||((CTexture*)g_curBoundTex[0] == pEntry->pEnhancedTexture)) g_curBoundTex[0] = NULL;
+	if (((CTexture*)g_curBoundTex[1] == pEntry->pTexture)||((CTexture*)g_curBoundTex[1] == pEntry->pEnhancedTexture)) g_curBoundTex[1] = NULL;
+	SAFE_DELETE(pEntry->pTexture);
+	SAFE_DELETE(pEntry->pEnhancedTexture);
+	__lwp_heap_free(GXtexCache,pEntry);
+}
+#endif
 
 CTextureManager::~CTextureManager()
 {
@@ -108,8 +127,11 @@ bool CTextureManager::CleanUp()
 		{
 			TxtrCacheEntry * pVictim = m_pHead;
 			m_pHead = pVictim->pNext;
-
+#ifdef HW_RVL
+			evictTex(pVictim);
+#else
 			delete pVictim;
+#endif
 		}
     }
 
@@ -191,8 +213,12 @@ void CTextureManager::PurgeOldTextures()
         {
             if (pPrev != NULL) pPrev->pNext        = pCurr->pNext;
             else               m_pHead = pCurr->pNext;
-            
+
+#ifdef HW_RVL
+			evictTex(pCurr);
+#else
 			delete pCurr;
+#endif
             pCurr = pNext;  
         }
         else
@@ -249,8 +275,11 @@ void CTextureManager::RecycleAllTextures()
             dwCount++;
 			if (g_bUseSetTextureMem)
 			{
-				gGX.GXnumTexBytes -= (pTVictim->pTexture->GXtextureBytes);
+#ifdef HW_RVL
+				evictTex(pTVictim);
+#else
 				delete pTVictim;
+#endif
 			}
 			else
 				RecycleTexture(pTVictim);
@@ -286,14 +315,22 @@ void CTextureManager::RecycleTexture(TxtrCacheEntry *pEntry)
     {
         // Fix me, why I can not reuse the texture in OpenGL,
         // how can I unload texture from video card memory for OpenGL
+#ifdef HW_RVL
+		evictTex(pEntry);		
+#else
         delete pEntry;
+#endif
         return;
     }
 
     if (pEntry->pTexture == NULL)
     {
         // No point in saving!
-		delete pEntry;
+#ifdef HW_RVL
+		evictTex(pEntry);
+#else
+        delete pEntry;
+#endif
     }
     else
     {
@@ -468,8 +505,11 @@ void CTextureManager::RemoveTexture(TxtrCacheEntry * pEntry)
                 }
 
                 // decrease the mem usage counter
-				gGX.GXnumTexBytes -= (pEntry->pTexture->GXtextureBytes);
-                delete pEntry;
+#ifdef HW_RVL
+				evictTex(pEntry);
+#else
+				delete pEntry;
+#endif
             }
             else
             {
@@ -496,7 +536,7 @@ TxtrCacheEntry * CTextureManager::CreateNewCacheEntry(uint32 dwAddr, uint32 dwWi
         DWORD freeUpSize = (widthToCreate * heightToCreate * 4) + g_amountToFree;
 
         // make sure there is enough room for the new texture by deleting old textures
-        while ((gGX.GXnumTexBytes + freeUpSize) > g_maxTextureMemUsage && m_pOldestTexture != NULL)
+        while ((gGX.GXnumTex > 2048 || (gGX.GXnumTexBytes + freeUpSize) > g_maxTextureMemUsage) && m_pOldestTexture != NULL)
         {
             TxtrCacheEntry *nextYoungest = m_pOldestTexture->pNextYoungest;
 
@@ -515,8 +555,13 @@ TxtrCacheEntry * CTextureManager::CreateNewCacheEntry(uint32 dwAddr, uint32 dwWi
 
     if (pEntry == NULL || g_bUseSetTextureMem)
     {
-        // Couldn't find on - recreate!
+        // Couldn't find one - recreate!
+#ifdef HW_RVL
+		pEntry = (TxtrCacheEntry*)__lwp_heap_allocate(GXtexCache,sizeof(TxtrCacheEntry));
+		memset(pEntry, 0, sizeof(TxtrCacheEntry));
+#else
         pEntry = new TxtrCacheEntry;
+#endif
         if (pEntry == NULL)
         {
             _VIDEO_DisplayTemporaryMessage("Error to create an texture entry");

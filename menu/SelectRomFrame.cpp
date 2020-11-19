@@ -22,6 +22,10 @@
 
 #include <math.h>
 #include <cstdlib>
+#ifdef HW_RVL
+#include "../gc_memory/MEM2.h"
+#include <ogc/lwp_heap.h>
+#endif
 #include "MenuContext.h"
 #include "SelectRomFrame.h"
 #include "../libgui/Button.h"
@@ -42,7 +46,11 @@ extern "C" {
 #include "../main/rom.h"
 #include "../main/ROM-Cache.h"
 #include "../main/wii64config.h"
+#include "../gui/DEBUG.h"
 }
+#ifdef HW_RVL
+heap_cntrl* boxartTexCache = NULL;
+#endif
 
 void Func_ReturnFromSelectRomFrame();
 void Func_SR_SD();
@@ -194,8 +202,25 @@ SelectRomFrame::SelectRomFrame()
 	setBackFunc(Func_ReturnFromSelectRomFrame);
 	setEnabled(true);
 
-	for (int i = 0; i<NUM_FILE_SLOTS; i++)
+#ifdef HW_RVL
+	if(boxartTexCache == NULL) {
+		boxartTexCache = (heap_cntrl*)malloc(sizeof(heap_cntrl));
+		__lwp_heap_init(boxartTexCache, BOXART_ICON_LO,BOXART_ICON_SIZE, 32);
+#ifdef SHOW_DEBUG
+		DEBUG_registerHeap(boxartTexCache, "ART");
+#endif
+	}
+#endif
+
+	for (int i = 0; i<NUM_FILE_SLOTS; i++) {
+		if (fileTextures[i])
+#ifdef HW_RVL
+			__lwp_heap_free(boxartTexCache, fileTextures[i]);
+#else
+			free(fileTextures[i]);
+#endif
 		fileTextures[i] = NULL;
+	}
 	dir_entries = NULL;
 	rom_headers = NULL;
 	
@@ -237,7 +262,11 @@ void SelectRomFrame::activateSubmenu(int submenu)
 		int btn_ind = i+5;
 		if(!fileTextures[i])
 		{
+#ifdef HW_RVL
+			fileTextures[i] = (u8*)__lwp_heap_allocate(boxartTexCache,BOXART_TEX_SIZE);
+#else
 			fileTextures[i] = (u8*) memalign(32, BOXART_TEX_SIZE);
+#endif
 			memset(fileTextures[i], 0xFF, BOXART_TEX_SIZE);
 			DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 			FRAME_BUTTONS[btn_ind].button->setBoxTexture(fileTextures[i]);
@@ -513,7 +542,11 @@ void Func_ReturnFromSelectRomFrame()
 	for (int i = 0; i<NUM_FILE_SLOTS; i++)
 	{
 		if (fileTextures[i])
+#ifdef HW_RVL
+			__lwp_heap_free(boxartTexCache, fileTextures[i]);
+#else
 			free(fileTextures[i]);
+#endif
 		fileTextures[i] = NULL;
 	}
 	if(dir_entries){ free(dir_entries); dir_entries = NULL; }
@@ -645,9 +678,6 @@ void selectRomFrame_FillPage()
 	for (int i = 0; i < NUM_FILE_SLOTS; i++)
 	{
 		int btn_ind = i+5;
-/*		if(!fileTextures[i])
-			fileTextures[i] = (u8*) memalign(32, BOXART_TEX_SIZE);
-		FRAME_BUTTONS[btn_ind].button->setBoxTexture(fileTextures[i]);*/
 		if ((current_page*NUM_FILE_SLOTS) + i < num_entries)
 		{
 			if(dir_entries[i+(current_page*NUM_FILE_SLOTS)].attr & FILE_BROWSER_ATTR_DIR)

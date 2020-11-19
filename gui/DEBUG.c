@@ -36,9 +36,39 @@ long long texttimes[DEBUG_TEXT_HEIGHT];
 char text[DEBUG_TEXT_HEIGHT][DEBUG_TEXT_WIDTH];
 extern unsigned int diff_sec(long long start,long long end);
 
+#define MAX_HEAPS 8
+static heap_cntrl *registeredHeaps[MAX_HEAPS];
+static const char *registeredHeapNames[MAX_HEAPS];
+
 static void check_heap_space(void){
-	sprintf(txtbuffer,"At least %dKB MEM1 available", SYS_GetArena1Size()/1024);
+	sprintf(txtbuffer,"MEM Free (KB): [Arena|%d] ", SYS_GetArena1Size()/1024);
+	
+	char *heapBuf = (char*)calloc(1, 64);
+	int i;
+	for(i = 0; i < MAX_HEAPS; i++) {
+		if(registeredHeaps[i] != NULL) {
+			heap_iblock heapInfo;
+			__lwp_heap_getinfo(registeredHeaps[i],&heapInfo);
+			sprintf(heapBuf, "[%s|%d] ", registeredHeapNames[i], heapInfo.free_size/1024);
+			strcat(txtbuffer, heapBuf);
+			memset(heapBuf, 0, 64);
+		}
+	}
 	DEBUG_print(txtbuffer,DBG_MEMFREEINFO);
+	free(heapBuf);
+}
+
+void DEBUG_registerHeap(heap_cntrl *theHeap, const char *heapName) {
+	int i;
+	for(i = 0; i < MAX_HEAPS; i++) {
+		if(registeredHeaps[i] == theHeap)
+			return;
+		if(registeredHeaps[i] == NULL) {
+			registeredHeaps[i] = theHeap;
+			registeredHeapNames[i] = heapName;
+			return;
+		}
+	}
 }
 
 void DEBUG_update() {
