@@ -1667,12 +1667,6 @@ void DLParser_LoadTile(Gfx *gfx)
     uint32 size = line * height;
     SetTmemFlag(tile.dwTMem,size );
 
-    uint32 dwPitch = g_TI.dwWidth;
-    if( tile.dwSize != TXT_SIZE_4b )
-    {
-        dwPitch = g_TI.dwWidth<<(tile.dwSize-1);
-    }
-
     LOG_TEXTURE(
     {
         DebuggerAppendMsg("LoadTile:%d (%d,%d) -> (%d,%d) [%d x %d]\n",
@@ -2328,12 +2322,14 @@ uint32 GetValidTmemInfoIndex(uint32 tmemAddr)
         return tmemAddr;
     else
     {
-        for( uint32 i=index; i>=0; i-- )
+        for( uint32 x=index+1; x != 0; x-- )
         {
+			uint32 i = x - 1;
             if( g_TmemFlag[i] != 0 )
             {
-                for( uint32 j=0x1F; j>=0; j-- )
+                for( uint32 y=0x20; y != 0; y-- )
                 {
+					uint32 j = y - 1;
                     if( (g_TmemFlag[i] & (1<<j)) != 0 )
                     {
                         return ((i<<5)+j);

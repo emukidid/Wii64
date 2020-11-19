@@ -55,8 +55,6 @@ OGLRender::OGLRender()
     m_bSupportFogCoordExt = pcontext->m_bSupportFogCoord;
     m_bMultiTexture = pcontext->m_bSupportMultiTexture;
     m_bSupportClampToEdge = false;
-    m_bClampS[0] = m_bClampS[1] = false;
-    m_bClampT[0] = m_bClampT[1] = false;
     for( int i=0; i<8; i++ )
     {
         m_curBoundTex[i]=0;
@@ -650,7 +648,6 @@ void OGLRender::SetTextureUFlag(TextureUVFlag dwFlag, uint32 dwTile)
 #endif //__GX__
         }
         SetTexWrapS(0, OGLXUVFlagMaps[dwFlag].realFlag);
-        m_bClampS[0] = dwFlag==TEXTURE_UV_FLAG_CLAMP?true:false;
     }
 }
 void OGLRender::SetTextureVFlag(TextureUVFlag dwFlag, uint32 dwTile)
@@ -669,7 +666,6 @@ void OGLRender::SetTextureVFlag(TextureUVFlag dwFlag, uint32 dwTile)
 #endif //__GX__
         }
         SetTexWrapT(0, OGLXUVFlagMaps[dwFlag].realFlag);
-        m_bClampT[0] = dwFlag==TEXTURE_UV_FLAG_CLAMP?true:false;
     }
 }
 
@@ -834,8 +830,8 @@ bool OGLRender::RenderLine3D()
     glBegin(GL_TRIANGLE_FAN);
 
     glColor4ub(m_line3DVtx[1].r, m_line3DVtx[1].g, m_line3DVtx[1].b, m_line3DVtx[1].a);
-    glVertex3f(m_line3DVector[3].x, m_line3DVector[3].y, -m_line3DVtx[3].z);
-    glVertex3f(m_line3DVector[2].x, m_line3DVector[2].y, -m_line3DVtx[2].z);
+    glVertex3f(m_line3DVector[3].x, m_line3DVector[3].y, -m_line3DVtx[1].z);
+    glVertex3f(m_line3DVector[2].x, m_line3DVector[2].y, -m_line3DVtx[0].z);
     
     glColor4ub(m_line3DVtx[0].r, m_line3DVtx[0].g, m_line3DVtx[0].b, m_line3DVtx[0].a);
     glVertex3f(m_line3DVector[1].x, m_line3DVector[1].y, -m_line3DVtx[1].z);
@@ -852,9 +848,9 @@ bool OGLRender::RenderLine3D()
 	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
 	GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-		GX_Position3f32( m_line3DVector[3].x, m_line3DVector[3].y, -m_line3DVtx[3].z );
+		GX_Position3f32( m_line3DVector[3].x, m_line3DVector[3].y, -m_line3DVtx[1].z );
 		GX_Color4u8( m_line3DVtx[1].r,m_line3DVtx[1].g, m_line3DVtx[1].b, m_line3DVtx[1].a );
-		GX_Position3f32( m_line3DVector[2].x, m_line3DVector[2].y, -m_line3DVtx[2].z );
+		GX_Position3f32( m_line3DVector[2].x, m_line3DVector[2].y, -m_line3DVtx[0].z );
 		GX_Color4u8( m_line3DVtx[1].r,m_line3DVtx[1].g, m_line3DVtx[1].b, m_line3DVtx[1].a );
 		GX_Position3f32( m_line3DVector[1].x, m_line3DVector[1].y, -m_line3DVtx[1].z );
 		GX_Color4u8( m_line3DVtx[0].r,m_line3DVtx[0].g, m_line3DVtx[0].b, m_line3DVtx[0].a );

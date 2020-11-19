@@ -621,7 +621,6 @@ bool CRender::TexRect(LONG nX0, LONG nY0, LONG nX1, LONG nY1, float fS0, float f
 
     BOOL accurate = currentRomOptions.bAccurateTextureMapping;
 
-    CTexture *surf = g_textures[gRSP.curTile].m_pCTexture;
     RenderTexture &tex0 = g_textures[gRSP.curTile];
     Tile &tile0 = gRDP.tiles[gRSP.curTile];
 
@@ -721,7 +720,6 @@ bool CRender::TexRect(LONG nX0, LONG nY0, LONG nX1, LONG nY1, float fS0, float f
 
     if( IsTexel1Enable() )
     {
-        surf = g_textures[(gRSP.curTile+1)&7].m_pCTexture;
         RenderTexture &tex1 = g_textures[(gRSP.curTile+1)&7];
         Tile &tile1 = gRDP.tiles[(gRSP.curTile+1)&7];
 
@@ -1214,7 +1212,6 @@ bool CRender::DrawTriangles()
     for( int t=0; t<2; t++ )
     {
         float halfscaleS = 1;
-        float halfscaleT = 1;
 
         // This will get rid of the thin black lines
         if( t==0 && !(m_pColorCombiner->m_bTex0Enabled) ) 
@@ -1227,7 +1224,6 @@ bool CRender::DrawTriangles()
                 && gRDP.tiles[0].dwFormat == TXT_FMT_CI && gRDP.tiles[0].dwSize == TXT_SIZE_8b && gRSP.curTile == 0 ))
             {
                 halfscaleS = 0.5;
-                halfscaleT = 0.5;
             }
         }
 

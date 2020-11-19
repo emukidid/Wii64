@@ -117,8 +117,6 @@ protected:
     bool m_bSupportFogCoordExt;
     bool m_bMultiTexture;
     bool m_bSupportClampToEdge;
-    bool m_bClampS[2];
-    bool m_bClampT[2];
 
 #ifndef __GX__
     GLuint  m_curBoundTex[8];

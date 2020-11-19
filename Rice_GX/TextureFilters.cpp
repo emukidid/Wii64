@@ -1384,34 +1384,29 @@ is of type TxtrInfo) are uint32.
 */
 int FindScaleFactor(const ExtTxtrInfo &info, TxtrCacheEntry &entry)
 {
-    int scaleShift = -1;
-    if( info.height == (int)entry.ti.HeightToLoad && info.width == (int)entry.ti.WidthToLoad )
+    int scaleShift = 0;
+
+    // find the smallest power of 2 which is greater than or equal to the ratio of the hi-res texture's
+    // dimensions to the original (N64) texture dimensions
+    while (info.height > (int) entry.ti.HeightToLoad * (1 << scaleShift) && info.width > (int) entry.ti.WidthToLoad * (1 << scaleShift))
     {
-        scaleShift = 0;
-    }
-    else if (info.height == (int)entry.ti.HeightToLoad*2 && info.width == (int)entry.ti.WidthToLoad*2 )
+		scaleShift++;
+	}
+	// if the ratio of the 2 textures' dimensions is an even power of 2, then the hi-res texture is allowed
+    if (info.height == (int) entry.ti.HeightToLoad * (1 << scaleShift) && info.width == (int) entry.ti.WidthToLoad * (1 << scaleShift))
     {
-        scaleShift = 1;
-    }
-    else if (info.height == (int)entry.ti.HeightToLoad*4 && info.width == (int)entry.ti.WidthToLoad*4)
-    {
-        scaleShift = 2;
-    }
-    else if (info.height == (int)entry.ti.HeightToLoad*8 && info.width == (int)entry.ti.WidthToLoad*8)
-    {
-        scaleShift = 3;
-    }
-    else if (info.height == (int)entry.ti.HeightToLoad*16 && info.width == (int)entry.ti.WidthToLoad*16)
-    {
-        scaleShift = 4;
+        // found appropriate scale shift, return it
+        return scaleShift;
     }
 
-    return scaleShift;
+    // the dimensions of the hires replacement are not power of 2 of the original texture
+    return -1;
 }
 
 int CheckTextureInfos( CSortedList<uint64,ExtTxtrInfo> &infos, TxtrCacheEntry &entry, int &indexa, bool bForDump = false )
 {
-    if(entry.ti.WidthToCreate/entry.ti.WidthToLoad > 2 || entry.ti.HeightToCreate/entry.ti.HeightToLoad > 2 )
+    if ((entry.ti.WidthToLoad  != 0 && entry.ti.WidthToCreate  / entry.ti.WidthToLoad  > 2) ||
+        (entry.ti.HeightToLoad != 0 && entry.ti.HeightToCreate / entry.ti.HeightToLoad > 2 ))
     {
         //TRACE0("Hires texture does not support extreme texture replication");
         return -1;
@@ -1880,8 +1875,8 @@ void LoadHiresTexture( TxtrCacheEntry &entry )
         scale =16;
     else
     {
-        int scalex = width / (int)entry.ti.WidthToCreate;
-        int scaley = height / (int)entry.ti.HeightToCreate;
+        int scalex = width / (int)entry.ti.WidthToLoad;
+        int scaley = height / (int)entry.ti.HeightToLoad;
         scale = scalex > scaley ? scalex : scaley; // set scale to maximum(scalex,scaley)
         printf("Warning: Non-integral hi-res texture scale.  Orig = (%i,%i)  Hi-res = (%i,%i)\nTextures may look incorrect\n", 
                entry.ti.WidthToCreate, entry.ti.HeightToCreate, width, height);

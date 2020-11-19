@@ -557,8 +557,7 @@ TxtrCacheEntry * CTextureManager::CreateNewCacheEntry(uint32 dwAddr, uint32 dwWi
     {
         // Couldn't find one - recreate!
 #ifdef HW_RVL
-		pEntry = (TxtrCacheEntry*)__lwp_heap_allocate(GXtexCache,sizeof(TxtrCacheEntry));
-		memset(pEntry, 0, sizeof(TxtrCacheEntry));
+		pEntry = new ((void*)__lwp_heap_allocate(GXtexCache,sizeof(TxtrCacheEntry))) TxtrCacheEntry;
 #else
         pEntry = new TxtrCacheEntry;
 #endif
@@ -657,13 +656,11 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
         }
     }
 
-    bool loadFromBackBuffer=false;
     if( frameBufferOptions.bCheckBackBufs && g_pFrameBufferManager->CheckAddrInBackBuffers(pgti->Address, pgti->HeightToLoad*pgti->Pitch) >= 0 )
     {
         if( !frameBufferOptions.bWriteBackBufToRDRAM )
         {
             // Load the texture from recent back buffer
-            loadFromBackBuffer = true;
             txtBufIdxToLoadFrom = g_pFrameBufferManager->CheckAddrInRenderTextures(pgti->Address);
             if( txtBufIdxToLoadFrom >= 0 )
             {
@@ -795,29 +792,29 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
     pEntry->bExternalTxtrChecked = false;
     pEntry->maxCI = maxCI;
 
-    if( pEntry->pTexture->m_dwCreatedTextureWidth < pgti->WidthToCreate )
-    {
-        pEntry->ti.WidthToLoad = pEntry->pTexture->m_dwCreatedTextureWidth;
-        pEntry->pTexture->m_bScaledS = false;
-        pEntry->pTexture->m_bScaledT = false;
-    }
-    if( pEntry->pTexture->m_dwCreatedTextureHeight < pgti->HeightToCreate )
-    {
-        pEntry->ti.HeightToLoad = pEntry->pTexture->m_dwCreatedTextureHeight;
-        pEntry->pTexture->m_bScaledT = false;
-        pEntry->pTexture->m_bScaledS = false;
-    }
-
     try 
     {
         if (pEntry->pTexture != NULL)
         {
+			
+			if( pEntry->pTexture->m_dwCreatedTextureWidth < pgti->WidthToCreate )
+			{
+				pEntry->ti.WidthToLoad = pEntry->pTexture->m_dwCreatedTextureWidth;
+				pEntry->pTexture->m_bScaledS = false;
+				pEntry->pTexture->m_bScaledT = false;
+			}
+			if( pEntry->pTexture->m_dwCreatedTextureHeight < pgti->HeightToCreate )
+			{
+				pEntry->ti.HeightToLoad = pEntry->pTexture->m_dwCreatedTextureHeight;
+				pEntry->pTexture->m_bScaledT = false;
+				pEntry->pTexture->m_bScaledS = false;
+			}
 #if 0//def __GX__
-		static int callcount5 = 0;
-		sprintf(txtbuffer,"TextureManager::tryLoadTex %d", callcount5++);
-		DEBUG_print(txtbuffer,DBG_RICE); 
+			static int callcount5 = 0;
+			sprintf(txtbuffer,"TextureManager::tryLoadTex %d", callcount5++);
+			DEBUG_print(txtbuffer,DBG_RICE); 
+			TextureFmt dwType = pEntry->pTexture->GetSurfaceFormat();
 #endif //__GX__
-            TextureFmt dwType = pEntry->pTexture->GetSurfaceFormat();
             SAFE_DELETE(pEntry->pEnhancedTexture);
             pEntry->dwEnhancementFlag = TEXTURE_NO_ENHANCEMENT;
 
