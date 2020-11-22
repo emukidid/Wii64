@@ -32,9 +32,9 @@
 /* DVD Globals */
 int dvd_init = 0;
 
-#define ZELDA_OOT_NAME  "Zelda - Ocarina of Time"
-#define ZELDA_MQ_NAME   "Zelda - Ocarina of Time Master Quest"
-#define ZELDA_MM_NAME   "Zelda - Majoras Mask"
+#define ZELDA_OOT_NAME  "Zelda - Ocarina of Time.z64"
+#define ZELDA_MQ_NAME   "Zelda - Ocarina of Time Master Quest.z64"
+#define ZELDA_MM_NAME   "Zelda - Majoras Mask.z64"
 
 fileBrowser_file topLevel_DVD =
 	{ "\\", // file name
@@ -55,34 +55,32 @@ int fileBrowser_DVD_readDir(fileBrowser_file* ffile, fileBrowser_file** dir, int
 		dvd_init = 1;
 	}
 
-	if (!memcmp((void*)0x80000000, "D43U01", 6)) { //OoT+MQ bonus disc support.
+	if (!memcmp((void*)0x80000000, "D43", 3)) { //OoT+MQ bonus disc support.
 		num_entries = 2;
 		*dir = malloc( num_entries * sizeof(fileBrowser_file) );
 		strcpy( (*dir)[0].name, ZELDA_OOT_NAME);
-		(*dir)[0].discoffset = 0x54FBEEF4ULL;
 		(*dir)[0].offset = 0;
 		(*dir)[0].size   = 0x2000000;
 		(*dir)[0].attr	 = 0;
 		strcpy( (*dir)[1].name, ZELDA_MQ_NAME);
-		(*dir)[1].discoffset = 0x52CCC5FCULL;
 		(*dir)[1].offset = 0;
 		(*dir)[1].size   = 0x2000000;
 		(*dir)[1].attr	 = 0;
-		return num_entries;
-	}
-	else if (!memcmp((void*)0x80000000, "D43E01", 6)) {
-		num_entries = 2;
-		*dir = malloc( num_entries * sizeof(fileBrowser_file) );
-		strcpy( (*dir)[0].name, ZELDA_OOT_NAME);
-		(*dir)[0].discoffset = 0x550569D8ULL;
-		(*dir)[0].offset = 0;
-		(*dir)[0].size   = 0x2000000;
-		(*dir)[0].attr	 = 0;
-		strcpy( (*dir)[1].name, ZELDA_MQ_NAME);
-		(*dir)[1].discoffset = 0x52FBC1E0ULL;
-		(*dir)[1].offset = 0;
-		(*dir)[1].size   = 0x2000000;
-		(*dir)[1].attr	 = 0;
+		
+		switch(((char*)0x80000000)[3]) {
+			case 'U':
+				(*dir)[0].discoffset = 0x54FBEEF4ULL;
+				(*dir)[1].discoffset = 0x52CCC5FCULL;
+			break;
+			case 'P':
+				(*dir)[0].discoffset = 0x52CCA240ULL;
+				(*dir)[1].discoffset = 0x54FBCB38ULL;
+			break;
+			case 'E':
+				(*dir)[0].discoffset = 0x550569D8ULL;
+				(*dir)[1].discoffset = 0x52FBC1E0ULL;
+			break;
+		}
 		return num_entries;
 	}
 	else if (!memcmp((void*)0x80000000, "PZLP01", 6)) { //Zelda Collectors disc support.

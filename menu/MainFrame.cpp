@@ -257,6 +257,9 @@ void Func_PlayGame()
 	new_frame();
 	new_vi();
 	go();
+#ifdef HW_DOL
+	RecompCache_Release(4*1024*1024);	// helps the menu out
+#endif
 #ifdef DEBUGON
 	_break();
 #endif

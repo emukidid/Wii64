@@ -1313,12 +1313,12 @@ void PrepareTextures()
                         {
                             MirrorTexture(tilenos[i], pEntry);;
                         }
-
+#ifndef HW_DOL
                         if( options.bLoadHiResTextures && (pEntry->pEnhancedTexture == NULL || pEntry->dwEnhancementFlag < TEXTURE_EXTERNAL ) )
                         {
                             LoadHiresTexture(*pEntry);
                         }
-
+#endif
                         if( pEntry->pEnhancedTexture == NULL || (pEntry->dwEnhancementFlag != options.textureEnhancement && pEntry->dwEnhancementFlag < TEXTURE_EXTERNAL ) )
                         {
                             EnhanceTexture(pEntry);

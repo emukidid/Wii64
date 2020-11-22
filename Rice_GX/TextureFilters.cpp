@@ -1985,7 +1985,7 @@ void LoadHiresTexture( TxtrCacheEntry &entry )
 }
 
 #else //!__GX__
-
+#ifndef HW_DOL
 //Start of Texture Pack Code for GX:
 
 void CloseExternalTextures(void)
@@ -2226,5 +2226,6 @@ void LoadHiresTexture( TxtrCacheEntry &entry )
         TRACE0("Cannot create a new texture");
     }
 }
+#endif
 #endif //__GX__
 

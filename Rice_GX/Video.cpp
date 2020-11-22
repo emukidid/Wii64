@@ -304,9 +304,9 @@ void StartVideo(void)
         status.fRatio = 0.75f;
     else
         status.fRatio = 9/11.0f;;
-    
+#ifndef HW_DOL    
     InitExternalTextures();
-
+#endif
     try {
 #ifdef __GX__
 		CDeviceBuilder::SelectDeviceType(OGL_DEVICE);
@@ -350,7 +350,9 @@ void StopVideo()
 
 
     try {
+#ifndef HW_DOL
         CloseExternalTextures();
+#endif
 
         // Kill all textures?
         gTextureManager.RecycleAllTextures();

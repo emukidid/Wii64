@@ -868,13 +868,13 @@ TxtrCacheEntry * CTextureManager::GetTexture(TxtrInfo * pgti, bool fromTMEM, boo
                 ExpandTextureS(pEntry);
                 ExpandTextureT(pEntry);
             }
-
+#ifdef _DEBUG
             if( options.bDumpTexturesToFiles && !loadFromTextureBuffer )
             {
                 DumpCachedTexture(*pEntry);
             }
 
-#ifdef _DEBUG
+
             if( pauseAtNext && eventToPause == NEXT_NEW_TEXTURE )
             {
                 CRender::g_pRender->SetCurrentTexture( 0, pEntry->pTexture, pEntry->ti.WidthToCreate, pEntry->ti.HeightToCreate, pEntry);

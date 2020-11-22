@@ -321,7 +321,6 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 	continueRemovalThread();
 	return res;
 #else
-	sdgecko_setSpeed(EXI_SPEED32MHZ);
 	if(!sdMounted) {           //GC has only SD
 		if(carda->startup()) {
 			res = fatMountSimple ("sd", carda);
@@ -333,7 +332,6 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 			if(res)
 				sdMounted = CARD_B;
 		}
-		sdgecko_setSpeed(EXI_SPEED32MHZ);
 		return res;
 	}
 	return 1; 				// Already mounted

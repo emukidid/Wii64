@@ -61,7 +61,7 @@
 
 // 2MB RecompCache Meta
 #define RECOMPMETA_LO   (MEMPACK_HI)
-#define RECOMPMETA_SIZE	(2*MB)
+#define RECOMPMETA_SIZE	((2*MB) + (512*KB))
 #define RECOMPMETA_HI   (RECOMPMETA_LO + RECOMPMETA_SIZE)
 
 // 8MB ROM Cache (fill up the rest of ARAM)

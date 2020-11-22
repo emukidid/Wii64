@@ -71,6 +71,17 @@ int init_dvd() {
   {
     dvd_reset();
 	dvd_read_id();
+	u8* driveDate = (u8*)memalign(32,32);
+	memset(driveDate,0,32);
+	drive_version(driveDate);
+	free(driveDate);
+	dvd_get_error();
+	dvd_read_id();
+	
+	if(!dvd_get_error()) {
+      return 0; //we're ok
+    }
+	
 	// Avoid lid open scenario
 	if((dvd_get_error()>>24) && (dvd_get_error()>>24 != 1)) {
 		dvd_enable_patches();	// Could be a dvd backup
