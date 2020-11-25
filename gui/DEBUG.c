@@ -15,6 +15,8 @@
 
 char printToSD;
 
+#ifdef SHOW_DEBUG
+
 void print_gecko(const char* fmt, ...)
 {
 	if(usb_isgeckoalive(1)) {
@@ -27,8 +29,6 @@ void print_gecko(const char* fmt, ...)
 		usb_sendbuffer_safe(1,tempstr,strlen(tempstr));
 	}
 }
-
-#ifdef SHOW_DEBUG
 
 char txtbuffer[1024];
 extern long long gettime();

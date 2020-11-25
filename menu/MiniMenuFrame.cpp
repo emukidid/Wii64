@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #include "MenuContext.h"
 #include "MiniMenuFrame.h"
 #include "SettingsFrame.h"
@@ -595,3 +595,4 @@ void Func_SetResumeGame()
 {
 	FRAME_BUTTONS[5].buttonString = FRAME_STRINGS[6];
 }*/
+#endif

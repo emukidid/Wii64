@@ -57,16 +57,20 @@ public:
 		IMAGE_LOGO,
 		IMAGE_CONTROLLER_EMPTY,
 		IMAGE_CONTROLLER_GAMECUBE,
+#ifdef HW_RVL
 		IMAGE_CONTROLLER_CLASSIC,
 		IMAGE_CONTROLLER_WIIMOTENUNCHUCK,
 		IMAGE_CONTROLLER_WIIMOTE,
 		IMAGE_CONTROLLER_WIIUPRO,
+#endif
 		IMAGE_N64_CONTROLLER,
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 		IMAGE_CURRENT_FB,
 		IMAGE_STATE_FB,
 		IMAGE_BOXART_FRONT,
 		IMAGE_BOXART_SPINE,
 		IMAGE_BOXART_BACK
+#endif
 	};
 
 private:
@@ -79,13 +83,17 @@ private:
 	Image *menuBackgroundImage;
 	Image *logoImage;
 	Image *controllerEmptyImage, *controllerGamecubeImage;
+#ifdef HW_RVL
 	Image *controllerClassicImage, *controllerWiimoteNunchuckImage;
 	Image *controllerWiimoteImage, *controllerWiiUProImage;
+#endif
 	Image *n64ControllerImage;
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	Image *currentFramebufferImage, *stateFramebufferImage;
 	u8	*currentFramebufferTexture, *stateFramebufferTexture;
 	Image *boxartFrontImage, *boxartSpineImage, *boxartBackImage;
 	u8	*boxartTexture;
+#endif
 
 };
 

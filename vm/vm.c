@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <ogc/machine/processor.h>
 #include <ogc/aram.h>
+#include <string.h>
 #include "vm.h"
 
 #include <stdio.h>
@@ -198,7 +199,7 @@ void* VM_Init(u32 VMSize, u32 MEMSize)
 		errno = ENOMEM;
 		return NULL;
 	}
-
+	memset(MEM_Base, 0, MEMSize);
 	AR_Clear(AR_ARAMINTUSER);
 
 	tlbia();

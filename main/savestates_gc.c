@@ -147,8 +147,10 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	//Save Header
 	gzwrite(f, statesmagic, 3); //Write magic "W64"
 	gzwrite(f, &savestates_version, sizeof(unsigned int));
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	gzwrite(f, fb_tex, FB_THUMB_SIZE);
-	
+#endif
+
 	//Save State
 	// RDRAM 0->50%
 	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
@@ -230,7 +232,9 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 	if (!f || !savestates_check_valid(f)) {
 		return -1;
 	}
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	gzread(f, fb_tex, FB_THUMB_SIZE);
+#endif
 	gzclose(f);
 	return 0;
 }
@@ -250,9 +254,11 @@ int savestates_load(unsigned int slot)
 	}
 	LoadingBar_showBar(progress, LOAD_STATE_MSG);
 	
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	//Skip image
 	gzseek(f, FB_THUMB_SIZE, SEEK_CUR);
-	
+#endif
+
 	//Load State
 	// RDRAM 0->50%
 	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);

@@ -54,19 +54,26 @@ void Func_ExitToLoader();
 void Func_PlayGame();
 void Func_BasicMenu();
 
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #define NUM_MAIN_BUTTONS 7
+#else
+#define NUM_MAIN_BUTTONS 6
+#endif
 #define FRAME_BUTTONS mainFrameButtons
 #define FRAME_STRINGS mainFrameStrings
 
-char FRAME_STRINGS[8][20] =
+char FRAME_STRINGS[NUM_MAIN_BUTTONS+1][20] =
 	{ "Load ROM",
 	  "Current ROM",
 	  "Settings",
 	  "Credits",
 	  "Quit",
 	  "Play Game",
-	  "Resume Game",
-	  "Basic"};
+	  "Resume Game"
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+	  ,"Basic"
+#endif
+	};
 
 
 struct ButtonInfo
@@ -92,7 +99,9 @@ struct ButtonInfo
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	315.0,	240.0,	200.0,	56.0,	 2,	 4,	 6,	 6,	Func_Credits,			NULL }, // Credits
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	315.0,	300.0,	200.0,	56.0,	 3,	 5,	 6,	 6,	Func_ExitToLoader,		NULL }, // Exit to Loader
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	315.0,	360.0,	200.0,	56.0,	 4,	 0,	 6,	 6,	Func_PlayGame,			NULL }, // Play/Resume Game
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[7],	535.0,	360.0,	 80.0,	56.0,	 4,	 0,	 5,	 5,	Func_BasicMenu,			NULL }, // Basic Menu
+#endif
 };
 
 MainFrame::MainFrame()
@@ -168,19 +177,20 @@ void Func_Credits()
 	char CreditsInfo[512] = "";
 #ifdef HW_RVL
   int iosversion = IOS_GetVersion();
-  sprintf(CreditsInfo,"Wii64 Beta 1.2 - IOS %i\n",iosversion);
+  sprintf(CreditsInfo,"Wii64 Beta 1.3 - IOS %i\n",iosversion);
 #else
-	strcat(CreditsInfo,"Cube64 Beta 1.2\n");
+	strcat(CreditsInfo,"Cube64 Beta 1.3\n");
 #endif
 	strcat(CreditsInfo,"\n");
-	strcat(CreditsInfo,"Wii64 Team: www.emulatemii.com\n");
+	strcat(CreditsInfo,"Wii64 Team:\n");
 	strcat(CreditsInfo,"tehpola - core\n");
 	strcat(CreditsInfo,"sepp256 - graphics & menu\n");
 	strcat(CreditsInfo,"emu_kidid - general coding\n");
 	strcat(CreditsInfo,"\n");
-	strcat(CreditsInfo,"Special Thanks To:\n");
-	strcat(CreditsInfo,"       drmr - for menu graphics\n");
-	strcat(CreditsInfo,"Hacktarux - for Mupen64\n");
+	strcat(CreditsInfo,"Special thanks to:\n");
+	strcat(CreditsInfo,"drmr - menu graphics\n");
+	strcat(CreditsInfo,"Hacktarux - Mupen64\n");
+	strcat(CreditsInfo,"Extrems - Not64\n");
 	strcat(CreditsInfo,"Wintermute/Shagkur - devkitPro/libOGC\n");
 #ifdef HW_RVL
 	strcat(CreditsInfo,"Team Twiizers - for Wii homebrew\n");
@@ -263,9 +273,12 @@ void Func_PlayGame()
 #ifdef DEBUGON
 	_break();
 #endif
+
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	//Create Thumbnail of last Framebuffer
 	menu::Gui::getInstance().gfx->copyFBTex(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 
 											FB_THUMB_WD, FB_THUMB_HT, FB_THUMB_FMT, FB_THUMB_BPP);
+#endif
 
 	menuActive = 1;
 	menuActive = 1;

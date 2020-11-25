@@ -544,6 +544,7 @@ void fileBrowserFrame_LoadFile(int i)
 		pMenuContext->getFrame(MenuContext::FRAME_FILEBROWSER)->setDefaultFocus(FRAME_BUTTONS[2].button);
 		menu::Focus::getInstance().clearPrimaryFocus();*/
 
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 		//Clear FB images
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
@@ -555,6 +556,7 @@ void fileBrowserFrame_LoadFile(int i)
 		BOXART_LoadTexture(ROM_HEADER.CRC1,(char*) menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture());
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture(), BOXART_TEX_SIZE);
 		GX_InvalidateTexAll();
+#endif
 
 		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 		if(hasLoadedROM) Func_SetPlayGame();

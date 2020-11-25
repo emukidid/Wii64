@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
  <app version="1.2">
-   <name>Wii64 (Rice GFX)</name>
+   <name>Wii64 | Rice GFX</name>
    <coder>Wii64 Team</coder>
-   <version>Beta 1.2</version>
-   <release_date>201302230000</release_date>
+   <version>Beta 1.3</version>
+   <release_date>202011250000</release_date>
    <short_description>N64 Emulator for Wii</short_description>
    <long_description>
 

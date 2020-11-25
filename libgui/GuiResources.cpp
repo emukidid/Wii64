@@ -28,20 +28,12 @@ namespace menu {
 Resources::Resources()
 {
 	defaultButtonImage = new Image(ButtonTexture, 16, 16, GX_TF_I8, GX_CLAMP, GX_CLAMP, GX_FALSE);
-	defaultButtonFocusImage = new Image(ButtonFocusTexture, 16, 16, GX_TF_I8, GX_CLAMP, GX_CLAMP, GX_FALSE);
-//	styleAButtonImage = new Image(StyleAButtonTexture, 8, 56, GX_TF_CI8, GX_CLAMP, GX_CLAMP, GX_FALSE, StyleAButtonTlut, GX_TL_RGB5A3, GX_TLUT0, GX_TLUT_256);
-//	styleAButtonFocusImage = new Image(StyleAButtonFocusTexture, 8, 56, GX_TF_CI8, GX_CLAMP, GX_CLAMP, GX_FALSE, StyleAButtonTlut, GX_TL_RGB5A3, GX_TLUT0, GX_TLUT_256);
-//	styleAButtonSelectOffImage = new Image(StyleAButtonSelectOffTexture, 8, 56, GX_TF_CI8, GX_CLAMP, GX_CLAMP, GX_FALSE, StyleAButtonTlut, GX_TL_RGB5A3, GX_TLUT0, GX_TLUT_256);
-//	styleAButtonSelectOffFocusImage = new Image(StyleAButtonSelectOffFocusTexture, 8, 56, GX_TF_CI8, GX_CLAMP, GX_CLAMP, GX_FALSE, StyleAButtonTlut, GX_TL_RGB5A3, GX_TLUT0, GX_TLUT_256);
-//	styleAButtonSelectOnImage = new Image(StyleAButtonSelectOnTexture, 8, 56, GX_TF_CI8, GX_CLAMP, GX_CLAMP, GX_FALSE, StyleAButtonTlut, GX_TL_RGB5A3, GX_TLUT0, GX_TLUT_256);
-//	styleAButtonSelectOnFocusImage = new Image(StyleAButtonSelectOnFocusTexture, 8, 56, GX_TF_CI8, GX_CLAMP, GX_CLAMP, GX_FALSE, StyleAButtonTlut, GX_TL_RGB5A3, GX_TLUT0, GX_TLUT_256);
 	styleAButtonImage = new Image(StyleAButtonTexture, 8, 56, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	styleAButtonFocusImage = new Image(StyleAButtonFocusTexture, 8, 56, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	styleAButtonSelectOffImage = new Image(StyleAButtonSelectOffTexture, 8, 56, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	styleAButtonSelectOffFocusImage = new Image(StyleAButtonSelectOffFocusTexture, 8, 56, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	styleAButtonSelectOnImage = new Image(StyleAButtonSelectOnTexture, 8, 56, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	styleAButtonSelectOnFocusImage = new Image(StyleAButtonSelectOnFocusTexture, 8, 56, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
-//	menuBackgroundImage = new Image(BackgroundTexture, 848, 480, GX_TF_I8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	menuBackgroundImage = new Image(BackgroundTexture, 424, 240, GX_TF_I8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 #ifdef HW_RVL
 	logoImage = new Image(LogoTexture, 144, 52, GX_TF_RGB5A3, GX_CLAMP, GX_CLAMP, GX_FALSE);
@@ -50,12 +42,15 @@ Resources::Resources()
 #endif
 	controllerEmptyImage = new Image(ControlEmptyTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	controllerGamecubeImage = new Image(ControlGamecubeTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
+#ifdef HW_RVL
 	controllerClassicImage = new Image(ControlClassicTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	controllerWiimoteNunchuckImage = new Image(ControlWiimoteNunchuckTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	controllerWiimoteImage = new Image(ControlWiimoteTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	controllerWiiUProImage = new Image(ControlWiiUProTexture, 48, 64, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
+#endif
 	n64ControllerImage = new Image(N64ControllerTexture, 208, 200, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
-	
+
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	//Thumbnail images for current FB and state FB
 	currentFramebufferTexture = (u8*) memalign(32, FB_THUMB_SIZE);
 	stateFramebufferTexture = (u8*) memalign(32, FB_THUMB_SIZE);
@@ -76,6 +71,7 @@ Resources::Resources()
 								BOXART_TEX_WD, BOXART_TEX_SPINE_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
 	boxartBackImage = new Image(boxartTexture+BOXART_TEX_FRONT_SIZE+BOXART_TEX_SPINE_SIZE,
 								BOXART_TEX_WD, BOXART_TEX_FRONT_HT, BOXART_TEX_FMT, GX_CLAMP, GX_CLAMP, GX_FALSE);
+#endif
 }
 
 Resources::~Resources()
@@ -92,11 +88,14 @@ Resources::~Resources()
 	delete logoImage;
 	delete controllerEmptyImage;
 	delete controllerGamecubeImage;
+#ifdef HW_RVL
 	delete controllerClassicImage;
 	delete controllerWiimoteNunchuckImage;
 	delete controllerWiimoteImage;
 	delete controllerWiiUProImage;
+#endif
 	delete n64ControllerImage;
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	delete currentFramebufferImage;
 	delete stateFramebufferImage;
 	delete boxartFrontImage;
@@ -105,6 +104,7 @@ Resources::~Resources()
 	free(currentFramebufferTexture);
 	free(stateFramebufferTexture);
 	free(boxartTexture);
+#endif
 }
 
 Image* Resources::getImage(int image)
@@ -148,6 +148,7 @@ Image* Resources::getImage(int image)
 	case IMAGE_CONTROLLER_GAMECUBE:
 		returnImage = controllerGamecubeImage;
 		break;
+#ifdef HW_RVL
 	case IMAGE_CONTROLLER_CLASSIC:
 		returnImage = controllerClassicImage;
 		break;
@@ -160,9 +161,11 @@ Image* Resources::getImage(int image)
 	case IMAGE_CONTROLLER_WIIUPRO:
 		returnImage = controllerWiiUProImage;
 		break;
+#endif
 	case IMAGE_N64_CONTROLLER:
 		returnImage = n64ControllerImage;
 		break;
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	case IMAGE_CURRENT_FB:
 		returnImage = currentFramebufferImage;
 		break;
@@ -178,6 +181,7 @@ Image* Resources::getImage(int image)
 	case IMAGE_BOXART_BACK:
 		returnImage = boxartBackImage;
 		break;
+#endif
 	}
 	return returnImage;
 }

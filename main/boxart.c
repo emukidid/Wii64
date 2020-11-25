@@ -2,7 +2,7 @@
 	- Boxart texture loading from a binary compilation
 	by emu_kidid
  */
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #include <string.h>
 #include <stdio.h>
 #include <fat.h>
@@ -94,3 +94,4 @@ void BOXART_LoadTexture(u32 CRC, char *buffer)
 	// if we didn't find it, then return the default image
 	memcpy(buffer,&missBoxArt,missBoxArt_length);
 }
+#endif

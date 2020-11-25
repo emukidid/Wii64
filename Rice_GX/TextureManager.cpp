@@ -25,10 +25,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef __GX__
 # ifdef HW_RVL
-# include "../gc_memory/MEM2.h"
-# define GX_TEXTURE_CACHE_SIZE TEXCACHE_SIZE //8 MB for Wii
+#  include "../gc_memory/MEM2.h"
+#  define GX_TEXTURE_CACHE_SIZE TEXCACHE_SIZE //8 MB for Wii
 # else //HW_RVL
-# define GX_TEXTURE_CACHE_SIZE (2*1024*1024) //2 MB for GC
+#  ifdef USE_EXPANSION
+#   define GX_TEXTURE_CACHE_SIZE (1*1024*1024) //1 MB for GC with expansion pak
+#  else
+#	define GX_TEXTURE_CACHE_SIZE (2*1024*1024) //2 MB for GC
+#  endif
 # endif //!HW_RVL
 heap_cntrl* GXtexCache = NULL;
 #endif //__GX__
@@ -56,7 +60,7 @@ CTextureManager::CTextureManager() :
 #ifdef HW_RVL
     m_numOfCachedTxtrList(809)
 #else
-	m_numOfCachedTxtrList(257)
+	m_numOfCachedTxtrList(131)
 #endif
 {
 	

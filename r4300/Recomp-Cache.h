@@ -25,12 +25,20 @@
 
 #ifdef HW_RVL
 #ifdef GLN64_GX
-#define RECOMP_CACHE_SIZE (10*1024*1024)	// glN64
+#define RECOMP_CACHE_SIZE (10*1024*1024)	// glN64 Wii
 #else
-#define RECOMP_CACHE_SIZE (9*1024*1024)		// Rice
+#define RECOMP_CACHE_SIZE (9*1024*1024)		// Rice Wii
 #endif
 #else
-#define RECOMP_CACHE_SIZE (8*1024*1024)		// GameCube
+# ifdef USE_EXPANSION
+#  ifdef GLN64_GX
+#   define RECOMP_CACHE_SIZE (7*1024*1024) //7 MB for GC with expansion pak + glN64
+#  else
+#   define RECOMP_CACHE_SIZE (6*1024*1024) //6 MB for GC with expansion pak + Rice
+#  endif
+# else
+#  define RECOMP_CACHE_SIZE (8*1024*1024) //8 MB for GC
+# endif
 #endif
 #include "ppc/Recompile.h"
 

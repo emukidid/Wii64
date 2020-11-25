@@ -19,7 +19,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #include <math.h>
 #include <cstdlib>
 #ifdef HW_RVL
@@ -744,7 +744,7 @@ void selectRomFrame_LoadFile(int i)
 		Func_ReturnFromSelectRomFrame();
 
 		int ret = loadROM( &f );
-		
+
 		//Clear FB images
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
@@ -764,7 +764,7 @@ void selectRomFrame_LoadFile(int i)
 		}
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_BOXART_FRONT)->getTexture(), BOXART_TEX_SIZE);
 		GX_InvalidateTexAll();
-		
+
 		if(!ret){	// If the read succeeded.
 
 			strcpy(feedback_string, "Loaded ");
@@ -828,3 +828,4 @@ void selectRomFrame_LoadFile(int i)
 		}
 	}
 }
+#endif

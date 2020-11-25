@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #include "Box3D.h"
 #include "GuiResources.h"
 #include "Image.h"
@@ -346,3 +346,4 @@ void Box3D::drawLine(u8 v0, u8 v1, u8 c)
 }
 
 } //namespace menu 
+#endif

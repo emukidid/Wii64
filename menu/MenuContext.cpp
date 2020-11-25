@@ -27,8 +27,10 @@ MenuContext *pMenuContext;
 MenuContext::MenuContext(GXRModeObj *vmode)
 		: currentActiveFrame(0),
 		  mainFrame(0),
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))			  
 		  miniMenuFrame(0),
 		  selectRomFrame(0),
+#endif
 		  loadRomFrame(0),
 		  fileBrowserFrame(0),
 		  currentRomFrame(0),
@@ -46,8 +48,10 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 	menu::Gui::getInstance().setVmode(vmode);
 
 	mainFrame = new MainFrame();
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))	
 	miniMenuFrame = new MiniMenuFrame();
 	selectRomFrame = new SelectRomFrame();
+#endif
 	loadRomFrame = new LoadRomFrame();
 	fileBrowserFrame = new FileBrowserFrame();
 	currentRomFrame = new CurrentRomFrame();
@@ -60,8 +64,10 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 	configureButtonsFrame = new ConfigureButtonsFrame();
 
 	menu::Gui::getInstance().addFrame(mainFrame);
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	menu::Gui::getInstance().addFrame(miniMenuFrame);
 	menu::Gui::getInstance().addFrame(selectRomFrame);
+#endif
 	menu::Gui::getInstance().addFrame(loadRomFrame);
 	menu::Gui::getInstance().addFrame(fileBrowserFrame);
 	menu::Gui::getInstance().addFrame(currentRomFrame);
@@ -89,8 +95,10 @@ MenuContext::~MenuContext()
 	delete currentRomFrame;
 	delete fileBrowserFrame;
 	delete loadRomFrame;
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))	
 	delete selectRomFrame;
 	delete miniMenuFrame;
+#endif
 	delete mainFrame;
 	pMenuContext = NULL;
 }
@@ -120,14 +128,18 @@ void MenuContext::setActiveFrame(int frameIndex)
 
 	switch(frameIndex) {
 	case FRAME_MAIN:
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 		if(useMiniMenu)
 			currentActiveFrame = miniMenuFrame;
 		else
+#endif
 			currentActiveFrame = mainFrame;
 		break;
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	case FRAME_SELECTROM:
 		currentActiveFrame = selectRomFrame;
 		break;
+#endif
 	case FRAME_LOADROM:
 		currentActiveFrame = loadRomFrame;
 		break;
@@ -181,9 +193,11 @@ menu::Frame* MenuContext::getFrame(int frameIndex)
 	case FRAME_MAIN:
 		pFrame = mainFrame;
 		break;
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	case FRAME_SELECTROM:
 		pFrame = selectRomFrame;
 		break;
+#endif
 	case FRAME_LOADROM:
 		pFrame = loadRomFrame;
 		break;

@@ -1,0 +1,11 @@
+#Makefile MUPEN64 for glN64_GX + MenuV2 + GC + Expansion Pak
+
+ELF		= cube64-glN64-exp.elf
+DOL		= cube64-glN64-exp.dol
+
+CXXFLAGS	+= -DUSE_EXPANSION
+
+include Makefile.glN64
+include Makefile.gc
+include Makefile.base
+

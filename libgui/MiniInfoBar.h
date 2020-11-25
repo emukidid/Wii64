@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #ifndef MINIINFOBAR_H
 #define MINIINFOBAR_H
 
@@ -41,4 +41,5 @@ private:
 
 } //namespace menu 
 
+#endif
 #endif

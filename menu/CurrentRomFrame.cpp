@@ -175,9 +175,11 @@ void Func_ResetROM()
 		romOpen_audio();
 		romOpen_input();
 		cpu_init();
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 		//Clear FB image
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);
+#endif
 		GX_InvalidateTexAll();
 		menu::MessageBox::getInstance().setMessage("Game restarted");
 		Func_SetPlayGame();
@@ -377,8 +379,11 @@ void Func_SaveState()
     menu::MessageBox::getInstance().setMessage("Failed to create save state");
   }
   else {
-//    savestates_save();
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	savestates_save(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture());
+#else
+	savestates_save(which_slot, NULL);
+#endif
 	menu::MessageBox::getInstance().setMessage("State Saved Successfully");
   }
 }

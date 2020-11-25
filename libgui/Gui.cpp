@@ -43,14 +43,18 @@ Gui::Gui()
 	menuLogo = new Logo();
 	menuLogo->setLocation(570.0, 70.0, -150.0);
 	menuLogo->setVisible(true);
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))	
 	menuBox3D = new Box3D();
 	menuBox3D->setLocation(320.0, 240.0, -150.0);
 	menuBox3D->setVisible(true);
+#endif
 }
 
 Gui::~Gui()
 {
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	delete menuBox3D;
+#endif
 	delete menuLogo;
 	delete gfx;
 }

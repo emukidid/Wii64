@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #ifndef BOX3D_H
 #define BOX3D_H
 
@@ -61,4 +61,5 @@ private:
 
 } //namespace menu 
 
+#endif
 #endif

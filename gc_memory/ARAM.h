@@ -31,7 +31,11 @@
 #define MB (1024*1024)
 #define KB (1024)
 
-#define MRAM_BACKING	(2*MB)			// Use 2MB to page our 16MB
+#ifdef USE_EXPANSION
+	#define MRAM_BACKING	(1*MB)			// Use 1MB to page our 16MB if expansion pak
+#else
+	#define MRAM_BACKING	(2*MB)			// Use 2MB to page our 16MB
+#endif
 
 #define ARAM_RESERVED	(64*KB)			// Reserved for DSP/AESND/etc
 

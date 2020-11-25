@@ -108,13 +108,14 @@ void MainInfoBar::drawComponent(Graphics& gfx)
 #endif
 	gfx.setTEV(GX_PASSCLR);
 
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	//draw current FB thumbnail
 	Resources::getInstance().getImage(Resources::IMAGE_CURRENT_FB)->activateImage(GX_TEXMAP0);
 	gfx.setTEV(GX_REPLACE);
 	gfx.enableBlending(true);
 	gfx.drawImage(0, 87, 145, 160, 120, 0, 1, 0, 1);
 	gfx.setTEV(GX_PASSCLR);
-	
+#endif
 }
 
 void MainInfoBar::updateTime(float deltaTime)

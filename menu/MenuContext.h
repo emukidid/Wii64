@@ -71,8 +71,10 @@ private:
 	void draw();
 	menu::Frame *currentActiveFrame;
 	MainFrame *mainFrame;
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 	MiniMenuFrame *miniMenuFrame;
 	SelectRomFrame *selectRomFrame;
+#endif
 	LoadRomFrame *loadRomFrame;
 	FileBrowserFrame *fileBrowserFrame;
 	CurrentRomFrame *currentRomFrame;

@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #include "MiniInfoBar.h"
 #include "Gui.h"
 #include "GuiResources.h"
@@ -154,3 +154,4 @@ Component* MiniInfoBar::updateFocus(int direction, int buttonsPressed)
 }
 
 } //namespace menu 
+#endif

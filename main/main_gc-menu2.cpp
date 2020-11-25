@@ -285,7 +285,11 @@ int main(int argc, char* argv[]) {
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
 
 	// Default Settings
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))	
 	miniMenuActive   = MINIMENU_ENABLE; // Activate MiniMenu
+#else
+	miniMenuActive   = MINIMENU_DISABLE; // Activate MiniMenu
+#endif
 	audioEnabled     = 1; // Audio
 #ifdef RELEASE
 	showFPSonScreen  = 0; // Show FPS on Screen

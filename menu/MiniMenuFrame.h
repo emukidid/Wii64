@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-
+#if !(defined(HW_DOL) && defined(USE_EXPANSION))
 #ifndef MINIMENUFRAME_H
 #define MINIMENUFRAME_H
 
@@ -40,4 +40,5 @@ private:
 	u32 previousButtonsWii[4];
 };
 
+#endif
 #endif
