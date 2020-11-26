@@ -51,7 +51,7 @@ static int cacheSize = 0;
 #define HEAP_PARENT(i) ((i-1)>>2)
 
 #define INITIAL_HEAP_SIZE (64)
-#define MIN_RELEASE_SIZE (1*1024*1024)
+#define MIN_RELEASE_SIZE (512*1024)
 static unsigned int heapSize = 0;
 static unsigned int maxHeapSize = 0;
 static CacheMetaNode** cacheHeap = NULL;
@@ -201,7 +201,10 @@ static inline void update_lru(PowerPC_func* func){
 
 static void release(int minNeeded){
 	// Frees alloc'ed blocks so that at least minNeeded bytes are available
-	int toFree = minNeeded * 2 > MIN_RELEASE_SIZE ? minNeeded * 2 : MIN_RELEASE_SIZE; // Free 2x or 1 MB
+	int toFree = minNeeded * 2; // Free 2x if we're here due to meta filling up
+	if ((minNeeded * 2) + cacheSize > RECOMP_CACHE_SIZE) {
+		toFree = minNeeded * 2 > MIN_RELEASE_SIZE ? minNeeded * 2 : MIN_RELEASE_SIZE; // Free more when we've actually hit capacity.
+	}
 	// Restore the heap properties to pop the LRU
 	heapify();
 	// Release nodes' memory until we've freed enough
