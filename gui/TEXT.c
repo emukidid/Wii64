@@ -2,8 +2,8 @@
    by Mike Slegeir for Mupen64-GC
  */
 
+#ifndef MENU_V2
 #include "TEXT.h"
-
 char TEXT_split_lines[TEXT_MAX_SPLIT][TEXT_WIDTH];
 
 int TEXT_split(char* string){
@@ -64,3 +64,4 @@ void TEXT_expand(char* string){
 			if(string[i] == '\t') string[i] = ' ';
 	}
 }
+#endif

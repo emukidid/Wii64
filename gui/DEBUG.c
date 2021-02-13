@@ -1,7 +1,7 @@
 /* DEBUG.c - DEBUG interface
    by Mike Slegeir for Mupen64-GC
  */
-
+ 
 #include <ogc/system.h>
 #include <string.h>
 #include <stdio.h>
@@ -16,6 +16,7 @@
 char printToSD;
 
 #ifdef SHOW_DEBUG
+#include <ogc/usbgecko.h>
 
 void print_gecko(const char* fmt, ...)
 {
@@ -36,12 +37,12 @@ long long texttimes[DEBUG_TEXT_HEIGHT];
 char text[DEBUG_TEXT_HEIGHT][DEBUG_TEXT_WIDTH];
 extern unsigned int diff_sec(long long start,long long end);
 
-#define MAX_HEAPS 8
+#define MAX_HEAPS 8 
 static heap_cntrl *registeredHeaps[MAX_HEAPS];
 static const char *registeredHeapNames[MAX_HEAPS];
 
 static void check_heap_space(void){
-	sprintf(txtbuffer,"MEM Free (KB): [Arena|%d] ", SYS_GetArena1Size()/1024);
+	sprintf(&text[DBG_MEMFREEINFO][0],"MEM Free (KB): [Arena|%d] ", SYS_GetArena1Size()/1024);
 	
 	char *heapBuf = (char*)calloc(1, 64);
 	int i;
@@ -50,11 +51,10 @@ static void check_heap_space(void){
 			heap_iblock heapInfo;
 			__lwp_heap_getinfo(registeredHeaps[i],&heapInfo);
 			sprintf(heapBuf, "[%s|%d] ", registeredHeapNames[i], heapInfo.free_size/1024);
-			strcat(txtbuffer, heapBuf);
+			strcat(&text[DBG_MEMFREEINFO][0], heapBuf);
 			memset(heapBuf, 0, 64);
 		}
 	}
-	DEBUG_print(txtbuffer,DBG_MEMFREEINFO);
 	free(heapBuf);
 }
 
@@ -124,14 +124,13 @@ void DEBUG_print(char* string,int pos){
 #endif
 		}
 		else {
-			memset(text[pos],0,DEBUG_TEXT_WIDTH);
-			strncpy(text[pos], string, DEBUG_TEXT_WIDTH);
-			memset(text[DEBUG_TEXT_WIDTH-1],0,1);
+			memset(&text[pos][0],0,DEBUG_TEXT_WIDTH);
+			strncpy(&text[pos][0], string, DEBUG_TEXT_WIDTH-1);
 			texttimes[pos] = gettime();
 		}
 }
 
-
+#if 0
 #define MAX_STATS 20
 unsigned int stats_buffer[MAX_STATS];
 unsigned int avge_counter[MAX_STATS];
@@ -160,4 +159,5 @@ void DEBUG_stats(int stats_id, char *info, unsigned int stats_type, unsigned int
 	DEBUG_print(txtbuffer,DBG_STATSBASE+stats_id);
 
 }
+#endif
 #endif

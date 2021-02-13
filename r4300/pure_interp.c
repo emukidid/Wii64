@@ -44,6 +44,7 @@
 
 #ifdef __PPC__
 #include "../main/ROM-Cache.h"
+#include "ppc/Wrappers.h"
 #endif
 #include "../gui/DEBUG.h"
 
@@ -137,7 +138,7 @@ static void JR()
 static void JALR()
 {
    //DEBUG_stats(19, "JALR", STAT_TYPE_ACCUM, 1);
-   unsigned long long int *dest = PC->f.r.rd;
+   unsigned long long int *dest = (unsigned long long int *)PC->f.r.rd;
    local_rs32 = rrs32;
    r4300.pc+=4;
    r4300.delay_slot=1;

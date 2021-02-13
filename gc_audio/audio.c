@@ -121,7 +121,7 @@ EXPORT void CALL AiLenChanged(void)
 #endif
 		uint32_t level = IRQ_Disable();
 		
-		char *stream = AudioInfo.RDRAM + (*AudioInfo.AI_DRAM_ADDR_REG & 0xFFFFFF);
+		unsigned char *stream = AudioInfo.RDRAM + (*AudioInfo.AI_DRAM_ADDR_REG & 0xFFFFFF);
 		int length = *AudioInfo.AI_LEN_REG;
 		
 		if (buffered + length < BUFFER_SIZE) {

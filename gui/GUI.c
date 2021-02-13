@@ -1,7 +1,7 @@
 /* GUI.c - GUI interface
    by Mike Slegeir for Mupen64-GC
  */
-
+#ifndef MENU_V2
 #include <string.h>
 #include "GUI.h"
 #include "TEXT.h"
@@ -123,3 +123,4 @@ GXColor* GUI_get_colors(void){
 	return &colors;
 }
 
+#endif

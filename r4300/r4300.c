@@ -142,7 +142,7 @@ void update_count()
 	//sprintf(txtbuffer, "trace: addr = 0x%08x\n", r4300.pc);
 #ifdef SHOW_DEBUG
 	if(r4300.pc < r4300.last_pc) {
-		sprintf(txtbuffer, "r4300.pc (%08x) < r4300.last_pc (%08x)\n");
+		sprintf(txtbuffer, "r4300.pc (%08lx) < r4300.last_pc (%08lx)\n", r4300.pc, r4300.last_pc);
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
 	}
 #endif

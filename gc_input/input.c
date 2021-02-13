@@ -25,6 +25,7 @@
 #include <stdio.h>
 
 #include "../main/winlnxdefs.h"
+#include "../main/main.h"
 #include "InputPlugin.h"
 #include "Controller_#1.1.h"
 #include "PakIO.h"

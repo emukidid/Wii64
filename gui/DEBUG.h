@@ -18,22 +18,22 @@
 #define DBG_CCINFO 7
 #define DBG_BLINFO 8
 #define DBG_AUDIOINFO 9
-#define DBG_CACHEINFO 11
-#define DBG_PROFILE_GFX 19
-#define DBG_PROFILE_AUDIO 20
-#define DBG_PROFILE_IDLE 21
-#define DBG_PROFILE_TLB 22
-#define DBG_PROFILE_FP 23
-#define DBG_PROFILE_COMP 24
-#define DBG_PROFILE_INTERP 25
-#define DBG_PROFILE_TRAMP 26
-#define DBG_PROFILE_FUNCS 27
-#define DBG_PROFILE_LINK 28
-#define DBG_PROFILE_UNLINK 29
-#define DBG_PROFILE_DYNAMEM 30
-#define DBG_PROFILE_ROMREAD 31
-#define DBG_PROFILE_BLOCKS 32
-#define DBG_STATSBASE 12 // ALL stats print from this line onwards
+#define DBG_CACHEINFO 10
+#define DBG_PROFILE_GFX 11
+#define DBG_PROFILE_AUDIO 12
+#define DBG_PROFILE_IDLE 13
+#define DBG_PROFILE_TLB 14
+#define DBG_PROFILE_FP 15
+#define DBG_PROFILE_COMP 16
+#define DBG_PROFILE_INTERP 17
+#define DBG_PROFILE_TRAMP 18
+#define DBG_PROFILE_FUNCS 19
+#define DBG_PROFILE_LINK 20
+#define DBG_PROFILE_UNLINK 21
+#define DBG_PROFILE_DYNAMEM 22
+#define DBG_PROFILE_ROMREAD 23
+#define DBG_PROFILE_BLOCKS 24
+#define DBG_STATSBASE 11 // ALL stats print from this line onwards
 #define DBG_SDGECKOOPEN 0xFC
 #define DBG_SDGECKOCLOSE 0xFD
 #define DBG_SDGECKOPRINT 0xFE
@@ -53,8 +53,8 @@ extern char txtbuffer[1024];
 // Amount of time each string will be held onto
 #define DEBUG_STRING_LIFE 5
 // Dimensions of array returned by get_text
-#define DEBUG_TEXT_WIDTH  100
-#define DEBUG_TEXT_HEIGHT 40
+#define DEBUG_TEXT_WIDTH  256
+#define DEBUG_TEXT_HEIGHT 25
 
 #ifdef __cplusplus
 extern "C" {

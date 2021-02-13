@@ -162,7 +162,6 @@ static void assign(int p, int v){
 	// Nothing to do here
 }
 
-static void init(void);
 static void refreshAvailable(void);
 
 controller_t controller_GC =

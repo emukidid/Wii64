@@ -48,6 +48,7 @@
 #include "../r4300/interupt.h"
 #include "../r4300/macros.h"
 #include "../r4300/Invalid_Code.h"
+#include "../r4300/ppc/Wrappers.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "pif.h"
 #include "flashram.h"
