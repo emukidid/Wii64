@@ -177,7 +177,8 @@ void Func_Credits()
 	char CreditsInfo[512] = "";
 #ifdef HW_RVL
   int iosversion = IOS_GetVersion();
-  sprintf(CreditsInfo,"Wii64 Beta 1.3 - IOS %i\n",iosversion);
+  int isWiiVC = SYS_GetCoreMultiplier() >= 5.0;
+  sprintf(CreditsInfo,"Wii64 Beta 1.3 - IOS %i %s\n",iosversion,isWiiVC ? "WiiVC!":"");
 #else
 	strcat(CreditsInfo,"Cube64 Beta 1.3\n");
 #endif
