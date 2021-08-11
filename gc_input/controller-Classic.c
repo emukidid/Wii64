@@ -44,6 +44,9 @@ static int getStickValue(joystick_t* j, float maxMag, int axis, int maxAbsValue)
 		value = magnitude * sin( angle );
 	else
 		value = magnitude * cos( angle );
+	if(value < -0.1f) value = (value+0.1f)*1.111f;
+	else if(value > 0.1f) value = (value-0.1f)*1.111f;
+	else value = 0.f;
 	return (int)(value * maxAbsValue);
 }
 
@@ -143,7 +146,7 @@ static int available(int Control) {
 	}
 }
 
-#define DEFAULT_MAX_MAG 0.5f
+#define DEFAULT_MAX_MAG 0.667f
 typedef struct maxMagEntry_t {
 	struct bd_addr bdaddr;
 	float maxLMag;

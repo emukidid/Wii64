@@ -4,7 +4,7 @@ CXXFLAGS	+= -DWII -DHW_RVL -DUSE_EXPANSION -D__wii__
 
 LDFLAGS		+= -mrvl
 
-LIBPATHS 	+= -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
+LIBPATHS 	+= -L$(DEVKITPRO)/libogc2/lib/wii
 
 OBJ		+= \
 		gc_memory/TLB-Cache-hash.o \

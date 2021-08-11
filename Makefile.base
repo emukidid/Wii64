@@ -1,5 +1,7 @@
 # Makefile variables and targets used in all builds
 
+export	LIBOGC_INC	:=	$(DEVKITPRO)/libogc2/include
+
 CC		= powerpc-eabi-gcc
 CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
@@ -10,7 +12,7 @@ DEBUG_FLAGS += #-DSHOW_DEBUG #-DPROFILE #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #
 MACHDEP		+= -mcpu=750 -meabi -mhard-float 
 LDFLAGS		+= -O3 $(LTO) $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref $(LTO)
 
-INCLUDE 	+= -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include
+INCLUDE 	+= -I$(DEVKITPRO)/libogc2/include -I$(DEVKITPRO)/portlibs/ppc/include
 LIBPATHS	+= -L$(DEVKITPRO)/portlibs/ppc/lib
 
 CXXFLAGS		+= \

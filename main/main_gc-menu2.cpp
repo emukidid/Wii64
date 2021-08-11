@@ -269,6 +269,9 @@ int main(int argc, char* argv[]) {
 #endif
 #ifdef HW_RVL
 	L2Enhance();
+	/* Reload to IOS58 for USB */
+	if(IOS_GetVersion() != 58)
+		IOS_ReloadIOS(58);
 #endif
 
 #ifdef DEBUGON

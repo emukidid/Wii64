@@ -1,25 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
- <app version="1.2">
+ <app version="1.3">
    <name>Wii64 | Rice GFX</name>
    <coder>Wii64 Team</coder>
    <version>Beta 1.3</version>
-   <release_date>202011250000</release_date>
+   <release_date>202108032239</release_date>
    <short_description>N64 Emulator for Wii</short_description>
    <long_description>
 
-Wii64 Team is:
-Core Coder - tehpola  
-Graphics &amp; Menu Coding - sepp256  
-General Coding - emu_kidid
+The Wii64Team proudly presents Wii64 Beta 1.3 (Wii version with Rice GFX Plugin)
+Wii64 is a port of Mupen64 0.5 to the Wii/GameCube
 
-The Wii64Team proudly presents Wii64 Beta 1.2
-Wii64 is a port of Mupen64 to the Wii
-
-It currently runs most games at full speed or close to it, there are some known graphical and/or core issues which are posted on http://emulatemii.com/wii64/CompatList/
-If you like this project, please support us by donating towards our hardware fund at emulatemii.com
-Please see the enclosed README and visit emulatemii.com to report issues, or to check out the latest progress.
+It currently runs most games at full speed or close to it, there are some known graphical and/or core issues.
+Please see the enclosed README and visit https://github.com/emukidid/Wii64 to report issues, or to check out the latest progress.
 
 Special Thanks to:
+Extrems - Not64
 drmr - Graphics
 marshallh - Wii64 Demo ROM
 wiibrew - wiki &amp; forums
