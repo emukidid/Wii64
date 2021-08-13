@@ -126,7 +126,11 @@ void Graphics::init()
 void Graphics::drawInit()
 {
 	// Reset various parameters from gfx plugin
+#ifdef RICE_GFX
+	GX_SetZTexture(GX_ZT_DISABLE,GX_TF_Z16,0);
+#else
 	GX_SetZTexture(GX_ZT_DISABLE,GX_TF_Z8,0);
+#endif
 	GX_SetZCompLoc(GX_TRUE);	// Do Z-compare before texturing.
 	GX_SetFog(GX_FOG_NONE,0,1,0,1,(GXColor){0,0,0,255});
 	GX_SetViewport(0,0,vmode->fbWidth,vmode->efbHeight,0,1);

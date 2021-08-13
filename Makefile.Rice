@@ -1,5 +1,7 @@
 # Makefile for Rice
 
+CXXFLAGS	+= -DRICE_GFX
+
 OBJ_RICE_GX	+= \
 		TextureArchive/ArchiveReader.o \
 		Rice_GX/OGLGraphicsContext.o \

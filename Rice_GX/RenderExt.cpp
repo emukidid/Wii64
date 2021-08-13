@@ -869,6 +869,7 @@ void CRender::LoadObjSprite(uObjTxSprite &sprite, bool useTIAddr)
     gti.Address += sprite.sprite.imageAdrs<<3;
     gti.LeftToLoad      = 0;
     gti.TopToLoad       = 0;
+	gti.HeightToCreate	= 0;
     gti.Palette = sprite.sprite.imagePal;
     gti.PalAddress = palAddr;
 
