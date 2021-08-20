@@ -392,8 +392,8 @@ void gSPViewport( u32 v )
 
 	gSP.viewport.x		= gSP.viewport.vtrans[0] - gSP.viewport.vscale[0];
 	gSP.viewport.y		= gSP.viewport.vtrans[1] - gSP.viewport.vscale[1];
-	gSP.viewport.width	= fabs(gSP.viewport.vscale[0]) * 2;
-	gSP.viewport.height	= fabs(gSP.viewport.vscale[1]) * 2;
+	gSP.viewport.width	= gSP.viewport.vscale[0] * 2;
+	gSP.viewport.height	= gSP.viewport.vscale[1] * 2;
 	gSP.viewport.nearz	= gSP.viewport.vtrans[2] - gSP.viewport.vscale[2];
 	gSP.viewport.farz	= gSP.viewport.vtrans[2] + gSP.viewport.vscale[2];
 
@@ -1265,8 +1265,8 @@ void gSPModifyVertex( u32 vtx, u32 where, u32 val )
 #endif
 			break;
 		case G_MWO_POINT_ST:
-			gSP.vertices[vtx].s = _FIXED2FLOAT( (s16)_SHIFTR( val, 16, 16 ), 5 );
-			gSP.vertices[vtx].t = _FIXED2FLOAT( (s16)_SHIFTR( val, 0, 16 ), 5 );
+			gSP.vertices[vtx].s = _FIXED2FLOAT( (s16)_SHIFTR( val, 16, 16 ), 5 ) / gSP.texture.scales;
+			gSP.vertices[vtx].t = _FIXED2FLOAT( (s16)_SHIFTR( val, 0, 16 ), 5 ) / gSP.texture.scalet;
 #ifdef DEBUG
 			DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPModifyVertex( %i, %s, 0x%08X );\n",
 				vtx, MWOPointText[(where - 0x10) >> 2], val );

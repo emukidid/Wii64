@@ -248,9 +248,9 @@ void Func_TogglePad0Type()
 {
 	int i = PADASSIGN_INPUT0;
 #ifdef HW_RVL
-	padType[i] = (padType[i]+1) %3;
+	padType[i] = (padType[i]==PADTYPE_WII) ? PADTYPE_NONE : padType[i]+1;
 #else
-	padType[i] = (padType[i]+1) %2;
+	padType[i] = (padType[i]==PADTYPE_GAMECUBE) ? PADTYPE_NONE : padType[i]+1;
 #endif
 
 	if (padType[i]) Func_AssignPad(i);
@@ -262,9 +262,9 @@ void Func_TogglePad1Type()
 {
 	int i = PADASSIGN_INPUT1;
 #ifdef HW_RVL
-	padType[i] = (padType[i]+1) %3;
+	padType[i] = (padType[i]==PADTYPE_WII) ? PADTYPE_NONE : padType[i]+1;
 #else
-	padType[i] = (padType[i]+1) %2;
+	padType[i] = (padType[i]==PADTYPE_GAMECUBE) ? PADTYPE_NONE : padType[i]+1;
 #endif
 
 	if (padType[i]) Func_AssignPad(i);
@@ -276,9 +276,9 @@ void Func_TogglePad2Type()
 {
 	int i = PADASSIGN_INPUT2;
 #ifdef HW_RVL
-	padType[i] = (padType[i]+1) %3;
+	padType[i] = (padType[i]==PADTYPE_WII) ? PADTYPE_NONE : padType[i]+1;
 #else
-	padType[i] = (padType[i]+1) %2;
+	padType[i] = (padType[i]==PADTYPE_GAMECUBE) ? PADTYPE_NONE : padType[i]+1;
 #endif
 
 	if (padType[i]) Func_AssignPad(i);
@@ -290,9 +290,9 @@ void Func_TogglePad3Type()
 {
 	int i = PADASSIGN_INPUT3;
 #ifdef HW_RVL
-	padType[i] = (padType[i]+1) %3;
+	padType[i] = (padType[i]==PADTYPE_WII) ? PADTYPE_NONE : padType[i]+1;
 #else
-	padType[i] = (padType[i]+1) %2;
+	padType[i] = (padType[i]==PADTYPE_GAMECUBE) ? PADTYPE_NONE : padType[i]+1;
 #endif
 
 	if (padType[i]) Func_AssignPad(i);

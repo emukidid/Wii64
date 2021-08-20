@@ -344,6 +344,7 @@ void Func_PlayGame()
 	continueRemovalThread();
 	FRAME_BUTTONS[5].buttonString = FRAME_STRINGS[6];
 	menu::Cursor::getInstance().clearCursorFocus();
+	menu::Focus::getInstance().clearPrimaryFocus();
 }
 
 void Func_SetPlayGame()

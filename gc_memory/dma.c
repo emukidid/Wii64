@@ -128,7 +128,7 @@ void dma_pi_read()
 			if (flashRAMInfo.use_flashram != 1)
 			{
 				sramWritten = TRUE;
-				memcpy(	&sram[((pi_register.pi_cart_addr_reg-0x08000000))^S8],
+				memcpy(	&sram[((pi_register.pi_cart_addr_reg-0x08000000)&0xFFFE)^S8],
 						&rdramb[(pi_register.pi_dram_addr_reg)^S8],
 						(pi_register.pi_rd_len_reg & 0xFFFFFE)+2);
 				flashRAMInfo.use_flashram = -1;
@@ -285,8 +285,8 @@ void dma_sp_write()
 	{
 		spMemType = (unsigned char*)SP_IMEM;
 	}
-	memcpy(	&spMemType[((sp_register.sp_mem_addr_reg & 0xFFF))^S8],
-			&rdramb[((sp_register.sp_dram_addr_reg & 0xFFFFFF))^S8],
+	memcpy(	&spMemType[((sp_register.sp_mem_addr_reg & 0xFF8))^S8],
+			&rdramb[((sp_register.sp_dram_addr_reg & 0xFFFFF8))^S8],
 			((sp_register.sp_rd_len_reg & 0xFFF)+1));
 }
 
@@ -297,8 +297,8 @@ void dma_sp_read()
 	{
 		spMemType = (unsigned char*)SP_IMEM;
 	}
-	memcpy(	&rdramb[((sp_register.sp_dram_addr_reg & 0xFFFFFF))^S8],
-			&spMemType[((sp_register.sp_mem_addr_reg & 0xFFF))^S8],
+	memcpy(	&rdramb[((sp_register.sp_dram_addr_reg & 0xFFFFF8))^S8],
+			&spMemType[((sp_register.sp_mem_addr_reg & 0xFF8))^S8],
 			((sp_register.sp_wr_len_reg & 0xFFF)+1));
 }
 

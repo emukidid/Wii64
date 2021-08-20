@@ -807,12 +807,12 @@ void OGL_UpdateStates()
 			(int)((gDP.scissor.lrx - gDP.scissor.ulx) * OGL.scaleX), (int)((gDP.scissor.lry - gDP.scissor.uly) * OGL.scaleY) );
 	}
 #else // !__GX__
-	if ((gDP.changed & CHANGED_SCISSOR) || (gSP.changed & CHANGED_VIEWPORT))
+	if (gDP.changed & CHANGED_SCISSOR)
 	{
-		float ulx = max(OGL.GXorigX + max(gDP.scissor.ulx,gSP.viewport.x) * OGL.GXscaleX, 0);
-		float uly = max(OGL.GXorigY + max(gDP.scissor.uly,gSP.viewport.y) * OGL.GXscaleY, 0);
-		float lrx = max(OGL.GXorigX + min(min(gDP.scissor.lrx,gSP.viewport.x + gSP.viewport.width) * OGL.GXscaleX,OGL.GXwidth), 0);
-		float lry = max(OGL.GXorigY + min(min(gDP.scissor.lry,gSP.viewport.y + gSP.viewport.height) * OGL.GXscaleY,OGL.GXheight), 0);
+		float ulx = max(OGL.GXorigX + gDP.scissor.ulx * OGL.GXscaleX, 0);
+		float uly = max(OGL.GXorigY + gDP.scissor.uly * OGL.GXscaleY, 0);
+		float lrx = max(OGL.GXorigX + min(gDP.scissor.lrx * OGL.GXscaleX,OGL.GXwidth), 0);
+		float lry = max(OGL.GXorigY + min(gDP.scissor.lry * OGL.GXscaleY,OGL.GXheight), 0);
 		GX_SetScissor((u32) ulx,(u32) uly,(u32) (lrx - ulx),(u32) (lry - uly));
 	}
 #endif // __GX__
