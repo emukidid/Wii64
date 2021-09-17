@@ -48,7 +48,7 @@ static int getStickValue(joystick_t* j, int axis, int maxAbsValue){
 enum {
 	NUNCHUK_AS_ANALOG, IR_AS_ANALOG,
 	TILT_AS_ANALOG, WHEEL_AS_ANALOG,
-	NO_ANALOG,
+	BUTTON_AS_ANALOG, NO_ANALOG,
 };
 
 enum {
@@ -89,7 +89,8 @@ static button_t analog_sources_wm[] = {
 	{ 0, TILT_AS_ANALOG,     "Tilt" },
 	{ 1, WHEEL_AS_ANALOG,    "Wheel" },
 	{ 2, IR_AS_ANALOG,       "IR" },
-	{ 3, NO_ANALOG,          "None" },
+	{ 3, BUTTON_AS_ANALOG,   "D-Pad" },
+	{ 4, NO_ANALOG,          "None" },
 };
 
 static button_t menu_combos[] = {
@@ -154,6 +155,15 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config,
 	} else if(config->analog->mask == WHEEL_AS_ANALOG){
 		c->X_AXIS = 5*(512 - wpad->accel.y)/8;
 		c->Y_AXIS = 5*(wpad->accel.z - 512)/8;
+	} else if(config->analog->mask == BUTTON_AS_ANALOG){
+		if(b & WPAD_BUTTON_DOWN)
+			c->X_AXIS = +80;
+		else if(b & WPAD_BUTTON_UP)
+			c->X_AXIS = -80;
+		if(b & WPAD_BUTTON_RIGHT)
+			c->Y_AXIS = +80;
+		else if(b & WPAD_BUTTON_LEFT)
+			c->Y_AXIS = -80;
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 
