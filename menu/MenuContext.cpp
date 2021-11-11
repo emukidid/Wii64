@@ -79,6 +79,8 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 	menu::Gui::getInstance().addFrame(configurePaksFrame);
 	menu::Gui::getInstance().addFrame(configureButtonsFrame);
 
+	Autoboot = false;
+			  
 	menu::Focus::getInstance().setFocusActive(true);
 	setActiveFrame(FRAME_MAIN);
 }
@@ -174,6 +176,13 @@ void MenuContext::setActiveFrame(int frameIndex)
 
 	if(currentActiveFrame)
 	{
+		if(currentActiveFrame == loadRomFrame && Autoboot)
+		{
+			if(strcasestr(AutobootPath,"sd:/") != NULL)
+				Func_LoadFromSD();
+			else
+				Func_LoadFromUSB();
+		}
 		currentActiveFrame->showFrame();
 		menu::Focus::getInstance().setCurrentFrame(currentActiveFrame);
 		menu::Cursor::getInstance().setCurrentFrame(currentActiveFrame);
