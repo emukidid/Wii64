@@ -350,6 +350,8 @@ void Func_PlayGame()
 void Func_SetPlayGame()
 {
 	FRAME_BUTTONS[5].buttonString = FRAME_STRINGS[5];
+	if(pMenuContext->Autoboot)
+		Func_PlayGame();
 }
 
 void Func_SetResumeGame()
