@@ -34,4 +34,7 @@ private:
 	
 };
 
+void Func_LoadFromSD();
+void Func_LoadFromUSB();
+
 #endif
