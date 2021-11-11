@@ -46,6 +46,9 @@ public:
 	MenuContext(GXRModeObj *vmode);
 	~MenuContext();
 	bool isRunning();
+	bool Autoboot;
+	char AutobootROM[1024];
+	char AutobootPath[1024];
 	void setUseMiniMenu(bool setUseMiniMenu);
 	void setActiveFrame(int frameIndex);
 	void setActiveFrame(int frameIndex, int submenu);
