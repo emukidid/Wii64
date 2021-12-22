@@ -7,7 +7,7 @@ CXX		= powerpc-eabi-g++
 AS		= powerpc-eabi-as
 
 LTO			 = #-flto # Uncomment to use link-time optimization
-DEBUG_FLAGS += #-DSHOW_DEBUG #-DPROFILE #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DNO_BT
+DEBUG_FLAGS += -DSHOW_DEBUG #-DPROFILE #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DNO_BT
 
 MACHDEP		+= -mcpu=750 -meabi -mhard-float 
 LDFLAGS		+= -O3 $(LTO) $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref $(LTO)

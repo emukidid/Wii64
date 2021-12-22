@@ -64,7 +64,7 @@ public:
 		IMAGE_CONTROLLER_WIIUPRO,
 #endif
 		IMAGE_N64_CONTROLLER,
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 		IMAGE_CURRENT_FB,
 		IMAGE_STATE_FB,
 		IMAGE_BOXART_FRONT,
@@ -88,7 +88,7 @@ private:
 	Image *controllerWiimoteImage, *controllerWiiUProImage;
 #endif
 	Image *n64ControllerImage;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	Image *currentFramebufferImage, *stateFramebufferImage;
 	u8	*currentFramebufferTexture, *stateFramebufferTexture;
 	Image *boxartFrontImage, *boxartSpineImage, *boxartBackImage;

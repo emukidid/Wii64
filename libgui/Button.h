@@ -27,7 +27,7 @@
 #define BTN_DEFAULT menu::Button::BUTTON_DEFAULT
 #define BTN_A_NRM menu::Button::BUTTON_STYLEA_NORMAL
 #define BTN_A_SEL menu::Button::BUTTON_STYLEA_SELECT
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 #define BTN_BOX3D menu::Button::BUTTON_BOX3D
 #endif
 
@@ -75,7 +75,7 @@ public:
 		BUTTON_DEFAULT=0,
 		BUTTON_STYLEA_NORMAL,
 		BUTTON_STYLEA_SELECT
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 		,BUTTON_BOX3D
 #endif
 	};

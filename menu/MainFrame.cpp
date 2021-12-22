@@ -54,7 +54,7 @@ void Func_ExitToLoader();
 void Func_PlayGame();
 void Func_BasicMenu();
 
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 #define NUM_MAIN_BUTTONS 7
 #else
 #define NUM_MAIN_BUTTONS 6
@@ -70,7 +70,7 @@ char FRAME_STRINGS[NUM_MAIN_BUTTONS+1][20] =
 	  "Quit",
 	  "Play Game",
 	  "Resume Game"
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	  ,"Basic"
 #endif
 	};
@@ -99,7 +99,7 @@ struct ButtonInfo
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	315.0,	240.0,	200.0,	56.0,	 2,	 4,	 6,	 6,	Func_Credits,			NULL }, // Credits
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	315.0,	300.0,	200.0,	56.0,	 3,	 5,	 6,	 6,	Func_ExitToLoader,		NULL }, // Exit to Loader
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	315.0,	360.0,	200.0,	56.0,	 4,	 0,	 6,	 6,	Func_PlayGame,			NULL }, // Play/Resume Game
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[7],	535.0,	360.0,	 80.0,	56.0,	 4,	 0,	 5,	 5,	Func_BasicMenu,			NULL }, // Basic Menu
 #endif
 };
@@ -275,7 +275,7 @@ void Func_PlayGame()
 	_break();
 #endif
 
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	//Create Thumbnail of last Framebuffer
 	menu::Gui::getInstance().gfx->copyFBTex(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 
 											FB_THUMB_WD, FB_THUMB_HT, FB_THUMB_FMT, FB_THUMB_BPP);

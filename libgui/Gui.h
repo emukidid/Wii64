@@ -44,7 +44,7 @@ public:
 	}
 	Graphics *gfx;
 	Logo* menuLogo;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	Box3D* menuBox3D;
 #endif
 

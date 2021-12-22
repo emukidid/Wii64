@@ -1,0 +1,13 @@
+#Makefile MUPEN64 for Rice + MenuV2 + GC + No boxart
+
+ELF		= cube64-Rice-basic.elf
+DOL		= cube64-Rice-basic.dol
+
+CXXFLAGS	+= -DGC_BASIC
+INCLUDE 	=
+LIB			= 
+
+include Makefile.Rice
+include Makefile.gc
+include Makefile.base
+

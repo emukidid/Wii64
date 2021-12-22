@@ -50,7 +50,7 @@ Resources::Resources()
 #endif
 	n64ControllerImage = new Image(N64ControllerTexture, 208, 200, GX_TF_I4, GX_CLAMP, GX_CLAMP, GX_FALSE);
 
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	//Thumbnail images for current FB and state FB
 	currentFramebufferTexture = (u8*) memalign(32, FB_THUMB_SIZE);
 	stateFramebufferTexture = (u8*) memalign(32, FB_THUMB_SIZE);
@@ -95,7 +95,7 @@ Resources::~Resources()
 	delete controllerWiiUProImage;
 #endif
 	delete n64ControllerImage;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	delete currentFramebufferImage;
 	delete stateFramebufferImage;
 	delete boxartFrontImage;
@@ -165,7 +165,7 @@ Image* Resources::getImage(int image)
 	case IMAGE_N64_CONTROLLER:
 		returnImage = n64ControllerImage;
 		break;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	case IMAGE_CURRENT_FB:
 		returnImage = currentFramebufferImage;
 		break;

@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 #ifndef SELECTROMFRAME_H
 #define SELECTROMFRAME_H
 
