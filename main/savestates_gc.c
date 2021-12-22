@@ -147,7 +147,7 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 	//Save Header
 	gzwrite(f, statesmagic, 3); //Write magic "W64"
 	gzwrite(f, &savestates_version, sizeof(unsigned int));
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	gzwrite(f, fb_tex, FB_THUMB_SIZE);
 #endif
 
@@ -232,7 +232,7 @@ int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time
 	if (!f || !savestates_check_valid(f)) {
 		return -1;
 	}
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	gzread(f, fb_tex, FB_THUMB_SIZE);
 #endif
 	gzclose(f);
@@ -254,7 +254,7 @@ int savestates_load(unsigned int slot)
 	}
 	LoadingBar_showBar(progress, LOAD_STATE_MSG);
 	
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	//Skip image
 	gzseek(f, FB_THUMB_SIZE, SEEK_CUR);
 #endif

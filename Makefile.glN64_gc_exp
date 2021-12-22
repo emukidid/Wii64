@@ -3,7 +3,7 @@
 ELF		= cube64-glN64-exp.elf
 DOL		= cube64-glN64-exp.dol
 
-CXXFLAGS	+= -DUSE_EXPANSION
+CXXFLAGS	+= -DUSE_EXPANSION -DGC_BASIC
 
 include Makefile.glN64
 include Makefile.gc

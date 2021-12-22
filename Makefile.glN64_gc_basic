@@ -1,0 +1,11 @@
+#Makefile MUPEN64 for glN64_GX + MenuV2 + GC + No boxart
+
+ELF		= cube64-glN64-basic.elf
+DOL		= cube64-glN64-basic.dol
+
+CXXFLAGS	+= -DGC_BASIC
+
+include Makefile.glN64
+include Makefile.gc
+include Makefile.base
+

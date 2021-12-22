@@ -27,7 +27,7 @@ MenuContext *pMenuContext;
 MenuContext::MenuContext(GXRModeObj *vmode)
 		: currentActiveFrame(0),
 		  mainFrame(0),
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))			  
+#if !(defined(GC_BASIC))		  
 		  miniMenuFrame(0),
 		  selectRomFrame(0),
 #endif
@@ -48,7 +48,7 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 	menu::Gui::getInstance().setVmode(vmode);
 
 	mainFrame = new MainFrame();
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))	
+#if !(defined(GC_BASIC))
 	miniMenuFrame = new MiniMenuFrame();
 	selectRomFrame = new SelectRomFrame();
 #endif
@@ -64,7 +64,7 @@ MenuContext::MenuContext(GXRModeObj *vmode)
 	configureButtonsFrame = new ConfigureButtonsFrame();
 
 	menu::Gui::getInstance().addFrame(mainFrame);
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	menu::Gui::getInstance().addFrame(miniMenuFrame);
 	menu::Gui::getInstance().addFrame(selectRomFrame);
 #endif
@@ -97,7 +97,7 @@ MenuContext::~MenuContext()
 	delete currentRomFrame;
 	delete fileBrowserFrame;
 	delete loadRomFrame;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))	
+#if !(defined(GC_BASIC))	
 	delete selectRomFrame;
 	delete miniMenuFrame;
 #endif
@@ -130,14 +130,14 @@ void MenuContext::setActiveFrame(int frameIndex)
 
 	switch(frameIndex) {
 	case FRAME_MAIN:
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 		if(useMiniMenu)
 			currentActiveFrame = miniMenuFrame;
 		else
 #endif
 			currentActiveFrame = mainFrame;
 		break;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	case FRAME_SELECTROM:
 		currentActiveFrame = selectRomFrame;
 		break;
@@ -202,7 +202,7 @@ menu::Frame* MenuContext::getFrame(int frameIndex)
 	case FRAME_MAIN:
 		pFrame = mainFrame;
 		break;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	case FRAME_SELECTROM:
 		pFrame = selectRomFrame;
 		break;

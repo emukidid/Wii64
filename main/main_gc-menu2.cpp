@@ -288,7 +288,7 @@ int main(int argc, char* argv[]) {
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
 
 	// Default Settings
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))	
+#if !(defined(GC_BASIC))
 	miniMenuActive   = MINIMENU_ENABLE; // Activate MiniMenu
 #else
 	miniMenuActive   = MINIMENU_DISABLE; // Activate MiniMenu

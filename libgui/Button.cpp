@@ -253,7 +253,7 @@ void Button::drawComponent(Graphics& gfx)
 		gfx.drawImage(0, x, y, width/2, height, 0.0, width/8.0, 0.0, 1.0);
 		gfx.drawImage(0, x+width/2, y, width/2, height, width/8.0, 0.0, 0.0, 1.0);
 		break;
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 	case BUTTON_BOX3D:
 		if (getFocus())	
 		{

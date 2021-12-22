@@ -17,7 +17,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 #include "MiniInfoBar.h"
 #include "Gui.h"
 #include "GuiResources.h"

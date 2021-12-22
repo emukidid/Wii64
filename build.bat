@@ -6,6 +6,8 @@ make -f Makefile.glN64_gc --jobs=5
 del *.o /s
 make -f Makefile.glN64_gc_exp --jobs=5
 del *.o /s
+make -f Makefile.glN64_gc_basic --jobs=5
+del *.o /s
 make -f Makefile.glN64_wii --jobs=5
 del *.o /s
 make -f Makefile.glN64_wiivc --jobs=5
@@ -13,6 +15,8 @@ del *.o /s
 make -f Makefile.Rice_gc --jobs=5
 del *.o /s
 make -f Makefile.Rice_gc_exp --jobs=5
+del *.o /s
+make -f Makefile.Rice_gc_basic --jobs=5
 del *.o /s
 make -f Makefile.Rice_wii --jobs=5
 del *.o /s

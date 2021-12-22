@@ -65,13 +65,17 @@
      saves from the selected device on ROM load and save when returning to the menu or
      turning off the console
 ## ADVANCED USAGE
-### GameCube Version
+### GameCube Version(s)
 Wii64 also exists as Cube64, a version of the emulator with the same UI and features albeit with tighter memory restrictions and less CPU power. This version has significantly less memory available and requires heavy paging of ROM data from your storage medium into a small ARAM cache and then into main memory, this is denoted by every time you see a cartridge icon in the top right hand corner of the screen.
 
-There's also 2 versions per graphics plugin shipped (4 .dol files total), the "-exp.dol" versions attempt to support the expansion pak by removing the mini menu, boxart and further reducing various caches, this should only really be used for expansion pak required games as it will likely crash more often due to less memory being available.
+There's also 3 versions per graphics plugin shipped (6 .dol files total). 
 
-### WiiVC Version
-This version isn't really supported much due to the niche nature of it, but the gist of it is that you can run Wii64 on a Wii U in "Wii mode" but with the CPU multiplier unlocked and have Wii U Game Pad support. To boot this version you'll need to be well versed in Wii U homebrew setups, but essentially there's a process that exists to inject homebrew into a WiiVC title (e.g. Wii titles were available on the Wii U via the eShop) and there's a thing called [sign_c2w_patcher](https://github.com/FIX94/sign_c2w_patcher) that you must boot before loading this title to unlock the CPU multiplier. This version is shipped as "Wii64 | Rice GFX | WiiVC" and "Wii64 | glN64 GFX | WiiVC" in the archive.
+The "-exp.dol" versions attempt to support the expansion pak by removing the mini menu, boxart and further reducing various caches, this should only really be used for expansion pak required games as it will likely crash more often due to less memory being available.
+
+The "-basic.dol" versions remove boxart support and the mini menu in an attempt to have more free memory available to avoid crashes.
+
+### "WiiVC" Version
+This version isn't really supported much due to the niche nature of it. It enables DRC (Wii U GamePad) support, and also takes advantage of unlocked CPU multiplier support if enabled. The gist of it is that you can run Wii64 on a Wii U in "Wii mode" but with Wii U Game Pad support and (optionally) the CPU multiplier unlocked. To boot this version you can either just use the vWii mode to use the GamePad, or to unlock the CPU multiplier you'll need to be well versed in Wii U homebrew setups (essentially there's a process that exists to inject homebrew into a WiiVC title - e.g. Wii titles were available on the Wii U via the eShop) and there's a thing called [sign_c2w_patcher](https://github.com/FIX94/sign_c2w_patcher) that you must boot before loading this title to unlock the CPU multiplier. This version is shipped as "Wii64 | Rice GFX | WiiVC" and "Wii64 | glN64 GFX | WiiVC" in the archive.
 
 ### Boot time arguments
 The following can be passed in via wiiload or by editing the meta.xml to override settings. They can also be changed via the settings.cfg that's created upon booting up the emulator for the first time.

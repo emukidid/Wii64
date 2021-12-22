@@ -19,7 +19,7 @@
  * See the GNU General Public Licence for more details.
  *
 **/
-#if !(defined(HW_DOL) && defined(USE_EXPANSION))
+#if !(defined(GC_BASIC))
 #include <math.h>
 #include <cstdlib>
 #ifdef HW_RVL
