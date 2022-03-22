@@ -182,6 +182,7 @@ void Func_Credits()
 #else
 	strcat(CreditsInfo,"Cube64 Beta 1.3\n");
 #endif
+	strcat(CreditsInfo,"WiiFlow MOD Beta4 by saulfabreg\n");
 	strcat(CreditsInfo,"\n");
 	strcat(CreditsInfo,"Wii64 Team:\n");
 	strcat(CreditsInfo,"tehpola - core\n");
