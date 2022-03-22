@@ -184,12 +184,10 @@ void Func_Credits()
 #endif
 	strcat(CreditsInfo,"WiiFlow MOD Beta4 by saulfabreg\n");
 	strcat(CreditsInfo,"\n");
-	strcat(CreditsInfo,"Wii64 Team:\n");
+	strcat(CreditsInfo,"Special thanks to:\n");
+	strcat(CreditsInfo,"emu_kidid - original Wii64 general coding\n");
 	strcat(CreditsInfo,"tehpola - core\n");
 	strcat(CreditsInfo,"sepp256 - graphics & menu\n");
-	strcat(CreditsInfo,"emu_kidid - general coding\n");
-	strcat(CreditsInfo,"\n");
-	strcat(CreditsInfo,"Special thanks to:\n");
 	strcat(CreditsInfo,"drmr - menu graphics\n");
 	strcat(CreditsInfo,"Hacktarux - Mupen64\n");
 	strcat(CreditsInfo,"Extrems - Not64\n");
