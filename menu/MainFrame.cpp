@@ -182,7 +182,7 @@ void Func_Credits()
 #else
 	strcat(CreditsInfo,"Cube64 Beta 1.3\n");
 #endif
-	strcat(CreditsInfo,"WiiFlow MOD Beta5 by saulfabreg\n");
+	strcat(CreditsInfo,"WiiFlow MOD Beta4 by saulfabreg\n");
 	strcat(CreditsInfo,"\n");
 	strcat(CreditsInfo,"Special thanks to:\n");
 	strcat(CreditsInfo,"emu_kidid - original Wii64 general coding\n");
@@ -190,7 +190,7 @@ void Func_Credits()
 	strcat(CreditsInfo,"sepp256 - graphics & menu\n");
 	strcat(CreditsInfo,"drmr - menu graphics\n");
 	strcat(CreditsInfo,"Hacktarux - Mupen64\n");
-	strcat(CreditsInfo,"Extrems - Not64 & libOGC2\n");
+	strcat(CreditsInfo,"Extrems - Not64\n");
 	strcat(CreditsInfo,"Wintermute/Shagkur - devkitPro/libOGC\n");
 #ifdef HW_RVL
 	strcat(CreditsInfo,"Team Twiizers - for Wii homebrew\n");
