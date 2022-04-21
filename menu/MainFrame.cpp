@@ -190,7 +190,7 @@ void Func_Credits()
 	strcat(CreditsInfo,"sepp256 - graphics & menu\n");
 	strcat(CreditsInfo,"drmr - menu graphics\n");
 	strcat(CreditsInfo,"Hacktarux - Mupen64\n");
-	strcat(CreditsInfo,"Extrems - Not64\n");
+	strcat(CreditsInfo,"Extrems - Not64 & libOGC2\n");
 	strcat(CreditsInfo,"Wintermute/Shagkur - devkitPro/libOGC\n");
 #ifdef HW_RVL
 	strcat(CreditsInfo,"Team Twiizers - for Wii homebrew\n");
