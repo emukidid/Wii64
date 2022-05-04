@@ -29,4 +29,5 @@ void *GetGameSpecificHack();
 // Game specific hack detection via CRC
 void GameSpecificHackSetup();
 
+void hack_winback();
 #endif
