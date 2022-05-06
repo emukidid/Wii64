@@ -11,6 +11,9 @@
 
 #ifdef __GX__
 #include <gccore.h>
+extern "C" {
+#include "../main/gamehacks.h"
+}
 #endif // __GX__
 
 #include "N64.h"
@@ -249,11 +252,37 @@ void RDP_TexRectFlip( u32 w0, u32 w1 )
 
 void RDP_TexRect( u32 w0, u32 w1 )
 {
+	u32 cmd1 = (*(u32*)&RDRAM[RSP.PC[RSP.PCi] + 0]) >> 24;
+	u32 cmd2 = (*(u32*)&RDRAM[RSP.PC[RSP.PCi] + 8]) >> 24;
 	u32 w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
 	RSP.PC[RSP.PCi] += 8;
 
 	u32 w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
 	RSP.PC[RSP.PCi] += 8;
+#ifdef __GX__
+	// Winback floating square hack, retrofitted version of https://github.com/gonetz/GLideN64/issues/63
+	if(GetGameSpecificHack() == &hack_winback) {
+		enum {
+			gspTexRect,
+			gdpTexRect,
+			halfTexRect
+		} texRectMode = gdpTexRect;
+		if (cmd1 == G_RDPHALF_1) {
+			if (cmd2 == G_RDPHALF_2)
+				texRectMode = gspTexRect;
+		} else if (cmd1 == 0xB3) {
+			if (cmd2 == 0xB2)
+				texRectMode = gspTexRect;
+			else
+				texRectMode = halfTexRect;
+		} else if (cmd1 == 0xF1)
+			texRectMode = halfTexRect;
+			
+		if(texRectMode == gdpTexRect) {
+			return;
+		}
+	}
+#endif
 
 	gDPTextureRectangle( _FIXED2FLOAT( (u16)_SHIFTR( w1, 12, 12 ), 2 ),		// ulx
 						 _FIXED2FLOAT( (u16)_SHIFTR( w1,  0, 12 ), 2 ),		// uly
