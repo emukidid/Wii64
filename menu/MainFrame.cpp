@@ -178,27 +178,20 @@ void Func_Credits()
 #ifdef HW_RVL
   int iosversion = IOS_GetVersion();
   int isWiiVC = SYS_GetCoreMultiplier() >= 5.0;
-#ifdef GLN64_GX
-  sprintf(CreditsInfo,"Wii64 Beta 1.3 glN64 GFX - IOS %i %s\n",iosversion,isWiiVC ? "WiiVC!":"");
+  sprintf(CreditsInfo,"Wii64 Beta 1.3 - IOS %i %s\n",iosversion,isWiiVC ? "WiiVC!":"");
 #else
-  sprintf(CreditsInfo,"Wii64 Beta 1.3 Rice GFX - IOS %i %s\n",iosversion,isWiiVC ? "WiiVC!":"");
-#endif // GLN64_GX (Wii)
-#else
-#ifdef GLN64_GX
-	strcat(CreditsInfo,"Cube64 Beta 1.3 glN64 GFX\n");
-#else
-	strcat(CreditsInfo,"Cube64 Beta 1.3 Rice GFX\n");
-#endif // GLN64_GX (GameCube)
-#endif // HW_RVL
-	strcat(CreditsInfo,"WiiFlow MOD Beta5 by saulfabreg\n");
+	strcat(CreditsInfo,"Cube64 Beta 1.3\n");
+#endif
 	strcat(CreditsInfo,"\n");
-	strcat(CreditsInfo,"Special thanks to:\n");
-	strcat(CreditsInfo,"emu_kidid - original Wii64 general coding\n");
+	strcat(CreditsInfo,"Wii64 Team:\n");
 	strcat(CreditsInfo,"tehpola - core\n");
 	strcat(CreditsInfo,"sepp256 - graphics & menu\n");
+	strcat(CreditsInfo,"emu_kidid - general coding\n");
+	strcat(CreditsInfo,"\n");
+	strcat(CreditsInfo,"Special thanks to:\n");
 	strcat(CreditsInfo,"drmr - menu graphics\n");
 	strcat(CreditsInfo,"Hacktarux - Mupen64\n");
-	strcat(CreditsInfo,"Extrems - Not64 & libOGC2\n");
+	strcat(CreditsInfo,"Extrems - Not64\n");
 	strcat(CreditsInfo,"Wintermute/Shagkur - devkitPro/libOGC\n");
 #ifdef HW_RVL
 	strcat(CreditsInfo,"Team Twiizers - for Wii homebrew\n");
