@@ -14,11 +14,11 @@
  * To install: Extract the contents of the latest release zip to the root of your SD card
  * For SD/USB: Put ROMs in the directory named /wii64/roms,
     All save types will automatically be placed in /wii64/saves
- * For DVD: ROMs may be anywhere on the disc (requires DVDxV2 on Wii)
+ * For DVD: ROMs may be anywhere on the disc (requires a compatible Wii)
  * Load the desired executable from the HBC or in the loader of your choice, the emulator is shipped with 2 graphics plugins now.
 	 * **Rice GFX Plugin version** 
 		 * Slightly faster and has fixed sky boxes in games but isn't as refined as glN64
-		 * Supports hi-res texture pak via Wii64 specific [texture packer](https://github.com/emukidid/Wii64/releases/tag/texturepacker_1.2)
+		 * Experimental support for hi-res texture paks via Wii64 specific [texture packer](https://github.com/emukidid/Wii64/releases/tag/texturepacker_1.2)
 	 * **glN64 GFX Plugin version**
 		 * Slightly slower than Rice GFX on certain games
 		 * FrameBuffer texture support (OoT subscreen)
@@ -73,6 +73,8 @@ There's also 3 versions per graphics plugin shipped (6 .dol files total).
 The "-exp.dol" versions attempt to support the expansion pak by removing the mini menu, boxart and further reducing various caches, this should only really be used for expansion pak required games as it will likely crash more often due to less memory being available.
 
 The "-basic.dol" versions remove boxart support and the mini menu in an attempt to have more free memory available to avoid crashes.
+
+Lastly, the regular .dol version has boxart support but no expansion pak support.
 
 ### "WiiVC" Version
 This version isn't really supported much due to the niche nature of it. It enables DRC (Wii U GamePad) support, and also takes advantage of unlocked CPU multiplier support if enabled. The gist of it is that you can run Wii64 on a Wii U in "Wii mode" but with Wii U Game Pad support and (optionally) the CPU multiplier unlocked. To boot this version you can either just use the vWii mode to use the GamePad, or to unlock the CPU multiplier you'll need to be well versed in Wii U homebrew setups (essentially there's a process that exists to inject homebrew into a WiiVC title - e.g. Wii titles were available on the Wii U via the eShop) and there's a thing called [sign_c2w_patcher](https://github.com/FIX94/sign_c2w_patcher) that you must boot before loading this title to unlock the CPU multiplier. This version is shipped as "Wii64 | Rice GFX | WiiVC" and "Wii64 | glN64 GFX | WiiVC" in the archive.
