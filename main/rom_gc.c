@@ -154,8 +154,8 @@ int rom_read(fileBrowser_file* file){
 
   //Copy header name as Goodname (in the .ini we can use CRC to identify ROMS)
   memset((char*)buffer,0,1024);
-  strncpy(buffer, (char*)ROM_HEADER.Name,32);
-  //Maximum ROM name is 32 bytes. Lets make sure we cut off trailing spaces
+  strncpy(buffer, (char*)ROM_HEADER.Name,20);
+  //Maximum ROM name is 20 bytes. Lets make sure we cut off trailing spaces
   for(i = strlen(buffer); i>0; i--)
   {
     if(buffer[i-1] !=  ' ') {

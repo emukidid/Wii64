@@ -43,9 +43,14 @@ extern int stop;
 #include <ogc/usbstorage.h>
 const DISC_INTERFACE* frontsd = &__io_wiisd;
 const DISC_INTERFACE* usb = &__io_usbstorage;
-#endif
 const DISC_INTERFACE* carda = &__io_gcsda;
 const DISC_INTERFACE* cardb = &__io_gcsdb;
+
+#else
+const DISC_INTERFACE* carda = &__io_gcsda;
+const DISC_INTERFACE* cardb = &__io_gcsdb;
+const DISC_INTERFACE* sd2sp2 = &__io_gcsd2;
+#endif
 
 // Threaded insertion/removal detection
 #define THREAD_SLEEP 100
@@ -60,8 +65,6 @@ static char sdMounted  = 0;
 static char sdNeedsUnmount  = 0;
 static char usbMounted = 0;
 static char usbNeedsUnmount = 0;
-#else
-static char sdMounted  = 0;
 #endif
 
 fileBrowser_file topLevel_libfat_Default =
@@ -321,20 +324,17 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 	continueRemovalThread();
 	return res;
 #else
-	if(!sdMounted) {           //GC has only SD
-		if(carda->startup()) {
-			res = fatMountSimple ("sd", carda);
-			if(res)
-				sdMounted = CARD_A;
-		}
-		if(!res && cardb->startup()) {
-			res = fatMountSimple ("sd", cardb);
-			if(res)
-				sdMounted = CARD_B;
-		}
-		return res;
+	// GC has only SD
+	if(sd2sp2->startup()) {
+		res = fatMountSimple ("sd", sd2sp2);
 	}
-	return 1; 				// Already mounted
+	if(carda->startup()) {
+		res = fatMountSimple ("sd", carda);
+	}
+	if(!res && cardb->startup()) {
+		res = fatMountSimple ("sd", cardb);
+	}
+	return res;
 #endif
 }
 
@@ -343,6 +343,9 @@ int fileBrowser_libfat_deleteFile(fileBrowser_file* file){
 }
 
 int fileBrowser_libfat_deinit(fileBrowser_file* f){
+	if(f->name[0] == 's') {      //SD
+		fatUnmount("sd");
+ 	}
 	return 0;
 }
 

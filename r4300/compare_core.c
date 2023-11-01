@@ -41,20 +41,6 @@ static long long int comp_reg[32];
 extern unsigned long op;
 static unsigned long old_op;
 
-
-void print_gecko(const char* fmt, ...)
-{
-	if(usb_isgeckoalive(1)) {
-		char tempstr[2048];
-		va_list arglist;
-		va_start(arglist, fmt);
-		vsprintf(tempstr, fmt, arglist);
-		va_end(arglist);
-		// write out over usb gecko ;)
-		usb_sendbuffer_safe(1,tempstr,strlen(tempstr));
-	}
-}
-
 void display_error(char *txt)
 {
 	int i;
