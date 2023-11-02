@@ -188,7 +188,7 @@ void (*fBGetFrameBufferInfo)(void *p) = NULL;
 // Read PAD format from Classic if available
 u16 readWPAD(void);
 
-void load_config(char *loaded_path) {
+void load_config(const char *loaded_path) {
 	//config stuff
 	fileBrowser_file configFile_file;
 	char prefix[16];
@@ -285,6 +285,12 @@ int main(int argc, char* argv[]) {
   DVD_Init();  
 #endif
 	MenuContext *menu = new MenuContext(vmode);
+	if(argc > 2 && argv[1] != NULL && argv[2] != NULL)
+	{
+		menu->Autoboot = true;
+		strncpy(menu->AutobootPath, argv[1], sizeof(menu->AutobootPath));
+		strncpy(menu->AutobootROM, argv[2], sizeof(menu->AutobootROM));
+	}
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
 
 	// Default Settings
@@ -341,18 +347,33 @@ int main(int argc, char* argv[]) {
 
 #ifdef HW_RVL
 	load_config(&argv[0][0]);
-	// Handle options passed in through arguments
-	int i;
-	for(i=1; i<argc; ++i){
-		handleConfigPair(argv[i]);
-	}
-#else
-	load_config("sd");
-#endif
-	//Switch to MiniMenu if active
-	if (miniMenuActive)
+	if(argc != 0 && argv != 0)
 	{
+		load_config(&argv[0][0]);
+		// Handle options passed in through arguments
+		int i;
+		for(i=1; i<argc; ++i){
+			handleConfigPair(argv[i]);
+		}
+	}
+	else
+#endif
+		load_config("sd");
+
+	if (miniMenuActive)
+
 		menu->setUseMiniMenu(true);
+	
+	if (menu->Autoboot)
+	{
+		// after init wpad wait a bit
+		sleep(2);
+		menu->setActiveFrame(MenuContext::FRAME_LOADROM);
+		menu->Autoboot = false;
+	}
+	else if (miniMenuActive)
+	{
+		//Switch to MiniMenu if active
 		menu->setActiveFrame(MenuContext::FRAME_MAIN);
 	}
 	while (menu->isRunning()) {}

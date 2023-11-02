@@ -128,7 +128,15 @@ void Func_LoadFromSD()
 	romFile_init( romFile_topLevel );
 
 	pMenuContext->setActiveFrame(MenuContext::FRAME_FILEBROWSER);
-	fileBrowserFrame_OpenDirectory(romFile_topLevel);
+	
+	if(pMenuContext->Autoboot)
+	{
+		strncpy(romFile_topLevel->name, pMenuContext->AutobootPath, sizeof(romFile_topLevel->name));
+		fileBrowserFrame_OpenDirectory(romFile_topLevel);
+		fileBrowserFrame_AutoBootFile();
+	}
+	else
+		fileBrowserFrame_OpenDirectory(romFile_topLevel);
 }
 
 void Func_LoadFromDVD()
@@ -146,7 +154,15 @@ void Func_LoadFromDVD()
 	romFile_init( romFile_topLevel );
 
 	pMenuContext->setActiveFrame(MenuContext::FRAME_FILEBROWSER);
-	fileBrowserFrame_OpenDirectory(romFile_topLevel);
+	
+	if(pMenuContext->Autoboot)
+	{
+		strncpy(romFile_topLevel->name, pMenuContext->AutobootPath, sizeof(romFile_topLevel->name));
+		fileBrowserFrame_OpenDirectory(romFile_topLevel);
+		fileBrowserFrame_AutoBootFile();
+	}
+	else
+		fileBrowserFrame_OpenDirectory(romFile_topLevel);
 }
 
 void Func_LoadFromUSB()
@@ -166,7 +182,15 @@ void Func_LoadFromUSB()
 	romFile_init( romFile_topLevel );
 	
 	pMenuContext->setActiveFrame(MenuContext::FRAME_FILEBROWSER);
-	fileBrowserFrame_OpenDirectory(romFile_topLevel);
+	
+	if(pMenuContext->Autoboot)
+	{
+		strncpy(romFile_topLevel->name, pMenuContext->AutobootPath, sizeof(romFile_topLevel->name));
+		fileBrowserFrame_OpenDirectory(romFile_topLevel);
+		fileBrowserFrame_AutoBootFile();
+	}
+	else
+		fileBrowserFrame_OpenDirectory(romFile_topLevel);
 #endif
 }
 
