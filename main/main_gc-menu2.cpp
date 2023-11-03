@@ -366,8 +366,6 @@ int main(int argc, char* argv[]) {
 	
 	if (menu->Autoboot)
 	{
-		// after init wpad wait a bit
-		sleep(2);
 		menu->setActiveFrame(MenuContext::FRAME_LOADROM);
 		menu->Autoboot = false;
 	}
