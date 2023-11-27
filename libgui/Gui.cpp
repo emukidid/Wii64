@@ -30,10 +30,16 @@
 
 extern "C" {
 #include "../gc_input/controller.h"
+#ifdef WII
+#include <ogc/machine/processor.h>
+#endif
 }
 
 extern char shutdown;
 extern unsigned int dvd_hard_init;
+#ifdef WII
+bool isWiiU = (*(vu16*)0xCD8005A0 == 0xCAFE) && CONF_GetAspectRatio();
+#endif
 
 namespace menu {
 
@@ -83,6 +89,17 @@ void Gui::draw()
 	Focus::getInstance().updateFocus();
 	if(padAutoAssign) auto_assign_controllers();
 	//Update time??
+
+#ifdef WII
+	// Adjust Wii U aspect ratio via DMCU
+	static char oldScreenMode = -1;
+	if (isWiiU && (oldScreenMode != screenMode)) {
+		write32(0xd8006a0, screenMode ? 0x30000004 : 0x30000002);
+		mask32(0xd8006a8, 0, 2);
+		oldScreenMode = screenMode;
+	}
+#endif
+
 	//Get graphics framework and pass to Frame draw fns?
 	gfx->drawInit();
 	drawBackground();
@@ -119,6 +136,13 @@ void Gui::draw()
 			VIDEO_SetBlack(true);
 			VIDEO_Flush();
 		 	VIDEO_WaitVSync();
+#ifdef WII
+			// If this is a Wii U, restore the original aspect ratio
+			if(isWiiU) {
+				write32(0xd8006a0, 0x30000004);
+				mask32(0xd8006a8, 0, 2);
+			}
+#endif
 			if(shutdown==1)	//Power off System
 				SYS_ResetSystem(SYS_POWEROFF, 0, 0);
 			else			//Return to Loader
