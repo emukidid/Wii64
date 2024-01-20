@@ -472,7 +472,7 @@ void fileBrowserFrame_LoadFile(int i)
 		// We must select this file
 		int ret = loadROM( &dir_entries[i] );
 		
-		if(!ret){	// If the read succeeded.
+		if(!ret && !pMenuContext->Autoboot){	// If the read succeeded.
 			strcpy(feedback_string, "Loaded ");
 			strncat(feedback_string, filenameFromAbsPath(dir_entries[i].name), 36-7);
 
@@ -513,7 +513,7 @@ void fileBrowserFrame_LoadFile(int i)
 
 			menu::MessageBox::getInstance().setMessage(RomInfo);
 		}
-		else		// If not.
+		else if(ret)		// If not.
 		{
   		switch(ret) {
     		case ROM_CACHE_ERROR_READ:
@@ -561,4 +561,14 @@ void fileBrowserFrame_LoadFile(int i)
 		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 		if(hasLoadedROM) Func_SetPlayGame();
 	}
+}
+
+
+void fileBrowserFrame_AutoBootFile()
+{
+	int i;
+	for(i = 0; i < num_entries - 1; i++)
+		if(strcasestr(dir_entries[i].name, pMenuContext->AutobootROM) != NULL)
+			break;
+	fileBrowserFrame_LoadFile(i);
 }
