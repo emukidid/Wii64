@@ -24,6 +24,7 @@
 **/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
@@ -40,13 +41,13 @@
 static char* ROMBase = ROMCACHE_LO;
 #else
 #include "../gc_memory/ARAM.h"
-#define BLOCK_SIZE  (4*1024)
+#define BLOCK_SIZE  (64*1024)
 #define BLOCK_MASK  (BLOCK_SIZE-1)
 #define OFFSET_MASK (0xFFFFFFFF-BLOCK_MASK)
-#define BLOCK_SHIFT (12)	//only change ME and BLOCK_SIZE
+#define BLOCK_SHIFT (16)	//only change ME and BLOCK_SIZE
 #define MAX_ROMSIZE (64*1024*1024)
 #define NUM_BLOCKS  (MAX_ROMSIZE/BLOCK_SIZE)
-#define LOAD_SIZE   (4*1024)
+#define LOAD_SIZE   (64*1024)
 static char* ROMBlocks[NUM_BLOCKS];
 static int   ROMBlocksLRU[NUM_BLOCKS];
 static void ensure_block(u32 block);
@@ -124,9 +125,7 @@ void* ROMCache_pointer(u32 rom_offset){
 }
 
 #ifdef HW_DOL
-static void ROMCache_load_block(char* dst, u32 rom_offset){
-  if((hasLoadedROM) && (!r4300.stop))
-    pauseAudio();
+static void ROMCache_load_block(char* dst, u32 rom_offset) {
 	enableLoadIcon = 1;
 	u32 offset = 0, bytes_read, loads_til_update = 0;
 	romFile_seekFile(&ROMFile, rom_offset, FILE_BROWSER_SEEK_SET);
@@ -136,16 +135,14 @@ static void ROMCache_load_block(char* dst, u32 rom_offset){
 		offset += bytes_read;
 		
 		if(!loads_til_update--){
-//			showLoadProgress( (float)offset/BLOCK_SIZE );
 			loads_til_update = 32;
 		}
 	}
-//	showLoadProgress( 1.0f );
-	if((hasLoadedROM) && (!r4300.stop))
-	  resumeAudio();
 }
 
 static void ensure_block(u32 block){
+	if (block >= NUM_BLOCKS)
+        return;
 	if(!ROMBlocks[block]){
 		// The block we're trying to read isn't in the cache
 		// Find the Least Recently Used Block
@@ -159,6 +156,7 @@ static void ensure_block(u32 block){
 	}
 }
 #endif
+
 
 void ROMCache_read(u8* ram_dest, u32 rom_offset, u32 length){
 #ifdef HW_RVL
@@ -174,6 +172,9 @@ void ROMCache_read(u8* ram_dest, u32 rom_offset, u32 length){
 		u32 offset2 = rom_offset&BLOCK_MASK;
 		
 		while(length2){
+			if (block >= NUM_BLOCKS) {
+				return;
+			}
 			ensure_block(block);
 			
 			// Set length to the length for this block

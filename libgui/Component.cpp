@@ -105,7 +105,7 @@ void Component::drawComponent(Graphics& gfx)
 	//Overload for custom draw routine
 }
 
-void Component::drawChildren(Graphics& gfx) const
+void Component::drawChildren(Graphics& gfx)
 {
 	//Overload when Component class contains children
 }

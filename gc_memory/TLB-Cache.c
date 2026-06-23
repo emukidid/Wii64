@@ -1,9 +1,9 @@
 /**
  * Wii64 - TLB-Cache.c
- * Copyright (C) 2007, 2008, 2009 emu_kidid
+ * Copyright (C) 2007, 2008, 2009, 2026 emu_kidid
  * Copyright (C) 2007, 2008, 2009 Mike Slegeir
  * 
- * Tiny TLB cache. It keeps 16 * 1024(*4) ranges of entries.
+ * Tiny 2 stage TLB cache
  *
  * Wii64 homepage: http://www.emulatemii.com
  * email address: tehpola@gmail.com
@@ -29,90 +29,113 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
+#include "tlb.h"
 #include "TLB-Cache.h"
 #include "../gui/DEBUG.h"
 
-#define TLB_NUM_BLOCKS                           128
-#define TLB_W_TYPE                                1
-#define TLB_R_TYPE                                2
-#define CACHED_TLB_ENTRIES                     1024
-#define CACHED_TLB_SIZE      CACHED_TLB_ENTRIES * 4
+typedef unsigned long TLBEntry;
 
-static u32    tlb_block[TLB_NUM_BLOCKS][CACHED_TLB_ENTRIES] __attribute__((aligned(32)));
-static u32    tlb_block_type[TLB_NUM_BLOCKS];
-static u32    tlb_block_addr[TLB_NUM_BLOCKS];
+#define TLB_L1_BITS   10
+#define TLB_L2_BITS   10
+#define TLB_L1_SIZE   (1u << TLB_L1_BITS)
+#define TLB_L2_SIZE   (1u << TLB_L2_BITS)
+#define TLB_L2_MASK   (TLB_L2_SIZE - 1)
 
-void TLBCache_init(void){
-	int i = 0, j = 0;
-	for(i=0;i<TLB_NUM_BLOCKS;i++) {
-		for(j=0;j<CACHED_TLB_ENTRIES;j++)
-			tlb_block[i][j] = 0;
-		tlb_block_type[i] = 0;
-		tlb_block_addr[i] = 0;
-	}
-}
+// entry contains VALID/WRITE flags + phys bits
+static TLBEntry *tlb_cache_l1[TLB_L1_SIZE];
+static u32 allocated = 0;
 
-void TLBCache_deinit(void){
-	TLBCache_init();
-}
-
-static inline int calc_block_addr(unsigned int page){
-  return ((page - (page % CACHED_TLB_ENTRIES)) * 4);
-}
-
-static inline int calc_index(unsigned int page){
-  return page % CACHED_TLB_ENTRIES;
-}
-
-static unsigned int TLBCache_get(int type, unsigned int page){
-  int i = 0;
-  // it must exist
-  for(i=0; i<TLB_NUM_BLOCKS; i++) {
-    if((tlb_block_type[i]==type) && (tlb_block_addr[i]==calc_block_addr(page))) {
-      return tlb_block[i][calc_index(page)];
+static inline void TLBCache_reset_level(TLBEntry **entry)
+{
+    for (u32 i = 0; i < TLB_L1_SIZE; ++i) {
+        if (entry[i]) {
+            free(entry[i]);
+            entry[i] = NULL;
+        }
     }
-  }
-  return 0;
+	allocated = 0;
 }
 
-unsigned int TLBCache_get_r(unsigned int page){
-  return TLBCache_get(TLB_R_TYPE, page);
+void TLBCache_reset(void)
+{
+    TLBCache_reset_level(tlb_cache_l1);
 }
 
-unsigned int TLBCache_get_w(unsigned int page){
-  return TLBCache_get(TLB_W_TYPE, page);
+u32 TLBCache_getSize() {
+	return allocated;
 }
 
-static inline void TLBCache_set(int type, unsigned int page, unsigned int val){
-  int i = 0;
-  // check if it exists already
-  for(i=0; i<TLB_NUM_BLOCKS; i++) {
-    if(tlb_block_type[i]==type && tlb_block_addr[i]==calc_block_addr(page)) {
-      tlb_block[i][calc_index(page)] = val;
-      return;
+static inline TLBEntry *TLBCache_get_slot(u32 vpn, int create)
+{
+    u32 l1_idx = vpn >> TLB_L2_BITS;
+    u32 l2_idx = vpn & TLB_L2_MASK;
+
+    TLBEntry *page = tlb_cache_l1[l1_idx];
+
+    if (!page) {
+        if (!create) {
+            return NULL;
+        }
+        page = (TLBEntry *)calloc(TLB_L2_SIZE, sizeof(TLBEntry));
+        if (!page) {
+            // just say unmapped
+            return NULL;
+        }
+		allocated += (TLB_L2_SIZE * sizeof(TLBEntry));
+        tlb_cache_l1[l1_idx] = page;
     }
-  }
-  // else, populate a tlb block
-  for(i=0; i<TLB_NUM_BLOCKS; i++) {
-    if(!tlb_block_type[i]) {
-      tlb_block_type[i] = type;
-      tlb_block_addr[i] = calc_block_addr(page);
-      tlb_block[i][calc_index(page)] = val;
-      return;
+
+    return &page[l2_idx];
+}
+
+u32 TLBCache_get_r(u32 vpn)
+{
+    TLBEntry *slot = TLBCache_get_slot(vpn, 0);
+    if (!slot) return 0;
+
+    u32 e = *slot;
+    if (!(e & TLB_VALID))
+        return 0;
+
+    return e;
+}
+
+
+u32 TLBCache_get_w(u32 vpn)
+{
+    TLBEntry *slot = TLBCache_get_slot(vpn, 0);
+    if (!slot) return 0;
+
+    u32 e = *slot;
+    if (!(e & TLB_VALID)) return 0;
+    if (!(e & TLB_WRITE)) return 0;
+
+    return e;
+}
+
+
+void TLBCache_set_r(u32 vpn, u32 entry)
+{
+    if (!entry) {
+        TLBEntry *slot = TLBCache_get_slot(vpn, 0);
+        if (slot) *slot = 0;
+        return;
     }
-  }
-  // If we hit here, this is big trouble (just need to increase the amount of entries..)
-  *(u32*)0 = 0x13370002;
+
+    TLBEntry *slot = TLBCache_get_slot(vpn, 1);
+    if (slot) *slot = entry;
 }
 
-void TLBCache_set_r(unsigned int page, unsigned int val){
-  TLBCache_set(TLB_R_TYPE, page, val);
-}
 
-void TLBCache_set_w(unsigned int page, unsigned int val){
-  TLBCache_set(TLB_W_TYPE, page, val);
-}
+void TLBCache_set_w(u32 vpn, u32 entry)
+{
+    if (!entry) {
+        TLBEntry *slot = TLBCache_get_slot(vpn, 0);
+        if (slot) *slot = 0;
+        return;
+    }
 
+    TLBEntry *slot = TLBCache_get_slot(vpn, 1);
+    if (slot) *slot = entry;
+}
 #endif
-
-

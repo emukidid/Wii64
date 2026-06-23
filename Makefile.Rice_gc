@@ -3,12 +3,7 @@
 ELF		= cube64-Rice.elf
 DOL		= cube64-Rice.dol
 
-#CFLAGS		=
-INCLUDE 	=
-#LD			= 
-#LDFLAGS 	=
-#LIBPATHS	= 
-LIB			= 
+CXXFLAGS	+= -DGC_BASIC
 
 include Makefile.Rice
 include Makefile.gc

@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <ogc/machine/processor.h>
 #include <ogc/aram.h>
+#include <ogc/context.h>
 #include <string.h>
 #include "vm.h"
 
@@ -44,9 +45,16 @@ static vm_page* MEM_Base = NULL;
 static mutex_t vm_mutex = LWP_MUTEX_NULL;
 static bool vm_initialized = 0;
 
+
 static __inline__ void tlbie(void* p)
 {
-	asm volatile("tlbie %0" :: "r"(p));
+	asm volatile(
+        "tlbie %0\n"
+        "eieio\n"
+        "tlbsync\n"
+        "eieio\n"
+        :: "r"(p)
+    );
 }
 
 static u16 locate_oldest(void)
@@ -64,7 +72,7 @@ static u16 locate_oldest(void)
 			continue;
 
 		p = HTABORG+phys_map[head].pte_index;
-		tlbie(VM_Base+phys_map[head].page_index);
+		tlbie((void*)(VM_Base+phys_map[head].page_index));
 
 		if (p->C)
 		{
@@ -80,6 +88,7 @@ static u16 locate_oldest(void)
 		}
 
 		p->data[0] = 0;
+		p->data[1] = 0;
 
 		pmap_head = head+1;
 		return head;
@@ -104,7 +113,7 @@ static PTE* StorePTE(PTEG pteg, u32 virtual, u32 physical, u8 WIMG, u8 PP, int s
 		if (pteg[i].valid)
 			continue;
 
-		asm volatile("tlbie %0" : : "r"(virtual));
+		tlbie((void*)(virtual));
 		pteg[i].data[1] = p.data[1];
 		pteg[i].data[0] = p.data[0];
 		return pteg+i;
@@ -148,16 +157,16 @@ static void tlbia(void)
 {
 	int i;
 	for (i=0; i < 64; i++)
-		asm volatile("tlbie %0" :: "r" (i*PAGE_SIZE));
+		tlbie((void*)(i*PAGE_SIZE));
 }
 
 /* This definition is wrong, pHndl does not take frame_context* as a parameter,
  * it has to adjust the stack pointer and finish filling frame_context itself
  */
 void __exception_sethandler(u32 nExcept, void (*pHndl)(frame_context*));
-extern void default_exceptionhandler();
+extern void default_exceptionhandler(frame_context*);
 // use our own exception stub because libogc stupidly requires it
-extern void dsi_handler();
+extern void dsi_handler(frame_context*);
 
 void* VM_Init(u32 VMSize, u32 MEMSize)
 {
@@ -272,7 +281,13 @@ void VM_Deinit(void)
 
 	vm_initialized = 0;
 }
-
+#ifdef DSISR
+#undef DSISR
+#endif
+#ifdef DAR
+#undef DAR
+#endif
+static ARQRequest arq_request;
 int vm_dsi_handler(u32 DSISR, u32 DAR)
 {
 	u16 v_index;
@@ -296,8 +311,8 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	if (phys_map[p_index].dirty)
 	{
 		DCFlushRange(MEM_Base+p_index, PAGE_SIZE);
-		AR_StartDMA(AR_MRAMTOARAM,(u32)(MEM_Base+p_index),phys_map[p_index].page_index*PAGE_SIZE,PAGE_SIZE);
-		while (AR_GetDMAStatus());
+		ARQ_PostRequest(&arq_request,99,ARQ_MRAMTOARAM,ARQ_PRIO_HI,phys_map[p_index].page_index*PAGE_SIZE,(u32)(MEM_Base+p_index),PAGE_SIZE);
+		
 		virt_map[phys_map[p_index].page_index].committed = 1;
 		virt_map[phys_map[p_index].page_index].p_map_index = pmap_max;
 		phys_map[p_index].dirty = 0;
@@ -307,8 +322,7 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	if (virt_map[v_index].committed)
 	{
 		DCInvalidateRange(MEM_Base+p_index, PAGE_SIZE);
-		AR_StartDMA(AR_ARAMTOMRAM,(u32)(MEM_Base+p_index),v_index*PAGE_SIZE,PAGE_SIZE);
-		while (AR_GetDMAStatus());
+		ARQ_PostRequest(&arq_request,99,ARQ_ARAMTOMRAM,ARQ_PRIO_HI,v_index*PAGE_SIZE,(u32)(MEM_Base+p_index),PAGE_SIZE);
 	}
 	else
 		DCZeroRange(MEM_Base+p_index, PAGE_SIZE);

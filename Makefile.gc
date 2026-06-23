@@ -4,7 +4,8 @@ CXXFLAGS	+= -DHW_DOL -DUSE_TLB_CACHE -DTINY_TLBCACHE -D__gamecube__
 
 LDFLAGS		+= -mogc
 
-LIBPATHS	+= -L$(DEVKITPRO)/libogc2/lib/cube
+LIBPATHS	+= -L$(DEVKITPRO)/libogc2/gamecube/lib
+INCLUDE 	+= -I$(DEVKITPRO)/libogc2/gamecube/include
 
 OBJ		+= \
 		gc_memory/TLB-Cache.o \

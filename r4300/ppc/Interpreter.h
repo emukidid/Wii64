@@ -29,7 +29,7 @@
 	3) Calls interp_ops[MIPS_GET_OPCODE(instr)]() (Interprets)
 	4) Restores state
  */
-unsigned int decodeNInterpret();
+unsigned int decodeNInterpret(MIPS_instr, unsigned int, int);
 
 // These defines tell the recompiler to interpret
 //  rather than recompile the instruction

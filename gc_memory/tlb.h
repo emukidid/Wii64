@@ -30,6 +30,11 @@
 #ifndef TLB_H
 #define TLB_H
 
+#define TLB_VALID 0x80000000
+#define TLB_WRITE 0x40000000
+#define TLB_PADDR_MASK 0x1FFFF000
+
+
 typedef struct _tlb
 {
    short mask;
@@ -56,8 +61,7 @@ typedef struct _tlb
    char pad;	// so we have 48 bytes
 } tlb;
 #ifndef USE_TLB_CACHE
-extern unsigned long *const tlb_LUT_r;
-extern unsigned long *const tlb_LUT_w;
+extern unsigned long *tlb_LUT;
 void tlb_mem2_init();
 // Wrapper functions to make our savestate code cleaner
 #define TLBCache_init() tlb_mem2_init()
@@ -66,7 +70,7 @@ void tlb_mem2_init();
 #define TLBCache_get_r(page) {tlb_LUT_r[page]}
 #define TLBCache_get_w(page) {tlb_LUT_w[page]}
 #endif
-unsigned long virtual_to_physical_address(unsigned long addresse, int w);
+unsigned long virtual_to_physical_address(unsigned long vaddr, int w);
 int probe_nop(unsigned long address);
 extern unsigned long rom_base_in_tlb;
 

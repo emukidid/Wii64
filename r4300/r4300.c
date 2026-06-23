@@ -243,8 +243,7 @@ void cpu_init(void){
 #ifndef USE_TLB_CACHE
    for (i=0; i<0x100000; i++)
      {
-	tlb_LUT_r[i] = 0;
-	tlb_LUT_w[i] = 0;
+	tlb_LUT[i] = 0;
      }
 #endif
    r4300.llbit=0;

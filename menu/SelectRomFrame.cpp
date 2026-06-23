@@ -654,10 +654,8 @@ void selectRomFrame_Error(fileBrowser_file* dir, int error_code)
   	sprintf(feedback_string,"NO Disc Inserted");
 	}
 	//set first entry to read 'error' and return to main menu
-	else if(dir->name)
-	  sprintf(feedback_string,"Error opening directory \"%s\"",&dir->name[0]);
 	else
-	  strcpy(feedback_string,"An error occured");
+	  sprintf(feedback_string,"Error opening directory \"%s\"",&dir->name[0]);
 /*	FRAME_BUTTONS[2].buttonString = feedback_string;
 	FRAME_BUTTONS[2].button->setClicked(Func_ReturnFromFileBrowserFrame);
 	FRAME_BUTTONS[2].button->setActive(true);

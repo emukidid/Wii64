@@ -1,24 +1,26 @@
 # Makefile variables and targets used in all builds
 
-export	LIBOGC_INC	:=	$(DEVKITPRO)/libogc2/include
+CC  := $(DEVKITPPC)/bin/powerpc-eabi-gcc
+CXX := $(DEVKITPPC)/bin/powerpc-eabi-g++
+AS  := $(DEVKITPPC)/bin/powerpc-eabi-as
 
-CC		= powerpc-eabi-gcc
-CXX		= powerpc-eabi-g++
-AS		= powerpc-eabi-as
 
-LTO			 = #-flto # Uncomment to use link-time optimization
-DEBUG_FLAGS += #-DSHOW_DEBUG #-DPROFILE #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DNO_BT
+
+LTO			 = -flto -fno-strict-aliasing # Uncomment to use link-time optimization
+DEBUG_FLAGS += -DSHOW_DEBUG #-DPROFILE #-DSHOW_DEBUG #-DDEBUGON #-DPRINTGECKO #-DGLN64_SDLOG #-DNO_BT
 
 MACHDEP		+= -mcpu=750 -meabi -mhard-float 
 LDFLAGS		+= -O3 $(LTO) $(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--cref $(LTO)
 
-INCLUDE 	+= -I$(DEVKITPRO)/libogc2/include -I$(DEVKITPRO)/portlibs/ppc/include
+INCLUDE 	+= -I$(DEVKITPRO)/portlibs/ppc/include
 LIBPATHS	+= -L$(DEVKITPRO)/portlibs/ppc/lib
 
 CXXFLAGS		+= \
 		-g -O3 $(LTO) -Wall -Wno-parentheses -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
 		-DGEKKO -D__GX__ -DUSE_GUI -DRELEASE -DMENU_V2 \
 		-DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DNO_ASM \
+		-Wstrict-aliasing=3 -Wcast-align -Wlto-type-mismatch -Wodr \
+		-Wclobbered -Wvolatile-register-var -Winline -fno-toplevel-reorder -fno-strict-aliasing \
 		$(DEBUG_FLAGS) $(FEATURES) #-fno-exceptions
 
 CFLAGS	+= $(CXXFLAGS) -fgnu89-inline -Wno-multichar
@@ -119,13 +121,6 @@ OBJ_RSPHLE	=rsp_hle/alist.o \
 		rsp_hle/musyx.o \
 		rsp_hle/re2.o \
 		rsp_hle/plugin.o
-		
-OBJ_RSPHLEPPC	+= \
-		rsp_hle-ppc/main.o \
-		rsp_hle-ppc/jpeg.o \
-		rsp_hle-ppc/ucode3.o \
-		rsp_hle-ppc/ucode2.o \
-		rsp_hle-ppc/ucode1.o
 
 OBJ_AUDIO	+= \
 		gc_audio/audio.o
@@ -141,6 +136,11 @@ HEADER		+= \
 		r4300/interupt.h \
 		r4300/recomp.h \
 		gc_memory/pif.h
+
+r4300/Recomp-Cache-Heap.o: CFLAGS += -fno-lto 
+r4300/ppc/Recompile.o: CFLAGS += -fno-lto 
+r4300/ppc/Wrappers.o: CFLAGS += -fno-lto 
+r4300/ppc/FuncTree.o: CFLAGS += -fno-lto 
 
 LIB		+= -logc -lm -lfat -ldb -lz -laesnd -logc -static
 

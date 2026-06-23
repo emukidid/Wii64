@@ -315,7 +315,11 @@ int convert(void){
 	return result;
 }
 
-static int NI(){
+static int NI(MIPS_instr mips){
+	return CONVERT_ERROR;
+}
+
+static int NI_COP(MIPS_instr mips, int _){
 	return CONVERT_ERROR;
 }
 
@@ -3828,10 +3832,10 @@ static int (*gen_cop1_fp[64])(MIPS_instr, int) =
 {
    ADD_FP    ,SUB_FP    ,MUL_FP   ,DIV_FP    ,SQRT_FP   ,ABS_FP    ,MOV_FP   ,NEG_FP    ,
    ROUND_L_FP,TRUNC_L_FP,CEIL_L_FP,FLOOR_L_FP,ROUND_W_FP,TRUNC_W_FP,CEIL_W_FP,FLOOR_W_FP,
-   NI        ,NI        ,NI       ,NI        ,NI        ,NI        ,NI       ,NI        ,
-   NI        ,NI        ,NI       ,NI        ,NI        ,NI        ,NI       ,NI        ,
-   CVT_S_FP  ,CVT_D_FP  ,NI       ,NI        ,CVT_W_FP  ,CVT_L_FP  ,NI       ,NI        ,
-   NI        ,NI        ,NI       ,NI        ,NI        ,NI        ,NI       ,NI        ,
+   NI_COP   ,NI_COP   ,NI_COP  ,NI_COP   ,NI_COP   ,NI_COP   ,NI_COP  ,NI_COP   ,
+   NI_COP   ,NI_COP   ,NI_COP  ,NI_COP   ,NI_COP   ,NI_COP   ,NI_COP  ,NI_COP   ,
+   CVT_S_FP  ,CVT_D_FP  ,NI_COP  ,NI_COP   ,CVT_W_FP  ,CVT_L_FP  ,NI_COP  ,NI_COP   ,
+   NI_COP   ,NI_COP   ,NI_COP  ,NI_COP   ,NI_COP   ,NI_COP   ,NI_COP  ,NI_COP   ,
    C_F_FP    ,C_UN_FP   ,C_EQ_FP  ,C_UEQ_FP  ,C_OLT_FP  ,C_ULT_FP  ,C_OLE_FP ,C_ULE_FP  ,
    C_SF_FP   ,C_NGLE_FP ,C_SEQ_FP ,C_NGL_FP  ,C_LT_FP   ,C_NGE_FP  ,C_LE_FP  ,C_NGT_FP
 };

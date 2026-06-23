@@ -42,7 +42,7 @@ public:
 	Component* getParent() const;
 	void draw(Graphics& gfx);
 	virtual void drawComponent(Graphics& gfx);
-	virtual void drawChildren(Graphics& gfx) const;
+	virtual void drawChildren(Graphics& gfx);
 	virtual void updateTime(float deltaTime);
 	void setNextFocus(int direction, Component* component);
 	Component* getNextFocus(int direction);

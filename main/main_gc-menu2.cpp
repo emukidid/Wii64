@@ -188,7 +188,7 @@ void (*fBGetFrameBufferInfo)(void *p) = NULL;
 // Read PAD format from Classic if available
 u16 readWPAD(void);
 
-void load_config(char *loaded_path) {
+void load_config(const char *loaded_path) {
 	//config stuff
 	fileBrowser_file configFile_file;
 	char prefix[16];
@@ -261,7 +261,7 @@ void load_config(char *loaded_path) {
 	}
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
 	/* INITIALIZE */
 #ifdef HW_DOL
 	AESND_Init();
@@ -344,7 +344,7 @@ int main(int argc, char* argv[]) {
 	// Handle options passed in through arguments
 	int i;
 	for(i=1; i<argc; ++i){
-		handleConfigPair(argv[i]);
+		handleConfigPair((char*)argv[i]);
 	}
 #else
 	load_config("sd");
@@ -431,10 +431,12 @@ int loadROM(fileBrowser_file* rom){
 	reset_flashram();
 	init_eeprom();
 	hasLoadedROM = TRUE;
-#ifndef HW_RVL
-	TLBCache_init();
+#ifdef USE_TLB_CACHE
+	TLBCache_reset();
 #else
+#ifdef HW_RVL
 	tlb_mem2_init();
+#endif
 #endif
 	ret = rom_read(rom);
 	if(ret){	// Something failed while trying to read the ROM.
@@ -490,7 +492,6 @@ int loadROM(fileBrowser_file* rom){
   	result += loadSram(saveFile_dir);
   	result += loadMempak(saveFile_dir);
   	result += loadFlashram(saveFile_dir);
-  	saveFile_deinit(saveFile_dir);
 
   	switch (nativeSaveDevice)
   	{

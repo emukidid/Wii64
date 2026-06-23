@@ -41,9 +41,8 @@ typedef struct node {
 	struct node* next;
 } TLB_hash_node;
 
-void TLBCache_init(void);
-void TLBCache_deinit(void);
-
+void TLBCache_reset(void);
+u32 TLBCache_getSize();
 unsigned int inline TLBCache_get_r(unsigned int page);
 unsigned int inline TLBCache_get_w(unsigned int page);
 

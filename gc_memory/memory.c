@@ -512,9 +512,6 @@ int init_memory()
 
 void free_memory()
 {
-#ifdef USE_TLB_CACHE
-	TLBCache_deinit();
-#endif
 }
 
 static void update_MI_init_mode_reg()

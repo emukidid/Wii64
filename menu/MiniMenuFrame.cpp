@@ -504,7 +504,6 @@ void Func_MMPlayGame()
 	menu::Gui::getInstance().gfx->clearEFB((GXColor){0, 0, 0, 0xFF}, 0x000000);
 	BOXART_DeInit();
 	
-	pauseRemovalThread();
 	resumeAudio();
 	resumeInput();
 	menuActive = 0;
@@ -525,7 +524,6 @@ void Func_MMPlayGame()
 	menuActive = 1;
 	pauseInput();
 	pauseAudio();
-  continueRemovalThread();
 	
   if(autoSave==AUTOSAVE_ENABLE) {
     if(flashramWritten || sramWritten || eepromWritten || mempakWritten) {  //something needs saving

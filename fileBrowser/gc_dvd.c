@@ -56,6 +56,8 @@ int have_hw_access() {
   return 0;
 }
 
+void drive_version(u8 *buf);
+
 int init_dvd() {
 // Gamecube Mode
 #ifdef HW_DOL
@@ -408,7 +410,7 @@ int dvd_writemem_32(u32 addr, u32 dat)
 	return 0;
 }
 
-int dvd_writemem_array(u32 addr, void* buf, u32 size)
+int dvd_writemem_array(u32 addr, const void* buf, u32 size)
 {
 	u32* ptr = (u32*)buf;
 	int rem = size;
@@ -440,7 +442,7 @@ void dvd_motor_on_extra()
 	while (dvd[7] & 1);
 }
 
-void* drive_patch_ptr(u32 driveVersion)
+const void* drive_patch_ptr(u32 driveVersion)
 {
 	if(driveVersion == 0x20020402)
 		return &Drive04;
@@ -465,7 +467,7 @@ void dvd_enable_patches()
 	
 	if(!driveVersion) return;	// Unsupported drive
 
-	void* patchCode = drive_patch_ptr(driveVersion);
+	const void* patchCode = drive_patch_ptr(driveVersion);
 	
 	//print_gecko("Drive date %08X\r\nUnlocking DVD\r\n",driveVersion);
 	dvd_unlock();

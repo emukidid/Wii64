@@ -75,6 +75,11 @@ char FRAME_STRINGS[NUM_MAIN_BUTTONS+1][20] =
 #endif
 	};
 
+#if !(defined(GC_BASIC))
+#define MAX_BTN 6
+#else
+#define MAX_BTN 5
+#endif
 
 struct ButtonInfo
 {
@@ -93,12 +98,12 @@ struct ButtonInfo
 	ButtonFunc		returnFunc;
 } FRAME_BUTTONS[NUM_MAIN_BUTTONS] =
 { //	button	buttonStyle	buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc				returnFunc
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	315.0,	 60.0,	200.0,	56.0,	 5,	 1,	 6,	 6,	Func_LoadROM,			NULL }, // Load ROM
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	315.0,	120.0,	200.0,	56.0,	 0,	 2,	 6,	 6,	Func_CurrentROM,		NULL }, // Current ROM
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	315.0,	180.0,	200.0,	56.0,	 1,	 3,	 6,	 6,	Func_Settings,			NULL }, // Settings
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	315.0,	240.0,	200.0,	56.0,	 2,	 4,	 6,	 6,	Func_Credits,			NULL }, // Credits
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	315.0,	300.0,	200.0,	56.0,	 3,	 5,	 6,	 6,	Func_ExitToLoader,		NULL }, // Exit to Loader
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	315.0,	360.0,	200.0,	56.0,	 4,	 0,	 6,	 6,	Func_PlayGame,			NULL }, // Play/Resume Game
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	315.0,	 60.0,	200.0,	56.0,	 5,	 1,	 MAX_BTN,	 MAX_BTN,	Func_LoadROM,			NULL }, // Load ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	315.0,	120.0,	200.0,	56.0,	 0,	 2,	 MAX_BTN,	 MAX_BTN,	Func_CurrentROM,		NULL }, // Current ROM
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	315.0,	180.0,	200.0,	56.0,	 1,	 3,	 MAX_BTN,	 MAX_BTN,	Func_Settings,			NULL }, // Settings
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	315.0,	240.0,	200.0,	56.0,	 2,	 4,	 MAX_BTN,	 MAX_BTN,	Func_Credits,			NULL }, // Credits
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[4],	315.0,	300.0,	200.0,	56.0,	 3,	 5,	 MAX_BTN,	 MAX_BTN,	Func_ExitToLoader,		NULL }, // Exit to Loader
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[5],	315.0,	360.0,	200.0,	56.0,	 4,	 0,	 0,	 0,	Func_PlayGame,			NULL }, // Play/Resume Game
 #if !(defined(GC_BASIC))
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[7],	535.0,	360.0,	 80.0,	56.0,	 4,	 0,	 5,	 5,	Func_BasicMenu,			NULL }, // Basic Menu
 #endif
@@ -258,7 +263,6 @@ void Func_PlayGame()
 
 	menu::Gui::getInstance().gfx->clearEFB((GXColor){0, 0, 0, 0xFF}, 0x000000);
 
-	pauseRemovalThread();
 	resumeAudio();
 	resumeInput();
 	menuActive = 0;
@@ -341,7 +345,6 @@ void Func_PlayGame()
       
     }
   }
-	continueRemovalThread();
 	FRAME_BUTTONS[5].buttonString = FRAME_STRINGS[6];
 	menu::Cursor::getInstance().clearCursorFocus();
 	menu::Focus::getInstance().clearPrimaryFocus();

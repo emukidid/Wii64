@@ -147,10 +147,10 @@ int rom_read(fileBrowser_file* file){
    ROMCache_init(rom_file);
    int ret = ROMCache_load(rom_file);
    if(ret) {
-     ROMCache_deinit(rom_file);
+     ROMCache_deinit();
      return ret;
    }
-   ROMCache_read(&ROM_HEADER, 0, sizeof(rom_header));
+   ROMCache_read((u8*)&ROM_HEADER, 0, sizeof(rom_header));
 
   //Copy header name as Goodname (in the .ini we can use CRC to identify ROMS)
   memset((char*)buffer,0,1024);
