@@ -34,7 +34,6 @@ extern "C" {
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-DVD.h"
-#include "../fileBrowser/fileBrowser-CARD.h"
 #include "../fileBrowser/gc_dvd.h"
 #include "../main/rom.h"
 #include "../main/ROM-Cache.h"
@@ -499,12 +498,6 @@ void fileBrowserFrame_LoadFile(int i)
 				break;
 			case NATIVESAVEDEVICE_USB:
 				strcat(RomInfo,"\nFound & loaded save from USB device\n");
-				break;
-			case NATIVESAVEDEVICE_CARDA:
-				strcat(RomInfo,"\nFound & loaded save from memcard in slot A\n");
-				break;
-			case NATIVESAVEDEVICE_CARDB:
-				strcat(RomInfo,"\nFound & loaded save from memcard in slot B\n");
 				break;
 			}
 			autoSaveLoaded = NATIVESAVEDEVICE_NONE;

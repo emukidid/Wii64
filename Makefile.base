@@ -17,7 +17,7 @@ LIBPATHS	+= -L$(DEVKITPRO)/portlibs/ppc/lib
 
 CXXFLAGS		+= \
 		-g -O3 $(LTO) -Wall -Wno-parentheses -Wno-unused-parameter -pipe $(MACHDEP) $(INCLUDE) \
-		-DGEKKO -D__GX__ -DUSE_GUI -DRELEASE -DMENU_V2 \
+		-DGEKKO -D__GX__ -DUSE_GUI -DRELEASE \
 		-DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DNO_ASM \
 		-Wstrict-aliasing=3 -Wcast-align -Wlto-type-mismatch -Wodr \
 		-Wclobbered -Wvolatile-register-var -Winline -fno-toplevel-reorder -fno-strict-aliasing \
@@ -30,7 +30,6 @@ OBJ		+= \
 		main/rom_gc.o \
 		main/ROM-Cache.o \
 		main/main_gc-menu2.o \
-		main/gczip.o \
 		main/timers.o \
 		main/boxart.o \
 		main/boxart_resource.o \
@@ -71,12 +70,9 @@ OBJ		+= \
 		libgui/TextBox.o \
 		fileBrowser/gc_dvd.o \
 		fileBrowser/fileBrowser-DVD.o \
-		fileBrowser/fileBrowser-CARD.o \
 		fileBrowser/fileBrowser-libfat.o \
 		fileBrowser/fileBrowser.o \
-		gui/GUI.o \
 		gui/DEBUG.o \
-		gui/TEXT.o \
 		r4300/r4300.o \
 		r4300/exception.o \
 		r4300/Invalid_Code.o \

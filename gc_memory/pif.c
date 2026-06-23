@@ -37,12 +37,6 @@
 #endif
 #include <time.h>
 
-#ifdef USE_GUI
-#include "../gui/GUI.h"
-//#define PRINT GUI_print
-#else
-//#define PRINT printf
-#endif
 
 #include "memory.h"
 #include "pif.h"
@@ -65,8 +59,8 @@ static unsigned char (*const mempack)[0x8000] = (unsigned char(*)[])(MEMPACK_LO)
 
 static unsigned long cic_challenge;
 
-BOOL eepromWritten = FALSE;
-BOOL mempakWritten = FALSE;
+bool eepromWritten = false;
+bool mempakWritten = false;
 
 static unsigned char mempak_init[] = {
 	0x81,0x01,0x02,0x03, 0x04,0x05,0x06,0x07, 0x08,0x09,0x0a,0x0b, 0x0c,0x0d,0x0e,0x0f,
@@ -105,7 +99,7 @@ int loadEeprom(fileBrowser_file* savepath){
 		saveFile.offset = 0;
 		if(saveFile_readFile(&saveFile, eeprom, 0x800)!=0x800) { //error reading file
 			init_eeprom();
-			eepromWritten = FALSE;
+			eepromWritten = false;
 			return -1;
 		}
 		result = 1;
@@ -113,7 +107,7 @@ int loadEeprom(fileBrowser_file* savepath){
 		return result;  //file read ok
 	} else init_eeprom(); //file doesn't exist
 
-	eepromWritten = FALSE;
+	eepromWritten = false;
 
 	return result;  //no file
 }
@@ -182,7 +176,7 @@ void EepromCommand(BYTE *Command)
 			memcpy(&Command[4], eeprom + Command[3]*8, 8);
 		break;
 		case 5: // write
-			eepromWritten = TRUE;
+			eepromWritten = true;
 			memcpy(eeprom + Command[3]*8, &Command[4], 8);
 		break;
 		case 6:
@@ -275,7 +269,7 @@ int loadMempak(fileBrowser_file* savepath){
 		saveFile.offset = 0;
 		if(saveFile_readFile(&saveFile, mempack, 0x8000 * 4)!=(0x8000*4)) { //error reading file
 			format_mempacks();
-			mempakWritten = FALSE;
+			mempakWritten = false;
 			return -1;
 		}
 		result = 1;
@@ -283,7 +277,7 @@ int loadMempak(fileBrowser_file* savepath){
 		return result;  //file read ok
 	} else format_mempacks(); //file doesn't exist
 
-	mempakWritten = FALSE;
+	mempakWritten = false;
 
 	return result;    //no file
 }
@@ -421,7 +415,7 @@ void internal_ControllerCommand(int Control, BYTE *Command)
 							address &= 0xFFE0;
 							if (address <= 0x7FE0)
 							{
-								mempakWritten = TRUE;
+								mempakWritten = true;
 								memcpy(&mempack[Control][address], &Command[5], 0x20);
 								Command[0x25] = mempack_crc(&Command[5]);
 							}

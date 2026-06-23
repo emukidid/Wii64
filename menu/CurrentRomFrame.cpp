@@ -37,7 +37,6 @@ extern "C" {
 #include "../main/savestates.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
-#include "../fileBrowser/fileBrowser-CARD.h"
 }
 
 void Func_ShowRomInfo();
@@ -190,10 +189,10 @@ void Func_ResetROM()
 	}
 }
 
-extern BOOL sramWritten;
-extern BOOL eepromWritten;
-extern BOOL mempakWritten;
-extern BOOL flashramWritten;
+extern bool sramWritten;
+extern bool eepromWritten;
+extern bool mempakWritten;
+extern bool flashramWritten;
 
 void Func_LoadSave()
 {
@@ -213,15 +212,6 @@ void Func_LoadSave()
   		saveFile_writeFile = fileBrowser_libfat_writeFile;
   		saveFile_init      = fileBrowser_libfat_init;
   		saveFile_deinit    = fileBrowser_libfat_deinit;
-  		break;
-  	case NATIVESAVEDEVICE_CARDA:
-  	case NATIVESAVEDEVICE_CARDB:
-  		// Adjust saveFile pointers
-  		saveFile_dir       = (nativeSaveDevice==NATIVESAVEDEVICE_CARDA) ? &saveDir_CARD_SlotA:&saveDir_CARD_SlotB;
-  		saveFile_readFile  = fileBrowser_CARD_readFile;
-  		saveFile_writeFile = fileBrowser_CARD_writeFile;
-  		saveFile_init      = fileBrowser_CARD_init;
-  		saveFile_deinit    = fileBrowser_CARD_deinit;
   		break;
   }
 
@@ -244,14 +234,6 @@ void Func_LoadSave()
 			if (result) menu::MessageBox::getInstance().setMessage("Loaded save from USB device");
 			else		menu::MessageBox::getInstance().setMessage("No saves found on USB device");
 			break;
-		case NATIVESAVEDEVICE_CARDA:
-			if (result) menu::MessageBox::getInstance().setMessage("Loaded save from memcard in slot A");
-			else		menu::MessageBox::getInstance().setMessage("No saves found on memcard A");
-			break;
-		case NATIVESAVEDEVICE_CARDB:
-			if (result) menu::MessageBox::getInstance().setMessage("Loaded save from memcard in slot A");
-			else		menu::MessageBox::getInstance().setMessage("No saves found on memcard B");
-			break;
 	}
 	sramWritten = eepromWritten = mempakWritten = flashramWritten = false;
 }
@@ -272,15 +254,6 @@ void Func_SaveGame()
   		saveFile_writeFile = fileBrowser_libfat_writeFile;
   		saveFile_init      = fileBrowser_libfat_init;
   		saveFile_deinit    = fileBrowser_libfat_deinit;
-  		break;
-  	case NATIVESAVEDEVICE_CARDA:
-  	case NATIVESAVEDEVICE_CARDB:
-  		// Adjust saveFile pointers
-  		saveFile_dir       = (nativeSaveDevice==NATIVESAVEDEVICE_CARDA) ? &saveDir_CARD_SlotA:&saveDir_CARD_SlotB;
-  		saveFile_readFile  = fileBrowser_CARD_readFile;
-  		saveFile_writeFile = fileBrowser_CARD_writeFile;
-  		saveFile_init      = fileBrowser_CARD_init;
-  		saveFile_deinit    = fileBrowser_CARD_deinit;
   		break;
   }
 
@@ -303,12 +276,6 @@ void Func_SaveGame()
 			case NATIVESAVEDEVICE_USB:
 				menu::MessageBox::getInstance().setMessage("Saved game to USB device");
 				break;
-			case NATIVESAVEDEVICE_CARDA:
-				menu::MessageBox::getInstance().setMessage("Saved game to memcard in Slot A");
-				break;
-			case NATIVESAVEDEVICE_CARDB:
-				menu::MessageBox::getInstance().setMessage("Saved game to memcard in Slot B");
-				break;
 		}
 		sramWritten = eepromWritten = mempakWritten = flashramWritten = false;
 	}
@@ -330,16 +297,6 @@ void Func_DeleteSave()
 			saveFile_init      = fileBrowser_libfat_init;
 			saveFile_deinit    = fileBrowser_libfat_deinit;
 			saveFile_deleteFile= fileBrowser_libfat_deleteFile;
-		break;
-		case NATIVESAVEDEVICE_CARDA:
-		case NATIVESAVEDEVICE_CARDB:
-			// Adjust saveFile pointers
-			saveFile_dir       = (nativeSaveDevice==NATIVESAVEDEVICE_CARDA) ? &saveDir_CARD_SlotA:&saveDir_CARD_SlotB;
-			saveFile_readFile  = fileBrowser_CARD_readFile;
-			saveFile_writeFile = fileBrowser_CARD_writeFile;
-			saveFile_init      = fileBrowser_CARD_init;
-			saveFile_deinit    = fileBrowser_CARD_deinit;
-			saveFile_deleteFile= fileBrowser_CARD_deleteFile;
 		break;
 	}
 

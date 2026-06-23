@@ -30,10 +30,6 @@ extern "C" {
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-DVD.h"
-#include "../fileBrowser/fileBrowser-CARD.h"
-#ifdef WII
-#include "../fileBrowser/fileBrowser-WiiFS.h"
-#endif
 }
 
 void Func_LoadFromSD();
@@ -41,7 +37,11 @@ void Func_LoadFromDVD();
 void Func_LoadFromUSB();
 void Func_ReturnFromLoadRomFrame();
 
+#ifdef HW_RVL
 #define NUM_FRAME_BUTTONS 3
+#else
+#define NUM_FRAME_BUTTONS 2
+#endif
 #define FRAME_BUTTONS loadRomFrameButtons
 #define FRAME_STRINGS loadRomFrameStrings
 
@@ -67,9 +67,11 @@ struct ButtonInfo
 	ButtonFunc		returnFunc;
 } FRAME_BUTTONS[NUM_FRAME_BUTTONS] =
 { //	button	buttonStyle	buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc			returnFunc
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	100.0,	340.0,	56.0,	 2,	 1,	-1,	-1,	Func_LoadFromSD,	Func_ReturnFromLoadRomFrame }, // Load From SD
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	200.0,	340.0,	56.0,	 0,	 2,	-1,	-1,	Func_LoadFromDVD,	Func_ReturnFromLoadRomFrame }, // Load From DVD
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	100.0,	340.0,	56.0,	 NUM_FRAME_BUTTONS-1,	 1,	-1,	-1,	Func_LoadFromSD,	Func_ReturnFromLoadRomFrame }, // Load From SD
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	200.0,	340.0,	56.0,	 0,	 NUM_FRAME_BUTTONS == 2 ? 0 : 2,	-1,	-1,	Func_LoadFromDVD,	Func_ReturnFromLoadRomFrame }, // Load From DVD
+#ifdef HW_RVL
 	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	150.0,	300.0,	340.0,	56.0,	 1,	 0,	-1,	-1,	Func_LoadFromUSB,	Func_ReturnFromLoadRomFrame }, // Load From USB
+#endif
 };
 
 LoadRomFrame::LoadRomFrame()

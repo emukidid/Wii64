@@ -32,13 +32,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef USE_GUI
-#include "../gui/GUI.h"
-#define PRINT GUI_print
-#else
-#define PRINT printf
-#endif
-
 #include "memory.h"
 #include "../r4300/r4300.h"
 #include "../main/guifuncs.h"
@@ -53,7 +46,7 @@
 #endif
 static unsigned char *const flashram = (unsigned char*)(FLASHRAM_LO);
 
-BOOL flashramWritten = FALSE;
+bool flashramWritten = false;
 _FlashRAMInfo flashRAMInfo;
 
 int loadFlashram(fileBrowser_file* savepath){
@@ -67,7 +60,7 @@ int loadFlashram(fileBrowser_file* savepath){
 		saveFile.offset = 0;
 		if(saveFile_readFile(&saveFile, flashram, 0x20000)!=0x20000) {  //error reading file
   		for (i=0; i<0x20000; i++) flashram[i] = 0xff;
-  		flashramWritten = FALSE;
+  		flashramWritten = false;
   		return -1;
 		}
 		result = 1;
@@ -75,7 +68,7 @@ int loadFlashram(fileBrowser_file* savepath){
 		return result;  //file read ok
 	} else for (i=0; i<0x20000; i++) flashram[i] = 0xff;  //file doesn't exist
 
-	flashramWritten = FALSE;
+	flashramWritten = false;
 
 	return result;    //no file
 }
@@ -143,7 +136,7 @@ void flashram_command(unsigned long command)
 				case ERASE_MODE:	// Erase a 128 byte page with 0xFF
 				{
 					int i;
-					flashramWritten = TRUE;
+					flashramWritten = true;
 					for (i=flashRAMInfo.erase_offset; i<(flashRAMInfo.erase_offset+128); i++)
 						flashram[i^S8] = 0xff;
 				}
@@ -151,7 +144,7 @@ void flashram_command(unsigned long command)
 				case WRITE_MODE:	// Write 128 byte page from RDRAM to the freshly erased page
 				{
 					int i;
-					flashramWritten = TRUE;
+					flashramWritten = true;
 					for (i=0; i<128; i++)
 						flashram[(flashRAMInfo.erase_offset+i)^S8] = ((unsigned char*)rdram)[(flashRAMInfo.write_pointer+i)^S8];
 				}

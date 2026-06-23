@@ -62,7 +62,6 @@ extern "C" {
 #include "ROM-Cache.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
-#include "../fileBrowser/fileBrowser-CARD.h"
 #include "wii64config.h"
 #ifndef HW_RVL
 #include "../vm/vm.h"
@@ -148,7 +147,7 @@ static struct {
   { "VideoMode", &videoMode, VIDEOMODE_AUTO, VIDEOMODE_576P },
   { "Core", ((char*)&dynacore)+3, DYNACORE_INTERPRETER, DYNACORE_PURE_INTERP },
   { "CountPerOp", ((char*)&count_per_op)+3, COUNT_PER_OP_1, COUNT_PER_OP_3 },
-  { "NativeDevice", &nativeSaveDevice, NATIVESAVEDEVICE_SD, NATIVESAVEDEVICE_CARDB },
+  { "NativeDevice", &nativeSaveDevice, NATIVESAVEDEVICE_SD, NATIVESAVEDEVICE_USB },
   { "StatesDevice", &saveStateDevice, SAVESTATEDEVICE_SD, SAVESTATEDEVICE_USB },
   { "AutoSave", &autoSave, AUTOSAVE_DISABLE, AUTOSAVE_ENABLE },
   { "LimitVIs", &Timers.limitVIs, LIMITVIS_NONE, LIMITVIS_WAIT_FOR_FRAME },
@@ -399,10 +398,10 @@ u16 readWPAD(void){
 u16 readWPAD(void){ return 0; }
 #endif
 
-extern BOOL eepromWritten;
-extern BOOL mempakWritten;
-extern BOOL sramWritten;
-extern BOOL flashramWritten;
+extern bool eepromWritten;
+extern bool mempakWritten;
+extern bool sramWritten;
+extern bool flashramWritten;
 BOOL hasLoadedROM = FALSE;
 int autoSaveLoaded = NATIVESAVEDEVICE_NONE;
 
@@ -475,15 +474,6 @@ int loadROM(fileBrowser_file* rom){
     		saveFile_init      = fileBrowser_libfat_init;
     		saveFile_deinit    = fileBrowser_libfat_deinit;
     		break;
-    	case NATIVESAVEDEVICE_CARDA:
-    	case NATIVESAVEDEVICE_CARDB:
-    		// Adjust saveFile pointers
-    		saveFile_dir       = (nativeSaveDevice==NATIVESAVEDEVICE_CARDA) ? &saveDir_CARD_SlotA:&saveDir_CARD_SlotB;
-    		saveFile_readFile  = fileBrowser_CARD_readFile;
-    		saveFile_writeFile = fileBrowser_CARD_writeFile;
-    		saveFile_init      = fileBrowser_CARD_init;
-    		saveFile_deinit    = fileBrowser_CARD_deinit;
-    		break;
     }
     // Try loading everything
   	int result = 0;
@@ -500,12 +490,6 @@ int loadROM(fileBrowser_file* rom){
   			break;
   		case NATIVESAVEDEVICE_USB:
   			if (result) autoSaveLoaded = NATIVESAVEDEVICE_USB;
-  			break;
-  		case NATIVESAVEDEVICE_CARDA:
-  			if (result) autoSaveLoaded = NATIVESAVEDEVICE_CARDA;
-  			break;
-  		case NATIVESAVEDEVICE_CARDB:
-   			if (result) autoSaveLoaded = NATIVESAVEDEVICE_CARDB;
   			break;
   	}
   }

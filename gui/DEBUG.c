@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include <sys/dir.h>
 #include "DEBUG.h"
-#include "TEXT.h"
 #include "../gc_memory/TLB-Cache.h"
 
 char printToSD;

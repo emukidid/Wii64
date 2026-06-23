@@ -43,7 +43,6 @@ extern "C" {
 #include "../main/savestates.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
-#include "../fileBrowser/fileBrowser-CARD.h"
 #include "../r4300/Recomp-Cache.h"
 }
 
@@ -463,10 +462,10 @@ void go(void);
 
 extern char menuActive;
 extern char autoSave;
-extern BOOL sramWritten;
-extern BOOL eepromWritten;
-extern BOOL mempakWritten;
-extern BOOL flashramWritten;
+extern bool sramWritten;
+extern bool eepromWritten;
+extern bool mempakWritten;
+extern bool flashramWritten;
 extern "C" unsigned int usleep(unsigned int us);
 
 void Func_MMPlayGame()
@@ -538,15 +537,6 @@ void Func_MMPlayGame()
     			saveFile_init      = fileBrowser_libfat_init;
     			saveFile_deinit    = fileBrowser_libfat_deinit;
     			break;
-    		case NATIVESAVEDEVICE_CARDA:
-    		case NATIVESAVEDEVICE_CARDB:
-    			// Adjust saveFile pointers
-    			saveFile_dir       = (nativeSaveDevice==NATIVESAVEDEVICE_CARDA) ? &saveDir_CARD_SlotA:&saveDir_CARD_SlotB;
-    			saveFile_readFile  = fileBrowser_CARD_readFile;
-    			saveFile_writeFile = fileBrowser_CARD_writeFile;
-    			saveFile_init      = fileBrowser_CARD_init;
-    			saveFile_deinit    = fileBrowser_CARD_deinit;
-    			break;
     	}
     	// Try saving everything
     	int amountSaves = flashramWritten + sramWritten + eepromWritten + mempakWritten;
@@ -565,12 +555,6 @@ void Func_MMPlayGame()
     				break;
     			case NATIVESAVEDEVICE_USB:
     				menu::MessageBox::getInstance().fadeMessage("Automatically saved to USB device");
-    				break;
-    			case NATIVESAVEDEVICE_CARDA:
-    				menu::MessageBox::getInstance().fadeMessage("Automatically saved to memcard in Slot A");
-    				break;
-    			case NATIVESAVEDEVICE_CARDB:
-    				menu::MessageBox::getInstance().fadeMessage("Automatically saved to memcard in Slot B");
     				break;
     		}
     		flashramWritten = sramWritten = eepromWritten = mempakWritten = 0;  //nothing new written since save

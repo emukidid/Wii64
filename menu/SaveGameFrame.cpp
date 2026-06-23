@@ -31,31 +31,23 @@ extern "C" {
 #include "../gc_memory/Saves.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
-#include "../fileBrowser/fileBrowser-CARD.h"
-#ifdef WII
-#include "../fileBrowser/fileBrowser-WiiFS.h"
-#endif
 }
 
-void Func_SaveGameCardA();
-void Func_SaveGameCardB();
 void Func_SaveGameSD();
-void Func_SaveGameWiiFS();
+void Func_SaveGameUSB();
 void Func_ReturnFromSaveGameFrame();
 
 #ifdef HW_RVL
-#define NUM_FRAME_BUTTONS 4
+#define NUM_FRAME_BUTTONS 2
 #else
-#define NUM_FRAME_BUTTONS 3
+#define NUM_FRAME_BUTTONS 1
 #endif
 #define FRAME_BUTTONS saveGameFrameButtons
 #define FRAME_STRINGS saveGameFrameStrings
 
-static char FRAME_STRINGS[4][22] =
-	{ "Memory Card in Slot A",
-	  "Memory Card in Slot B",
-	  "SD Card",
-	  "Wii Filesystem"};
+static char FRAME_STRINGS[2][22] =
+	{ "SD Card",
+	  "USB"};
 
 struct ButtonInfo
 {
@@ -74,11 +66,9 @@ struct ButtonInfo
 	ButtonFunc		returnFunc;
 } FRAME_BUTTONS[NUM_FRAME_BUTTONS] =
 { //	button	buttonStyle buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc			returnFunc
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	 50.0,	340.0,	56.0,	 3,	 1,	-1,	-1,	Func_SaveGameCardA,	Func_ReturnFromSaveGameFrame }, // Save To Card A
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	150.0,	340.0,	56.0,	 0,	 2,	-1,	-1,	Func_SaveGameCardB,	Func_ReturnFromSaveGameFrame }, // Save To Card B
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	150.0,	250.0,	340.0,	56.0,	 1,	 3,	-1,	-1,	Func_SaveGameSD,	Func_ReturnFromSaveGameFrame }, // Save To SD
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	 50.0,	340.0,	56.0,	 NUM_FRAME_BUTTONS == 1 ? -1 : 1,	 NUM_FRAME_BUTTONS == 1 ? -1 : 1,	-1,	-1,	Func_SaveGameSD,	Func_ReturnFromSaveGameFrame }, // Save To SD
 #ifdef HW_RVL
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	150.0,	350.0,	340.0,	56.0,	 2,	 0,	-1,	-1,	Func_SaveGameWiiFS,	Func_ReturnFromSaveGameFrame }, // Save To Wii FS
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	150.0,	340.0,	56.0,	 0,	 0,	-1,	-1,	Func_SaveGameUSB,	Func_ReturnFromSaveGameFrame }, // Save To USB
 #endif
 };
 
@@ -119,52 +109,6 @@ SaveGameFrame::~SaveGameFrame()
 
 }
 
-void Func_SaveGameCardA()
-{
-	// Adjust saveFile pointers
-//	saveFile_dir = (item_num%2) ? &saveDir_CARD_SlotB : &saveDir_CARD_SlotA;
-	saveFile_dir       = &saveDir_CARD_SlotA;
-	saveFile_readFile  = fileBrowser_CARD_readFile;
-	saveFile_writeFile = fileBrowser_CARD_writeFile;
-	saveFile_init      = fileBrowser_CARD_init;
-	saveFile_deinit    = fileBrowser_CARD_deinit;
-		
-	// Try loading everything
-	int result = 0;
-	saveFile_init(saveFile_dir);
-	result += saveEeprom(saveFile_dir);
-	result += saveSram(saveFile_dir);
-	result += saveMempak(saveFile_dir);
-	result += saveFlashram(saveFile_dir);
-	saveFile_deinit(saveFile_dir);
-		
-	if (result)	menu::MessageBox::getInstance().setMessage("Saved game to memcard in Slot A");
-	else		menu::MessageBox::getInstance().setMessage("Nothing to save");
-}
-
-void Func_SaveGameCardB()
-{
-	// Adjust saveFile pointers
-//	saveFile_dir = (item_num%2) ? &saveDir_CARD_SlotB : &saveDir_CARD_SlotA;
-	saveFile_dir       = &saveDir_CARD_SlotB;
-	saveFile_readFile  = fileBrowser_CARD_readFile;
-	saveFile_writeFile = fileBrowser_CARD_writeFile;
-	saveFile_init      = fileBrowser_CARD_init;
-	saveFile_deinit    = fileBrowser_CARD_deinit;
-		
-	// Try loading everything
-	int result = 0;
-	saveFile_init(saveFile_dir);
-	result += saveEeprom(saveFile_dir);
-	result += saveSram(saveFile_dir);
-	result += saveMempak(saveFile_dir);
-	result += saveFlashram(saveFile_dir);
-	saveFile_deinit(saveFile_dir);
-		
-	if (result)	menu::MessageBox::getInstance().setMessage("Saved game to memcard in Slot B");
-	else		menu::MessageBox::getInstance().setMessage("Nothing to save");
-}
-
 void Func_SaveGameSD()
 {
 	// Adjust saveFile pointers
@@ -186,15 +130,14 @@ void Func_SaveGameSD()
 	else		menu::MessageBox::getInstance().setMessage("Nothing to save");
 }
 
-void Func_SaveGameWiiFS()
+void Func_SaveGameUSB()
 {
-#if 0 //def HW_RVL
 	// Adjust saveFile pointers
-	saveFile_dir       = &saveDir_WiiFS;
-	saveFile_readFile  = fileBrowser_WiiFS_readFile;
-	saveFile_writeFile = fileBrowser_WiiFS_writeFile;
-	saveFile_init      = fileBrowser_WiiFS_init;
-	saveFile_deinit    = fileBrowser_WiiFS_deinit;
+	saveFile_dir = &saveDir_libfat_USB;
+	saveFile_readFile  = fileBrowser_libfat_readFile;
+	saveFile_writeFile = fileBrowser_libfat_writeFile;
+	saveFile_init      = fileBrowser_libfat_init;
+	saveFile_deinit    = fileBrowser_libfat_deinit;
 		
 	// Try loading everything
 	int result = 0;
@@ -203,11 +146,9 @@ void Func_SaveGameWiiFS()
 	result += saveSram(saveFile_dir);
 	result += saveMempak(saveFile_dir);
 	result += saveFlashram(saveFile_dir);
-	saveFile_deinit(saveFile_dir);
 		
-	if (result)	menu::MessageBox::getInstance().setMessage("Saved game to Wii filesystem");
+	if (result)	menu::MessageBox::getInstance().setMessage("Saved game to SD card");
 	else		menu::MessageBox::getInstance().setMessage("Nothing to save");
-#endif
 }
 
 extern MenuContext *pMenuContext;

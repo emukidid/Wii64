@@ -19,12 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __GX__
 #include <SDL_opengl.h>
 #else //!__GX__
-# ifdef MENU_V2
 #include "../libgui/IPLFont.h"
 #include "../menu/MenuResources.h"
-# else // MENU_V2
-#include "../gui/font.h"
-# endif //!MENU_V2
 #include "../gui/DEBUG.h"
 #include "../main/timers.h"
 #endif // __GX__
@@ -360,15 +356,9 @@ void VI_GX_showFPS(){
 	sprintf(caption, "%.1f VI/s, %.1f FPS",Timers.vis,Timers.fps);
 	
 	GXColor fontColor = {150,255,150,255};
-#ifndef MENU_V2
-	write_font_init_GX(fontColor);
-	if(showFPSonScreen)
-		write_font(10,35,caption, 1.0);
-#else
 	menu::IplFont::getInstance().drawInit(fontColor);
 	if(showFPSonScreen)
 		menu::IplFont::getInstance().drawString(20,40,caption, 1.0, false);
-#endif
 
 	//reset swap table from GUI/DEBUG
 //	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
@@ -473,18 +463,11 @@ void VI_GX_showDEBUG()
 	GXColor fontColor = {150, 255, 150, 255};
 #ifdef SHOW_DEBUG
 	DEBUG_update();
-#ifndef MENU_V2
-	write_font_init_GX(fontColor);
-	if(printToScreen)
-		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
-			write_font(10,(10*i+60),text[i], 0.5); 
-#else
 	menu::IplFont::getInstance().drawInit(fontColor);
 	if(printToScreen)
 		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
 //			menu::IplFont::getInstance().drawString(10,(15*i+0),text[i], 0.8, false); 
 			menu::IplFont::getInstance().drawString(20,(10*i+65),text[i], 0.5, false); 
-#endif
 #endif //SHOW_DEBUG
 
 	//Reset any stats in DEBUG_stats
@@ -499,17 +482,10 @@ void VI_GX_showDEBUG()
 		int i = 0;
 		GXColor fontColor = {150, 255, 150, 255};
 		DEBUG_update();
-#ifndef MENU_V2
-		write_font_init_GX(fontColor);
-		if(printToScreen)
-			for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
-				write_font(10,(10*i+60),text[i], 0.5); 
-#else
 		menu::IplFont::getInstance().drawInit(fontColor);
 		if(printToScreen)
 			for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
 				menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
-#endif
 		
 	   //reset swap table from GUI/DEBUG
 		GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);

@@ -31,27 +31,22 @@ extern "C" {
 #include "../gc_memory/Saves.h"
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
-#include "../fileBrowser/fileBrowser-CARD.h"
-#ifdef WII
-#include "../fileBrowser/fileBrowser-WiiFS.h"
-#endif
 }
 
-void Func_LoadSaveCardA();
-void Func_LoadSaveCardB();
 void Func_LoadSaveSD();
-void Func_LoadSaveWiiFS();
+void Func_LoadSaveUSB();
 void Func_ReturnFromLoadSaveFrame();
 
-#define NUM_FRAME_BUTTONS 4
+#ifdef HW_RVL
+#define NUM_FRAME_BUTTONS 2
+#else
+#define NUM_FRAME_BUTTONS 1
+#endif
 #define FRAME_BUTTONS loadSaveFrameButtons
 #define FRAME_STRINGS loadSaveFrameStrings
 
-static char FRAME_STRINGS[4][22] =
-	{ "Memory Card in Slot A",
-	  "Memory Card in Slot B",
-	  "SD Card",
-	  "Wii Filesystem"};
+static char FRAME_STRINGS[2][22] =
+	{ "SD Card", "USB"};
 
 struct ButtonInfo
 {
@@ -70,10 +65,10 @@ struct ButtonInfo
 	ButtonFunc		returnFunc;
 } FRAME_BUTTONS[NUM_FRAME_BUTTONS] =
 { //	button	buttonStyle	buttonString		x		y		width	height	Up	Dwn	Lft	Rt	clickFunc			returnFunc
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	 50.0,	340.0,	56.0,	 3,	 1,	-1,	-1,	Func_LoadSaveCardA,	Func_ReturnFromLoadSaveFrame }, // Load From Card A
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	150.0,	340.0,	56.0,	 0,	 2,	-1,	-1,	Func_LoadSaveCardB,	Func_ReturnFromLoadSaveFrame }, // Load From Card B
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[2],	150.0,	250.0,	340.0,	56.0,	 1,	 3,	-1,	-1,	Func_LoadSaveSD,	Func_ReturnFromLoadSaveFrame }, // Load From SD
-	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[3],	150.0,	350.0,	340.0,	56.0,	 2,	 0,	-1,	-1,	Func_LoadSaveWiiFS,	Func_ReturnFromLoadSaveFrame }, // Load From Wii FS
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[0],	150.0,	 50.0,	340.0,	56.0,	 NUM_FRAME_BUTTONS == 1 ? -1 : 1,	 NUM_FRAME_BUTTONS == 1 ? -1 : 1,	-1,	-1,	Func_LoadSaveSD,	Func_ReturnFromLoadSaveFrame }, // Load From SD
+#ifdef HW_RVL
+	{	NULL,	BTN_A_NRM,	FRAME_STRINGS[1],	150.0,	150.0,	340.0,	56.0,	 0,	 0,	-1,	-1,	Func_LoadSaveUSB,	Func_ReturnFromLoadSaveFrame }, // Load From USB
+#endif
 };
 
 LoadSaveFrame::LoadSaveFrame()
@@ -115,62 +110,6 @@ LoadSaveFrame::~LoadSaveFrame()
 
 extern BOOL hasLoadedROM;
 
-void Func_LoadSaveCardA()
-{
-	if(!hasLoadedROM)
-	{
-		menu::MessageBox::getInstance().setMessage("Please load a ROM first");
-		return;
-	}
-	// Adjust saveFile pointers
-//	saveFile_dir = (item_num%2) ? &saveDir_CARD_SlotB : &saveDir_CARD_SlotA;
-	saveFile_dir	   = &saveDir_CARD_SlotA;
-	saveFile_readFile  = fileBrowser_CARD_readFile;
-	saveFile_writeFile = fileBrowser_CARD_writeFile;
-	saveFile_init      = fileBrowser_CARD_init;
-	saveFile_deinit    = fileBrowser_CARD_deinit;
-		
-	// Try loading everything
-	int result = 0;
-	saveFile_init(saveFile_dir);
-	result += loadEeprom(saveFile_dir);
-	result += loadSram(saveFile_dir);
-	result += loadMempak(saveFile_dir);
-	result += loadFlashram(saveFile_dir);
-	saveFile_deinit(saveFile_dir);
-	
-	if (result)	menu::MessageBox::getInstance().setMessage("Loaded save from memcard in slot A");
-	else		menu::MessageBox::getInstance().setMessage("No saves found on memcard");
-}
-
-void Func_LoadSaveCardB()
-{
-	if(!hasLoadedROM)
-	{
-		menu::MessageBox::getInstance().setMessage("Please load a ROM first");
-		return;
-	}
-	// Adjust saveFile pointers
-//	saveFile_dir = (item_num%2) ? &saveDir_CARD_SlotB : &saveDir_CARD_SlotA;
-	saveFile_dir	   = &saveDir_CARD_SlotB;
-	saveFile_readFile  = fileBrowser_CARD_readFile;
-	saveFile_writeFile = fileBrowser_CARD_writeFile;
-	saveFile_init      = fileBrowser_CARD_init;
-	saveFile_deinit    = fileBrowser_CARD_deinit;
-		
-	// Try loading everything
-	int result = 0;
-	saveFile_init(saveFile_dir);
-	result += loadEeprom(saveFile_dir);
-	result += loadSram(saveFile_dir);
-	result += loadMempak(saveFile_dir);
-	result += loadFlashram(saveFile_dir);
-	saveFile_deinit(saveFile_dir);
-	
-	if (result)	menu::MessageBox::getInstance().setMessage("Loaded save from memcard in slot B");
-	else		menu::MessageBox::getInstance().setMessage("No saves found on memcard");
-}
-
 void Func_LoadSaveSD()
 {
 	if(!hasLoadedROM)
@@ -179,8 +118,6 @@ void Func_LoadSaveSD()
 		return;
 	}
 	// Adjust saveFile pointers
-	//TODO: based on default save location preference (SD vs USB)
-	//      change saveFile_dir here.
 	saveFile_dir = &saveDir_libfat_Default;
 	saveFile_readFile  = fileBrowser_libfat_readFile;
 	saveFile_writeFile = fileBrowser_libfat_writeFile;
@@ -200,33 +137,31 @@ void Func_LoadSaveSD()
 	else		menu::MessageBox::getInstance().setMessage("No saves found on SD card");
 }
 
-void Func_LoadSaveWiiFS()
+void Func_LoadSaveUSB()
 {
-#ifdef WII
-	if(!hasLoadedROM) return;
+	if(!hasLoadedROM)
 	{
 		menu::MessageBox::getInstance().setMessage("Please load a ROM first");
 		return;
 	}
 	// Adjust saveFile pointers
-	saveFile_dir       = &saveDir_WiiFS;
-	saveFile_readFile  = fileBrowser_WiiFS_readFile;
-	saveFile_writeFile = fileBrowser_WiiFS_writeFile;
-	saveFile_init      = fileBrowser_WiiFS_init;
-	saveFile_deinit    = fileBrowser_WiiFS_deinit;
+	saveFile_dir = &saveDir_libfat_USB;
+	saveFile_readFile  = fileBrowser_libfat_readFile;
+	saveFile_writeFile = fileBrowser_libfat_writeFile;
+	saveFile_init      = fileBrowser_libfat_init;
+	saveFile_deinit    = fileBrowser_libfat_deinit;
 		
 	// Try loading everything
 	int result = 0;
+	saveFile_deinit(saveFile_dir);
 	saveFile_init(saveFile_dir);
 	result += loadEeprom(saveFile_dir);
 	result += loadSram(saveFile_dir);
 	result += loadMempak(saveFile_dir);
 	result += loadFlashram(saveFile_dir);
-	saveFile_deinit(saveFile_dir);
 		
-	if (result)	menu::MessageBox::getInstance().setMessage("Loaded save from Wii filesystem");
-	else		menu::MessageBox::getInstance().setMessage("No saves found on Wii filesystem");
-#endif
+	if (result)	menu::MessageBox::getInstance().setMessage("Loaded save from SD card");
+	else		menu::MessageBox::getInstance().setMessage("No saves found on SD card");
 }
 
 extern MenuContext *pMenuContext;

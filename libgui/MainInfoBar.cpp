@@ -48,10 +48,10 @@ MainInfoBar::~MainInfoBar()
 
 extern "C" BOOL hasLoadedROM;
 extern "C" char autoSave;
-extern "C" BOOL sramWritten;
-extern "C" BOOL eepromWritten;
-extern "C" BOOL mempakWritten;
-extern "C" BOOL flashramWritten;
+extern "C" bool sramWritten;
+extern "C" bool eepromWritten;
+extern "C" bool mempakWritten;
+extern "C" bool flashramWritten;
 
 void MainInfoBar::drawComponent(Graphics& gfx)
 {

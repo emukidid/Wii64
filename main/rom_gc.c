@@ -33,7 +33,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <ogc/machine/processor.h>
-#include "../gui/GUI.h"
 #include "rom.h"
 #include "ROM-Cache.h"
 #include "wii64config.h"

@@ -29,13 +29,6 @@
  *
 **/
 
-#ifdef USE_GUI
-#include "../gui/GUI.h"
-//#define PRINT GUI_print
-#else
-//#define PRINT printf
-#endif
-
 #include <stdio.h>
 #include <malloc.h>
 #include "dma.h"
@@ -68,7 +61,7 @@
 #endif
 static unsigned char *const sram = (unsigned char*)(SRAM_LO);
 
-BOOL sramWritten = FALSE;
+bool sramWritten = false;
 
 int loadSram(fileBrowser_file* savepath)
 {
@@ -82,7 +75,7 @@ int loadSram(fileBrowser_file* savepath)
 		saveFile.offset = 0;
 		if(saveFile_readFile(&saveFile, sram, 0x8000)!=0x8000) {  //error reading file
 			for (i=0; i<0x8000; i++) sram[i] = 0;
-			sramWritten = FALSE;
+			sramWritten = false;
 			return -1;
 		}
 		result = 1;
@@ -90,7 +83,7 @@ int loadSram(fileBrowser_file* savepath)
 		return result;  //file read ok
 	} else for (i=0; i<0x8000; i++) sram[i] = 0;  //file doesn't exist
 
-	sramWritten = FALSE;
+	sramWritten = false;
 	return result;    //no file
 }
 
@@ -127,7 +120,7 @@ void dma_pi_read()
 		{
 			if (flashRAMInfo.use_flashram != 1)
 			{
-				sramWritten = TRUE;
+				sramWritten = true;
 				memcpy(	&sram[((pi_register.pi_cart_addr_reg-0x08000000)&0xFFFE)^S8],
 						&rdramb[(pi_register.pi_dram_addr_reg)^S8],
 						(pi_register.pi_rd_len_reg & 0xFFFFFE)+2);
