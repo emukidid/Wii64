@@ -53,7 +53,7 @@ int no_compiled_jump = 0;
 unsigned long count_per_op = 2;
 unsigned long dyna_interp = 0;
 
-precomp_instr *PC = NULL;
+precomp_instr PC;
 //char invalid_code[0x100000];
 
 #ifdef PPC_DYNAREC
@@ -438,7 +438,6 @@ void cpu_init(void){
 
    // I'm adding this from pure_interpreter()
    r4300.pc = 0xa4000040;
-   PC = malloc(sizeof(precomp_instr));
    
    // Hack for the interpreter
    cpu_inited = 1;
@@ -474,6 +473,4 @@ void cpu_deinit(void){
 		}
 		}
 	}
-	if(PC) free(PC);
-	PC = NULL;
 }

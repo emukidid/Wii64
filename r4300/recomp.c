@@ -45,36 +45,36 @@ long src; // the current recompiled instruction
 
 static void recompile_standard_i_type()
 {
-   PC->f.i.rs = r4300.gpr + ((src >> 21) & 0x1F);
-   PC->f.i.rt = r4300.gpr + ((src >> 16) & 0x1F);
-   PC->f.i.immediate = src & 0xFFFF;
+   PC.f.i.rs = r4300.gpr + ((src >> 21) & 0x1F);
+   PC.f.i.rt = r4300.gpr + ((src >> 16) & 0x1F);
+   PC.f.i.immediate = src & 0xFFFF;
 }
 
 static void recompile_standard_j_type()
 {
-   PC->f.j.inst_index = src & 0x3FFFFFF;
+   PC.f.j.inst_index = src & 0x3FFFFFF;
 }
 
 static void recompile_standard_r_type()
 {
-   PC->f.r.rs = r4300.gpr + ((src >> 21) & 0x1F);
-   PC->f.r.rt = r4300.gpr + ((src >> 16) & 0x1F);
-   PC->f.r.rd = r4300.gpr + ((src >> 11) & 0x1F);
-   PC->f.r.sa = (src >>  6) & 0x1F;
+   PC.f.r.rs = r4300.gpr + ((src >> 21) & 0x1F);
+   PC.f.r.rt = r4300.gpr + ((src >> 16) & 0x1F);
+   PC.f.r.rd = r4300.gpr + ((src >> 11) & 0x1F);
+   PC.f.r.sa = (src >>  6) & 0x1F;
 }
 
 static void recompile_standard_lf_type()
 {
-   PC->f.lf.base = (src >> 21) & 0x1F;
-   PC->f.lf.ft = (src >> 16) & 0x1F;
-   PC->f.lf.offset = src & 0xFFFF;
+   PC.f.lf.base = (src >> 21) & 0x1F;
+   PC.f.lf.ft = (src >> 16) & 0x1F;
+   PC.f.lf.offset = src & 0xFFFF;
 }
 
 static void recompile_standard_cf_type()
 {
-   PC->f.cf.ft = (src >> 16) & 0x1F;
-   PC->f.cf.fs = (src >> 11) & 0x1F;
-   PC->f.cf.fd = (src >>  6) & 0x1F;
+   PC.f.cf.ft = (src >> 16) & 0x1F;
+   PC.f.cf.fs = (src >> 11) & 0x1F;
+   PC.f.cf.fd = (src >>  6) & 0x1F;
 }
 
 static void recompile_nothing() { }
@@ -272,14 +272,14 @@ static void (*recomp_tlb[64])(void) =
 static void RMFC0()
 {
       recompile_standard_r_type();
-   PC->f.r.rd = (long long*)(r4300.reg_cop0 + ((src >> 11) & 0x1F));
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.rd = (long long*)(r4300.reg_cop0 + ((src >> 11) & 0x1F));
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 }
 
 static void RMTC0()
 {
       recompile_standard_r_type();
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 
 }
 
@@ -533,39 +533,39 @@ static void (*recomp_l[64])(void) =
 static void RMFC1()
 {
       recompile_standard_r_type();
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 }
 
 static void RDMFC1()
 {
       recompile_standard_r_type();
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 }
 
 static void RCFC1()
 {
       recompile_standard_r_type();
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 }
 
 static void RMTC1()
 {
       recompile_standard_r_type();
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 
 }
 
 static void RDMTC1()
 {
       recompile_standard_r_type();
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 
 }
 
 static void RCTC1()
 {
       recompile_standard_r_type();
-   PC->f.r.nrd = (src >> 11) & 0x1F;
+   PC.f.r.nrd = (src >> 11) & 0x1F;
 
 }
 

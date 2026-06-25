@@ -199,14 +199,14 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 		if(mounted[0]) return 1;	// already.
 		if(fatMountSimple ("sd", frontsd)) {
 			mounted[0] = 1;
-			return res;
+			return 1;
 		}
 	}
 	else {
 		if(mounted[1]) return 1;	// already.
 		if(fatMountSimple ("usb", usb)) {
 			mounted[1] = 1;
-			return res;
+			return 1;
 		}
 	}
 #else

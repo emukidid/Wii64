@@ -62,14 +62,14 @@ typedef struct {
 	int           noCheckInterrupt; //2772
 	float         two16;
 } R4300;
-extern R4300 r4300 __attribute__((section(".sbss")));	//Why?
+extern R4300 r4300 __attribute__((section(".sbss")));
 
 #define local_rs (r4300.local_gpr[0])
 #define local_rt (r4300.local_gpr[1])
 #define local_rs32 LOW_WORD(local_rs)
 #define local_rt32 LOW_WORD(local_rt)
 
-extern precomp_instr *PC;
+extern precomp_instr PC __attribute__((section(".sbss")));
 #ifdef PPC_DYNAREC
 #include "ppc/Recompile.h"
 extern PowerPC_block **const blocks;

@@ -139,7 +139,7 @@ static void JR()
 static void JALR()
 {
    //DEBUG_stats(19, "JALR", STAT_TYPE_ACCUM, 1);
-   unsigned long long int *dest = (unsigned long long int *)PC->f.r.rd;
+   unsigned long long int *dest = (unsigned long long int *)PC.f.r.rd;
    local_rs32 = rrs32;
    r4300.pc+=4;
    r4300.delay_slot=1;
@@ -1117,7 +1117,7 @@ static void (*interp_tlb[64])(void) =
 
 static void MFC0()
 {
-   switch(PC->f.r.nrd)
+   switch(PC.f.r.nrd)
      {
       case 1:
 	printf("lecture de Random\n");
@@ -1126,7 +1126,7 @@ static void MFC0()
   _break();
 #endif     
       default:
-	rrt32 = r4300.reg_cop0[PC->f.r.nrd];
+	rrt32 = r4300.reg_cop0[PC.f.r.nrd];
 	sign_extended(rrt);
      }
    r4300.pc+=4;
@@ -1134,7 +1134,7 @@ static void MFC0()
 
 static void MTC0()
 {
-   switch(PC->f.r.nrd)
+   switch(PC.f.r.nrd)
      {
       case 0:    // Index
 	Index = rrt & 0x8000003F;
@@ -1232,7 +1232,7 @@ static void MTC0()
 	ErrorEPC = rrt;
 	break;
       default:
-	printf("unknown mtc0 write : %d\n", PC->f.r.nrd);
+	printf("unknown mtc0 write : %d\n", PC.f.r.nrd);
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -2242,7 +2242,7 @@ static void REGIMM()
 
 static void J()
 {
-   unsigned long naddr = (PC->f.j.inst_index<<2) | (r4300.pc & 0xF0000000);
+   unsigned long naddr = (PC.f.j.inst_index<<2) | (r4300.pc & 0xF0000000);
    if (naddr == r4300.pc)
      {
 	if (probe_nop(r4300.pc+4))
@@ -2269,7 +2269,7 @@ static void J()
 
 static void JAL()
 {
-   unsigned long naddr = (PC->f.j.inst_index<<2) | (r4300.pc & 0xF0000000);
+   unsigned long naddr = (PC.f.j.inst_index<<2) | (r4300.pc & 0xF0000000);
    if (naddr == r4300.pc)
      {
 	if (probe_nop(r4300.pc+4))

@@ -34,42 +34,27 @@
 #define sign_extendedb(a) a = (long long)((signed char)a)
 #define sign_extendedh(a) a = (long long)((signed short)a)
 
-#define rrt *PC->f.r.rt
-#define rrd *PC->f.r.rd
-#define rfs PC->f.r.nrd
-#define rrs *PC->f.r.rs
-#define rsa PC->f.r.sa
-#define irt *PC->f.i.rt
-#define ioffset PC->f.i.immediate
-#define iimmediate PC->f.i.immediate
-#define lsaddr (PC-1)->f.i.immediate+(*(PC-1)->f.i.rs)
-#define lsrt *(PC-1)->f.i.rt
-#define irs *PC->f.i.rs
-#define ibase *PC->f.i.rs
-#define jinst_index PC->f.j.inst_index
-#define lfbase PC->f.lf.base
-#define lfft PC->f.lf.ft
-#define lfoffset PC->f.lf.offset
-#define lslfaddr (PC-1)->f.lf.offset+r4300.gpr[(PC-1)->f.lf.base]
-#define lslfft (PC-1)->f.lf.ft
-#define cfft PC->f.cf.ft
-#define cffs PC->f.cf.fs
-#define cffd PC->f.cf.fd
+#define rrt *PC.f.r.rt
+#define rrd *PC.f.r.rd
+#define rfs PC.f.r.nrd
+#define rrs *PC.f.r.rs
+#define rsa PC.f.r.sa
+#define irt *PC.f.i.rt
+#define iimmediate PC.f.i.immediate
+#define irs *PC.f.i.rs
+#define lfbase PC.f.lf.base
+#define lfft PC.f.lf.ft
+#define lfoffset PC.f.lf.offset
+#define cfft PC.f.cf.ft
+#define cffs PC.f.cf.fs
+#define cffd PC.f.cf.fd
 
 // 32 bits macros
-#define rrt32 LOW_WORD(*PC->f.r.rt)
-#define rrd32 LOW_WORD(*PC->f.r.rd)
-#define rrs32 LOW_WORD(*PC->f.r.rs)
-#define irs32 LOW_WORD(*PC->f.i.rs)
-#define irt32 LOW_WORD(*PC->f.i.rt)
-
-#define check_PC \
-if (PC->addr == actual->fin) \
-{ \
-printf("changement de block\n"); \
-stop=1; \
-}
-
+#define rrt32 LOW_WORD(*PC.f.r.rt)
+#define rrd32 LOW_WORD(*PC.f.r.rd)
+#define rrs32 LOW_WORD(*PC.f.r.rs)
+#define irs32 LOW_WORD(*PC.f.i.rs)
+#define irt32 LOW_WORD(*PC.f.i.rt)
 
 //cop0 macros
 #define Index r4300.reg_cop0[0]
