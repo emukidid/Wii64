@@ -271,9 +271,6 @@ void Func_PlayGame()
 	new_frame();
 	new_vi();
 	go();
-#ifdef HW_DOL
-	RecompCache_Release(4*1024*1024);	// helps the menu out
-#endif
 #ifdef DEBUGON
 	_break();
 #endif
@@ -311,7 +308,7 @@ void Func_PlayGame()
     	result += saveSram(saveFile_dir);
     	result += saveMempak(saveFile_dir);
     	result += saveFlashram(saveFile_dir);
-    	saveFile_deinit(saveFile_dir);
+    	//saveFile_deinit(saveFile_dir);
     	if (result==amountSaves) {  //saved all of them ok	
     		switch (nativeSaveDevice)
     		{

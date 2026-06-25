@@ -29,10 +29,13 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
+#include <ogc/lwp_heap.h>
 #include "tlb.h"
 #include "TLB-Cache.h"
 #include "../gui/DEBUG.h"
+#include "../gc_memory/ARAM.h"
 
+static heap_cntrl* tlbHeap = NULL;
 typedef unsigned long TLBEntry;
 
 #define TLB_L1_BITS   10
@@ -43,26 +46,28 @@ typedef unsigned long TLBEntry;
 
 // entry contains VALID/WRITE flags + phys bits
 static TLBEntry *tlb_cache_l1[TLB_L1_SIZE];
-static u32 allocated = 0;
 
 static inline void TLBCache_reset_level(TLBEntry **entry)
 {
     for (u32 i = 0; i < TLB_L1_SIZE; ++i) {
         if (entry[i]) {
-            free(entry[i]);
+			__lwp_heap_free(tlbHeap, entry[i]);
             entry[i] = NULL;
         }
     }
-	allocated = 0;
 }
 
 void TLBCache_reset(void)
 {
+	if(!tlbHeap) {
+		tlbHeap = memalign(32,sizeof(heap_cntrl));
+		__lwp_heap_init(tlbHeap, (void*)TLBCACHE_LO,
+		                TLBCACHE_SIZE, 32);
+#ifdef SHOW_DEBUG
+		DEBUG_registerHeap(tlbHeap, "TLB");
+#endif
+	}
     TLBCache_reset_level(tlb_cache_l1);
-}
-
-u32 TLBCache_getSize() {
-	return allocated;
 }
 
 static inline TLBEntry *TLBCache_get_slot(u32 vpn, int create)
@@ -76,12 +81,12 @@ static inline TLBEntry *TLBCache_get_slot(u32 vpn, int create)
         if (!create) {
             return NULL;
         }
-        page = (TLBEntry *)calloc(TLB_L2_SIZE, sizeof(TLBEntry));
+		page = (TLBEntry *)__lwp_heap_allocate(tlbHeap, TLB_L2_SIZE * sizeof(TLBEntry));
         if (!page) {
             // just say unmapped
             return NULL;
         }
-		allocated += (TLB_L2_SIZE * sizeof(TLBEntry));
+		memset(page, 0, TLB_L2_SIZE * sizeof(TLBEntry));
         tlb_cache_l1[l1_idx] = page;
     }
 

@@ -189,26 +189,45 @@ int fileBrowser_libfat_writeFile(fileBrowser_file* file, void* buffer, unsigned 
     - returns 0 on device not present/error
     - returns 1 on ok
 */
+static int mounted[5];
+
 int fileBrowser_libfat_init(fileBrowser_file* f){
 
 	int res = 0;
 #ifdef HW_RVL
-	if(f->name[0] == 's')      //SD
-		res = fatMountSimple ("sd", frontsd);
-	else
-		res = fatMountSimple ("usb", usb);
+	if(f->name[0] == 's') {     //SD
+		if(mounted[0]) return 1;	// already.
+		if(fatMountSimple ("sd", frontsd)) {
+			mounted[0] = 1;
+			return res;
+		}
+	}
+	else {
+		if(mounted[1]) return 1;	// already.
+		if(fatMountSimple ("usb", usb)) {
+			mounted[1] = 1;
+			return res;
+		}
+	}
 #else
 	// GC has only SD
+	if(mounted[2]) return 1;
 	res = fatMountSimple ("sd", sd2sp2);
 #endif
 	if(res) {
+		mounted[2] = 1;
 		return res;
 	}
 	res = fatMountSimple ("sd", carda);
 	if(res) {
+		mounted[2] = 1;
 		return res;
 	}
 	res = fatMountSimple ("sd", cardb);
+	if(res) {
+		mounted[2] = 1;
+		return res;
+	}
 	return res;
 }
 
@@ -223,11 +242,10 @@ int fileBrowser_libfat_deinit(fileBrowser_file* f){
 			fclose(fd);
 			fd = NULL;
 		}
-		fatUnmount("sd");
+		//fatUnmount("sd");
  	}
 	return 0;
 }
-
 
 /* Special for ROM loading only */
 int fileBrowser_libfatROM_deinit(fileBrowser_file* f){
@@ -238,7 +256,6 @@ int fileBrowser_libfatROM_deinit(fileBrowser_file* f){
 }
 int fileBrowser_libfatROM_readFile(fileBrowser_file* file, void* buffer, unsigned int length){
 	if(!fd) fd = fopen( file->name, "rb");
-	
 	fseek(fd, file->offset, SEEK_SET);
 	int bytes_read = fread(buffer, 1, length, fd);
 	if(bytes_read > 0) file->offset += bytes_read;

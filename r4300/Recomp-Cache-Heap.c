@@ -52,9 +52,17 @@ static int cacheSize = 0;
 
 #define INITIAL_HEAP_SIZE (64)
 #define MIN_RELEASE_SIZE (512*1024)
-static unsigned int heapSize = 0;
-static unsigned int maxHeapSize = 0;
+
+#define NODE_HEAP_SIZE   (512 * 1024)
+#define MAX_HEAP_ENTRIES (32768)
+#define LRU_SCRATCH   ((CacheMetaNode**)RECOMP_CACHE_HEAP_SCRATCH_LO)
+
+static heap_cntrl* node_heap = NULL;
 static CacheMetaNode** cacheHeap = NULL;
+static unsigned int maxHeapSize = 0;
+static unsigned int heapSize = 0;
+
+void release(int minNeeded);
 
 static void heapSwap(int i, int j){
 	CacheMetaNode* t = cacheHeap[i];
@@ -97,14 +105,20 @@ static void heapify(void){
 	for(i=1; i<heapSize; ++i) heapUp(i);
 }
 
-static void heapPush(CacheMetaNode* node){
-	if(heapSize == maxHeapSize){
-		maxHeapSize = 3*maxHeapSize/2 + 10;
-		cacheHeap = realloc(cacheHeap, maxHeapSize*sizeof(void*));
-	}
-	// Simply add it to the end of the heap
-	// No need to heapUp since its the most recently used
-	cacheHeap[heapSize++] = node;
+static void heapPush(CacheMetaNode* node)
+{
+    // If the heap is full, free at least one block
+    if (heapSize >= maxHeapSize) {
+        // Free something, enough to hold the new thing
+        release(node->size);
+
+        if (heapSize >= maxHeapSize) {
+            // free at least one LRU block
+            release(1);
+        }
+    }
+
+    cacheHeap[heapSize++] = node;
 }
 
 static CacheMetaNode* heapPop(void){
@@ -180,26 +194,34 @@ static void free_func(PowerPC_func* func, unsigned int addr){
 static inline void update_lru(PowerPC_func* func){
 	func->lru = r4300.nextLRU++;
 
-	if(!r4300.nextLRU || r4300.nextLRU>0x80000000){
-		// Handle nextLRU overflows
-		// By heap-sorting and assigning new LRUs
-		heapify();
-		// Since you can't do an in-place min-heap ascending-sort
-		//   I have to create a new heap
-		CacheMetaNode** newHeap = malloc(maxHeapSize * sizeof(CacheMetaNode*));
-		int i, savedSize = heapSize;
-		for(i=0; heapSize > 0; ++i){
-			newHeap[i] = heapPop();
-			newHeap[i]->func->lru = i;
-		}
-		free(cacheHeap);
-		cacheHeap = newHeap;
+    // Handle LRU overflow
+    if (!r4300.nextLRU || r4300.nextLRU > 0x80000000)
+    {
+        // Rebuild heap ordering
+        heapify();
 
-		r4300.nextLRU = heapSize = savedSize;
-	}
+        // Pop everything into the scratch buffer (ARAM/MEM2)
+        int savedSize = heapSize;
+        int i = 0;
+
+        while (heapSize > 0)
+        {
+            CacheMetaNode* n = heapPop();
+            LRU_SCRATCH[i] = n;
+            n->func->lru = i; // new LRU
+            i++;
+        }
+
+        // Copy back into the real heap
+        for (i = 0; i < savedSize; i++)
+            cacheHeap[i] = LRU_SCRATCH[i];
+
+        heapSize = savedSize;
+        r4300.nextLRU = savedSize;
+    }
 }
 
-static void release(int minNeeded){
+void release(int minNeeded){
 	// Frees alloc'ed blocks so that at least minNeeded bytes are available
 	int toFree = minNeeded * 2; // Free 2x if we're here due to meta filling up
 	if ((minNeeded * 2) + cacheSize > RECOMP_CACHE_SIZE) {
@@ -216,18 +238,17 @@ static void release(int minNeeded){
 		toFree    -= n->size;
 		cacheSize -= n->size;
 		// And the cache node itself
-		free(n);
+		__lwp_heap_free(node_heap, n);
 	}
 }
 
-#ifdef HW_DOL
-void RecompCache_Release(int bytesRequired) {
-	release(bytesRequired);
-}
-#endif
-
 void RecompCache_Alloc(unsigned int size, unsigned int address, PowerPC_func* func){
-	CacheMetaNode* newBlock = malloc( sizeof(CacheMetaNode) );
+	CacheMetaNode* newBlock = __lwp_heap_allocate(node_heap, sizeof(CacheMetaNode));
+
+	if (!newBlock) {
+		release(size);
+		newBlock = __lwp_heap_allocate(node_heap, sizeof(CacheMetaNode));
+	}
 	newBlock->addr = address;
 	newBlock->size = size;
 	newBlock->func = func;
@@ -286,7 +307,7 @@ void RecompCache_Free(unsigned int addr){
 			free_func(n->func, addr);
 			cacheSize -= n->size;
 			// Free the cache node
-			free(n);
+			__lwp_heap_free(node_heap, n);
 			return;
 		}
 	}
@@ -338,6 +359,22 @@ void RecompCache_Init(void){
 		DEBUG_registerHeap(meta_cache, "META");
 #endif
 	}
+	if (!node_heap) {
+        node_heap = memalign(32, sizeof(heap_cntrl));
+        __lwp_heap_init(node_heap,
+                        memalign(32, NODE_HEAP_SIZE),
+                        NODE_HEAP_SIZE,
+                        32);
+#ifdef SHOW_DEBUG
+		DEBUG_registerHeap(node_heap, "Node");
+#endif
+    }
+
+    if (!cacheHeap) {
+        cacheHeap = __lwp_heap_allocate(node_heap,
+                                        MAX_HEAP_ENTRIES * sizeof(void*));
+        maxHeapSize = MAX_HEAP_ENTRIES;
+    }
 }
 
 void* MetaCache_Alloc(unsigned int size){

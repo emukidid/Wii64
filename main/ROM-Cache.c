@@ -233,7 +233,7 @@ int ROMCache_load(fileBrowser_file* file){
 			loads_til_update = 16;
 		}
 	} while (bytes_read > 0);
-	romFile_deinit(file);
+	//romFile_deinit(file);
 	return 0;
 #endif
 #ifdef HW_DOL

@@ -55,10 +55,6 @@ static void check_heap_space(void){
 			memset(heapBuf, 0, 64);
 		}
 	}
-#ifdef USE_TLB_CACHE	
-	sprintf(heapBuf, "[TLB|%d] ", TLBCache_getSize()/1024);
-	strcat(&text[DBG_MEMFREEINFO][0], heapBuf);
-#endif
 	free(heapBuf);
 }
 
