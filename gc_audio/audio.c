@@ -57,6 +57,7 @@ AUDIO_INFO AudioInfo;
 extern float VILimit;
 #define DEFAULT_FREQUENCY 33600
 #ifdef RVL_LIBWIIDRC
+#include <unistd.h>
 #define BUFFER_SIZE (DSP_STREAMBUFFER_SIZE * 32)
 #else
 #define BUFFER_SIZE (DSP_STREAMBUFFER_SIZE * 64)
