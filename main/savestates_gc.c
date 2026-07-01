@@ -165,7 +165,7 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 
 	// TLB 50->90% (cache funcs are just wrapper macros for a non cache build)
 	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
-	/*
+	
 	int j = 0;
 	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
 		for(j = 0; j < CHUNK_SIZE; j++) {
@@ -182,7 +182,7 @@ void savestates_save(unsigned int slot, u8* fb_tex)
 		}
 		progress += slice;
 		LoadingBar_showBar(progress, SAVE_STATE_MSG);
-	}*/
+	}
 
 	// Save registers (90->95%)
 	gzwrite(f, &rdram_register, sizeof(RDRAM_register));
@@ -276,8 +276,10 @@ int savestates_load(unsigned int slot)
 	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
 	u32 j, entry;
 
-	//TLBCache_init();
-	/*
+#ifdef TINY_TLBCACHE
+	TLBCache_reset();
+#endif
+	
 	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
 		for(j = 0; j < CHUNK_SIZE; j++) {
 			gzread(f, &entry, 4);
@@ -297,7 +299,7 @@ int savestates_load(unsigned int slot)
 		}
 		progress += slice;
 		LoadingBar_showBar(progress, LOAD_STATE_MSG);
-	}*/
+	}
 
 	// Load registers (90->95%)
 	gzread(f, &rdram_register, sizeof(RDRAM_register));

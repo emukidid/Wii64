@@ -49,8 +49,8 @@
 #define TLBLUT_LO   (ROMCACHE_HI)
 #define TLBLUT_HI   (TLBLUT_LO + TLBLUT_SIZE)
 
-// We want 16MB for a Texture Cache
-#define TEXCACHE_SIZE (16*MB)
+// We want 12MB for a Texture Cache
+#define TEXCACHE_SIZE (12*MB)
 #define TEXCACHE_LO   (TLBLUT_HI)
 #define TEXCACHE_HI   (TEXCACHE_LO + TEXCACHE_SIZE)
 
