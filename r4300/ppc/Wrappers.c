@@ -32,9 +32,6 @@
 #include "Recompile.h"
 #include "Wrappers.h"
 
-#define likely(x)       __builtin_expect((x),1)
-#define unlikely(x)     __builtin_expect((x),0)
-
 extern unsigned long instructionCount;
 extern void (*interp_ops[64])(void);
 inline unsigned long update_invalid_addr(unsigned long addr);
@@ -109,10 +106,14 @@ void dynarec(unsigned int address){
 		
 		if(!blocks[address>>12]){
 			blocks[address>>12] = calloc(1, sizeof(PowerPC_block));
+			if(!blocks[address>>12]) {
+				release(1);
+				blocks[address>>12] = calloc(1, sizeof(PowerPC_block));
+			}
 			blocks[address>>12]->start_address = address & ~0xFFF;
 			init_block(blocks[address>>12]);
 		} else if(invalid_code_get(address>>12)){
-			invalidate_block(blocks[address>>12]);
+			invalidate_block(blocks[address>>12], 0);
 		}
 
 		PowerPC_func* func = find_func(&blocks[address>>12]->funcs, address);

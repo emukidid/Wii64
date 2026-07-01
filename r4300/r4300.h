@@ -73,7 +73,6 @@ extern precomp_instr PC __attribute__((section(".sbss")));
 #ifdef PPC_DYNAREC
 #include "ppc/Recompile.h"
 extern PowerPC_block **const blocks;
-extern PowerPC_block *actual;
 #else
 extern precomp_block *blocks[0x100000], *actual;
 #endif

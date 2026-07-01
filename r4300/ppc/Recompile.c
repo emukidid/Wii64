@@ -67,7 +67,7 @@ static int pass0(PowerPC_block* ppc_block);
 static void pass2(PowerPC_block* ppc_block);
 //static void genRecompileBlock(PowerPC_block*);
 static void genJumpPad(void);
-void invalidate_block(PowerPC_block* ppc_block);
+void invalidate_block(PowerPC_block* ppc_block, int is_deinit);
 
 MIPS_instr get_next_src(void) { return *(src++); }
 MIPS_instr peek_next_src(void){ return *src;     }
@@ -139,6 +139,10 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 
 	// Create a PowerPC_func for this function
 	PowerPC_func* func = calloc(1, sizeof(PowerPC_func));
+	if(!func) {
+		release(1);
+		func = calloc(1, sizeof(PowerPC_func));
+	}
 	func->start_addr = addr_first;
 	func->end_addr = addr_last;
 	// We'll need to insert this func into the block
@@ -157,6 +161,10 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 		   (*node)->function->end_addr == func->end_addr){
 			// (*node)->function is a hole in func
 			PowerPC_func_hole_node* hole = malloc(sizeof(PowerPC_func_hole_node));
+			if(!hole) {
+				release(1);
+				hole = malloc(sizeof(PowerPC_func_hole_node));
+			}
 			hole->addr = (*node)->function->start_addr;
 			hole->next = func->holes;
 			func->holes = hole;
@@ -179,6 +187,10 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 				  func->end_addr == (*node)->function->end_addr){
 			// func is a hole in fn->function
 			PowerPC_func_hole_node* hole = malloc(sizeof(PowerPC_func_hole_node));
+			if(!hole) {
+				release(1);
+				hole = malloc(sizeof(PowerPC_func_hole_node));
+			}
 			hole->addr = func->start_addr&0xffff;
 			hole->next = (*node)->function->holes;
 			(*node)->function->holes = hole;
@@ -244,7 +256,9 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 	// In case we couldn't compile the whole function, use a pad
 	if(need_pad)
 		genJumpPad();
-
+#ifdef LAZY_GEN_CALLS
+	end_block();
+#endif
 	// Allocate the func buffers and copy the code
 	if(!func->code){
 		// We aren't recompiling from a hole
@@ -290,6 +304,10 @@ void init_block(PowerPC_block* ppc_block){
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
 			blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			if(!blocks[paddr>>12]) {
+				release(1);
+				blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			}
 			blocks[paddr>>12]->start_address = paddr & ~0xFFF;
 			init_block(blocks[paddr>>12]);
 		}
@@ -298,6 +316,10 @@ void init_block(PowerPC_block* ppc_block){
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
 			blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			if(!blocks[paddr>>12]) {
+				release(1);
+				blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			}
 			blocks[paddr>>12]->start_address = paddr & ~0xFFF;
 			init_block(blocks[paddr>>12]);
 		}
@@ -306,6 +328,10 @@ void init_block(PowerPC_block* ppc_block){
 		invalid_code_set(paddr>>12, 0);
 		if(!blocks[paddr>>12]){
 		     blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			 if(!blocks[paddr>>12]) {
+				release(1);
+				blocks[paddr>>12] = calloc(1, sizeof(PowerPC_block));
+			}
 		     blocks[paddr>>12]->start_address = paddr & ~0xFFF;
 		     init_block(blocks[paddr>>12]);
 		}
@@ -316,7 +342,7 @@ void init_block(PowerPC_block* ppc_block){
 
 void deinit_block(PowerPC_block* ppc_block){
 
-	invalidate_block(ppc_block);
+	invalidate_block(ppc_block, 1);
 
 	// We need to mark all equivalent addresses as invalid
 	if(ppc_block->start_address+0x1000 < 0x80000000 || ppc_block->start_address >= 0xc0000000){
@@ -508,7 +534,7 @@ static void genJumpPad(void){
 	GEN_BLR(0);
 }
 
-void invalidate_block(PowerPC_block* ppc_block){
+void invalidate_block(PowerPC_block* ppc_block, int is_deinit){
 	// Free the code for all the functions in this block
 	PowerPC_func_node* free_tree(PowerPC_func_node* node){
 		if(!node) return NULL;
@@ -518,7 +544,10 @@ void invalidate_block(PowerPC_block* ppc_block){
 		return NULL;
 	}
 	ppc_block->funcs = free_tree(ppc_block->funcs);
-	init_block(ppc_block);
+	if(!is_deinit) {
+		// Only re-init if this isn't being called from cpu_deinit so we don't want another block.
+		init_block(ppc_block);
+	}
 }
 
 int func_was_freed(PowerPC_func* func){

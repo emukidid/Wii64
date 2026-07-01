@@ -53,11 +53,11 @@ static int cacheSize = 0;
 #define INITIAL_HEAP_SIZE (64)
 #define MIN_RELEASE_SIZE (512*1024)
 
-#define NODE_HEAP_SIZE   (512 * 1024)
-#define MAX_HEAP_ENTRIES (32768)
+#define NODE_HEAP_SIZE   (384 * 1024)
+#define MAX_HEAP_ENTRIES (16384)
 #define LRU_SCRATCH   ((CacheMetaNode**)RECOMP_CACHE_HEAP_SCRATCH_LO)
 
-static heap_cntrl* node_heap = NULL;
+heap_cntrl* node_heap = NULL;
 static CacheMetaNode** cacheHeap = NULL;
 static unsigned int maxHeapSize = 0;
 static unsigned int heapSize = 0;
@@ -348,7 +348,7 @@ void RecompCache_Init(void){
 		__lwp_heap_init(cache, memalign(32,RECOMP_CACHE_SIZE),
 		                RECOMP_CACHE_SIZE, 32);
 #ifdef SHOW_DEBUG
-		DEBUG_registerHeap(cache, "REC");
+		DEBUG_registerHeap(cache, "RC");
 #endif
 	}
 	if(!meta_cache){
@@ -356,7 +356,7 @@ void RecompCache_Init(void){
 		__lwp_heap_init(meta_cache, (void*)RECOMPMETA_LO,
 		                RECOMPMETA_SIZE, 32);
 #ifdef SHOW_DEBUG
-		DEBUG_registerHeap(meta_cache, "META");
+		DEBUG_registerHeap(meta_cache, "M");
 #endif
 	}
 	if (!node_heap) {
@@ -366,7 +366,7 @@ void RecompCache_Init(void){
                         NODE_HEAP_SIZE,
                         32);
 #ifdef SHOW_DEBUG
-		DEBUG_registerHeap(node_heap, "Node");
+		DEBUG_registerHeap(node_heap, "N");
 #endif
     }
 

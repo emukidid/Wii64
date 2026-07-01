@@ -55,6 +55,7 @@ extern void set_jump_special(int which, int new_jump);
 // Set up appropriate register mappings
 void start_new_block(void);
 void start_new_mapping(void);
+void end_block();
 
 /* Convert one conceptual instruction
     this may use and/or generate more

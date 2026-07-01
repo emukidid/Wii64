@@ -30,6 +30,7 @@
 #include "Wrappers.h"
 #include "../Recomp-Cache.h"
 #include "../../gc_memory/memory.h"
+#include "../../gui/DEBUG.h"
 #include <math.h>
 #include "../Invalid_Code.h"
 
@@ -53,6 +54,8 @@ static void genJumpTo(unsigned int loc, unsigned int type);
 static void genUpdateCount(int checkCount);
 static void genCheckFP(void);
 static void genCallDynaMem(memType type, int count, int _rs, int _rt, short immed);
+static void emit_update_count_lazy(int checkCount);
+static void emit_genCheckFp_lazy(void);
 void RecompCache_Update(PowerPC_func*);
 static int inline mips_is_jump(MIPS_instr);
 void jump_to(unsigned int);
@@ -82,6 +85,22 @@ static inline short extractLower16(unsigned int address){
 
 static int FP_need_check;
 
+#ifdef LAZY_GEN_CALLS
+// For lazy single function generation per block.
+#define MAX_HELPER_CALLS 512
+static PowerPC_instr* update_count_slots[MAX_HELPER_CALLS];
+static int update_count_slot_count = 0;
+static PowerPC_instr* update_count_addr = NULL;
+
+static PowerPC_instr* update_count_check_slots[MAX_HELPER_CALLS];
+static int update_count_check_slot_count = 0;
+static PowerPC_instr* update_count_check_addr = NULL;
+
+static PowerPC_instr* gen_checkfp_slots[MAX_HELPER_CALLS];
+static int gen_checkfp_slot_count = 0;
+static PowerPC_instr* gen_checkfp_addr = NULL;
+#endif
+
 // Variable to indicate whether the next recompiled instruction
 //   is a delay slot (which needs to have its registers flushed)
 //   and the current instruction
@@ -105,6 +124,14 @@ static inline int check_delaySlot(void){
 // Initialize register mappings
 void start_new_block(void){
 	invalidateRegisters();
+#ifdef LAZY_GEN_CALLS
+	update_count_slot_count = 0;
+    update_count_addr = NULL;
+	update_count_check_slot_count = 0;
+	update_count_check_addr = NULL;
+	gen_checkfp_slot_count = 0;
+	gen_checkfp_addr = NULL;
+#endif
 	// Check if the previous instruction was a branch
 	//   and thus whether this block begins with a delay slot
 	unget_last_src();
@@ -116,6 +143,185 @@ void start_new_mapping(void){
 	FP_need_check = 1;
 	reset_code_addr();
 }
+
+#ifdef LAZY_GEN_CALLS
+static void patch_helper_slot(PowerPC_instr* slot, PowerPC_instr* helper_addr)
+{
+	unsigned long off = (unsigned long)((helper_addr - slot));
+	*slot &= ~(PPC_LI_MASK << PPC_LI_SHIFT);
+	PPC_SET_LI(*slot, off);
+}
+
+
+static PowerPC_instr* reserve_helper_slot(void)
+{
+    PowerPC_instr* slot = get_curr_dst();
+
+    PowerPC_instr ppc = NEW_PPC_INSTR();
+    PPC_SET_OPCODE(ppc, PPC_OPCODE_B);
+    PPC_SET_LI(ppc, 0);     // placeholder
+    PPC_SET_AA(ppc, 0);     // relative
+    PPC_SET_LK(ppc, 1);     // link
+    set_next_dst(ppc);
+
+    return slot;
+}
+
+/* LAZY_GEN_CALLS is an attempt at making less generated code by only 
+	placing a single version of certain generated functions into a block and then jumping to them.
+	It hasn't proven to be faster.
+*/
+void end_block()
+{
+    if(update_count_slot_count > 0)
+    {
+        int pc_reg = R3;
+        int tmp    = R4;
+
+        update_count_addr = get_curr_dst();
+
+        // r0 = last_pc
+        GEN_LWZ(R0, offsetof(R4300,last_pc), DYNAREG_R4300);
+
+        // tmp = pc_reg (current PC)
+        GEN_OR(tmp, pc_reg, pc_reg);  // tmp = pc_reg
+
+        // r4300.last_pc = pc_reg
+        GEN_STW(pc_reg, offsetof(R4300,last_pc), DYNAREG_R4300);
+
+        // r0 = pc - last_pc
+        GEN_SUBF(R0, R0, tmp);
+
+        // tmp = Count
+        GEN_LWZ(tmp, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+
+		if(count_per_op == 1) {
+			// r0 = (pc - last_pc) >> 2
+			GEN_SRWI(R0, R0, 2);
+		} 
+		else if(count_per_op == 2) {
+			// r0 = (pc - last_pc) >> 2
+			GEN_SRWI(R0, R0, 1);
+		} 
+		else {
+			// r0 = (pc - last_pc) >> 2
+			GEN_SRWI(R0, R0, 2);
+			// r0 *= count_per_op
+			GEN_MULLI(R0, R0, count_per_op);
+		} 
+
+        // r0 += Count
+        GEN_ADD(R0, R0, tmp);
+
+        // Count = r0
+        GEN_STW(R0, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+		
+		GEN_BLR(0)
+		//print_gecko("Generated update_count at addr %08X\r\n", update_count_addr);
+		//print_gecko("current dst is %08X\r\n", get_curr_dst());
+		for(int i = 0; i < update_count_slot_count; i++) {
+			//print_gecko("Patch helper slot at %08X\r\n", update_count_slots[i]);
+			patch_helper_slot(update_count_slots[i], update_count_addr);
+		}
+    }
+	if(update_count_check_slot_count > 0)
+    {
+        int pc_reg = R3;
+        int tmp    = R4;
+
+        update_count_check_addr = get_curr_dst();
+
+        // r0 = last_pc
+        GEN_LWZ(R0, offsetof(R4300,last_pc), DYNAREG_R4300);
+
+        // tmp = pc_reg (current PC)
+        GEN_OR(tmp, pc_reg, pc_reg);  // tmp = pc_reg
+
+        // r4300.last_pc = pc_reg
+        GEN_STW(pc_reg, offsetof(R4300,last_pc), DYNAREG_R4300);
+
+        // r0 = pc - last_pc
+        GEN_SUBF(R0, R0, tmp);
+
+        // tmp = Count
+        GEN_LWZ(tmp, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+
+		if(count_per_op == 1) {
+			// r0 = (pc - last_pc) >> 2
+			GEN_SRWI(R0, R0, 2);
+		} 
+		else if(count_per_op == 2) {
+			// r0 = (pc - last_pc) >> 2
+			GEN_SRWI(R0, R0, 1);
+		} 
+		else {
+			// r0 = (pc - last_pc) >> 2
+			GEN_SRWI(R0, R0, 2);
+			// r0 *= count_per_op
+			GEN_MULLI(R0, R0, count_per_op);
+		} 
+
+        // r0 += Count
+        GEN_ADD(R0, R0, tmp);
+
+		// lwz    tmp, 0(&r4300.next_interrupt) // tmp = r4300.next_interrupt
+		GEN_LWZ(tmp, 0+offsetof(R4300,next_interrupt), DYNAREG_R4300);
+		
+        // Count = r0
+        GEN_STW(R0, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+
+		// cmpl   cr3,  tmp, r0  // cr3 = r4300.next_interrupt ? Count
+		GEN_CMPL(CR3, tmp, R0);
+		
+		GEN_BLR(0)
+		//print_gecko("Generated update_count_check at addr %08X\r\n", update_count_check_addr);
+		//print_gecko("current dst is %08X\r\n", get_curr_dst());
+		for(int i = 0; i < update_count_check_slot_count; i++) {
+			//print_gecko("Patch helper slot at %08X\r\n", update_count_check_slots[i]);
+			patch_helper_slot(update_count_check_slots[i], update_count_check_addr);
+		}
+    }
+	if(gen_checkfp_slot_count > 0)
+    {
+        gen_checkfp_addr = get_curr_dst();
+
+		// Save LR since we BL'd to here.
+		GEN_STWU(R1, -32, R1);
+		GEN_MFLR(R0);
+		GEN_STW(R0, 24, R1);   // LR
+
+		// lwz r0, 12*4(r4300.reg_cop0)
+		GEN_LWZ(R0, (12*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+		// andis. r0, r0, 0x2000
+		GEN_ANDIS(R0, R0, 0x2000);
+		// bne cr0, end
+		GEN_BNE(CR0, 6, 0, 0);
+		
+		// Call dyna_check_cop1_unusable (r3 is addr, r4 is isDelaySlot)
+		GEN_B(add_jump((unsigned long)(&dyna_check_cop1_unusable), 1, 1), 0, 1);
+		
+		GEN_ADDI(R1, R1, 32);
+		// Load the old LR
+		GEN_LWZ(R0, DYNAOFF_LR, R1);
+		// Restore the LR
+		GEN_MTLR(R0);
+		// Return to trampoline
+		GEN_BLR(0);
+		
+		// Restore LR
+		GEN_LWZ(R0, 24, R1);
+		GEN_ADDI(R1, R1, 32);
+		GEN_MTLR(R0);
+		GEN_BLR(0);
+		//print_gecko("Generated update_count_check at addr %08X\r\n", update_count_check_addr);
+		//print_gecko("current dst is %08X\r\n", get_curr_dst());
+		for(int i = 0; i < gen_checkfp_slot_count; i++) {
+			//print_gecko("Patch helper slot at %08X\r\n", update_count_check_slots[i]);
+			patch_helper_slot(gen_checkfp_slots[i], gen_checkfp_addr);
+		}
+    }
+}
+#endif
 
 static inline int signExtend(int value, int size){
 	int signMask = 1 << (size-1);
@@ -4024,8 +4230,67 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 	}
 }
 
+#ifdef LAZY_GEN_CALLS
+static void emit_update_count_lazy(int checkCount)
+{
+	
+	// r3 = PC (get_src_pc()+4)
+	GEN_LIS(R3, extractUpper16(get_src_pc()+4));
+	GEN_ADDI(R3, R3, extractLower16(get_src_pc()+4));
+	// Reserve a placeholder for this call site
+    PowerPC_instr* slot = reserve_helper_slot();
+	// Load old LR
+	GEN_LWZ(R0, DYNAOFF_LR, R1);
+	// Restore LR
+	GEN_MTLR(R0);
+    
+    // Store it for patching later
+	if(checkCount) {
+		update_count_check_slots[update_count_check_slot_count++] = slot;
+	} else {
+		update_count_slots[update_count_slot_count++] = slot;
+	}
+	//print_gecko("reserved update_count bl at %08X\r\n", slot);
+}
+
+static void emit_genCheckFp_lazy(void)
+{
+	if(FP_need_check || isDelaySlot){
+		//print_gecko("genCheckFP\r\n");
+		flushRegisters();
+		if(!isDelaySlot) reset_code_addr(); // Calling this makes no sense in the context of the delay slot
+		
+		// Load the current PC as arg 1 (upper half)
+		GEN_LIS(R3, extractUpper16(get_src_pc()));
+		// Pass in whether this instruction is in the delay slot as arg 2
+		GEN_LI(R4, isDelaySlot);
+		// Current PC (lower half)
+		GEN_ADDI(R3, R3, extractLower16(get_src_pc()));
+		
+		// Reserve a placeholder for this call site
+		PowerPC_instr* slot = reserve_helper_slot();
+		
+		// Load the old LR
+		GEN_LWZ(R0, DYNAOFF_LR, R1);
+		// Restore the LR
+		GEN_MTLR(R0);
+		
+		// Don't check for the rest of this mapping
+		// Unless this instruction is in a delay slot
+		FP_need_check = isDelaySlot;
+		
+		// Store it for patching later
+		gen_checkfp_slots[gen_checkfp_slot_count++] = slot;
+		//print_gecko("reserved update_count bl at %08X\r\n", slot);
+	}
+}
+#endif
+
 // Updates Count, and sets cr3 to (r4300.next_interrupt ? Count)
 static void genUpdateCount(int checkCount){
+#ifdef LAZY_GEN_CALLS
+	emit_update_count_lazy(checkCount);
+#else
 #ifndef COMPARE_CORE
 	// Dynarec inlined code equivalent:
 	int tmp = mapRegisterTemp();
@@ -4041,12 +4306,24 @@ static void genUpdateCount(int checkCount){
 	GEN_SUBF(R0, R0, tmp);
 	// lwz    tmp, 9*4(r4300.reg_cop0)     // tmp = Count
 	GEN_LWZ(tmp, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
-	// srwi r0, r0, 2                // r0 = (pc - r4300.last_pc)>>2
-	GEN_SRWI(R0, R0, 2);
-	// mulli r0, r0, count_per_op    // r0 *= count_per_op
-	GEN_MULLI(R0, R0, count_per_op);
+	
+	if(count_per_op == 1) {
+		// srwi r0, r0, 2                // r0 = (pc - r4300.last_pc)>>2
+		GEN_SRWI(R0, R0, 2);
+	}
+	else if(count_per_op == 2) {
+		// srwi r0, r0, 1                // r0 = ((pc - r4300.last_pc)>>2) * 2
+		GEN_SRWI(R0, R0, 1);
+	}
+	else {
+		// srwi r0, r0, 2                // r0 = (pc - r4300.last_pc)>>2
+		GEN_SRWI(R0, R0, 2);
+		// mulli r0, r0, count_per_op    // r0 *= count_per_op
+		GEN_MULLI(R0, R0, count_per_op);
+	}
 	// add    r0,  r0, tmp           // r0 += Count
 	GEN_ADD(R0, R0, tmp);
+	
 	if(checkCount){
 		// lwz    tmp, 0(&r4300.next_interrupt) // tmp = r4300.next_interrupt
 		GEN_LWZ(tmp, 0+offsetof(R4300,next_interrupt), DYNAREG_R4300);
@@ -4073,10 +4350,14 @@ static void genUpdateCount(int checkCount){
 		GEN_CMPI(CR3, R3, 0);
 	}
 #endif
+#endif
 }
 
 // Check whether we need to take a FP unavailable exception
 static void genCheckFP(void){
+#ifdef LAZY_GEN_CALLS
+	emit_genCheckFp_lazy();
+#else
 	if(FP_need_check || isDelaySlot){
 		flushRegisters();
 		if(!isDelaySlot) reset_code_addr(); // Calling this makes no sense in the context of the delay slot
@@ -4104,6 +4385,7 @@ static void genCheckFP(void){
 		// Unless this instruction is in a delay slot
 		FP_need_check = isDelaySlot;
 	}
+#endif
 }
 
 #define check_memory() \

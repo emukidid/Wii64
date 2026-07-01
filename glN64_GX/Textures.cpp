@@ -745,7 +745,7 @@ CachedTexture *TextureCache_AddTop()
 	while (cache.cachedBytes > cache.maxBytes)
 //	while (cache.cachedBytes > 64) //cache.dummy->textureBytes)
 #else //!__GX__
-	while ((cache.cachedBytes > cache.maxBytes) || cache.numCached > GX_MAX_TEXTURES)
+	while ((cache.cachedBytes > cache.maxBytes) || cache.numCached >= GX_MAX_TEXTURES)
 #endif //__GX__
 	{
 		if (cache.bottom != cache.dummy)
@@ -755,6 +755,15 @@ CachedTexture *TextureCache_AddTop()
 	}
 
 	CachedTexture *newtop = (CachedTexture*)malloc( sizeof( CachedTexture ) );
+	while(!newtop) {
+		if (cache.bottom != cache.dummy)
+			TextureCache_RemoveBottom();
+		else if (cache.dummy->higher)
+			TextureCache_Remove( cache.dummy->higher );
+		//print_gecko("Out of memory %d/%d, next %d/%d\r\n", cache.cachedBytes, cache.maxBytes, cache.numCached, GX_MAX_TEXTURES);
+		newtop = (CachedTexture*)malloc( sizeof( CachedTexture ) );
+	}
+	//print_gecko("Memory %d/%d, next %d/%d\r\n", cache.cachedBytes, cache.maxBytes, cache.numCached, GX_MAX_TEXTURES);
 //	memset( newtop, 0x00, sizeof( CachedTexture ) );
 
 #ifndef __GX__

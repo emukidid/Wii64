@@ -35,7 +35,9 @@ struct CachedTexture
 	u32			VIcount;
 #endif // __GX__
 
+#ifndef __GX__
 	GLuint	glName;
+#endif
 	u32		address;
 	u32		crc;
 //	float	fulS, fulT;

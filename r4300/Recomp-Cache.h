@@ -49,9 +49,7 @@ void RecompCache_Init(void);
 void RecompCache_Alloc(unsigned int size, unsigned int address, PowerPC_func* func);
 void RecompCache_Realloc(PowerPC_func* func, unsigned int new_size);
 void RecompCache_Free(unsigned int addr);
-#ifdef HW_DOL
-void RecompCache_Release(int bytesRequired);
-#endif
+void release(int minNeeded);
 // Update the LRU info of the indicated block
 //   (call when the block is accessed)
 void RecompCache_Update(PowerPC_func* func);
