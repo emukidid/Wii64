@@ -65,10 +65,10 @@ extern unsigned long *tlb_LUT;
 void tlb_mem2_init();
 // Wrapper functions to make our savestate code cleaner
 #define TLBCache_init() tlb_mem2_init()
-#define TLBCache_set_r(page, val) {tlb_LUT_r[page]=val;}
-#define TLBCache_set_w(page, val) {tlb_LUT_w[page]=val;}
-#define TLBCache_get_r(page) {tlb_LUT_r[page]}
-#define TLBCache_get_w(page) {tlb_LUT_w[page]}
+#define TLBCache_set_r(page, val) {tlb_LUT[page]=(val);}
+#define TLBCache_set_w(page, val) {tlb_LUT[page]=(val);}
+#define TLBCache_get_r(page) {tlb_LUT[page]}
+#define TLBCache_get_w(page) {tlb_LUT[page]}
 #endif
 unsigned long virtual_to_physical_address(unsigned long vaddr, int w);
 int probe_nop(unsigned long address);
