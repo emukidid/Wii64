@@ -64,17 +64,14 @@
 	* Auto Save Native Saves: When enabled, the emulator will automatically load
      saves from the selected device on ROM load and save when returning to the menu or
      turning off the console
+
 ## ADVANCED USAGE
 ### GameCube Version(s)
-Wii64 also exists as Cube64, a version of the emulator with the same UI and features albeit with tighter memory restrictions and less CPU power. This version has significantly less memory available and requires heavy paging of ROM data from your storage medium into a small ARAM cache and then into main memory, this is denoted by every time you see a cartridge icon in the top right hand corner of the screen.
+Wii64 also exists as Cube64, a version of the emulator with the same UI and features albeit with tighter memory restrictions and less CPU power availble. This version has significantly less memory available and requires paging of ROM data from your storage medium into a small ARAM cache and then into main memory, this is denoted by every time you see a cartridge icon in the top right hand corner of the screen. GameCube builds don't have boxart support and the mini menu.
 
-There's also 3 versions per graphics plugin shipped (6 .dol files total). 
+There's also 2 versions per graphics plugin shipped (4 .dol files total). 
 
-The "-exp.dol" versions attempt to support the expansion pak by removing the mini menu, boxart and further reducing various caches, this should only really be used for expansion pak required games as it will likely crash more often due to less memory being available.
-
-The "-basic.dol" versions remove boxart support and the mini menu in an attempt to have more free memory available to avoid crashes.
-
-Lastly, the regular .dol version has boxart support but no expansion pak support.
+The "-exp.dol" versions support the expansion pak by reducing certain cache sizes, this should only really be used for expansion pak required games as it will likely thrash more often due to less memory being available and cause slowdown that could be avoided by using the non "exp" version.
 
 ### "WiiVC" Version
 This version isn't really supported much due to the niche nature of it. It enables DRC (Wii U GamePad) support, and also takes advantage of unlocked CPU multiplier support if enabled. The gist of it is that you can run Wii64 on a Wii U in "Wii mode" but with Wii U Game Pad support and (optionally) the CPU multiplier unlocked. To boot this version you can either just use the vWii mode to use the GamePad, or to unlock the CPU multiplier you'll need to be well versed in Wii U homebrew setups (essentially there's a process that exists to inject homebrew into a WiiVC title - e.g. Wii titles were available on the Wii U via the eShop) and there's a thing called [sign_c2w_patcher](https://github.com/FIX94/sign_c2w_patcher) that you must boot before loading this title to unlock the CPU multiplier. This version is shipped as "Wii64 | Rice GFX | WiiVC" and "Wii64 | glN64 GFX | WiiVC" in the archive.
@@ -145,9 +142,9 @@ Report and view any open issues on the [issue tracker](https://github.com/emukid
  * Graphics & Menu Coder: sepp256
  * General Coder & current maintainer: emu_kidid
  * Original mupen64: Hactarux
- * [Not64](https://github.com/extremscorner/not64): [Extrems](extremscorner.org)
+ * [Not64](https://github.com/extremscorner/not64) /[libogc2](https://github.com/extremscorner/libogc2): [Extrems](extremscorner.org)
  * WiiVC/DRG stuff: [FIX94](https://github.com/FIX94/)
  * Artwork: drmr
  * Wii64 Demo ROM: marshallh
- * Compiled using [devKitPro](https://devkitpro.org/) and "libOGC2" ([unofficial](https://github.com/emukidid/libogc))
+ * Compiled using [devKitPro](https://devkitpro.org/) and [libogc2](https://github.com/extremscorner/libogc2))
  * Visit the official code repo on [GitHub](https://github.com/emukidid/Wii64)

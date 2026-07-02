@@ -279,6 +279,9 @@ int savestates_load(unsigned int slot)
 #ifdef TINY_TLBCACHE
 	TLBCache_reset();
 #endif
+#ifdef HW_RVL
+	tlb_mem2_init();
+#endif
 	
 	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
 		for(j = 0; j < CHUNK_SIZE; j++) {
