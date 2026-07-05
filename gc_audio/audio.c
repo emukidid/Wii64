@@ -159,7 +159,6 @@ EXPORT void CALL CloseDLL(void)
 EXPORT BOOL CALL InitiateAudio(AUDIO_INFO Audio_Info)
 {
 	AudioInfo = Audio_Info;
-	AESND_Init();
 	
 	voice = AESND_AllocateVoice(aesnd_callback);
 	if (voice == NULL) return FALSE;

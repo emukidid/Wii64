@@ -509,6 +509,7 @@ void Func_MMPlayGame()
 #ifdef DEBUGON
 	_break();
 #endif
+	menu::Gui::getInstance().gfx->setInGameVMode();
 	go();
 #ifdef DEBUGON
 	_break();

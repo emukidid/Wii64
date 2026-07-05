@@ -10,7 +10,8 @@ INCLUDE 	+= -I$(DEVKITPRO)/libogc2/wii/include
 OBJ		+= \
 		vm/dsihandler.o \
 		vm/wii_vm.o \
-		main/wii.o
+		main/wii.o \
+		main/Autoboot.o
 
 OBJ_INPUT	+= \
 		gc_input/controller-Classic.o \

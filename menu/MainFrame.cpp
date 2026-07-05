@@ -270,6 +270,7 @@ void Func_PlayGame()
 #endif
 	new_frame();
 	new_vi();
+	menu::Gui::getInstance().gfx->setInGameVMode();
 	go();
 #ifdef DEBUGON
 	_break();

@@ -255,7 +255,16 @@ int fileBrowser_libfatROM_deinit(fileBrowser_file* f){
 	return 0;
 }
 int fileBrowser_libfatROM_readFile(fileBrowser_file* file, void* buffer, unsigned int length){
-	if(!fd) fd = fopen( file->name, "rb");
+	if(!fd) {
+		fd = fopen( file->name, "rb");
+		struct stat fileInfo;
+		if(!stat(&file->name[0], &fileInfo)){
+			file->size = fileInfo.st_size;
+		}
+		else {
+			return 0;
+		}
+	}
 	fseek(fd, file->offset, SEEK_SET);
 	int bytes_read = fread(buffer, 1, length, fd);
 	if(bytes_read > 0) file->offset += bytes_read;

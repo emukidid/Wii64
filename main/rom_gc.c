@@ -140,6 +140,7 @@ int rom_read(fileBrowser_file* file){
    char buffer[1024];
    int i;
 
+   romFile_readFile(file, buffer, 32);	// dummy read to set up the file/size.
    rom_file = file;
    rom_length = file->size;
 

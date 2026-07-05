@@ -35,6 +35,9 @@ public:
 	void drawInit();
 	void swapBuffers();
 	void clearEFB(GXColor color, u32 zvalue);
+	void resetCopyParamsForMenu(bool applyDeflicker);
+	GXRModeObj* getVmode();
+	void setNativeOut(bool is_pal);
 	void copyFBTex(u8* dest, int width, int height, u8 fmt, int bpp);
 	void newModelView();
 	void translate(float x, float y, float z);
@@ -64,12 +67,14 @@ public:
 	void popTransparency();
 	void setTransparency(float f);
 	float getTransparency();
+	void setInGameVMode();
 
 private:
 	void applyCurrentColor();
 	float getCurrentTransparency(int index);
 	GXRModeObj *vmode;
 	GXRModeObj vmode_phys;
+	GXRModeObj *curVmode;
 	int which_fb;
 	bool first_frame;
 	void *xfb[2];

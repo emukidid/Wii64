@@ -78,6 +78,7 @@ unsigned int MALLOC_MEM2 = 0;
 #include <ogc/conf.h>
 #include <wiiuse/wpad.h>
 #include "../gc_memory/MEM2.h"
+#include "Autoboot.h"
 #endif
 
 
@@ -177,7 +178,6 @@ static unsigned int* xfb[2] = { NULL, NULL };	/*** Framebuffers ***/
 //static GXRModeObj *vmode;				/*** Graphics Mode Object ***/
 GXRModeObj *vmode, *rmode;				/*** Graphics Mode Object ***/
 GXRModeObj vmode_phys, rmode_phys;		/*** Graphics Mode Object ***/
-void ScanPADSandReset(u32 dummy);
 int GX_xfb_offset = 0;
 
 // Dummy functions
@@ -260,17 +260,24 @@ void load_config(const char *loaded_path) {
 	}
 }
 
+extern "C" void ScanPADSandReset(u32 _) {
+	drcNeedScan = padNeedScan = wpadNeedScan = 1;
+	if(!((*(u32*)0xCC003000)>>16))
+		stop_it();
+}
+
 int main(int argc, const char* argv[]) {
 	/* INITIALIZE */
-#ifdef HW_DOL
-	AESND_Init();
-	VM_Init(ARAM_SIZE, MRAM_BACKING);		// Setup Virtual Memory with the entire ARAM
-#endif
 #ifdef HW_RVL
 	L2Enhance();
 	/* Reload to IOS58 for USB */
 	if(IOS_GetVersion() != 58)
 		IOS_ReloadIOS(58);
+#endif
+
+	AESND_Init();
+#ifdef HW_DOL
+	VM_Init(ARAM_SIZE, MRAM_BACKING);		// Setup Virtual Memory with the entire ARAM
 #endif
 
 #ifdef DEBUGON
@@ -281,10 +288,8 @@ int main(int argc, const char* argv[]) {
 
 	Initialise(); // Stock OGC initialization
 #ifndef HW_RVL
-  DVD_Init();  
+	DVD_Init();  
 #endif
-	MenuContext *menu = new MenuContext(vmode);
-	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
 
 	// Default Settings
 #if !(defined(GC_BASIC))
@@ -337,8 +342,9 @@ int main(int argc, const char* argv[]) {
 #endif //GLN64_GX
 	menuActive = 1;
 
-
 #ifdef HW_RVL
+	if (argc > 1)
+        Autoboot::setPath(argv[1]);
 	load_config(&argv[0][0]);
 	// Handle options passed in through arguments
 	int i;
@@ -348,6 +354,8 @@ int main(int argc, const char* argv[]) {
 #else
 	load_config("sd");
 #endif
+	MenuContext *menu = new MenuContext(vmode);
+	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
 	//Switch to MiniMenu if active
 	if (miniMenuActive)
 	{
@@ -593,12 +601,6 @@ static void rsp_info_init(void){
 }
 
 void stop_it() { r4300.stop = 1; }
-
-void ScanPADSandReset(u32 dummy) {
-	drcNeedScan = padNeedScan = wpadNeedScan = 1;
-	if(!((*(u32*)0xCC003000)>>16))
-		stop_it();
-}
 
 #ifdef HW_RVL
 void ShutdownWii() {

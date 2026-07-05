@@ -18,6 +18,7 @@
  *
 **/
 
+#include <unistd.h>
 #include "MenuContext.h"
 #include "LoadRomFrame.h"
 #include "../libgui/Button.h"
@@ -30,14 +31,22 @@ extern "C" {
 #include "../fileBrowser/fileBrowser.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
 #include "../fileBrowser/fileBrowser-DVD.h"
+extern void LoadingBar_showBar(float percent, const char* string);
+extern void control_info_init(void);
 }
+extern int loadROM(fileBrowser_file* rom);
 
 void Func_LoadFromSD();
 void Func_LoadFromDVD();
 void Func_LoadFromUSB();
 void Func_ReturnFromLoadRomFrame();
 
+extern MenuContext *pMenuContext;
+extern void Func_PlayGame();
+extern void Func_SetPlayGame();
+
 #ifdef HW_RVL
+#include "../main/Autoboot.h"
 #define NUM_FRAME_BUTTONS 3
 #else
 #define NUM_FRAME_BUTTONS 2
@@ -74,8 +83,57 @@ struct ButtonInfo
 #endif
 };
 
+void setupFatDevice(fileBrowser_file* topLevel) 
+{
+	// TODO once you've done this you can no longer play a game that requires to be streamed in.
+	// Deinit any existing romFile state
+	if(romFile_deinit) romFile_deinit( romFile_topLevel );
+	// Change all the romFile pointers
+	romFile_topLevel = topLevel;
+	romFile_readDir  = fileBrowser_libfat_readDir;
+	romFile_readFile = fileBrowser_libfatROM_readFile;
+	romFile_seekFile = fileBrowser_libfat_seekFile;
+	romFile_init     = fileBrowser_libfat_init;
+	romFile_deinit   = fileBrowser_libfatROM_deinit;
+	// Make sure the romFile system is ready before we browse the filesystem
+	romFile_deinit( romFile_topLevel );
+	romFile_init( romFile_topLevel );
+}
+
 LoadRomFrame::LoadRomFrame()
 {
+#ifdef HW_RVL	
+	// argv is only setup if we detect argv[0] sd:/ or usb:/
+	// Yes this happens early, before we've actually run the menu for any frames.
+	if (Autoboot::hasPath())
+    {
+        const char* path = Autoboot::getPath();
+        //print_gecko("Autoboot path: %s\n", path);
+
+        fileBrowser_file* autoBoot = (fileBrowser_file*)calloc(1, sizeof(fileBrowser_file));
+        strncpy(autoBoot->name, path, 191);
+		autoBoot->name[191] = '\0';
+		
+		setupFatDevice(strncmp(path, "sd:/", 4) == 0 ? &topLevel_libfat_Default : &topLevel_libfat_USB);
+        int ret = loadROM(autoBoot);
+		menu::Gui::getInstance().draw();	
+
+        if (ret)
+        {
+            menu::MessageBox::getInstance().setMessage("Autoboot failed");
+        }
+        else
+        {
+            Func_SetPlayGame();
+            pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
+			LoadingBar_showBar(1.0f, "Loading ...");
+			sleep(3);
+			control_info_init(); // by now a Wii remote should've re-sync'd.
+            Func_PlayGame();
+        }
+		Autoboot::setPath(NULL);
+    }
+#endif
 	for (int i = 0; i < NUM_FRAME_BUTTONS; i++)
 		FRAME_BUTTONS[i].button = new menu::Button(FRAME_BUTTONS[i].buttonStyle, &FRAME_BUTTONS[i].buttonString, 
 										FRAME_BUTTONS[i].x, FRAME_BUTTONS[i].y, 
@@ -116,19 +174,7 @@ extern void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir);
 
 void Func_LoadFromSD()
 {
-	// Deinit any existing romFile state
-	if(romFile_deinit) romFile_deinit( romFile_topLevel );
-	// Change all the romFile pointers
-	romFile_topLevel = &topLevel_libfat_Default;
-	romFile_readDir  = fileBrowser_libfat_readDir;
-	romFile_readFile = fileBrowser_libfatROM_readFile;
-	romFile_seekFile = fileBrowser_libfat_seekFile;
-	romFile_init     = fileBrowser_libfat_init;
-	romFile_deinit   = fileBrowser_libfatROM_deinit;
-	// Make sure the romFile system is ready before we browse the filesystem
-	romFile_deinit( romFile_topLevel );
-	romFile_init( romFile_topLevel );
-
+	setupFatDevice(&topLevel_libfat_Default);
 	pMenuContext->setActiveFrame(MenuContext::FRAME_FILEBROWSER);
 	fileBrowserFrame_OpenDirectory(romFile_topLevel);
 }
@@ -154,19 +200,7 @@ void Func_LoadFromDVD()
 void Func_LoadFromUSB()
 {
 #ifdef WII
-	// Deinit any existing romFile state
-	if(romFile_deinit) romFile_deinit( romFile_topLevel );
-	// Change all the romFile pointers
-	romFile_topLevel = &topLevel_libfat_USB;
-	romFile_readDir  = fileBrowser_libfat_readDir;
-	romFile_readFile = fileBrowser_libfatROM_readFile;
-	romFile_seekFile = fileBrowser_libfat_seekFile;
-	romFile_init     = fileBrowser_libfat_init;
-	romFile_deinit   = fileBrowser_libfatROM_deinit;
-	// Make sure the romFile system is ready before we browse the filesystem
-	romFile_deinit( romFile_topLevel );
-	romFile_init( romFile_topLevel );
-	
+	setupFatDevice(&topLevel_libfat_USB);	
 	pMenuContext->setActiveFrame(MenuContext::FRAME_FILEBROWSER);
 	fileBrowserFrame_OpenDirectory(romFile_topLevel);
 #endif

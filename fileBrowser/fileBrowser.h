@@ -27,7 +27,7 @@
 
 #include <stdint.h>
 
-#define FILE_BROWSER_MAX_PATH_LEN 128
+#define FILE_BROWSER_MAX_PATH_LEN 192
 
 #define FILE_BROWSER_ATTR_DIR     0x10
 
