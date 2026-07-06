@@ -197,5 +197,11 @@ enum renderCpuFramebuffer
 };
 //#endif //GLN64_GX
 
+extern char nativeOutput;
+enum ConfigNativeOutput
+{
+	NATIVEOUT_DISABLE=0,
+	NATIVEOUT_ENABLE
+};
 
 #endif //WII64CONFIG_H

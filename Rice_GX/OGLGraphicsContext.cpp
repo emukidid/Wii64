@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "../menu/MenuResources.h"
 #include "../gui/DEBUG.h"
 #include "../main/timers.h"
+#include "../main/wii64config.h"
 #endif // __GX__
 
 #include "stdafx.h"
@@ -351,47 +352,18 @@ void VI_GX_setFB(unsigned int* fb1, unsigned int* fb2){
 extern timers Timers;
 
 void VI_GX_showFPS(){
-	static char caption[25];
+	if(showFPSonScreen) {
+		static char caption[25];
 
-	sprintf(caption, "%.1f VI/s, %.1f FPS",Timers.vis,Timers.fps);
-	
-	GXColor fontColor = {150,255,150,255};
-	menu::IplFont::getInstance().drawInit(fontColor);
-	if(showFPSonScreen)
+		sprintf(caption, "%.1f VI/s, %.1f FPS",Timers.vis,Timers.fps);
+		
+		GXColor fontColor = {150,255,150,255};
+		menu::IplFont::getInstance().drawInit(fontColor);
 		menu::IplFont::getInstance().drawString(20,40,caption, 1.0, false);
 
-	//reset swap table from GUI/DEBUG
-//	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
-	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
-
-/*	static long long lastTick=0;
-	static int frames=0;
-	static int VIs=0;
-	static char caption[20];
-	
-	long long nowTick = gettime();
-	VIs++;
-//	if (VI.updateOSD)
-//		frames++;
-	if (diff_sec(lastTick,nowTick)>=1) {
-		sprintf(caption, "%02d VI/s, %02d FPS",VIs,frames);
-		frames = 0;
-		VIs = 0;
-		lastTick = nowTick;
-	}
-	
-//	if (VI.updateOSD)
-//	{
-		GXColor fontColor = {150,255,150,255};
-		write_font_init_GX(fontColor);
-		if(showFPSonScreen)
-			write_font(10,35,caption, 1.0);
-		//write_font(10,10,caption,xfb,which_fb);
-
 		//reset swap table from GUI/DEBUG
-		GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
 		GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
-//	}*/
+	}
 }
 
 #ifdef HW_DOL
@@ -459,47 +431,16 @@ extern char text[DEBUG_TEXT_HEIGHT][DEBUG_TEXT_WIDTH];
 
 void VI_GX_showDEBUG()
 {
+#ifdef SHOW_DEBUG
 	int i = 0;
 	GXColor fontColor = {150, 255, 150, 255};
-#ifdef SHOW_DEBUG
 	DEBUG_update();
 	menu::IplFont::getInstance().drawInit(fontColor);
 	if(printToScreen)
 		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
-//			menu::IplFont::getInstance().drawString(10,(15*i+0),text[i], 0.8, false); 
 			menu::IplFont::getInstance().drawString(20,(10*i+65),text[i], 0.5, false); 
-#endif //SHOW_DEBUG
-
-	//Reset any stats in DEBUG_stats
-//	DEBUG_stats(8, "RecompCache Blocks Freed", STAT_TYPE_CLEAR, 1);
-
-   //reset swap table from GUI/DEBUG
-//	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
 	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
-/*
-//	if (VI.updateOSD)
-//	{
-		int i = 0;
-		GXColor fontColor = {150, 255, 150, 255};
-		DEBUG_update();
-		menu::IplFont::getInstance().drawInit(fontColor);
-		if(printToScreen)
-			for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
-				menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
-		
-	   //reset swap table from GUI/DEBUG
-		GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
-		GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
-//	}*/
-}
-
-void VI_GX_showStats()
-{
-/*	if (VI.updateOSD)
-	{
-		sprintf(txtbuffer,"texCache: %d bytes in %d cached textures; %d FB textures",cache.cachedBytes,cache.numCached,frameBuffer.numBuffers);
-		DEBUG_print(txtbuffer,DBG_CACHEINFO); 
-	}*/
+#endif //SHOW_DEBUG
 }
 
 void VI_GX_PreRetraceCallback(u32 retraceCnt)
@@ -514,6 +455,45 @@ void VI_GX_PreRetraceCallback(u32 retraceCnt)
 }
 
 #endif //__GX__
+
+static char using_240p = 0;
+static char oldNativeOutputSetting = NATIVEOUT_DISABLE;
+extern "C" void switchTo240p(bool is_pal);
+extern "C" void switchToNormalVideo();
+extern "C" int getXfbHeight();
+extern void gfx_set_window(int x, int y, int width, int height);
+
+void GX_CheckResChange() {
+	// Detect resolution change (if we'd gone back to the menu)
+	int xfbHeight = getXfbHeight(), dims_changed = 0;
+	if((using_240p && xfbHeight > 264) || (!using_240p && xfbHeight <= 264)) {
+		using_240p = xfbHeight <= 264;
+		dims_changed = 1;
+	}
+	// 
+	// Detect internal res change or setting change.
+	if ((dims_changed || (oldNativeOutputSetting != nativeOutput)) && windowSetting.fViHeight > 0) {
+		int new_h = windowSetting.fViHeight;
+
+		// Decide if we should be in 240p
+		bool want_240p = (nativeOutput == NATIVEOUT_ENABLE) && (new_h <= 288);
+
+		if (want_240p && !using_240p) {
+			switchTo240p(new_h > 240);
+			using_240p = true;
+			gfx_set_window(0, 0, 640, 240);
+		}
+		else if (!want_240p && using_240p || (oldNativeOutputSetting == NATIVEOUT_ENABLE)) {
+			switchToNormalVideo();
+			using_240p = false;
+			if (screenMode == SCREENMODE_16x9_PILLARBOX)
+				gfx_set_window( 80, 0, 480, 480);
+			else
+				gfx_set_window( 0, 0, 640, 480);
+		}
+		oldNativeOutputSetting = nativeOutput;
+	}
+}
 
 void COGLGraphicsContext::UpdateFrame(bool swaponly)
 {
@@ -580,12 +560,10 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
 	//TODO: Implement in GX
    SDL_GL_SwapBuffers();
 #else
-
+	GX_CheckResChange();
 //	VI_GX_cleanUp();
-//	VI_GX_showStats();
    //TODO: Move the following and others to a "clean up" function
 	// Set viewport to whole EFB and scissor to N64 frame for OSD
-	GX_SetViewport(0,0,rmode->fbWidth,rmode->efbHeight,0,1);
 	GX_SetScissor((u32) gGX.GXorigX,(u32) gGX.GXorigY,(u32) gGX.GXwidth,(u32) gGX.GXheight);	//Set Scissor to render plane for DEBUG prints
 #ifdef HW_DOL
 	VI_GX_showLoadIcon();

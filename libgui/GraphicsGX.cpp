@@ -579,11 +579,11 @@ GXRModeObj* Graphics::getVmode() {
 }
 
 void Graphics::setNativeOut(bool is_pal) {
-	/*GXRModeObj* m = &TVEurgb60Hz240Ds;
+	GXRModeObj* m = &TVEurgb60Hz240Ds;
 	if(is_pal) {
 		m = &TVPal264Ds;
 	}
-	GX_SetCopyFilter(m->aa,m->sample_pattern,deflicker ? GX_TRUE : GX_FALSE,m->vfilter);
+	GX_SetCopyFilter(m->aa,m->sample_pattern, GX_FALSE,m->vfilter);
     VIDEO_Configure(m);
 	curVmode = m;
     VIDEO_Flush();
@@ -606,7 +606,7 @@ void Graphics::setNativeOut(bool is_pal) {
 
     Mtx44 proj;
     guOrtho(proj, 0, m->efbHeight, 0, m->fbWidth, 0, 300);
-    GX_LoadProjectionMtx(proj, GX_ORTHOGRAPHIC);*/
+    GX_LoadProjectionMtx(proj, GX_ORTHOGRAPHIC);
 }
 
 extern "C" void switchToNormalVideo()

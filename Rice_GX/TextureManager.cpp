@@ -42,7 +42,7 @@ CTextureManager gTextureManager;
 #ifdef __GX__
 //TODO: Revisit cache handling once Enhanced & Framebuffer textures are implemented.
 DWORD g_maxTextureMemUsage = GX_TEXTURE_CACHE_SIZE;
-DWORD g_amountToFree = (512*1024);
+DWORD g_amountToFree = (32*1024);
 bool g_bUseSetTextureMem = true;
 #else //__GX__
 DWORD g_maxTextureMemUsage = (5*1024*1024);

@@ -18,6 +18,7 @@
 #include "../menu/MenuResources.h"
 #include "../gui/DEBUG.h"
 #include "../main/timers.h"
+#include "../main/wii64config.h"
 //#include "Textures.h"
 #endif // __GX__
 
@@ -79,6 +80,49 @@ void VI_UpdateSize()
 
 	if (VI.width == 0) VI.width = 320;
 	if (VI.height == 0) VI.height = 240;
+}
+
+
+static char using_240p = 0;
+static char oldNativeOutputSetting = NATIVEOUT_DISABLE;
+extern "C" void switchTo240p(bool is_pal);
+extern "C" void switchToNormalVideo();
+extern "C" int getXfbHeight();
+extern void gfx_set_window(int x, int y, int width, int height);
+extern void OGL_UpdateScale();
+
+void GX_CheckResChange() {
+	// Detect resolution change (if we'd gone back to the menu)
+	int xfbHeight = getXfbHeight(), dims_changed = 0;
+	if((using_240p && xfbHeight > 264) || (!using_240p && xfbHeight <= 264)) {
+		using_240p = xfbHeight <= 264;
+		dims_changed = 1;
+	}
+	// 
+	// Detect internal res change or setting change.
+	if ((dims_changed || (oldNativeOutputSetting != nativeOutput)) && VI.height > 0) {
+		int new_h = VI.height;
+
+		// Decide if we should be in 240p
+		bool want_240p = (nativeOutput == NATIVEOUT_ENABLE) && (new_h <= 288);
+
+		if (want_240p && !using_240p) {
+			switchTo240p(new_h > 240);
+			using_240p = true;
+			gfx_set_window(0, 0, 640, 240);
+			OGL_UpdateScale();
+		}
+		else if (!want_240p && using_240p || (oldNativeOutputSetting == NATIVEOUT_ENABLE)) {
+			switchToNormalVideo();
+			using_240p = false;
+			if (screenMode == SCREENMODE_16x9_PILLARBOX)
+				gfx_set_window( 80, 0, 480, 480);
+			else
+				gfx_set_window( 0, 0, 640, 480);
+			OGL_UpdateScale();
+		}
+		oldNativeOutputSetting = nativeOutput;
+	}
 }
 
 void VI_UpdateScreen()
@@ -227,18 +271,19 @@ extern timers Timers;
 extern float VILimit;
 
 void VI_GX_showFPS(){
-	char caption[50];
+	if(showFPSonScreen) {
+		char caption[50];
 
-	sprintf(caption, "%.1f VI/s (%.1fx), %.1f DL/s",Timers.vis,Timers.vis/VILimit,Timers.fps);
+		sprintf(caption, "%.1f VI/s (%.1fx), %.1f DL/s",Timers.vis,Timers.vis/VILimit,Timers.fps);
+		
+		GXColor fontColor = {150,255,150,255};
+		menu::IplFont::getInstance().drawInit(fontColor);
 	
-	GXColor fontColor = {150,255,150,255};
-	menu::IplFont::getInstance().drawInit(fontColor);
-	if(showFPSonScreen)
 		menu::IplFont::getInstance().drawString(15,35,caption, 1.0, false);
 
-	//reset swap table from GUI/DEBUG
-//	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
-	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+		//reset swap table from GUI/DEBUG
+		GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+	}
 }
 
 #ifdef HW_DOL
@@ -322,13 +367,8 @@ void VI_GX_showDEBUG()
 	if(printToScreen)
 		for (i=0;i<DEBUG_TEXT_HEIGHT;i++)
 			menu::IplFont::getInstance().drawString(10,(10*i+60),text[i], 0.5, false); 
-#endif
-	//Reset any stats in DEBUG_stats
-//	DEBUG_stats(8, "RecompCache Blocks Freed", STAT_TYPE_CLEAR, 1);
-
-   //reset swap table from GUI/DEBUG
-//	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
 	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+#endif
 }
 
 #ifdef SHOW_DEBUG
@@ -354,6 +394,8 @@ void VI_GX_showStats()
 
 void VI_GX_cleanUp()
 {
+	GX_CheckResChange();
+	
 	GX_SetNumTevStages(1);
 	GX_SetTevOp(GX_TEVSTAGE0,GX_MODULATE);
 

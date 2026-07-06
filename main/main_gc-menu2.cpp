@@ -113,6 +113,7 @@ char glN64_useFrameBufferTextures;
 char glN64_use2xSaiTextures;
 char renderCpuFramebuffer;
 #endif //!GLN64_GX
+char nativeOutput;
 extern timers Timers;
 char menuActive;
 char miniMenuActive;
@@ -143,6 +144,7 @@ static struct {
   { "FPS", &showFPSonScreen, FPS_HIDE, FPS_SHOW },
 //  { "Debug", &printToScreen, DEBUG_HIDE, DEBUG_SHOW },
   { "FBTex", &glN64_useFrameBufferTextures, GLN64_FBTEX_DISABLE, GLN64_FBTEX_ENABLE },
+  { "NativeOutput", &nativeOutput, NATIVEOUT_DISABLE, NATIVEOUT_ENABLE },
   { "2xSaI", &glN64_use2xSaiTextures, GLN64_2XSAI_DISABLE, GLN64_2XSAI_ENABLE },
   { "ScreenMode", &screenMode, SCREENMODE_4x3, SCREENMODE_16x9_PILLARBOX },
   { "VideoMode", &videoMode, VIDEOMODE_AUTO, VIDEOMODE_576P },
@@ -341,6 +343,7 @@ int main(int argc, const char* argv[]) {
 	renderCpuFramebuffer = 0; // Disable CPU Framebuffer Rendering
 #endif //GLN64_GX
 	menuActive = 1;
+	nativeOutput	 = NATIVEOUT_DISABLE;
 
 #ifdef HW_RVL
 	if (argc > 1)
