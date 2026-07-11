@@ -322,7 +322,7 @@ void Func_MMResetROM()
 }
 
 void Func_MMRefreshStateInfo()
-{
+{ 
 	savestates_select_slot(which_slot);
 	FRAME_STRINGS[8][5] = which_slot + '0';
 	FRAME_STRINGS[2][11] = which_slot + '0';
@@ -343,6 +343,10 @@ void Func_MMRefreshStateInfo()
 		state_exists = true;
 	DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), FB_THUMB_SIZE);
 	GX_InvalidateTexAll();
+}
+
+void MiniMenuFrame::Func_MMRefreshStates() {
+	Func_MMRefreshStateInfo();
 }
 
 void Func_MMSaveState()

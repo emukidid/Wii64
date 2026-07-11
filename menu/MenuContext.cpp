@@ -129,8 +129,10 @@ void MenuContext::setActiveFrame(int frameIndex)
 	switch(frameIndex) {
 	case FRAME_MAIN:
 #if !(defined(GC_BASIC))
-		if(useMiniMenu)
+		if(useMiniMenu) {
 			currentActiveFrame = miniMenuFrame;
+			miniMenuFrame->Func_MMRefreshStates();
+		}
 		else
 #endif
 			currentActiveFrame = mainFrame;

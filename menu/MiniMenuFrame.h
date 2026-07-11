@@ -32,6 +32,7 @@ public:
 	MiniMenuFrame();
 	~MiniMenuFrame();
 	void drawChildren(menu::Graphics& gfx);
+	void Func_MMRefreshStates();
 
 private:
 	menu::MiniInfoBar *miniInfoBar;
