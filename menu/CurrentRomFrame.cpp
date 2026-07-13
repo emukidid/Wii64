@@ -336,12 +336,18 @@ void Func_SaveState()
     menu::MessageBox::getInstance().setMessage("Failed to create save state");
   }
   else {
+	 if(
 #if !(defined(GC_BASIC))
-	savestates_save(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture());
+		savestates_save(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture())
 #else
-	savestates_save(which_slot, NULL);
+		savestates_save(which_slot, NULL)
 #endif
-	menu::MessageBox::getInstance().setMessage("State Saved Successfully");
+	  ) {
+		menu::MessageBox::getInstance().setMessage("State Saved Successfully");
+	}
+	else {
+		menu::MessageBox::getInstance().setMessage("Failed to create save state");
+	}
   }
 }
 

@@ -367,9 +367,13 @@ void Func_MMSaveState()
 		menu::MessageBox::getInstance().setMessage("Failed to create save state");
 	}
 	else {
-		savestates_save(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture());
-		Func_MMRefreshStateInfo();
-		menu::MessageBox::getInstance().setMessage("State Saved Successfully");
+		if(savestates_save(which_slot, menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture())) {
+			Func_MMRefreshStateInfo();
+			menu::MessageBox::getInstance().setMessage("State Saved Successfully");
+		}
+		else {
+			menu::MessageBox::getInstance().setMessage("Failed to create save state");
+		}
 	}
 }
 

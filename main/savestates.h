@@ -39,7 +39,7 @@
 # define FB_THUMB_FMT GX_TF_RGB565 //GX_TF_RGBA8 or GX_TF_RGB565
 # define FB_THUMB_SIZE (FB_THUMB_WD*FB_THUMB_HT*FB_THUMB_BPP)
 
-void savestates_save(unsigned int slot, u8* fb_tex);
+int savestates_save(unsigned int slot, u8* fb_tex);
 int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time);
 int savestates_load(unsigned int slot);
 void savestates_queue_load(unsigned int slot);

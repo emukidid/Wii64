@@ -46,6 +46,7 @@
 #include "../r4300/interupt.h"
 #include "../gc_memory/TLB-Cache.h"
 #include "../fileBrowser/fileBrowser-libfat.h"
+#include "../gui/DEBUG.h"
 #include "wii64config.h"
 
 #ifdef USE_EXPANSION
@@ -53,20 +54,20 @@
 #else
 #define RDRAM_SIZE (0x400000)
 #endif
-#define CHUNK_SIZE (0x10000)
+#define SAVE_CHUNK_SIZE (32768)
+#define LOAD_CHUNK_SIZE (32768)
 
 char* statesmagic = "W64";
 char* statespath = "/wii64/saves/";
 void LoadingBar_showBar(float percent, const char* string);
 #define SAVE_STATE_MSG "Saving State .."
 #define LOAD_STATE_MSG "Loading State .."
-#define STATE_VERSION 2
+#define STATE_VERSION 3
 
 static unsigned int savestates_version = STATE_VERSION;
 static unsigned int savestates_slot = 0;
 static int loadstate_queued = 0;
 static int loadstate_slot = 0;
-static char state_filename[1024];
 
 void savestates_select_slot(unsigned int s)
 {
@@ -75,26 +76,44 @@ void savestates_select_slot(unsigned int s)
 }
 
 char *savestates_get_filename() {
-	memset(&state_filename[0], 0, 1024);
+	char *state_filename = calloc(1, 1024);
 #ifdef HW_RVL
 	sprintf(state_filename, "%s%s%s%s.st%d",(saveStateDevice==SAVESTATEDEVICE_USB)?"usb:":"sd:",
 			statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #else
 	sprintf(state_filename, "sd:%s%s%s.st%d", statespath, ROM_SETTINGS.goodname, saveregionstr(),savestates_slot);
 #endif
-	return &state_filename[0];
+	return state_filename;
 }
 
+//#define ZLIB_STATES 1
+#ifdef ZLIB_STATES
+#define stateFile            		gzFile
+#define stateOpen(filename, mode)   gzopen((filename), (mode))
+#define stateWrite(f, src, size)    gzwrite((f), (src), (size))
+#define stateRead(f, dst, size)     gzread((f), (dst), (size))
+#define stateSeek(f, size)     		gzseek((f), (size), SEEK_CUR)
+#define stateClose(f)               gzclose((f))
+#else
+#define stateFile            		FILE*
+#define stateOpen(filename, mode)   fopen((filename), (mode))
+#define stateWrite(f, src, size)    fwrite((src), 1, (size), (f))
+#define stateRead(f, dst, size)     fread((dst), 1, (size), (f))
+#define stateSeek(f, size)     		fseek((f), (size), SEEK_CUR)
+#define stateClose(f)               fclose((f))
+#endif
+
+
 // Checks if the save state contains our magic and is of the right version number
-int savestates_check_valid(gzFile f) {
+int savestates_check_valid(stateFile f) {
 	char statesmagic_read[3];
 	unsigned int savestates_version_read;
 	//Load Header
-	gzread(f, statesmagic_read, 3); //Read magic "W64"
-	gzread(f, &savestates_version_read, sizeof(unsigned int));
+	stateRead(f, statesmagic_read, 3); //Read magic "W64"
+	stateRead(f, &savestates_version_read, sizeof(unsigned int));
 	if (!((strncmp(statesmagic, statesmagic_read, 3)==0)&&(savestates_version==savestates_version_read)))
 	{
-		gzclose(f);
+		stateClose(f);
 		return 0;
 	}
 	return 1;
@@ -104,12 +123,13 @@ int savestates_check_valid(gzFile f) {
 int savestates_exists(unsigned int slot, int mode)
 {
 	savestates_select_slot(slot);
-	gzFile f = gzopen(savestates_get_filename(), (mode == SAVESTATE) ? "wb" : "rb");
-   	
+	char *filename = savestates_get_filename();
+	FILE *f = fopen(filename, (mode == SAVESTATE) ? "wb" : "rb");
+   	free(filename);
 	if(!f) {
 		return 0;
 	}
-	gzclose(f);
+	fclose(f);
 	return 1;
 }
 
@@ -129,152 +149,176 @@ int savestates_queued_load() {
 	return 0;
 }
 
-void savestates_save(unsigned int slot, u8* fb_tex)
+// returns 0 on failure.
+int savestates_save(unsigned int slot, u8* fb_tex)
 { 
-	gzFile f;
+	stateFile f;
 	char buf[1024];
 	int len, i;
 	float progress = 0.0f;
 	
 	savestates_select_slot(slot);
-	f = gzopen(savestates_get_filename(), "wb");
+	char *filename = savestates_get_filename();
+	f = stateOpen(filename, "wb");
 	
 	if(!f) {
-		return;
+		free(filename);
+		//print_gecko("Save state failed to save\r\n");
+		return 0;
 	}
 	LoadingBar_showBar(progress, SAVE_STATE_MSG);
 	
 	//Save Header
-	gzwrite(f, statesmagic, 3); //Write magic "W64"
-	gzwrite(f, &savestates_version, sizeof(unsigned int));
+	stateWrite(f, statesmagic, 3); //Write magic "W64"
+	stateWrite(f, &savestates_version, sizeof(unsigned int));
 #if !(defined(GC_BASIC))
-	gzwrite(f, fb_tex, FB_THUMB_SIZE);
+	stateWrite(f, fb_tex, FB_THUMB_SIZE);
 #endif
 
 	//Save State
 	// RDRAM 0->50%
-	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
+	float slice = 0.50f / (RDRAM_SIZE / SAVE_CHUNK_SIZE);
 	unsigned char* ramPtr = (unsigned char*)&rdram[0];
-	for(i = 0; i < RDRAM_SIZE; i+= CHUNK_SIZE) {
-		gzwrite(f, ramPtr, CHUNK_SIZE);
-		ramPtr+=CHUNK_SIZE;
+	for(i = 0; i < RDRAM_SIZE; i+= SAVE_CHUNK_SIZE) {
+		stateWrite(f, ramPtr, SAVE_CHUNK_SIZE);
+		ramPtr+=SAVE_CHUNK_SIZE;
 		progress += slice;
 		LoadingBar_showBar(progress, SAVE_STATE_MSG);
 	}
 	//print_gecko("adler of RDRAM %08X\r\n",adler32(0, (Bytef *)&rdram[0], RDRAM_SIZE));
 
 	// TLB 50->90% (cache funcs are just wrapper macros for a non cache build)
-	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
+	slice = 0.40f / ((0x100000*2) / SAVE_CHUNK_SIZE);
 	
 	int j = 0;
-	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
-		for(j = 0; j < CHUNK_SIZE; j++) {
-			u32 entry = TLBCache_get_r((i*CHUNK_SIZE) + j);
-			gzwrite(f, &entry, 4);
+	for(i = 0; i < 0x100000/SAVE_CHUNK_SIZE; i++) {
+		for(j = 0; j < SAVE_CHUNK_SIZE; j++) {
+			u32 entry = TLBCache_get_r((i*SAVE_CHUNK_SIZE) + j);
+			if(entry) {
+				u32 addr = (i*SAVE_CHUNK_SIZE) + j;
+				stateWrite(f, &addr, 4);
+				stateWrite(f, &entry, 4);
+			}
 		}
 		progress += slice;
 		LoadingBar_showBar(progress, SAVE_STATE_MSG);
 	}
-	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
-		for(j = 0; j < CHUNK_SIZE; j++) {
-			u32 entry = TLBCache_get_w((i*CHUNK_SIZE) + j);
-			gzwrite(f, &entry, 4);
+	u32 endTag = 0x1ABC0FE1;
+	stateWrite(f, &endTag, 4);
+	stateWrite(f, &endTag, 4);
+	
+	for(i = 0; i < 0x100000/SAVE_CHUNK_SIZE; i++) {
+		for(j = 0; j < SAVE_CHUNK_SIZE; j++) {
+			u32 entry = TLBCache_get_w((i*SAVE_CHUNK_SIZE) + j);
+			if(entry) {
+				u32 addr = (i*SAVE_CHUNK_SIZE) + j;
+				stateWrite(f, &addr, 4);
+				stateWrite(f, &entry, 4);
+			}
 		}
 		progress += slice;
 		LoadingBar_showBar(progress, SAVE_STATE_MSG);
 	}
+	stateWrite(f, &endTag, 4);
+	stateWrite(f, &endTag, 4);
 
 	// Save registers (90->95%)
-	gzwrite(f, &rdram_register, sizeof(RDRAM_register));
-	gzwrite(f, &MI_register, sizeof(mips_register));
-	gzwrite(f, &pi_register, sizeof(PI_register));
-	gzwrite(f, &sp_register, sizeof(SP_register));
-	gzwrite(f, &rsp_register, sizeof(RSP_register));
-	gzwrite(f, &si_register, sizeof(SI_register));
-	gzwrite(f, &vi_register, sizeof(VI_register));
-	gzwrite(f, &ri_register, sizeof(RI_register));
-	gzwrite(f, &ai_register, sizeof(AI_register));
-	gzwrite(f, &dpc_register, sizeof(DPC_register));
-	gzwrite(f, &dps_register, sizeof(DPS_register));
+	stateWrite(f, &rdram_register, sizeof(RDRAM_register));
+	stateWrite(f, &MI_register, sizeof(mips_register));
+	stateWrite(f, &pi_register, sizeof(PI_register));
+	stateWrite(f, &sp_register, sizeof(SP_register));
+	stateWrite(f, &rsp_register, sizeof(RSP_register));
+	stateWrite(f, &si_register, sizeof(SI_register));
+	stateWrite(f, &vi_register, sizeof(VI_register));
+	stateWrite(f, &ri_register, sizeof(RI_register));
+	stateWrite(f, &ai_register, sizeof(AI_register));
+	stateWrite(f, &dpc_register, sizeof(DPC_register));
+	stateWrite(f, &dps_register, sizeof(DPS_register));
 	progress += 0.05f;
 	LoadingBar_showBar(progress, SAVE_STATE_MSG);
 	
 	// RSP, r4300 struct and interrupt queue (95%->100%)
-	gzwrite(f, SP_DMEM, 0x1000);
-	gzwrite(f, SP_IMEM, 0x1000);
-	gzwrite(f, PIF_RAM, 0x40);
-	gzwrite(f, &flashRAMInfo, sizeof(_FlashRAMInfo));
-	gzwrite(f, &r4300, sizeof(r4300));
-	gzwrite(f, r4300.fpr_data, 32*8);
+	stateWrite(f, SP_DMEM, 0x1000);
+	stateWrite(f, SP_IMEM, 0x1000);
+	stateWrite(f, PIF_RAM, 0x40);
+	stateWrite(f, &flashRAMInfo, sizeof(_FlashRAMInfo));
+	stateWrite(f, &r4300, sizeof(r4300));
+	stateWrite(f, r4300.fpr_data, 32*8);
 	
 	len = save_eventqueue_infos(buf);
-	gzwrite(f, buf, len);
-	gzclose(f);
+	stateWrite(f, buf, len);
+	stateClose(f);
 	LoadingBar_showBar(1.0f, SAVE_STATE_MSG);
+	free(filename);
+	return 1;
 }
 
 //load a save state header (texture + datetime)
 int savestates_load_header(unsigned int slot, u8* fb_tex, char* date, char* time)
 {
-	gzFile f = NULL;
+	stateFile f = NULL;
 	struct stat attrib;
 
 	savestates_select_slot(slot);
+	char *filename = savestates_get_filename();
 
 	//get modified time from file attribute
-	stat(savestates_get_filename(), &attrib);
+	stat(filename, &attrib);
 	if(date)
 		strftime(date, 9, "%D", localtime(&(attrib.st_mtime)));//Write date string in MM/DD/YY format
 	if(time)
 		strftime(time, 9, "%R", localtime(&(attrib.st_mtime)));//Write time string in HH:MM format
 	
-	f = gzopen(savestates_get_filename(), "rb");
+	f = stateOpen(filename, "rb");
 	
 	if (!f || !savestates_check_valid(f)) {
+		free(filename);
 		return -1;
 	}
 #if !(defined(GC_BASIC))
-	gzread(f, fb_tex, FB_THUMB_SIZE);
+	stateRead(f, fb_tex, FB_THUMB_SIZE);
 #endif
-	gzclose(f);
+	stateClose(f);
+	free(filename);
 	return 0;
 }
 
 int savestates_load(unsigned int slot)
 {
-	gzFile f = NULL;
+	stateFile f = NULL;
 	char buf[1024];
 	int len, i;
 	float progress = 0.0f;
 	
 	savestates_select_slot(slot);
-	f = gzopen(savestates_get_filename(), "rb");
+	char *filename = savestates_get_filename();
+	f = stateOpen(filename, "rb");
 	
 	if (!f || !savestates_check_valid(f)) {
+		free(filename);
 		return -1;
 	}
 	LoadingBar_showBar(progress, LOAD_STATE_MSG);
 	
 #if !(defined(GC_BASIC))
 	//Skip image
-	gzseek(f, FB_THUMB_SIZE, SEEK_CUR);
+	stateSeek(f, FB_THUMB_SIZE);
 #endif
 
 	//Load State
 	// RDRAM 0->50%
-	float slice = 0.50f / (RDRAM_SIZE / CHUNK_SIZE);
+	float slice = 0.50f / (RDRAM_SIZE / LOAD_CHUNK_SIZE);
 	unsigned char* ramPtr = (unsigned char*)&rdram[0];
-	for(i = 0; i < RDRAM_SIZE; i+= CHUNK_SIZE) {
-		gzread(f, ramPtr, CHUNK_SIZE);
-		ramPtr+=CHUNK_SIZE;
+	for(i = 0; i < RDRAM_SIZE; i+= LOAD_CHUNK_SIZE) {
+		stateRead(f, ramPtr, LOAD_CHUNK_SIZE);
+		ramPtr+=LOAD_CHUNK_SIZE;
 		progress += slice;
 		LoadingBar_showBar(progress, LOAD_STATE_MSG);
 	}
 	//print_gecko("adler of RDRAM %08X\r\n",adler32(0, (Bytef *)&rdram[0], RDRAM_SIZE));
 	
 	// TLB 50->90% (cache funcs are just wrapper macros for a non cache build)
-	slice = 0.40f / ((0x100000*2) / CHUNK_SIZE);
-	u32 j, entry;
+	slice = 0.40f / ((0x100000*2) / LOAD_CHUNK_SIZE);
 
 #ifdef TINY_TLBCACHE
 	TLBCache_reset();
@@ -283,63 +327,60 @@ int savestates_load(unsigned int slot)
 	tlb_mem2_init();
 #endif
 	
-	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
-		for(j = 0; j < CHUNK_SIZE; j++) {
-			gzread(f, &entry, 4);
-			if(entry) {
-				TLBCache_set_r((i*CHUNK_SIZE) + j, entry);
-			}
-		}
-		progress += slice;
-		LoadingBar_showBar(progress, LOAD_STATE_MSG);
+	u32 entry[2] = {0, 0};
+	while(entry[0] != 0x1ABC0FE1) {
+		stateRead(f, &entry, 8);
+		if(entry[0] == 0x1ABC0FE1) { break; }
+		TLBCache_set_r(entry[0], entry[1]);
 	}
-	for(i = 0; i < 0x100000/CHUNK_SIZE; i++) {
-		for(j = 0; j < CHUNK_SIZE; j++) {
-			gzread(f, &entry, 4);
-			if(entry) {
-				TLBCache_set_w((i*CHUNK_SIZE) + j, entry);
-			}
-		}
-		progress += slice;
-		LoadingBar_showBar(progress, LOAD_STATE_MSG);
+	progress = 0.70f;
+	LoadingBar_showBar(progress, LOAD_STATE_MSG);
+	entry[0] = 0;
+	while(entry[0] != 0x1ABC0FE1) {
+		stateRead(f, &entry, 8);
+		if(entry[0] == 0x1ABC0FE1) { break; }
+		TLBCache_set_w(entry[0], entry[1]);
 	}
+	progress = 0.90f;
+	LoadingBar_showBar(progress, LOAD_STATE_MSG);
 
 	// Load registers (90->95%)
-	gzread(f, &rdram_register, sizeof(RDRAM_register));
-	gzread(f, &MI_register, sizeof(mips_register));
-	gzread(f, &pi_register, sizeof(PI_register));
-	gzread(f, &sp_register, sizeof(SP_register));
-	gzread(f, &rsp_register, sizeof(RSP_register));
-	gzread(f, &si_register, sizeof(SI_register));
-	gzread(f, &vi_register, sizeof(VI_register));
-	gzread(f, &ri_register, sizeof(RI_register));
-	gzread(f, &ai_register, sizeof(AI_register));
-	gzread(f, &dpc_register, sizeof(DPC_register));
-	gzread(f, &dps_register, sizeof(DPS_register));
+	stateRead(f, &rdram_register, sizeof(RDRAM_register));
+	stateRead(f, &MI_register, sizeof(mips_register));
+	stateRead(f, &pi_register, sizeof(PI_register));
+	stateRead(f, &sp_register, sizeof(SP_register));
+	stateRead(f, &rsp_register, sizeof(RSP_register));
+	stateRead(f, &si_register, sizeof(SI_register));
+	stateRead(f, &vi_register, sizeof(VI_register));
+	stateRead(f, &ri_register, sizeof(RI_register));
+	stateRead(f, &ai_register, sizeof(AI_register));
+	stateRead(f, &dpc_register, sizeof(DPC_register));
+	stateRead(f, &dps_register, sizeof(DPS_register));
 	progress += 0.05f;
 	LoadingBar_showBar(progress, LOAD_STATE_MSG);
 
 	// RSP, r4300 struct and interrupt queue (95%->100%)
-	gzread(f, SP_DMEM, 0x1000);
-	gzread(f, SP_IMEM, 0x1000);
-	gzread(f, PIF_RAM, 0x40);
-	gzread(f, &flashRAMInfo, sizeof(_FlashRAMInfo));
-	gzread(f, &r4300, sizeof(r4300));
+	stateRead(f, SP_DMEM, 0x1000);
+	stateRead(f, SP_IMEM, 0x1000);
+	stateRead(f, PIF_RAM, 0x40);
+	stateRead(f, &flashRAMInfo, sizeof(_FlashRAMInfo));
+	stateRead(f, &r4300, sizeof(r4300));
 	set_fpr_pointers(Status);  // Status is r4300.reg_cop0[12]
-	gzread(f, r4300.fpr_data, 32*8);
+	stateRead(f, r4300.fpr_data, 32*8);
 
 	len = 0;
 	while(1)
 	{
-		gzread(f, buf+len, 4);
+		stateRead(f, buf+len, 4);
 		if (*((unsigned long*)&buf[len]) == 0xFFFFFFFF) break;
-		gzread(f, buf+len+4, 4);
+		stateRead(f, buf+len+4, 4);
 		len += 8;
 	}
 	load_eventqueue_infos(buf);
-	gzclose(f);
+	stateClose(f);
 
 	r4300.stop = 0;
 	LoadingBar_showBar(1.0f, LOAD_STATE_MSG);
+	free(filename);
 	return 0; //success!
 }

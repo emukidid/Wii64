@@ -73,26 +73,31 @@ int rounding_mode = 0x33F, trunc_mode = 0xF3F, round_mode = 0x33F,
 
 inline unsigned long update_invalid_addr(unsigned long addr)
 {
-   if (addr >= 0x80000000 && addr < 0xc0000000)
-     {
-	if (invalid_code_get(addr>>12)) invalid_code_set((addr^0x20000000)>>12, 1);
-	if (invalid_code_get((addr^0x20000000)>>12)) invalid_code_set(addr>>12, 1);
-	return addr;
-     }
-   else
-     {
-	unsigned long paddr = virtual_to_physical_address(addr, 2);
-	if (paddr)
-	  {
-	     unsigned long beg_paddr = paddr - (addr - (addr&~0xFFF));
-	     update_invalid_addr(paddr);
-	     if (invalid_code_get((beg_paddr+0x000)>>12)) invalid_code_set(addr>>12, 1);
-	     if (invalid_code_get((beg_paddr+0xFFC)>>12)) invalid_code_set(addr>>12, 1);
-	     if (invalid_code_get(addr>>12)) invalid_code_set((beg_paddr+0x000)>>12, 1);
-	     if (invalid_code_get(addr>>12)) invalid_code_set((beg_paddr+0xFFC)>>12, 1);
-	  }
-	return paddr;
-     }
+	if (addr >= 0x80000000 && addr < 0xc0000000)
+	{
+		if (invalid_code_get(addr>>12)) invalid_code_set((addr^0x20000000)>>12, 1);
+		if (invalid_code_get((addr^0x20000000)>>12)) invalid_code_set(addr>>12, 1);
+		return addr;
+	}
+	else
+	{
+		unsigned long paddr = virtual_to_physical_address(addr, 2);
+		if (paddr)
+		{
+			unsigned long beg_paddr = paddr - (addr - (addr&~0xFFF));
+			if (paddr >= 0x80000000 && paddr < 0xc0000000)
+			{
+				if (invalid_code_get(paddr>>12)) invalid_code_set((paddr^0x20000000)>>12, 1);
+				if (invalid_code_get((paddr^0x20000000)>>12)) invalid_code_set(paddr>>12, 1);
+			}
+			
+			if (invalid_code_get((beg_paddr+0x000)>>12)) invalid_code_set(addr>>12, 1);
+			if (invalid_code_get((beg_paddr+0xFFC)>>12)) invalid_code_set(addr>>12, 1);
+			if (invalid_code_get(addr>>12)) invalid_code_set((beg_paddr+0x000)>>12, 1);
+			if (invalid_code_get(addr>>12)) invalid_code_set((beg_paddr+0xFFC)>>12, 1);
+		}
+		return paddr;
+	}
 }
 
 
