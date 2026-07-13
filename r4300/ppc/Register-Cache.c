@@ -49,6 +49,10 @@ static char availableRegsDefault[32] = {
 	};
 static char availableRegs[32];
 
+char* getVolatileAvailableRegs() {
+	return &availableRegs[3];
+}
+
 // Actually perform the store for a dirty register mapping
 static void _flushRegister(int gpr){
 	// Store the LSW

@@ -61,23 +61,23 @@ inline u32 dyna_run(PowerPC_func* func, PowerPC_instr *code){
 	end_section(TRAMP_SECTION);
 
 	__asm__ volatile(
-		"mtctr  %4        \n"
-		"bl     1f        \n"
-		"mflr   %3        \n"
-		"lwz    %2, 12(1) \n"
-		"addi   1, 1, 8   \n"
-		"b      2f        \n"
-		"1:               \n"
+        "mtctr  %4        \n"
+        "bl     1f        \n"
+        "mflr   %3        \n"
+        "lwz    %2, 12(1) \n"
+        "addi   1, 1, 8   \n"
+        "b      2f        \n"
+        "1:               \n"
 		"stwu   1, -8(1)  \n"
-		"mflr   0         \n"
-		"stw    0, 12(1)  \n"
+        "mflr   0         \n"
+        "stw    0, 12(1)  \n"
 		"bctr             \n"
-		"2:               \n"
-		: "=r" (r3), "=r" (r30), "=r" (return_addr), "=r" (link_branch)
+        "2:               \n"
+        : "=r" (r3), "=r" (r30), "=r" (return_addr), "=r" (link_branch)
 		: "r" (code), "r" (r28), "r" (r29), "r" (r30), "r" (r31)
-		: "r0", "r2", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12",
+        : "r0", "r2", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12",
 		  "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13",
-		  "lr", "ctr", "cr0", "cr1", "cr2", "cr3", "cr4", "cr5", "cr6", "cr7", "ca");
+          "lr", "ctr", "cr0", "cr1", "cr2", "cr3", "cr4", "cr5", "cr6", "cr7", "ca");
 
 	last_func = r30;
 	link_branch = link_branch == return_addr ? NULL : link_branch - 1;
@@ -160,6 +160,24 @@ void dynarec(unsigned int address){
 	r4300.pc = address;
 }
 
+unsigned int dyna_cop0_status(unsigned int pc, unsigned int oldStatus, unsigned int newStatus) {
+	r4300.pc = pc;
+
+	if ((newStatus & 0x04000000) != (oldStatus & 0x04000000)) {
+	  set_fpr_pointers(newStatus);
+	}
+	update_count();
+	r4300.pc+=4;
+	check_interupt();
+	if (r4300.next_interrupt <= Count)  {
+		gen_interupt();
+	}
+
+	if(r4300.pc != pc + 4) r4300.noCheckInterrupt = 1;
+
+	return r4300.pc != pc + 4 ? r4300.pc : 0;
+}
+
 unsigned int decodeNInterpret(MIPS_instr mips, unsigned int pc,
                               int isDelaySlot){
 	r4300.delay_slot = isDelaySlot; // Make sure we set r4300.delay_slot properly
@@ -226,6 +244,12 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 	//start_section(DYNAMEM_SECTION);
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
+	
+	uint32_t phys = addr & 0x1FFFFFFF;
+	int needsCheck = 1;
+	if (type >= MEM_SW && phys >= 0x03F00000 && phys <= 0x04900000) {
+		needsCheck = 0;
+	}
 
 	switch(type){
 		case MEM_LW:
@@ -361,7 +385,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				word = r4300.gpr[value + i];
 				write_word_in_memory();
 			}
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SH:
 			for(i = 0; i < count; i++){
@@ -369,7 +393,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				hword = r4300.gpr[value + i];
 				write_hword_in_memory();
 			}
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SB:
 			for(i = 0; i < count; i++){
@@ -377,7 +401,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				byte = r4300.gpr[value + i];
 				write_byte_in_memory();
 			}
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SD:
 			for(i = 0; i < count; i++){
@@ -385,7 +409,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				dword = r4300.gpr[value + i];
 				write_dword_in_memory();
 			}
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SWC1:
 			for(i = 0; i < count; i++){
@@ -393,7 +417,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				word = *((long*)r4300.fpr_single[value + i*2]);
 				write_word_in_memory();
 			}
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SDC1:
 			for(i = 0; i < count; i++){
@@ -401,7 +425,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				dword = *((long long*)r4300.fpr_double[value + i*2]);
 				write_dword_in_memory();
 			}
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SC:
 			if(r4300.llbit){
@@ -424,7 +448,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				word = (word & ~mask) | ((r4300.gpr[value] >> shift) & mask);
 			}
 			write_word_in_memory();
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SWR:
 			address = addr & ~3;
@@ -437,7 +461,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				word = (word & ~mask) | ((r4300.gpr[value] << shift) & mask);
 			}
 			write_word_in_memory();
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SDL:
 			address = addr & ~7;
@@ -450,7 +474,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				dword = (dword & ~mask) | ((r4300.gpr[value] >> shift) & mask);
 			}
 			write_dword_in_memory();
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		case MEM_SDR:
 			address = addr & ~7;
@@ -463,7 +487,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 				dword = (dword & ~mask) | ((r4300.gpr[value] << shift) & mask);
 			}
 			write_dword_in_memory();
-			invalidate_func(addr);
+			if(needsCheck) invalidate_func(addr);
 			break;
 		default:
 			r4300.stop = 1;

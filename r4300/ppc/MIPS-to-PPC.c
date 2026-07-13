@@ -3003,10 +3003,52 @@ static int MTC0(MIPS_instr mips){
 	case 27: // CacheErr
 		// Do nothing
 		return CONVERT_SUCCESS;
-	
+#if 0
+	case 12: {
+		flushRegister(rt);
+		char* availVolatileRegs = getVolatileAvailableRegs();
+
+		// Save r3–r12 (if they're in use) but don't flush to r4300 struct
+		for (int i = 0; i < 10; i++) {
+			if(!availVolatileRegs[i]) {
+				GEN_STW(R3 + i, (i*4)+offsetof(R4300,ppc_reg_scratch), DYNAREG_R4300);
+			}
+		}
+		
+		// r3 = pc
+		GEN_LIS(R3, extractUpper16(get_src_pc()));
+		// r5 = new status value
+		GEN_LWZ(R5, (rt*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
+		// r4 = old Status
+		GEN_LWZ(R4, (12*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+		GEN_ADDI(R3, R3, extractLower16(get_src_pc()));
+		// Status = newStatus (in r4300.reg_cop0)
+		GEN_STW(R5, (12*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+		GEN_B(add_jump((unsigned long)(&dyna_cop0_status), 1, 1), 0, 1);
+		// Load the old LR
+		GEN_LWZ(R0, DYNAOFF_LR, R1);
+		// Check if the PC changed
+		GEN_CMPI(CR5, R3, 0);
+		// Restore the LR
+		GEN_MTLR(R0);
+		
+		// Restore r3–r12, if they were in use
+		for (int i = 0; i < 10; i++) {
+			if(!availVolatileRegs[i]) {
+				GEN_LWZ(R3 + i, (i*4)+offsetof(R4300,ppc_reg_scratch), DYNAREG_R4300);
+			}
+		}
+		// if dyna_cop0_status returned an address, jumpTo it
+		GEN_BNELR(CR5, 0);
+
+		if(mips_is_jump(mips)) delaySlotNext = 2;
+		return INTERPRETED;
+	}
+#endif	
 	case 9: // Count
 	case 11: // Compare
 	case 12: // Status
+
 	default:
 		genCallInterp(mips);
 		return INTERPRETED;
@@ -4406,7 +4448,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 		isUnsafe = 0;
 		if(!isConstant){
 			isConstant = 2;
-			constant = r4300.gpr[_rs];
+			constant = r4300.gpr[_rs];	// This feels broken.
 		}
 	}
 
@@ -4425,9 +4467,14 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 	#endif
 		else
 			isPhysical = 0;
+		
+		uint32_t phys = constant & 0x1FFFFFFF;
+		if (type >= MEM_SW && phys >= 0x03F00000 && phys <= 0x04900000) {
+			isUnsafe = 0;
+		}
 	}
 #endif
-
+	
 	if(type == MEM_LDL || type == MEM_LDR || type == MEM_SDL || type == MEM_SDR){
 		isPhysical = 0;
 		isVirtual = 1;
@@ -4471,94 +4518,160 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 		switch(type){
 			case MEM_LW:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegisterNew(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 29);
-						GEN_LWZUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_LWZ(rt, i*4, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFC) + (count*4) < 32767)) {
+					// Save an instruction for lowmem stuff if we can.
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i*4) + (constant & 0x7FFFFC);
+						int rt = mapRegisterNew(_rt + i);
+						GEN_LWZ(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegisterNew(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 29);
+							GEN_LWZUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_LWZ(rt, i*4, tmp);
+						}
 					}
 				}
 				break;
 			}
 			case MEM_LWU:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegisterNewUnsigned(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 29);
-						GEN_LWZUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_LWZ(rt, i*4, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFC) + (count*4) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i*4) + (constant & 0x7FFFFC);
+						int rt = mapRegisterNewUnsigned(_rt + i);
+						GEN_LWZ(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegisterNewUnsigned(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 29);
+							GEN_LWZUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_LWZ(rt, i*4, tmp);
+						}
 					}
 				}
 				break;
 			}
 			case MEM_LH:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegisterNew(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 30);
-						GEN_LHAUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_LHA(rt, i*2, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFE) + (count*2) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i*2) + (constant & 0x7FFFFE);
+						int rt = mapRegisterNew(_rt + i);
+						GEN_LHA(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegisterNew(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 30);
+							GEN_LHAUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_LHA(rt, i*2, tmp);
+						}
 					}
 				}
 				break;
 			}
 			case MEM_LHU:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegisterNewUnsigned(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 30);
-						GEN_LHZUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_LHZ(rt, i*2, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFE) + (count*2) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i*2) + (constant & 0x7FFFFE);
+						int rt = mapRegisterNewUnsigned(_rt + i);
+						GEN_LHA(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegisterNewUnsigned(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 30);
+							GEN_LHZUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_LHZ(rt, i*2, tmp);
+						}
 					}
 				}
 				break;
 			}
 			case MEM_LB:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegisterNew(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 31);
-						GEN_LBZUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_LBZ(rt, i, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFF) + (count) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i) + (constant & 0x7FFFFF);
+						int rt = mapRegisterNew(_rt + i);
+						GEN_LBZ(rt, phys, DYNAREG_RDRAM);
+						GEN_EXTSB(rt, rt);
 					}
-					GEN_EXTSB(rt, rt);
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegisterNew(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 31);
+							GEN_LBZUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_LBZ(rt, i, tmp);
+						}
+						GEN_EXTSB(rt, rt);
+					}
 				}
 				break;
 			}
 			case MEM_LBU:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegisterNewUnsigned(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 31);
-						GEN_LBZUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_LBZ(rt, i, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFF) + (count) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i) + (constant & 0x7FFFFF);
+						int rt = mapRegisterNewUnsigned(_rt + i);
+						GEN_LBZ(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegisterNewUnsigned(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 31);
+							GEN_LBZUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_LBZ(rt, i, tmp);
+						}
 					}
 				}
 				break;
 			}
 			case MEM_LD:
 			{
-				for(i = 0; i < count; i++){
-					RegMapping rt = mapRegister64New(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 28);
-						GEN_LWZUX(rt.hi, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_LWZ(rt.hi, i*8, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFF8) + (count*8) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i*8) + (constant & 0x7FFFF8);
+						RegMapping rt = mapRegister64New(_rt + i);
+						GEN_LWZ(rt.hi, phys, DYNAREG_RDRAM);
+						GEN_LWZ(rt.lo, phys+4, DYNAREG_RDRAM);
 					}
-					GEN_LWZ(rt.lo, i*8+4, tmp);
+				}
+				else {
+					for(i = 0; i < count; i++){
+						RegMapping rt = mapRegister64New(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 28);
+							GEN_LWZUX(rt.hi, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_LWZ(rt.hi, i*8, tmp);
+						}
+						GEN_LWZ(rt.lo, i*8+4, tmp);
+					}
 				}
 				break;
 			}
@@ -4640,13 +4753,22 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 				break;
 			case MEM_SW:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegister(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 29);
-						GEN_STWUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_STW(rt, i*4, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFC) + (count*4) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i*4) + (constant & 0x7FFFFC);
+						int rt = mapRegister(_rt + i);
+						GEN_STW(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegister(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 29);
+							GEN_STWUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_STW(rt, i*4, tmp);
+						}
 					}
 				}
 				if(isUnsafe) check_memory();
@@ -4654,13 +4776,22 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 			}
 			case MEM_SH:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegister(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 30);
-						GEN_STHUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_STH(rt, i*2, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFE) + (count*2) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = (i*2) + (constant & 0x7FFFFE);
+						int rt = mapRegister(_rt + i);
+						GEN_STH(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegister(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 30);
+							GEN_STHUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_STH(rt, i*2, tmp);
+						}
 					}
 				}
 				if(isUnsafe) check_memory();
@@ -4668,13 +4799,22 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 			}
 			case MEM_SB:
 			{
-				for(i = 0; i < count; i++){
-					int rt = mapRegister(_rt + i);
-					if(i == 0){
-						GEN_RLWINM(tmp, rd, 0, 8, 31);
-						GEN_STBUX(rt, tmp, DYNAREG_RDRAM);
-					} else {
-						GEN_STB(rt, i, tmp);
+				if(isConstant==1 && (((constant) & 0x7FFFFF) + (count) < 32767)) {
+					for(i = 0; i < count; i++){
+						unsigned int phys = i + (constant & 0x7FFFFF);
+						int rt = mapRegister(_rt + i);
+						GEN_STB(rt, phys, DYNAREG_RDRAM);
+					}
+				}
+				else {
+					for(i = 0; i < count; i++){
+						int rt = mapRegister(_rt + i);
+						if(i == 0){
+							GEN_RLWINM(tmp, rd, 0, 8, 31);
+							GEN_STBUX(rt, tmp, DYNAREG_RDRAM);
+						} else {
+							GEN_STB(rt, i, tmp);
+						}
 					}
 				}
 				if(isUnsafe) check_memory();

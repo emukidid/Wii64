@@ -61,6 +61,7 @@ typedef struct {
 	unsigned int  nextLRU;			//2768
 	int           noCheckInterrupt; //2772
 	float         two16;
+	unsigned long ppc_reg_scratch[10];	// stashing of volatile regs (rarely)
 } R4300;
 extern R4300 r4300 __attribute__((section(".sbss")));
 

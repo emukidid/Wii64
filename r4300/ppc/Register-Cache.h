@@ -92,4 +92,6 @@ void unmapRegisterTemp(int tmp);
 int mapFPRTemp(void);
 void unmapFPRTemp(int tmp);
 
+char* getVolatileAvailableRegs();
+
 #endif
