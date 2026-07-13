@@ -170,7 +170,8 @@ int rom_read(fileBrowser_file* file){
   ROM_SETTINGS.eeprom_16kb = isEEPROM16k();
   // Apply game specific hacks
   GameSpecificHackSetup();
-#ifdef HW_RVL  
+#ifdef GLN64_GX
+#ifdef HW_RVL
 	// Makes the Mario Kart 64 in-game billboard screen work
   if(ROM_HEADER.CRC1 == 0xC3B6DE9D || 
     ROM_HEADER.CRC1 == 0x2577C7D4 || 
@@ -182,6 +183,7 @@ int rom_read(fileBrowser_file* file){
   else {
     enablegDPUpdateColorImage = 0;	
   }
+#endif
 #endif
   //Set VI limit based on ROM header
   InitTimer();
