@@ -38,6 +38,7 @@
 #endif
 
 gDPInfo gDP;
+char enablegDPUpdateColorImage = 0;
 
 void gDPSetOtherMode( u32 mode0, u32 mode1 )
 {
@@ -313,6 +314,67 @@ void gDPSetCombine( s32 muxs0, s32 muxs1 )
 	free( frameBuffer );
 }*/
 
+static inline u16 YUYV_to_RGBA5551(u8 y, u8 u, u8 v)
+{
+    int C = y - 16;
+    int D = u - 128;
+    int E = v - 128;
+
+    int R = (298 * C + 409 * E + 128) >> 8;
+    int G = (298 * C - 100 * D - 208 * E + 128) >> 8;
+    int B = (298 * C + 516 * D + 128) >> 8;
+
+    if (R < 0) R = 0; else if (R > 255) R = 255;
+    if (G < 0) G = 0; else if (G > 255) G = 255;
+    if (B < 0) B = 0; else if (B > 255) B = 255;
+
+    u16 r5 = R >> 3;
+    u16 g5 = G >> 3;
+    u16 b5 = B >> 3;
+
+    return (r5 << 11) | (g5 << 6) | (b5 << 1) | 1;
+}
+
+extern VIInfo VI;
+void gDPUpdateColorImage(void)
+{
+
+	// This is hacky (uses xfb, makes many assumptions, no depth buffer) so lets only enable it for Mario Kart 64.
+    const u32 w = gDP.colorImage.width  * OGL.scaleX;
+    const u32 h = gDP.colorImage.height * OGL.scaleY;
+
+    u16 *xfb = (u16*)VI.xfb[VI.which_fb];
+    u16 *dst = (u16*)&RDRAM[gDP.colorImage.address];
+
+    u32 i = 0;
+
+    for (u32 y = 0; y < gDP.colorImage.height; y++)
+    {
+        u32 frameY = OGL.GXheight < 480 ? y : (y * OGL.scaleY);
+
+        for (u32 x = 0; x < gDP.colorImage.width; x++)
+        {
+           u32 frameX = (u32)(x * OGL.scaleX);
+
+			u32 px = frameY * w + frameX;
+			u32 yuyv = ((u32*)xfb)[px >> 1];
+
+
+			u8 y0 = (yuyv >> 24) & 0xFF;
+			u8 u  = (yuyv >> 16) & 0xFF;
+			u8 y1 = (yuyv >>  8) & 0xFF;
+			u8 v  = (yuyv >>  0) & 0xFF;
+			u8 yval = (px & 1) ? y1 : y0;
+
+			u16 out = YUYV_to_RGBA5551(yval, u, v);
+
+			dst[i ^ 1] = out;
+			i++;
+        }
+    }
+}
+
+#if 0
 void gDPUpdateColorImage()
 {
 	return;
@@ -364,23 +426,29 @@ void gDPUpdateColorImage()
 		free( frameBuffer );
 	}
 }
+#endif
 
 void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 {
-/*	if (gDP.colorImage.changed &&
-//		(gDP.colorImage.address != gDP.depthImageAddress) &&
+	if (gDP.colorImage.changed &&
+		(gDP.colorImage.address != gDP.depthImageAddress) &&
 		(gDP.colorImage.address != RSP_SegmentToPhysical( address )))
 	{
-		gDPUpdateColorImage();
+		if(enablegDPUpdateColorImage) {
+			gDPUpdateColorImage();
+		}
 		OGL_ClearDepthBuffer();
 		gDP.colorImage.changed = FALSE;
 		gDP.colorImage.height = 1;
-	}*/
-
-/*	for (int i = 0; i < (gDP.colorImage.width * gDP.colorImage.height ) << gDP.colorImage.size >> 1; i++)
+	}
+/*
+	for (u32 i = 0; i < (gDP.colorImage.width * gDP.colorImage.height ) << gDP.colorImage.size >> 1; i++)
 	{
+		sprintf(txtbuffer, "gDP: RDRAM clear %i", (gDP.colorImage.width * gDP.colorImage.height ) << gDP.colorImage.size >> 1);
+		DEBUG_print(txtbuffer, DBG_CCINFO);
 		RDRAM[gDP.colorImage.address + i] = 0;
-	}*/
+	}
+*/
 	address = RSP_SegmentToPhysical( address );
 
 	if (gDP.colorImage.address != address)
@@ -437,8 +505,8 @@ void gDPSetTextureImage( u32 format, u32 size, u32 width, u32 address )
 
 void gDPSetDepthImage( u32 address )
 {
-//	if (address != gDP.depthImageAddress)
-//		OGL_ClearDepthBuffer();
+	if (address != gDP.depthImageAddress)
+		OGL_ClearDepthBuffer();
 
 	DepthBuffer_SetBuffer( RSP_SegmentToPhysical( address ) );
 

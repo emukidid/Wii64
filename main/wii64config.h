@@ -204,4 +204,6 @@ enum ConfigNativeOutput
 	NATIVEOUT_ENABLE
 };
 
+extern char enablegDPUpdateColorImage;
+
 #endif //WII64CONFIG_H
