@@ -28,7 +28,8 @@
 #include "../r4300/r4300.h"
 #include "wii64config.h"
 
-void *game_specific_hack = 0;
+static void *game_specific_hack = 0;
+static u32 zelda_subscreen_address = 0;
 
 void compare_hword_write_hword(u32 compAddr, u32 destAddr, u16 compVal, u16 destVal) {
 	address = compAddr;
@@ -267,6 +268,12 @@ void hack_pilotwings_j() {
 }
 #endif
 
+void hack_zelda_oot() {
+	if(zelda_subscreen_address) {
+		rdramb[zelda_subscreen_address] = 2;
+	}
+}
+
 
 // Return a pointer to the game specific hack or 0 if there isn't any
 void *GetGameSpecificHack() {
@@ -275,6 +282,12 @@ void *GetGameSpecificHack() {
 
 static int old_count_per_op = -1;
 
+void restore_count_per_op() {
+	if(old_count_per_op != -1) {
+		count_per_op = old_count_per_op;
+	}	
+}
+
 // Game specific hack detection via CRC
 void GameSpecificHackSetup() {
 	unsigned int curCRC[2];
@@ -282,39 +295,51 @@ void GameSpecificHackSetup() {
 	//print_gecko("CRC values %08X %08X\r\n", curCRC[0], curCRC[1]);
 	if(curCRC[0] == 0xCA12B547 && curCRC[1] == 0x71FA4EE4) {
 		game_specific_hack = &hack_pkm_snap_u;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0xEC0F690D && curCRC[1] == 0x32A7438C) {
 		game_specific_hack = &hack_pkm_snap_j;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x7BB18D40 && curCRC[1] == 0x83138559) {
 		game_specific_hack = &hack_pkm_snap_a;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x4FF5976F && curCRC[1] == 0xACF559D8) {
 		game_specific_hack = &hack_pkm_snap_e;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x5F3F49C6 && curCRC[1] == 0x0DC714B0) {
 		game_specific_hack = &hack_topgear_hb_e;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x845B0269 && curCRC[1] == 0x57DE9502) {
 		game_specific_hack = &hack_topgear_hb_j;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x8ECC02F0 && curCRC[1] == 0x7F8BDE81) {
 		game_specific_hack = &hack_topgear_hb_u;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0xD09BA538 && curCRC[1] == 0x1C1A5489) {
 		game_specific_hack = &hack_topgear_od_e;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x0578F24F && curCRC[1] == 0x9175BF17) {
 		game_specific_hack = &hack_topgear_od_j;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0xD741CD80 && curCRC[1] == 0xACA9B912) {
 		game_specific_hack = &hack_topgear_od_u;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x308DFEC8 && curCRC[1] == 0xCE2EB5F6) {
 		game_specific_hack = &hack_worlddriver_u;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0xAC062778 && curCRC[1] == 0xDFADFCB8) {
 		game_specific_hack = &hack_worlddriver_e;
+		restore_count_per_op();
 	}
 	else if((curCRC[0] == 0x0CAD17E6 && curCRC[1] == 0x71A5B797) ||
 			(curCRC[0] == 0x75A4E247 && curCRC[1] == 0x6008963D) ||
@@ -327,21 +352,66 @@ void GameSpecificHackSetup() {
 			(curCRC[0] == 0xD5898CAF && curCRC[1] == 0x6007B65B) ||
 			(curCRC[0] == 0x1FA056E0 && curCRC[1] == 0xA4B9946A)) {
 		game_specific_hack = &hack_winback;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0xC851961C && curCRC[1] == 0x78FCAAFA) {
 		game_specific_hack = &hack_pilotwings_u;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x09CC4801 && curCRC[1] == 0xE42EE491) {
 		game_specific_hack = &hack_pilotwings_j;
+		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0x1AA05AD5 && curCRC[1] == 0x46F52D80) {
 		game_specific_hack = &hack_pilotwings_e;
+		restore_count_per_op();
 	}
 #endif
-	else {
-		if(old_count_per_op != -1) {
-			count_per_op = old_count_per_op;
+	else if(strncmp((char *)ROM_HEADER.Name, "THE LEGEND OF ZELDA", 19) == 0) {
+		zelda_subscreen_address = 0;
+        if (curCRC[0] == 0xEC7011B7 && curCRC[1] == 0x7616D72B) {
+            // Legend of Zelda, The - Ocarina of Time (U) + (J) (V1.0)
+            zelda_subscreen_address = 0x1DA5CB;
+        } else if (curCRC[0] == 0xD43DA81F && curCRC[1] == 0x021E1E19) {
+            // Legend of Zelda, The - Ocarina of Time (U) + (J) (V1.1)
+            zelda_subscreen_address = 0x1DA78B;
+        } else if (curCRC[0] == 0x693BA2AE && curCRC[1] == 0xB7F14E9F) {
+            // Legend of Zelda, The - Ocarina of Time (U) + (J) (V1.2)
+            zelda_subscreen_address = 0x1DAE8B;
+        } else if (curCRC[0] == 0xB044B569 && curCRC[1] == 0x373C1985) {
+            // Legend of Zelda, The - Ocarina of Time (E) (V1.0)
+            zelda_subscreen_address = 0x1D860B;
+         } else if (curCRC[0] == 0xB2055FBD && curCRC[1] == 0x0BAB4E0C) {
+            // Legend of Zelda, The - Ocarina of Time (E) (V1.1)
+            zelda_subscreen_address = 0x1D864B;
+        // GC Versions
+        } else if (curCRC[0] == 0x1D4136F3 && curCRC[1] == 0xAF63EEA9) {
+            // Legend of Zelda, The - Ocarina of Time - Master Quest (E) (GC Version)
+            zelda_subscreen_address = 0x1D8F4B;
+        } else if (curCRC[0] == 0x09465AC3 && curCRC[1] == 0xF8CB501B) {
+            // Legend of Zelda, The - Ocarina of Time (E) (GC Version)
+            zelda_subscreen_address = 0x1D8F8B;
+        } else if (curCRC[0] == 0xF3DD35BA && curCRC[1] == 0x4152E075) {
+            // Legend of Zelda, The - Ocarina of Time (U) (GC Version) 
+            zelda_subscreen_address = 0x1DB78B;
+        } else if (curCRC[0] == 0xF034001A && curCRC[1] == 0xAE47ED06) {
+            // Legend of Zelda, The - Ocarina of Time - Master Quest (U) (GC Version)
+            zelda_subscreen_address = 0x1DB74B;
+        } else if (curCRC[0] == 0xF7F52DB8 && curCRC[1] == 0x2195E636) {
+            // Zelda no Densetsu - Toki no Ocarina - Zelda Collection Version (J) (GC Version) 
+            zelda_subscreen_address = 0x1DB78B;
+        } else if (curCRC[0] == 0xF611F4BA && curCRC[1] == 0xC584135C) {
+            // Zelda no Densetsu - Toki no Ocarina GC (J) (GC Version) 
+            zelda_subscreen_address = 0x1DB78B;
+        } else if (curCRC[0] == 0xF43B45BA && curCRC[1] == 0x2F0E9B6F) {
+            // Zelda no Densetsu - Toki no Ocarina GC Ura (J) (GC Version)
+            zelda_subscreen_address = 0x1DB78B;
 		}
+		if(zelda_subscreen_address != 0) {
+			game_specific_hack = &hack_zelda_oot;
+		}
+	}
+	else {
 		game_specific_hack = 0;
 	}
 	

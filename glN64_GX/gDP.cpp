@@ -437,7 +437,7 @@ void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 		if(enablegDPUpdateColorImage) {
 			gDPUpdateColorImage();
 		}
-		OGL_ClearDepthBuffer();
+		//OGL_ClearDepthBuffer();
 		gDP.colorImage.changed = FALSE;
 		gDP.colorImage.height = 1;
 	}
@@ -505,8 +505,8 @@ void gDPSetTextureImage( u32 format, u32 size, u32 width, u32 address )
 
 void gDPSetDepthImage( u32 address )
 {
-	if (address != gDP.depthImageAddress)
-		OGL_ClearDepthBuffer();
+	//if (address != gDP.depthImageAddress)
+	//	OGL_ClearDepthBuffer();
 
 	DepthBuffer_SetBuffer( RSP_SegmentToPhysical( address ) );
 
