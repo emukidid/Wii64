@@ -182,9 +182,9 @@ void Func_Credits()
 #ifdef HW_RVL
   int iosversion = IOS_GetVersion();
   int isWiiVC = SYS_GetCoreMultiplier() >= 5.0;
-  sprintf(CreditsInfo,"Wii64 Beta 1.4.1 - IOS %i %s\n",iosversion,isWiiVC ? "WiiVC!":"");
+  sprintf(CreditsInfo,"Wii64 Beta 1.4.2 - IOS %i %s\n",iosversion,isWiiVC ? "WiiVC!":"");
 #else
-	strcat(CreditsInfo,"Cube64 Beta 1.4.1\n");
+	strcat(CreditsInfo,"Cube64 Beta 1.4.2\n");
 #endif
 	strcat(CreditsInfo,"\n");
 	strcat(CreditsInfo,"Wii64 Team:\n");
