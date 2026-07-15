@@ -34,7 +34,7 @@
 
 extern unsigned long instructionCount;
 extern void (*interp_ops[64])(void);
-inline unsigned long update_invalid_addr(unsigned long addr);
+extern unsigned long update_invalid_addr(unsigned long addr);
 unsigned int dyna_check_cop1_unusable(unsigned int, int);
 unsigned int dyna_mem(unsigned int, unsigned int, int, memType, unsigned int, int);
 

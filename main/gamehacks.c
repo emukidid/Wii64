@@ -26,6 +26,7 @@
 #include "../gc_memory/memory.h"
 #include "ROM-Cache.h"
 #include "../r4300/r4300.h"
+#include "wii64config.h"
 
 void *game_specific_hack = 0;
 
@@ -141,6 +142,22 @@ void hack_topgear_od_u() {
 	compare_hword_write_hword(0x80001B4E, 0x80001B4E, 0x0001, 0);
 }
 
+// World Driver Championship (U) //jal 8006ED70 osRecvMesg #14
+void hack_worlddriver_u() {
+	word = 0;
+	address = 0x80023FE4;
+	write_word_in_memory();
+}
+
+// World Driver Championship (E) //jal 800706D0 osRecvMesg #14
+void hack_worlddriver_e() {
+	word = 0;
+	address = 0x800241D4;
+	write_word_in_memory();
+}
+
+
+
 void hack_winback() {
 	//NOP
 }
@@ -178,6 +195,7 @@ void hack_pilotwings_u() {
 	compare_byte_write_byte(0x80263D41, 0x3D, 0xFF);
 	compare_byte_write_byte(0x80263EC1, 0x3D, 0xFF);
 	compare_byte_write_byte(0x80263F01, 0x3D, 0xFF);
+
 }
 
 // Pilot Wings 64 (E)
@@ -255,6 +273,8 @@ void *GetGameSpecificHack() {
 	return game_specific_hack;
 }
 
+static int old_count_per_op = -1;
+
 // Game specific hack detection via CRC
 void GameSpecificHackSetup() {
 	unsigned int curCRC[2];
@@ -290,6 +310,18 @@ void GameSpecificHackSetup() {
 	else if(curCRC[0] == 0xD741CD80 && curCRC[1] == 0xACA9B912) {
 		game_specific_hack = &hack_topgear_od_u;
 	}
+	else if(curCRC[0] == 0x308DFEC8 && curCRC[1] == 0xCE2EB5F6) {
+		game_specific_hack = &hack_worlddriver_u;
+	}
+	else if(curCRC[0] == 0xAC062778 && curCRC[1] == 0xDFADFCB8) {
+		game_specific_hack = &hack_worlddriver_e;
+	}
+	else if((curCRC[0] == 0x0CAD17E6 && curCRC[1] == 0x71A5B797) ||
+			(curCRC[0] == 0x75A4E247 && curCRC[1] == 0x6008963D) ||
+			(curCRC[0] == 0x6AA4DDE7 && curCRC[1] == 0xE3E2F4E7)) {
+				old_count_per_op = count_per_op;
+				count_per_op = COUNT_PER_OP_3;
+	}
 #ifndef RICE_GFX
 	else if((curCRC[0] == 0xED98957E && curCRC[1] == 0x8242DCAC) ||
 			(curCRC[0] == 0xD5898CAF && curCRC[1] == 0x6007B65B) ||
@@ -307,7 +339,11 @@ void GameSpecificHackSetup() {
 	}
 #endif
 	else {
+		if(old_count_per_op != -1) {
+			count_per_op = old_count_per_op;
+		}
 		game_specific_hack = 0;
 	}
+	
 	//print_gecko("Applied a hack? %s\r\n", game_specific_hack ? "yes" : "no");
 }

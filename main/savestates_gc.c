@@ -86,7 +86,7 @@ char *savestates_get_filename() {
 	return state_filename;
 }
 
-//#define ZLIB_STATES 1
+#define ZLIB_STATES 1
 #ifdef ZLIB_STATES
 #define stateFile            		gzFile
 #define stateOpen(filename, mode)   gzopen((filename), (mode))
@@ -322,9 +322,10 @@ int savestates_load(unsigned int slot)
 
 #ifdef TINY_TLBCACHE
 	TLBCache_reset();
-#endif
+#else
 #ifdef HW_RVL
 	tlb_mem2_init();
+#endif
 #endif
 	
 	u32 entry[2] = {0, 0};

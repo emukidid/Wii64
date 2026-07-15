@@ -43,14 +43,16 @@
 
 #ifndef USE_TLB_CACHE
 #include "MEM2.h"
-unsigned long *tlb_LUT = (unsigned long*)(TLBLUT_LO);
+unsigned long *const tlb_LUT_r = (unsigned long*)(TLBLUT_LO);
+unsigned long *const tlb_LUT_w = (unsigned long*)(TLBLUT_LO+0x400000);
 
 void tlb_mem2_init()
 {
 	long i;
 	for(i = 0; i<(0x400000/4); i++)
 	{	
-		tlb_LUT[i] = 0;
+		tlb_LUT_r[i] = 0;
+		tlb_LUT_w[i] = 0;
 	}
 }
 #endif
@@ -67,19 +69,13 @@ unsigned long virtual_to_physical_address(unsigned long vaddr, int w)
     }
     return (e & TLB_PADDR_MASK) | (vaddr & 0xFFF) | 0x80000000;
 #else
-	unsigned long e = tlb_LUT[vaddr >> 12];
+	unsigned long paddr = w==1 ? tlb_LUT_w[vaddr>>12] : tlb_LUT_r[vaddr>>12];
+	if(paddr)
+		return (paddr&0xFFFFF000)|(vaddr&0xFFF);
 
-    if (!(e & TLB_VALID)) {
-        TLB_refill_exception(vaddr, w);
-        return 0;
-    }
-	
-	if (w && !(e & TLB_WRITE)) {
-        TLB_refill_exception(vaddr, w);
-        return 0;
-    }
-
-    return (e & TLB_PADDR_MASK) | (vaddr & 0xFFF) | 0x80000000;
+	// Make the game take a TLB Exception
+	TLB_refill_exception(vaddr,w);
+	return 0x00000000;
 #endif
 }
 

@@ -44,8 +44,8 @@
 #define ROMCACHE_LO   (MEM2_LO)
 #define ROMCACHE_HI   (ROMCACHE_LO + ROMCACHE_SIZE)
 
-// We want 4MB for TLB lut's
-#define TLBLUT_SIZE (4*MB)
+// We want 8MB for TLB lut's
+#define TLBLUT_SIZE (8*MB)
 #define TLBLUT_LO   (ROMCACHE_HI)
 #define TLBLUT_HI   (TLBLUT_LO + TLBLUT_SIZE)
 

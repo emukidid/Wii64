@@ -6,8 +6,7 @@
 #define INVALID_CODE_H
 
 extern unsigned char *const invalid_code;
-
-int inline invalid_code_get(int block_num);
-void inline invalid_code_set(int block_num, int value);
+#define invalid_code_get(block_num) (invalid_code[(block_num)])
+#define invalid_code_set(block_num, value) (invalid_code[(block_num)] = (value))
 
 #endif

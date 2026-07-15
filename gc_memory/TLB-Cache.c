@@ -33,7 +33,11 @@
 #include "tlb.h"
 #include "TLB-Cache.h"
 #include "../gui/DEBUG.h"
+#ifndef HW_RVL
 #include "../gc_memory/ARAM.h"
+#else
+#include "../gc_memory/MEM2.h"
+#endif
 
 static heap_cntrl* tlbHeap = NULL;
 typedef unsigned long TLBEntry;
@@ -61,8 +65,13 @@ void TLBCache_reset(void)
 {
 	if(!tlbHeap) {
 		tlbHeap = memalign(32,sizeof(heap_cntrl));
+#ifndef HW_RVL		
 		__lwp_heap_init(tlbHeap, (void*)TLBCACHE_LO,
 		                TLBCACHE_SIZE, 32);
+#else
+		__lwp_heap_init(tlbHeap, (void*)memalign(32, 32 * 1024),
+		                32 * 1024, 32);
+#endif
 #ifdef SHOW_DEBUG
 		DEBUG_registerHeap(tlbHeap, "TLB");
 #endif
@@ -121,26 +130,40 @@ u32 TLBCache_get_w(u32 vpn)
 
 void TLBCache_set_r(u32 vpn, u32 entry)
 {
+    TLBEntry *slot;
+
     if (!entry) {
-        TLBEntry *slot = TLBCache_get_slot(vpn, 0);
-        if (slot) *slot = 0;
+        slot = TLBCache_get_slot(vpn, 0);
+        if (slot)
+            *slot &= ~TLB_VALID;          // clear TLB_VALID, keep TLB_WRITE/phys
         return;
     }
 
-    TLBEntry *slot = TLBCache_get_slot(vpn, 1);
-    if (slot) *slot = entry;
+    slot = TLBCache_get_slot(vpn, 1);
+    if (slot) {
+        // preserve TLB_WRITE bit if it was set
+        u32 old = *slot & TLB_WRITE;
+        *slot = (entry & (TLB_PADDR_MASK | TLB_VALID)) | old;
+    }
 }
-
 
 void TLBCache_set_w(u32 vpn, u32 entry)
 {
+    TLBEntry *slot;
+
     if (!entry) {
-        TLBEntry *slot = TLBCache_get_slot(vpn, 0);
-        if (slot) *slot = 0;
+        slot = TLBCache_get_slot(vpn, 0);
+        if (slot)
+            *slot &= ~TLB_WRITE;          // clear TLB_WRITE, keep TLB_VALID/phys
         return;
     }
 
-    TLBEntry *slot = TLBCache_get_slot(vpn, 1);
-    if (slot) *slot = entry;
+    slot = TLBCache_get_slot(vpn, 1);
+    if (slot) {
+        // keep existing phys+TLB_VALID, just toggle TLB_WRITE
+        u32 base = *slot & (TLB_PADDR_MASK | TLB_VALID);
+        *slot = base | TLB_WRITE;
+    }
 }
+
 #endif

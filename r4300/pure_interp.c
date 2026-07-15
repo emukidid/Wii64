@@ -831,35 +831,43 @@ void TLBWI()
 
    if (r4300.tlb_e[idx].v_even)
      {
-	for (i=r4300.tlb_e[idx].start_even; i<r4300.tlb_e[idx].end_even; i+=0x1000)
+	for (i=r4300.tlb_e[idx].start_even; i<r4300.tlb_e[idx].end_even; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 	  TLBCache_set_r(i>>12, 0);
 #else
-	  tlb_LUT[i>>12] = 0;
+		if(tlb_LUT_r[i>>12]) invalid_code_set(i>>12, 1);
+		tlb_LUT_r[i>>12] = 0;
 #endif
+	}
 	if (r4300.tlb_e[idx].d_even)
-	  for (i=r4300.tlb_e[idx].start_even; i<r4300.tlb_e[idx].end_even; i+=0x1000)
+	  for (i=r4300.tlb_e[idx].start_even; i<r4300.tlb_e[idx].end_even; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 	    TLBCache_set_w(i>>12, 0);
 #else
-	    tlb_LUT[i>>12] = 0;
+		if(tlb_LUT_w[i>>12]) invalid_code_set(i>>12, 1);
+	    tlb_LUT_w[i>>12] = 0;
 #endif
+	  }
      }
    if (r4300.tlb_e[idx].v_odd)
      {
-	for (i=r4300.tlb_e[idx].start_odd; i<r4300.tlb_e[idx].end_odd; i+=0x1000)
+	for (i=r4300.tlb_e[idx].start_odd; i<r4300.tlb_e[idx].end_odd; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 	  TLBCache_set_r(i>>12, 0);
 #else
-	  tlb_LUT[i>>12] = 0;
+	  if(tlb_LUT_r[i>>12])  invalid_code_set(i>>12, 1);
+	  tlb_LUT_r[i>>12] = 0;
 #endif
+	}
 	if (r4300.tlb_e[idx].d_odd)
-	  for (i=r4300.tlb_e[idx].start_odd; i<r4300.tlb_e[idx].end_odd; i+=0x1000)
+	  for (i=r4300.tlb_e[idx].start_odd; i<r4300.tlb_e[idx].end_odd; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 	    TLBCache_set_w(i>>12, 0);
 #else
-	    tlb_LUT[i>>12] = 0;
+		if(tlb_LUT_w[i>>12]) invalid_code_set(i>>12, 1);
+	    tlb_LUT_w[i>>12] = 0;
 #endif
+	  }
      }
    r4300.tlb_e[idx].g = (EntryLo0 & EntryLo1 & 1);
    r4300.tlb_e[idx].pfn_even = (EntryLo0 & 0x3FFFFFC0) >> 6;
@@ -888,22 +896,24 @@ void TLBWI()
 	    r4300.tlb_e[idx].phys_even < 0x20000000)
 	  {
 	     for (i=r4300.tlb_e[idx].start_even;i<r4300.tlb_e[idx].end_even;i+=0x1000) {
+#ifdef USE_TLB_CACHE
 			u32 phys = r4300.tlb_e[idx].phys_even + (i - r4300.tlb_e[idx].start_even + 0xFFF);
 			u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK);
-#ifdef USE_TLB_CACHE
 			TLBCache_set_r(i>>12, entry);
 #else
-			tlb_LUT[i >> 12] = entry;
+			 tlb_LUT_r[i>>12] = 0x80000000 |
+				(r4300.tlb_e[idx].phys_even + (i - r4300.tlb_e[idx].start_even + 0xFFF));
 #endif
 		 }
 	     if (r4300.tlb_e[idx].d_even)
 	       for (i=r4300.tlb_e[idx].start_even;i<r4300.tlb_e[idx].end_even;i+=0x1000) {
+#ifdef USE_TLB_CACHE
 			u32 phys = r4300.tlb_e[idx].phys_even + (i - r4300.tlb_e[idx].start_even + 0xFFF);
 			u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK) | TLB_WRITE;
-#ifdef USE_TLB_CACHE
 			TLBCache_set_w(i>>12, entry);
 #else
-			tlb_LUT[i >> 12] = entry;
+			tlb_LUT_w[i>>12] = 0x80000000 |
+				(r4300.tlb_e[idx].phys_even + (i - r4300.tlb_e[idx].start_even + 0xFFF));
 #endif
 		   }
 	  }
@@ -922,23 +932,24 @@ void TLBWI()
 	    r4300.tlb_e[idx].phys_odd < 0x20000000)
 	  {
 	     for (i=r4300.tlb_e[idx].start_odd;i<r4300.tlb_e[idx].end_odd;i+=0x1000) {
+#ifdef USE_TLB_CACHE
 			u32 phys = r4300.tlb_e[idx].phys_odd + (i - r4300.tlb_e[idx].start_odd + 0xFFF);
 			u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK);
-#ifdef USE_TLB_CACHE
 			TLBCache_set_r(i>>12, entry);
 #else
-			tlb_LUT[i >> 12] = entry;
-
+			tlb_LUT_r[i>>12] = 0x80000000 |
+				(r4300.tlb_e[idx].phys_odd + (i - r4300.tlb_e[idx].start_odd + 0xFFF));
 #endif
 		 }
 	     if (r4300.tlb_e[idx].d_odd)
 	       for (i=r4300.tlb_e[idx].start_odd;i<r4300.tlb_e[idx].end_odd;i+=0x1000) {
+#ifdef USE_TLB_CACHE
 			u32 phys = r4300.tlb_e[idx].phys_odd + (i - r4300.tlb_e[idx].start_odd + 0xFFF);
 			u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK) | TLB_WRITE;
-#ifdef USE_TLB_CACHE
 			TLBCache_set_w(i>>12, entry);
 #else
-			tlb_LUT[i >> 12] = entry;
+			tlb_LUT_w[i>>12] = 0x80000000 |
+				(r4300.tlb_e[idx].phys_odd + (i - r4300.tlb_e[idx].start_odd + 0xFFF));
 #endif
 		   }
 	  }
@@ -953,34 +964,38 @@ static void TLBWR()
 	Random = (Count / count_per_op % (32 - Wired)) + Wired;
 
 	if (r4300.tlb_e[Random].v_even){
-		for (i=r4300.tlb_e[Random].start_even; i<r4300.tlb_e[Random].end_even; i+=0x1000)
+	for (i=r4300.tlb_e[Random].start_even; i<r4300.tlb_e[Random].end_even; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 			TLBCache_set_r(i>>12, 0);
 #else
-			tlb_LUT[i>>12] = 0;
+			tlb_LUT_r[i>>12] = 0;
 #endif
+	}
 		if (r4300.tlb_e[Random].d_even)
-			for (i=r4300.tlb_e[Random].start_even; i<r4300.tlb_e[Random].end_even; i+=0x1000)
+			for (i=r4300.tlb_e[Random].start_even; i<r4300.tlb_e[Random].end_even; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 				TLBCache_set_w(i>>12, 0);
 #else
-				tlb_LUT[i>>12] = 0;
+				tlb_LUT_w[i>>12] = 0;
 #endif
+			}
 	}
 	if (r4300.tlb_e[Random].v_odd){
-		for (i=r4300.tlb_e[Random].start_odd; i<r4300.tlb_e[Random].end_odd; i+=0x1000)
+		for (i=r4300.tlb_e[Random].start_odd; i<r4300.tlb_e[Random].end_odd; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 			TLBCache_set_r(i>>12, 0);
 #else
-			tlb_LUT[i>>12] = 0;
+			tlb_LUT_r[i>>12] = 0;
 #endif
+		}
 	if (r4300.tlb_e[Random].d_odd)
-		for (i=r4300.tlb_e[Random].start_odd; i<r4300.tlb_e[Random].end_odd; i+=0x1000)
+		for (i=r4300.tlb_e[Random].start_odd; i<r4300.tlb_e[Random].end_odd; i+=0x1000) {
 #ifdef USE_TLB_CACHE
 			TLBCache_set_w(i>>12, 0);
 #else
-			tlb_LUT[i>>12] = 0;
+			tlb_LUT_w[i>>12] = 0;
 #endif
+		}
 	}
 
 	r4300.tlb_e[Random].g = (EntryLo0 & EntryLo1 & 1);
@@ -1008,22 +1023,23 @@ static void TLBWR()
 		   r4300.tlb_e[Random].end_even < 0xC0000000) &&
 		   r4300.tlb_e[Random].phys_even < 0x20000000){
 			for (i=r4300.tlb_e[Random].start_even;i<r4300.tlb_e[Random].end_even;i+=0x1000) {
-				u32 phys = r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even + 0xFFF);
-				u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK);
 #ifdef USE_TLB_CACHE
-				TLBCache_set_r(i>>12, entry);
+				u32 phys = r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even + 0xFFF);
+				u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK);				TLBCache_set_r(i>>12, entry);
 #else
-				tlb_LUT[i >> 12] = entry;
+				tlb_LUT_r[i>>12] = 0x80000000 |
+					(r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even + 0xFFF));
 #endif
 			}
 			if (r4300.tlb_e[Random].d_even)
 				for (i=r4300.tlb_e[Random].start_even;i<r4300.tlb_e[Random].end_even;i+=0x1000) {
+#ifdef USE_TLB_CACHE
 					u32 phys = r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even + 0xFFF);
 					u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK) | TLB_WRITE;
-#ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, entry);
 #else
-					tlb_LUT[i >> 12] = entry;
+					tlb_LUT_w[i>>12] = 0x80000000 |
+						(r4300.tlb_e[Random].phys_even + (i - r4300.tlb_e[Random].start_even + 0xFFF));
 #endif
 				}
 		}
@@ -1039,22 +1055,24 @@ static void TLBWR()
 		   r4300.tlb_e[Random].end_odd < 0xC0000000) &&
 		   r4300.tlb_e[Random].phys_odd < 0x20000000){
 			for (i=r4300.tlb_e[Random].start_odd;i<r4300.tlb_e[Random].end_odd;i+=0x1000) {
+#ifdef USE_TLB_CACHE
 				u32 phys = r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd + 0xFFF);
 				u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK);
-#ifdef USE_TLB_CACHE
 				TLBCache_set_r(i>>12, entry);
 #else
-				tlb_LUT[i >> 12] = entry;
+				tlb_LUT_r[i>>12] = 0x80000000 |
+					(r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd + 0xFFF));
 #endif
 			}
 			if (r4300.tlb_e[Random].d_odd)
 				for (i=r4300.tlb_e[Random].start_odd;i<r4300.tlb_e[Random].end_odd;i+=0x1000) {
+#ifdef USE_TLB_CACHE
 					u32 phys = r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd + 0xFFF);
 					u32 entry = TLB_VALID | (phys & TLB_PADDR_MASK) | TLB_WRITE;
-#ifdef USE_TLB_CACHE
 					TLBCache_set_w(i>>12, entry);
 #else
-					tlb_LUT[i >> 12] = entry;
+					tlb_LUT_w[i>>12] = 0x80000000 |
+						(r4300.tlb_e[Random].phys_odd + (i - r4300.tlb_e[Random].start_odd + 0xFFF));
 #endif
 				}
 		}
