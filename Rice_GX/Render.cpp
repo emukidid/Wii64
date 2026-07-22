@@ -190,6 +190,20 @@ void CRender::SetWorldView(const Matrix & mat, bool bPush, bool bReplace)
         {
             // Load projection matrix
             gRSP.modelviewMtxs[gRSP.modelViewMtxTop] = mat;
+			// GX doesn't really need this but adding it for consistency.
+			// Hack needed to show flashing last heart and map arrows in Zelda OoT & MM
+            // It renders at Z cordinate = 0.0f that gets clipped away
+            // So we translate them a bit along Z to make them stick
+            if( options.enableHackForGames == HACK_FOR_ZELDA || options.enableHackForGames == HACK_FOR_ZELDA_MM) 
+            {
+                if(gRSP.modelviewMtxs[gRSP.modelViewMtxTop]._43 == 0.0f
+                    && gRSP.modelviewMtxs[gRSP.modelViewMtxTop]._42 != 0.0f
+                    && gRSP.modelviewMtxs[gRSP.modelViewMtxTop]._42 <= 94.5f
+                    && gRSP.modelviewMtxs[gRSP.modelViewMtxTop]._42 >= -94.5f)
+                {
+                    gRSP.modelviewMtxs[gRSP.modelViewMtxTop]._43 -= 10.1f;
+                }
+            }
         }
         else            // Multiply projection matrix
         {
@@ -589,7 +603,7 @@ bool CRender::TexRect(LONG nX0, LONG nY0, LONG nX1, LONG nY1, float fS0, float f
     if( options.bEnableHacks )
     {
         // Goldeneye HACK
-        if( options.bEnableHacks && nY1 - nY0 < 2 ) 
+        if( nY1 - nY0 < 2 ) 
             nY1 = nY1+2;
 
         //// Text edge hack

@@ -1368,10 +1368,9 @@ void ConvertYUV_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 							uint32 tx = x+l;
 							if (tx >= tinfo.WidthToLoad)
 								continue;
-
-							int y0 = *(uint8*)&pByteSrc[(dwWordOffset+(3^S8))^nFiddle];
+							int y0 = *(uint8*)&pByteSrc[(dwWordOffset+(1^S8))^nFiddle];
 							int v0 = *(uint8*)&pByteSrc[(dwWordOffset+(2^S8))^nFiddle];
-							int y1 = *(uint8*)&pByteSrc[(dwWordOffset+(1^S8))^nFiddle];
+							int y1 = *(uint8*)&pByteSrc[(dwWordOffset+(3^S8))^nFiddle];
 							int u0 = *(uint8*)&pByteSrc[(dwWordOffset+(0^S8))^nFiddle];
 
 							uint32 w = ConvertYUV16ToR8G8B8_GX(y0,u0,v0);
@@ -1410,9 +1409,9 @@ void ConvertYUV_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 							if (tx >= tinfo.WidthToLoad)
 								continue;
 
-							int y0 = *(uint8*)&pByteSrc[dwByteOffset+(3^S8)];
+							int y0 = *(uint8*)&pByteSrc[dwByteOffset+(1^S8)];
 							int v0 = *(uint8*)&pByteSrc[dwByteOffset+(2^S8)];
-							int y1 = *(uint8*)&pByteSrc[dwByteOffset+(1^S8)];
+							int y1 = *(uint8*)&pByteSrc[dwByteOffset+(3^S8)];
 							int u0 = *(uint8*)&pByteSrc[dwByteOffset+(0^S8)];
 
 							uint32 w = ConvertYUV16ToR8G8B8_GX(y0,u0,v0);
@@ -1435,28 +1434,22 @@ void ConvertYUV_GX(CTexture *pTexture, const TxtrInfo &tinfo)
 
 uint32 ConvertYUV16ToR8G8B8_GX(int Y, int U, int V)
 {
-    uint32 A= 1;
-
     /*
     int R = int(g_convc0 *(Y-16) + g_convc1 * V);
     int G = int(g_convc0 *(Y-16) + g_convc2 * U - g_convc3 * V);
     int B = int(g_convc0 *(Y-16) + g_convc4 * U);
     */
 
+    Y += 80;
     int R = int(Y + (1.370705f * (V-128)));
     int G = int(Y - (0.698001f * (V-128)) - (0.337633f * (U-128)));
     int B = int(Y + (1.732446f * (U-128)));
 
-    R = R<0 ? 0 : R;
-    G = G<0 ? 0 : G;
-    B = B<0 ? 0 : B;
+    R = R < 0 ? 0 : (R>255 ? 255 : R);
+    G = G < 0 ? 0 : (G>255 ? 255 : G);
+    B = B < 0 ? 0 : (B>255 ? 255 : B);
 
-    uint32 R2 = R>255 ? 255 : R;
-    uint32 G2 = G>255 ? 255 : G;
-    uint32 B2 = B>255 ? 255 : B;
-
-    return COLOR_RGBA(R2, G2, B2, 0xFF*A);
-//#define COLOR_RGBA(r,g,b,a) (((r&0xFF)<<16) | ((g&0xFF)<<8) | ((b&0xFF)<<0) | ((a&0xFF)<<24))
+    return COLOR_RGBA(R, G, B, 0xFF);
 }
 
 // Used by Starfox intro

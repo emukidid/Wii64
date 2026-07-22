@@ -614,19 +614,24 @@ uint32 CalculateRDRAMCRC(void *pPhysicalAddress, uint32 left, uint32 top, uint32
 
 #ifdef NO_ASM
             uint32* line = (uint32*)pAsmStart;
-            dwAsmPitch /= sizeof(uint32);
-            
-            for(int y = dwAsmHeight; y >= 0; --y) {
-            	uint32 v = 0;
-            	
-            	for(int x = dwAsmdwBytesPerLine - 4; x >= 0; x -= 4) {
-            		v = line[x / sizeof(uint32)] ^ x;
-            		dwAsmCRC = (dwAsmCRC << 4 | dwAsmCRC >> 28) + v;
-            	}
-            	
-            	dwAsmCRC += v ^ y;
-            	line += dwAsmPitch;
-            }
+			dwAsmPitch /= sizeof(uint32);
+
+			for(int y = dwAsmHeight; y >= 0; --y) {
+				uint32 esi = 0;
+
+				for(int x = dwAsmdwBytesPerLine - 4; x >= 0; x -= 4) {
+					esi = line[x / 4] ^ x;
+
+					dwAsmCRC = (dwAsmCRC << 4) + ((dwAsmCRC >> 28) & 15);
+					dwAsmCRC += esi;
+				}
+
+				esi ^= y;
+				dwAsmCRC += esi;
+
+				line += dwAsmPitch;
+			}
+
             
 #elif defined(__INTEL_COMPILER)
             __asm 
@@ -1149,8 +1154,7 @@ int FrameBufferManager::CheckRenderTexturesWithNewCI(SetImgInfo &CIinfo, uint32 
             if( info.CI_Info.dwSize == CIinfo.dwSize &&
                 info.CI_Info.dwWidth == CIinfo.dwWidth &&
                 info.CI_Info.dwFormat == CIinfo.dwFormat &&
-                info.N64Height == height 
-                && info.CI_Info.dwAddr == CIinfo.dwAddr 
+                info.N64Height == height
                 )
             {
                 // This is the same texture at the same address

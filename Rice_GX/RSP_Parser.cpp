@@ -1404,20 +1404,9 @@ void DLParser_FillRect(Gfx *gfx)
             status.bottomRendered = status.bottomRendered<0 ? y1 : max((int)y1,status.bottomRendered);
         }
 
-        if( gRDP.otherMode.cycle_type == CYCLE_TYPE_FILL )
+        if( !status.bHandleN64RenderTexture || g_pRenderTextureInfo->CI_Info.dwSize == TXT_SIZE_16b )
         {
-            if( !status.bHandleN64RenderTexture || g_pRenderTextureInfo->CI_Info.dwSize == TXT_SIZE_16b )
-            {
-                CRender::g_pRender->FillRect(x0, y0, x1, y1, gRDP.fillColor);
-            }
-        }
-        else
-        {
-            COLOR primColor = GetPrimitiveColor();
-            //if( RGBA_GETALPHA(primColor) != 0 )
-            {
-                CRender::g_pRender->FillRect(x0, y0, x1, y1, primColor);
-            }
+			CRender::g_pRender->FillRect(x0, y0, x1, y1, gRDP.fillColor);
         }
         DEBUGGER_PAUSE_AND_DUMP_COUNT_N( NEXT_FLUSH_TRI,{TRACE0("Pause after FillRect\n");});
         DEBUGGER_PAUSE_AND_DUMP_COUNT_N( NEXT_FILLRECT, {DebuggerAppendMsg("FillRect: X0=%d, Y0=%d, X1=%d, Y1=%d, Color=0x%08X", x0, y0, x1, y1, gRDP.originalFillColor);
