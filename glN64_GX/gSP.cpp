@@ -889,8 +889,12 @@ void gSPBranchList( u32 dl )
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPBranchList( 0x%08X );\n",
 		dl );
 #endif
-
-	RSP.PC[RSP.PCi] = address;
+	if(address == RSP.PC[RSP.PCi]-8) {	// Gauntlet Legends fix
+		return;
+	}
+	else {
+		RSP.PC[RSP.PCi] = address;
+	}
 }
 
 void gSPBranchLessZ( u32 branchdl, u32 vtx, f32 zval )

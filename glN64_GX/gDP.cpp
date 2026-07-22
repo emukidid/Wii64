@@ -834,6 +834,11 @@ void gDPLoadTLUT( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
     u16 count = (gDP.tiles[tile].lrs - gDP.tiles[tile].uls + 1) * (gDP.tiles[tile].lrt - gDP.tiles[tile].ult + 1);
 	u32	address = gDP.textureImage.address + gDP.tiles[tile].ult * gDP.textureImage.bpl + (gDP.tiles[tile].uls << gDP.textureImage.size >> 1);
 
+	if (gDP.tiles[tile].tmem < 0 ||
+		gDP.tiles[tile].tmem + count > 512)
+	{
+		return;
+	}
 	u64 *dest = &TMEM[gDP.tiles[tile].tmem];
 	u16 *src = (u16*)&RDRAM[address];
 
