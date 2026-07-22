@@ -16,7 +16,7 @@
  * This program is distributed in the hope that it will be use-
  * ful, but WITHOUT ANY WARRANTY; without even the implied war-
  * ranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public Licence for more details.
+ * See the GNU General Public Licence for  more details.
  *
 **/
 
@@ -31,6 +31,7 @@
 #include "../Recomp-Cache.h"
 #include "../../gc_memory/memory.h"
 #include "../../gui/DEBUG.h"
+#include "../../main/gamehacks.h"
 #include <math.h>
 #include "../Invalid_Code.h"
 
@@ -1067,7 +1068,7 @@ static int LW(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
-			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 4){
+			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 4 && (GetGameSpecificHack() != &hack_paperboy)){
 				mips = get_next_src();
 				count++;
 				while(has_next_src() && !is_j_dst(1)){
@@ -4233,7 +4234,7 @@ static void genCallInterp(MIPS_instr mips){
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// Check if the PC changed
 	GEN_CMPI(CR5, R3, 0);
-	// Restore the LR
+	// Restore the LR 
 	GEN_MTLR(R0);
 	// if decodeNInterpret returned an address
 	//   jumpTo it

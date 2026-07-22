@@ -157,7 +157,9 @@ void hack_worlddriver_e() {
 	write_word_in_memory();
 }
 
-
+void hack_paperboy() {
+	// NOP
+}
 
 void hack_winback() {
 	//NOP
@@ -339,6 +341,11 @@ void GameSpecificHackSetup() {
 	}
 	else if(curCRC[0] == 0xAC062778 && curCRC[1] == 0xDFADFCB8) {
 		game_specific_hack = &hack_worlddriver_e;
+		restore_count_per_op();
+	}
+	else if((curCRC[0] == 0xAC976B38 && curCRC[1] == 0xC3A9C97A) ||
+			(curCRC[0] == 0x3E198D9E && curCRC[1] == 0xF2E1267E)) {
+		game_specific_hack = &hack_paperboy;
 		restore_count_per_op();
 	}
 	else if((curCRC[0] == 0x0CAD17E6 && curCRC[1] == 0x71A5B797) ||

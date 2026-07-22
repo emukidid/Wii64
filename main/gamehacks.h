@@ -30,4 +30,5 @@ void *GetGameSpecificHack();
 void GameSpecificHackSetup();
 
 void hack_winback();
+void hack_paperboy();
 #endif
