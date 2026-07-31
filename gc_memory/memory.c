@@ -197,6 +197,28 @@ void (*rw_pif[8])() =
 	{ read_pif,  read_pifb,  read_pifh,  read_pifd,
 	  write_pif, write_pifb, write_pifh, write_pifd };
 
+void init_vi_clock_refresh_rate() {
+	vi_register.clock = 48681812; // NTSC
+	vi_register.expected_refresh_rate = 60; // NTSC
+	switch(ROM_HEADER.Country_code&0xFF)
+	{
+		case 0x44:
+		case 0x46:
+		case 0x49:
+		case 0x50:
+		case 0x53:
+		case 0x55:
+		case 0x58:
+		case 0x59:
+			vi_register.clock = 49656530;
+			vi_register.expected_refresh_rate = 50;
+			// TODO MPAL 48628316
+		break;
+		default:
+		break;
+	}
+	//print_gecko("Initialised as clock %i and refreshrate %i\r\n", vi_register.clock, vi_register.expected_refresh_rate);
+}
 
 // memory sections
 static unsigned long *readrdramreg[0x28];
@@ -362,6 +384,7 @@ int init_memory()
 	rwmem[0x8440] = rw_vi;
 	rwmem[0xa440] = rw_vi;
 	memset(&vi_register, 0, sizeof(VI_register));
+	init_vi_clock_refresh_rate();
 	readvi[0x0] = &vi_register.vi_status;
 	readvi[0x4] = &vi_register.vi_origin;
 	readvi[0x8] = &vi_register.vi_width;
@@ -1738,15 +1761,38 @@ void write_mid()
 	}
 }
 
+inline void update_vi_current() {
+#if 0
+	vi_register.count_per_scanline = vi_register.vi_v_sync == 0 ? 1500 : ((vi_register.clock / vi_register.expected_refresh_rate) / (vi_register.vi_v_sync + 1));
+	
+	uint32_t next_vi = get_event(VI_INT);
+	//print_gecko("update_vi_current next vi: %08X\r\n", next_vi);
+	if (next_vi != 0) {
+		update_count();
+		vi_register.vi_current = (vi_register.vi_delay-(next_vi-Count)) / vi_register.count_per_scanline;
+		//print_gecko("update_vi_current vi_current: %08X\r\n", vi_register.vi_current);
+
+		/* wrap around VI_CURRENT_REG if needed */
+		if (vi_register.vi_current >= vi_register.vi_v_sync)
+			vi_register.vi_current -= vi_register.vi_v_sync;
+	}
+
+	/* update current field */
+	vi_register.vi_current = (vi_register.vi_current & (~1)) | r4300.vi_field;
+#else
+	update_count();
+	vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
+	vi_register.vi_current = (vi_register.vi_current%vi_register.vi_v_sync);
+	vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
+#endif
+}
+
 void read_vi()
 {
 	switch(*address_low)
 	{
 		case 0x10:
-			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current%vi_register.vi_v_sync);
-			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
+			update_vi_current();
 		break;
 	}
 	word = *(readvi[*address_low]);
@@ -1760,10 +1806,7 @@ void read_vib()
 		case 0x11:
 		case 0x12:
 		case 0x13:
-			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current%vi_register.vi_v_sync);
-			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
+			update_vi_current();
 		break;
 	}
 	byte = *((unsigned char*)readvi[*address_low & 0xfffc]+ ((*address_low&3)^S8) );
@@ -1775,10 +1818,7 @@ void read_vih()
 	{
 		case 0x10:
 		case 0x12:
-			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current%vi_register.vi_v_sync);
-			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
+			update_vi_current();
 		break;
 	}
 	hword = *((unsigned short*)((unsigned char*)readvi[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
@@ -1789,10 +1829,7 @@ void read_vid()
 	switch(*address_low)
 	{
 		case 0x10:
-			update_count();
-			vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count))/1500;
-			vi_register.vi_current = (vi_register.vi_current%vi_register.vi_v_sync);
-			vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
+			update_vi_current();
 		break;
 	}
 	dword = ((unsigned long long int)(*readvi[*address_low])<<32) | *readvi[*address_low+4];
@@ -1823,7 +1860,7 @@ void write_vi()
 			check_interupt();
 			return;
 		break;
-	}
+				}
 	*readvi[*address_low] = word;
 }
 
@@ -1849,7 +1886,7 @@ void write_vib()
 		case 0x9:
 		case 0xa:
 		case 0xb:
-			temp = vi_register.vi_status;
+			temp = vi_register.vi_width;
 			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
 			if (vi_register.vi_width != temp)
 			{
@@ -1866,7 +1903,7 @@ void write_vib()
 			check_interupt();
 			return;
 		break;
-	}
+				}
 	*((unsigned char*)readvi[*address_low & 0xfffc] + ((*address_low&3)^S8) ) = byte;
 }
 
@@ -1888,7 +1925,7 @@ void write_vih()
 		break;
 		case 0x8:
 		case 0xa:
-			temp = vi_register.vi_status;
+			temp = vi_register.vi_width;
 			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
 			if (vi_register.vi_width != temp)
 			{
@@ -1903,7 +1940,7 @@ void write_vih()
 			check_interupt();
 			return;
 		break;
-	}
+				}
 	*((unsigned short*)((unsigned char*)readvi[*address_low & 0xfffc] + ((*address_low&3)^S16) )) = hword;
 }
 
@@ -1935,7 +1972,7 @@ void write_vid()
 			vi_register.vi_burst = dword & 0xFFFFFFFF;
 			return;
 		break;
-	}
+				}
 	*readvi[*address_low] = dword >> 32;
 	*readvi[*address_low+4] = dword & 0xFFFFFFFF;
 }
@@ -1950,6 +1987,7 @@ void read_ai()
 				word = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
 			else
 				word = 0;
+		return;
 		break;
 	}
 	word = *(readai[*address_low]);
@@ -1970,6 +2008,7 @@ void read_aib()
 			else
 				len = 0;
 			byte = *((unsigned char*)&len + ((*address_low&3)^S8) );
+			return;
 		break;
 	}
 	byte = *((unsigned char*)readai[*address_low & 0xfffc] + ((*address_low&3)^S8) );
@@ -1988,6 +2027,7 @@ void read_aih()
 			else
 				len = 0;
 			hword = *((unsigned short*)((unsigned char*)&len + ((*address_low&3)^S16) ));
+			return;
 		break;
 	}
 	hword = *((unsigned short*)((unsigned char*)readai[*address_low & 0xfffc] + ((*address_low&3)^S16) ));
@@ -2003,9 +2043,19 @@ void read_aid()
 				dword = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
 			else
 				dword = (unsigned long long)ai_register.ai_dram_addr << 32 & 0xFFFFFFFF00000000LL;
+			return;
 		break;
 	}
 	dword = ((unsigned long long int)(*readai[*address_low])<<32) | *readai[*address_low+4];
+}
+
+static unsigned int get_dma_duration()
+{
+    unsigned int samples_per_sec = vi_register.clock / (1 + ai_register.ai_dacrate);
+    unsigned int bytes_per_sample = 4; /* XXX: assume 16bit stereo - should depends on bitrate instead */
+    unsigned int cpu_counts_per_sec = vi_register.vi_delay == 0 ? vi_register.clock : vi_register.vi_delay * vi_register.expected_refresh_rate; /* estimate cpu counts/sec using VI */
+
+    return ai_register.ai_len * (cpu_counts_per_sec / (bytes_per_sample * samples_per_sec));
 }
 
 void write_ai()
@@ -2016,34 +2066,7 @@ void write_ai()
 		case 0x4:
 			ai_register.ai_len = word;
 			aiLenChanged();
-			switch(ROM_HEADER.Country_code&0xFF)
-			{
-				case 0x44:
-				case 0x46:
-				case 0x49:
-				case 0x50:
-				case 0x53:
-				case 0x55:
-				case 0x58:
-				case 0x59:
-				{
-					unsigned long f = 49656530/(ai_register.ai_dacrate+1);
-					if (f)
-					delay = ((unsigned long long)ai_register.ai_len*vi_register.vi_delay*50)/(f*4);
-				}
-				break;
-				case 0x37:
-				case 0x41:
-				case 0x45:
-				case 0x4a:
-				default:
-				{
-					unsigned long f = 48681812/(ai_register.ai_dacrate+1);
-					if (f)
-					delay = ((unsigned long long)ai_register.ai_len*vi_register.vi_delay*60)/(f*4);
-				}
-				break;
-			}
+			delay = get_dma_duration();
 			if (no_audio_delay) delay = 0;
 			if (ai_register.ai_status & 0x40000000) // busy
 			{
@@ -2111,27 +2134,7 @@ void write_aib()
 			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
 			ai_register.ai_len = temp;
 			aiLenChanged();
-			switch(ROM_HEADER.Country_code&0xFF)
-			{
-				case 0x44:
-				case 0x46:
-				case 0x49:
-				case 0x50:
-				case 0x53:
-				case 0x55:
-				case 0x58:
-				case 0x59:
-					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*vi_register.vi_delay*50)/49656530;
-				break;
-				case 0x37:
-				case 0x41:
-				case 0x45:
-				case 0x4a:
-				default:
-					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*vi_register.vi_delay*60)/48681812;
-				break;
-			}
-			//delay = 0;
+			delay = get_dma_duration();
 			if (ai_register.ai_status & 0x40000000) // busy
 			{
 				ai_register.next_delay = delay;
@@ -2204,26 +2207,7 @@ void write_aih()
 			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
 			ai_register.ai_len = temp;
 			aiLenChanged();
-			switch(ROM_HEADER.Country_code&0xFF)
-			{
-				case 0x44:
-				case 0x46:
-				case 0x49:
-				case 0x50:
-				case 0x53:
-				case 0x55:
-				case 0x58:
-				case 0x59:
-					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*vi_register.vi_delay*50)/49656530;
-				break;
-				case 0x37:
-				case 0x41:
-				case 0x45:
-				case 0x4a:
-				default:
-					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*vi_register.vi_delay*60)/48681812;
-				break;
-			}
+			delay = get_dma_duration();
 			if (no_audio_delay) delay = 0;
 			if (ai_register.ai_status & 0x40000000) // busy
 			{
@@ -2290,28 +2274,7 @@ void write_aid()
 			ai_register.ai_dram_addr = dword >> 32;
 			ai_register.ai_len = dword & 0xFFFFFFFF;
 			aiLenChanged();
-			switch(ROM_HEADER.Country_code&0xFF)
-			{
-				case 0x44:
-				case 0x46:
-				case 0x49:
-				case 0x50:
-				case 0x53:
-				case 0x55:
-				case 0x58:
-				case 0x59:
-					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*
-					vi_register.vi_delay*50)/49656530;
-				break;
-				case 0x37:
-				case 0x41:
-				case 0x45:
-				case 0x4a:
-				default:
-					delay = ((unsigned long long)ai_register.ai_len*(ai_register.ai_dacrate+1)*
-					vi_register.vi_delay*60)/48681812;
-				break;
-			}
+			delay = get_dma_duration();
 			if (no_audio_delay) delay = 0;
 			if (ai_register.ai_status & 0x40000000) // busy
 			{

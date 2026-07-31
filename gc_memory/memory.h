@@ -117,6 +117,21 @@ typedef struct _RSP_register
    unsigned long rsp_ibist;
 } RSP_register;
 
+enum
+{
+    DELAY_DP_INT = 0x001,
+    DELAY_UPDATESCREEN = 0x002
+};
+
+enum mi_intr
+{
+    MI_INTR_SP = 0x01,
+    MI_INTR_SI = 0x02,
+    MI_INTR_AI = 0x04,
+    MI_INTR_VI = 0x08,
+    MI_INTR_PI = 0x10,
+    MI_INTR_DP = 0x20
+};
 typedef struct _DPC_register
 {
    unsigned long dpc_start;
@@ -186,6 +201,9 @@ typedef struct _VI_register
    unsigned long vi_x_scale;
    unsigned long vi_y_scale;
    unsigned long vi_delay;
+   unsigned long expected_refresh_rate;
+   unsigned long count_per_scanline;
+   unsigned long clock;
 } VI_register;
 
 typedef struct _AI_register

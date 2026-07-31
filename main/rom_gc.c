@@ -47,6 +47,8 @@ int rom_length;
 rom_header ROM_HEADER;
 rom_settings ROM_SETTINGS;
 
+extern void init_vi_clock_refresh_rate();
+
 void stripInvalidChars(char *str) {
 	int i = 0;
 	for(i = 0; i < strlen(str); i++) {
@@ -187,6 +189,7 @@ int rom_read(fileBrowser_file* file){
 #endif
   //Set VI limit based on ROM header
   InitTimer();
+  init_vi_clock_refresh_rate();
 	
   return ret;
 }

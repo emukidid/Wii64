@@ -388,17 +388,26 @@ void gen_interupt()
       return;
     break;
     case VI_INT:
-      updateScreen();
+			updateScreen();
 #ifdef PROFILE
       refresh_stat();
 #endif
       new_vi();
+	  
+#if 0
+	  vi_register.vi_delay = (vi_register.vi_v_sync == 0) ? 500000 : vi_register.vi_delay;
+      unsigned long next_vi = get_event(VI_INT) + vi_register.vi_delay;
+      r4300.vi_field = (vi_register.vi_status&0x40) ? 1-r4300.vi_field : 0; 
+      remove_interupt_event();
+      add_interupt_event_count(VI_INT, next_vi);
+#else
       vi_register.vi_delay = (vi_register.vi_v_sync == 0) ? 500000 : ((vi_register.vi_v_sync + 1)*1500);
       r4300.next_vi += vi_register.vi_delay;
       r4300.vi_field = (vi_register.vi_status&0x40) ? 1-r4300.vi_field : 0; 
       remove_interupt_event();
       add_interupt_event_count(VI_INT, r4300.next_vi);
-  
+#endif
+ 
       MI_register.mi_intr_reg |= 0x08;
       if(!chk_status(1)) {
         return;

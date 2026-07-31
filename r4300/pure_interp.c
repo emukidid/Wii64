@@ -1214,15 +1214,7 @@ static void MTC0()
 	r4300.pc-=4;
 	break;
       case 13:   // Cause
-	if (rrt!=0)
-	  {
-	     printf("�criture dans Cause\n");
-	     r4300.stop = 1;
-#ifdef DEBUGON
-       _break();
-#endif     
-	  }
-	else Cause = rrt;
+	Cause = ((rrt & 0x300) | (Cause & ~0x300));
 	break;
       case 14:   // EPC
 	EPC = rrt;
