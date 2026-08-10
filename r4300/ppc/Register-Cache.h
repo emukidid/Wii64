@@ -26,6 +26,41 @@
 // -- GPRs --
 typedef struct { int hi, lo; } RegMapping;
 typedef enum { MAPPING_NONE, MAPPING_32, MAPPING_64 } RegMappingType;
+
+// Compile-time state of a single mapped GPR / FPR.
+typedef struct {
+	RegMapping map;   // Mapped HW register(s) or -1 (hi, lo)
+	int sign;         // Whether the value is sign-extended to 64 bits
+	int dirty;        // if register must be flushed to memory
+	int lru;          // higher is newer
+	int constant;     // Nonzero means there is a constant value mapped
+	long long value;  // Value if this mapping holds a constant
+} RegState;
+
+typedef struct {
+	int map;          // Mapped HW FPR or -1
+	int dbl;          // Double-precision
+	int dirty;        // if register must be flushed to memory
+	int lru;          // higher is newer
+} FPRState;
+
+// A full copy of the Register-Cache state at one point in time
+// Mostly used by functions that are recompiled and want to keep state vs full flushRegisters behaviour
+typedef struct {
+	RegState regMap[34];
+	int      nextLRUVal;
+	char     availableRegs[32];
+	FPRState fprMap[32];
+	int      nextLRUValFPR;
+	char     availableFPRs[32];
+} RegCacheState;
+
+// Copy the current cache model out to / in from a snapshot. (no ppc gen)
+void snapshotRegisters(RegCacheState* s);
+void restoreRegisters(const RegCacheState* s);
+// Flush/load (actual ppc code gen) of state
+void emitFlushOf(const RegCacheState* s);
+void emitReloadOf(const RegCacheState* s);
 // Create a mapping for a 32-bit register (reg) to a HW register (returned)
 // Loading the register's value if the mapping doesn't already exist
 int mapRegister(int reg);

@@ -507,6 +507,13 @@ static int branch(short offset, condition cond, int link, int likely){
 #endif
 }
 
+#define check_memory() \
+{ \
+invalidateRegisters(); \
+GEN_B(add_jump((unsigned long)&invalidate_func, 1, 1), 0, 1); \
+GEN_LWZ(R0, DYNAOFF_LR, R1); \
+GEN_MTLR(R0); \
+}
 
 static int (*gen_ops[64])(MIPS_instr);
 
@@ -516,6 +523,77 @@ int convert(void){
 	delaySlotNext = 0;
 
 	MIPS_instr mips = get_next_src();
+#if 0
+	// This probably isn't even worth it...
+	if (!isDelaySlot && !is_j_dst(1) &&
+        MIPS_GET_OPCODE(mips) == MIPS_OPCODE_LW &&
+        has_next_src())
+    {
+        MIPS_instr next = peek_next_src();
+
+        if (MIPS_GET_OPCODE(next) == MIPS_OPCODE_SW)
+        {
+            int lw_rs = MIPS_GET_RS(mips);
+            int lw_rt = MIPS_GET_RT(mips);
+
+            int sw_rs = MIPS_GET_RS(next);
+            int sw_rt = MIPS_GET_RT(next);
+
+            short lw_off = MIPS_GET_IMMED(mips);
+            short sw_off = MIPS_GET_IMMED(next);
+
+			if (lw_rt == sw_rt && lw_rt != lw_rs)
+			{
+				if (isRegisterConstant(lw_rs) && isRegisterConstant(sw_rs))
+				{
+					unsigned long base = getRegisterConstant(lw_rs);
+					unsigned long base_sw = getRegisterConstant(sw_rs);
+
+					// Only handle RDRAM range explicitly
+					if (base >= 0x80000000 && base < 0x80800000 && base_sw >= 0x80000000 && base_sw < 0x80800000)
+					{
+						unsigned long vaddr_lw = base + lw_off;
+						unsigned long vaddr_sw = base_sw + sw_off;
+
+						unsigned long rdram_lw = (vaddr_lw - 0x80000000) & 0x7FFFFF;
+						unsigned long rdram_sw = (vaddr_sw - 0x80000000) & 0x7FFFFF;
+
+						int tmp = mapRegisterTemp();
+						int rt = mapRegisterNew(lw_rt);
+
+						// Build RDRAM address for LW
+						GEN_LIS(tmp, extractUpper16(rdram_lw));
+						GEN_ADDI(tmp, tmp, extractLower16(rdram_lw));
+						GEN_ADD(tmp, tmp, DYNAREG_RDRAM);
+						GEN_LWZ(rt, 0, tmp);
+
+						// Build RDRAM address for SW
+						GEN_LIS(tmp, extractUpper16(rdram_sw));
+						GEN_ADDI(tmp, tmp, extractLower16(rdram_sw));
+						GEN_ADD(tmp, tmp, DYNAREG_RDRAM);
+						GEN_STW(rt, 0, tmp);
+
+						// Unmap temp before flush
+						unmapRegisterTemp(tmp);
+						flushRegisters();
+
+						// Set R3 = virtual address for invalidate_func
+						GEN_LIS(R3, vaddr_sw >> 16);
+						GEN_ORI(R3, R3, vaddr_sw & 0xFFFF);
+						check_memory();
+
+						// Consume SW
+						get_next_src();
+						return CONVERT_SUCCESS;
+					}
+				}
+			}
+			if(lw_rs == sw_rs && lw_off == sw_off) {
+				print_gecko("dead load/store\r\n");
+			}
+        }
+    }
+#endif
 	int result = gen_ops[MIPS_GET_OPCODE(mips)](mips);
 
 	if(needFlush) flushRegisters();
@@ -3004,18 +3082,11 @@ static int MTC0(MIPS_instr mips){
 	case 27: // CacheErr
 		// Do nothing
 		return CONVERT_SUCCESS;
-#if 0
-	case 12: {
-		flushRegister(rt);
-		char* availVolatileRegs = getVolatileAvailableRegs();
+	case 12: { // Status
+		RegCacheState preCall;
+		snapshotRegisters(&preCall);
+		emitFlushOf(&preCall);
 
-		// Save r3–r12 (if they're in use) but don't flush to r4300 struct
-		for (int i = 0; i < 10; i++) {
-			if(!availVolatileRegs[i]) {
-				GEN_STW(R3 + i, (i*4)+offsetof(R4300,ppc_reg_scratch), DYNAREG_R4300);
-			}
-		}
-		
 		// r3 = pc
 		GEN_LIS(R3, extractUpper16(get_src_pc()));
 		// r5 = new status value
@@ -3025,6 +3096,8 @@ static int MTC0(MIPS_instr mips){
 		GEN_ADDI(R3, R3, extractLower16(get_src_pc()));
 		// Status = newStatus (in r4300.reg_cop0)
 		GEN_STW(R5, (12*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
+		// isDelaySlot
+		GEN_LI(R6, isDelaySlot);
 		GEN_B(add_jump((unsigned long)(&dyna_cop0_status), 1, 1), 0, 1);
 		// Load the old LR
 		GEN_LWZ(R0, DYNAOFF_LR, R1);
@@ -3032,23 +3105,19 @@ static int MTC0(MIPS_instr mips){
 		GEN_CMPI(CR5, R3, 0);
 		// Restore the LR
 		GEN_MTLR(R0);
-		
-		// Restore r3–r12, if they were in use
-		for (int i = 0; i < 10; i++) {
-			if(!availVolatileRegs[i]) {
-				GEN_LWZ(R3 + i, (i*4)+offsetof(R4300,ppc_reg_scratch), DYNAREG_R4300);
-			}
-		}
-		// if dyna_cop0_status returned an address, jumpTo it
+		// If dyna_cop0_status returned a new PC, return to
+		// the trampoline with it. We're leaving this function for good, so
+		// there's no need to reload the register cache first.
 		GEN_BNELR(CR5, 0);
 
+		// No interrupt, the call clobbered the volatiles.
+		emitReloadOf(&preCall);
+
 		if(mips_is_jump(mips)) delaySlotNext = 2;
-		return INTERPRETED;
+		return CONVERT_SUCCESS;
 	}
-#endif	
 	case 9: // Count
 	case 11: // Compare
-	case 12: // Status
 
 	default:
 		genCallInterp(mips);
@@ -4431,14 +4500,6 @@ static void genCheckFP(void){
 #endif
 }
 
-#define check_memory() \
-{ \
-	invalidateRegisters(); \
-	GEN_B(add_jump((unsigned long)&invalidate_func, 1, 1), 0, 1); \
-	GEN_LWZ(R0, DYNAOFF_LR, R1); \
-	GEN_MTLR(R0); \
-}
-
 static void genCallDynaMem(memType type, int count, int _rs, int _rt, short immed){
 	int isPhysical = 1, isVirtual = 1, isUnsafe = 1;
 	int isConstant = isRegisterConstant(_rs);
@@ -4487,9 +4548,23 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 	if(type == MEM_LWC1 || type == MEM_LDC1 || type == MEM_SWC1 || type == MEM_SDC1)
 		genCheckFP();
 
+#if defined(FASTMEM_HOT_NOFLUSH) && defined(FASTMEM)
+	// Keep the register cache live across the rdram fast path
+	int hotNoFlush = isPhysical && isVirtual &&
+	                 (type == MEM_LW  || type == MEM_LWU ||
+	                  type == MEM_LH  || type == MEM_LHU ||
+	                  type == MEM_LB  || type == MEM_LBU ||
+	                  type == MEM_LD  || type == MEM_LL);
+	RegCacheState hot_split, hot_out;
+#else
+	const int hotNoFlush = 0;
+#endif
+
 	if(isVirtual || isUnsafe){
-		flushRegisters();
-		reset_code_addr();
+		if(!hotNoFlush){
+			flushRegisters();
+			reset_code_addr();
+		}
 	}
 
 	int rd = mapRegisterTemp();
@@ -4499,8 +4574,13 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 	// addr = rs + immed
 	GEN_ADDI(rd, rs, immed);
 
+#if defined(FASTMEM_HOT_NOFLUSH) && defined(FASTMEM)
+	// Snapshot the cache
+	if(hotNoFlush) snapshotRegisters(&hot_split);
+#endif
+
 #ifdef FASTMEM
-	int to_slow_id; 
+	int to_slow_id;
 	PowerPC_instr* ts_preCall;
 	if(isPhysical && isVirtual){
 		// If base in physical memory
@@ -4927,7 +5007,11 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 	int not_fastmem_id = 0;
 	PowerPC_instr* preCall = 0;
 	if(isPhysical && isVirtual){
-		flushRegisters();
+#ifdef FASTMEM_HOT_NOFLUSH
+		if(hotNoFlush) snapshotRegisters(&hot_out);
+		else
+#endif
+			flushRegisters();
 		// Skip over else
 		not_fastmem_id = add_jump_special(1);
 		GEN_B(not_fastmem_id, 0, 0);
@@ -4939,7 +5023,15 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 #endif // FASTMEM
 
 	if(isVirtual){
-		invalidateRegisters();
+#if defined(FASTMEM_HOT_NOFLUSH) && defined(FASTMEM)
+		if(hotNoFlush){
+			// Write the snapshot
+			emitFlushOf(&hot_split);
+			// Without the flush, we need to put r3 back potentially
+			GEN_OR(R3, rd, rd);
+		} else
+#endif
+			invalidateRegisters();
 		GEN_LI(R4, _rt);
 		GEN_LI(R5, count);
 		// Pass PC as arg 5 (upper half)
@@ -4960,6 +5052,12 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 		GEN_MTLR(R0);
 		// If so, return to trampoline
 		GEN_BNELR(CR5, 0);
+#if defined(FASTMEM_HOT_NOFLUSH) && defined(FASTMEM)
+		if(hotNoFlush){
+			// No interrupt
+			emitReloadOf(&hot_out);
+		}
+#endif
 	}
 
 #ifdef FASTMEM

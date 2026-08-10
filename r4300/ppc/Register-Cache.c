@@ -27,15 +27,7 @@
 #include <string.h>
 
 // -- GPR mappings --
-static struct {
-	// Holds the value of the physical reg or -1 (hi, lo)
-	RegMapping map;
-	int sign;
-	int dirty; // Nonzero means the register must be flushed to memory
-	int lru;   // LRU value for flushing; higher is newer
-	int constant; // Nonzero means there is a constant value mapped
-	long long value; // Value if this mapping holds a constant
-} regMap[34];
+static RegState regMap[34];
 
 static int nextLRUVal;
 static char availableRegsDefault[32] = {
@@ -322,12 +314,7 @@ void setRegisterConstant64(int gpr, long long value){
 }
 
 // -- FPR mappings --
-static struct {
-	int map;   // Holds the value of the physical fpr or -1
-	int dbl;   // Double-precision
-	int dirty; // Nonzero means the register must be flushed to memory
-	int lru;   // LRU value for flushing; higher is newer
-} fprMap[32];
+static FPRState fprMap[32];
 
 static int nextLRUValFPR;
 static char availableFPRsDefault[32] = {
@@ -495,5 +482,87 @@ int mapFPRTemp(void){
 
 void unmapFPRTemp(int fpr){
 	availableFPRs[fpr] = 1;
+}
+
+// Register-cache snapshots let a conditionally-taken helper call keep its hot path flushRegisters free
+// like in dyna_mem stuff.
+
+void snapshotRegisters(RegCacheState* s){
+	memcpy(s->regMap,        regMap,        sizeof(regMap));
+	s->nextLRUVal    = nextLRUVal;
+	memcpy(s->availableRegs, availableRegs, sizeof(availableRegs));
+	memcpy(s->fprMap,        fprMap,        sizeof(fprMap));
+	s->nextLRUValFPR = nextLRUValFPR;
+	memcpy(s->availableFPRs, availableFPRs, sizeof(availableFPRs));
+}
+
+void restoreRegisters(const RegCacheState* s){
+	memcpy(regMap,        s->regMap,        sizeof(regMap));
+	nextLRUVal    = s->nextLRUVal;
+	memcpy(availableRegs, s->availableRegs, sizeof(availableRegs));
+	memcpy(fprMap,        s->fprMap,        sizeof(fprMap));
+	nextLRUValFPR = s->nextLRUValFPR;
+	memcpy(availableFPRs, s->availableFPRs, sizeof(availableFPRs));
+}
+
+void emitFlushOf(const RegCacheState* s){
+	int i;
+	// GPRs (basically _flushRegister)
+	for(i=1; i<34; ++i){
+		const RegState* r = &s->regMap[i];
+		if(r->map.lo < 0 || !r->dirty) continue;
+		// Store the LSW
+		GEN_STW(r->map.lo, (i*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
+		if(r->map.hi >= 0){
+			// Store the mapped MSW
+			GEN_STW(r->map.hi, (i*8)+offsetof(R4300,gpr), DYNAREG_R4300);
+		} else if(r->sign){
+			// Sign extend to 64 bits, then store the MSW
+			GEN_SRAWI(R0, r->map.lo, 31);
+			GEN_STW(R0, (i*8)+offsetof(R4300,gpr), DYNAREG_R4300);
+		} else {
+			GEN_STW(DYNAREG_ZERO, (i*8)+offsetof(R4300,gpr), DYNAREG_R4300);
+		}
+	}
+	// FPRs (mirrors _flushFPR)
+	for(i=0; i<32; ++i){
+		const FPRState* f = &s->fprMap[i];
+		if(f->map < 0 || !f->dirty) continue;
+		if(f->dbl){
+			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+			GEN_STFDX(f->map, 0, R0);
+		} else {
+			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+			GEN_STFSX(f->map, 0, R0);
+		}
+	}
+}
+
+void emitReloadOf(const RegCacheState* s){
+	int i;
+	// GPRs (mirrors the load half of mapRegister / mapRegister64)
+	for(i=1; i<34; ++i){
+		const RegState* r = &s->regMap[i];
+		if(r->map.lo < 0) continue;
+		// Load the LSW
+		GEN_LWZ(r->map.lo, (i*8+4)+offsetof(R4300,gpr), DYNAREG_R4300);
+		// Load the MSW only for a full 64-bit mapping; a 32-bit mapping's high
+		// word is re-derived on demand when it is next mapped as 64-bit.
+		if(r->map.hi >= 0){
+			GEN_LWZ(r->map.hi, (i*8)+offsetof(R4300,gpr), DYNAREG_R4300);
+		}
+	}
+	// FPRs (mirrors the load half of mapFPR)
+	for(i=0; i<32; ++i){
+		const FPRState* f = &s->fprMap[i];
+		if(f->map < 0) continue;
+		if(f->dbl){
+			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+			GEN_LFDX(f->map, 0, R0);
+		} else {
+			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+			GEN_LFSX(f->map, 0, R0);
+		}
+	}
 }
 

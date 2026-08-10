@@ -160,8 +160,10 @@ void dynarec(unsigned int address){
 	r4300.pc = address;
 }
 
-unsigned int dyna_cop0_status(unsigned int pc, unsigned int oldStatus, unsigned int newStatus) {
+unsigned int dyna_cop0_status(unsigned int pc, unsigned int oldStatus,
+                              unsigned int newStatus, int isDelaySlot) {
 	r4300.pc = pc;
+	r4300.delay_slot = isDelaySlot;
 
 	if ((newStatus & 0x04000000) != (oldStatus & 0x04000000)) {
 	  set_fpr_pointers(newStatus);
@@ -172,6 +174,7 @@ unsigned int dyna_cop0_status(unsigned int pc, unsigned int oldStatus, unsigned 
 	if (r4300.next_interrupt <= Count)  {
 		gen_interupt();
 	}
+	r4300.delay_slot = 0;
 
 	if(r4300.pc != pc + 4) r4300.noCheckInterrupt = 1;
 
