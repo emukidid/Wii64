@@ -1767,8 +1767,7 @@ void OGLRender::GXclearEFB()
 	GX_SetCullMode (GX_CULL_NONE);
 	Mtx44 GXprojection;
 	guMtxIdentity(GXprojection);
-//	guOrtho(GXprojection, 0, OGL.height-1, 0, OGL.width-1, 0.0f, 1.0f);
-	guOrtho(GXprojection, 0, windowSetting.uDisplayHeight-1, 0, windowSetting.uDisplayWidth-1, 0.0f, 1.0f);
+	guOrtho(GXprojection, 0, windowSetting.uDisplayHeight, 0, windowSetting.uDisplayWidth, 0.0f, 1.0f);
 //	guOrtho(GXprojection, 0, 480, 0, 640, 0.0f, 1.0f);
 	GX_LoadProjectionMtx(GXprojection, GX_ORTHOGRAPHIC); 
 	GX_LoadPosMtxImm(gGX.GXmodelViewIdent,GX_PNMTX0);

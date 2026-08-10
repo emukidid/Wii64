@@ -267,6 +267,7 @@ typedef struct {
 	GXColor	GXfogColor;
 	u8		GXfogType;
 	bool	GXupdateFog;
+	bool	GXupdateCombiner;
 
 	//Tex Cache info
 	int		GXnumTex;

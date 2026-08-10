@@ -455,10 +455,15 @@ EXPORT void CALL RomClosed(void)
     StopVideo();
 #endif
     TRACE0("Video is stopped");
+
+#ifdef __GX__
+	GX_SetDrawSyncCallback(NULL);
+#endif // __GX__
 }
 
 #ifdef __GX__
 void VI_GX_PreRetraceCallback(u32 retraceCnt);
+void VI_GX_DrawSyncCallback(u16 token);
 #endif // __GX__
 
 EXPORT void CALL RomOpen(void)
@@ -518,7 +523,7 @@ EXPORT void CALL RomOpen(void)
 #endif
 
 #ifdef __GX__
-	VIDEO_SetPreRetraceCallback(VI_GX_PreRetraceCallback);
+	GX_SetDrawSyncCallback(VI_GX_DrawSyncCallback);
 #endif // __GX__
 }
 

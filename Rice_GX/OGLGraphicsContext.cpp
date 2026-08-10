@@ -389,6 +389,8 @@ void VI_GX_showLoadIcon()
 	GX_LoadPosMtxImm(GXmodelView2D,GX_PNMTX2);
 	guOrtho(GXprojection2D, 0, 480, 0, 640, 0, 1);
 	GX_LoadProjectionMtx(GXprojection2D, GX_ORTHOGRAPHIC); //load current 2D projection matrix
+	GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
+	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth,(u32) windowSetting.uDisplayHeight);
 
 	GX_ClearVtxDesc();
 	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX2);
@@ -445,13 +447,15 @@ void VI_GX_showDEBUG()
 
 void VI_GX_PreRetraceCallback(u32 retraceCnt)
 {
-	if(VI.copy_fb)
-	{
-		VIDEO_SetNextFramebuffer(VI.xfb[VI.which_fb]);
-		VIDEO_Flush();
-		VI.which_fb ^= 1;
-		VI.copy_fb = false;
-	}
+	VI.which_fb ^= 1;
+	VIDEO_SetPreRetraceCallback(NULL);
+}
+
+void VI_GX_DrawSyncCallback(u16 token)
+{
+	VIDEO_SetNextFramebuffer(VI.xfb[token & 1]);
+	VIDEO_Flush();
+	VIDEO_SetPreRetraceCallback(VI_GX_PreRetraceCallback);
 }
 
 #endif //__GX__
@@ -561,30 +565,38 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
    SDL_GL_SwapBuffers();
 #else
 	GX_CheckResChange();
-//	VI_GX_cleanUp();
-   //TODO: Move the following and others to a "clean up" function
-	// Set viewport to whole EFB and scissor to N64 frame for OSD
-	GX_SetScissor((u32) gGX.GXorigX,(u32) gGX.GXorigY,(u32) gGX.GXwidth,(u32) gGX.GXheight);	//Set Scissor to render plane for DEBUG prints
+
+	if( status.bScreenIsDrawn )
+	{
+		// Clean up GX state before calling our fps printing/etc
+		GX_SetNumTevStages(1);
+		GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+		GX_SetFog(GX_FOG_NONE, 0, 1, 0, 1, (GXColor){0,0,0,255});
+		GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
+		GX_SetCoPlanar(GX_DISABLE);
+		GX_SetClipMode(GX_CLIP_ENABLE);
+		GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth,(u32) windowSetting.uDisplayHeight);
+		GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
+		GX_SetZCompLoc(GX_TRUE);
+
 #ifdef HW_DOL
-	VI_GX_showLoadIcon();
+		VI_GX_showLoadIcon();
 #endif
-	VI_GX_showFPS();
-	VI_GX_showDEBUG();
-	// Set viewport to N64 frame and disable scissor CopyDisp
-	GX_SetViewport((f32) gGX.GXorigX,(f32) gGX.GXorigY,(f32) gGX.GXwidth,(f32) gGX.GXheight, 0.0f, 1.0f);
-	GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth+1,(u32) windowSetting.uDisplayHeight+1);	//Disable Scissor
-//	if(VI.updateOSD)
-//	{
-//		if(VI.copy_fb)
-//			VIDEO_WaitVSync();
+		VI_GX_showFPS();
+		VI_GX_showDEBUG();
+
+		GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth,(u32) windowSetting.uDisplayHeight);
 		GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
-//		GX_CopyDisp (VI.xfb[VI.which_fb], GX_TRUE);	//clear the EFB before executing new Dlist
-		GX_CopyDisp (VI.xfb[VI.which_fb], GX_FALSE);	//clear the EFB before executing new Dlist
-		GX_DrawDone(); //Wait until EFB->XFB copy is complete
-//		doCaptureScreen();
+		GX_CopyDisp(VI.xfb[VI.which_fb], GX_TRUE);	//Copy EFB->XFB and clear EFB
+		GX_SetDrawSync(VI.which_fb);
 		VI.updateOSD = false;
-		VI.copy_fb = true;
-//	}
+
+		gGX.GXupdateMtx = true;
+		gGX.GXupdateFog = true;
+		gGX.GXupdateCombiner = true;
+
+		status.bScreenIsDrawn = false;
+	}
 
 #endif //!__GX__
    
@@ -612,18 +624,10 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
         glClear(GL_DEPTH_BUFFER_BIT);
     }
 #else //!__GX__
-	//TODO: Integrate this with above GX_CopyDisp
-    if( !g_curRomInfo.bForceScreenClear ) 
-    {
-		gGX.GXclearDepthBuffer = true;
-		gGX.GXclearDepth = 1.0;
-		CRender::GetRender()->GXclearEFB();
-    }
-#endif //__GX__
-    else
-        needCleanScene = true;
 
-    status.bScreenIsDrawn = false;
+#endif //__GX__
+    if( g_curRomInfo.bForceScreenClear )
+        needCleanScene = true;
 }
 
 bool COGLGraphicsContext::SetFullscreenMode()

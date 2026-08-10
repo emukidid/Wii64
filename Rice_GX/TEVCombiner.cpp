@@ -393,14 +393,14 @@ void CTEVColorCombiner::InitCombinerCycle12(void)
 		m_dwLastMux1 = m_pDecodedMux->m_dwMux1;
 	}
 
-	if( m_bCycleChanged || combinerIsChanged || gRDP.texturesAreReloaded || gRDP.colorsAreReloaded )
+	if( m_bCycleChanged || combinerIsChanged || gRDP.texturesAreReloaded || gRDP.colorsAreReloaded || gGX.GXupdateCombiner )
 	{
 #ifdef SHOW_DEBUG
 //		sprintf(txtbuffer,"InitCombCyc12: m_bCycCh %d, combIsCh %d, gRDP.texRL %d, gRDP.colRL %d\r\n",
 //				m_bCycleChanged, combinerIsChanged, gRDP.texturesAreReloaded, gRDP.colorsAreReloaded);
 //		DEBUG_print(txtbuffer,DBG_USBGECKO);
 #endif //SHOW_DEBUG
-		if( m_bCycleChanged || combinerIsChanged )
+		if( m_bCycleChanged || combinerIsChanged || gGX.GXupdateCombiner )
 		{
 			GenerateCombinerSettingConstants(m_lastIndex);
 			GenerateCombinerSetting(m_lastIndex);
@@ -413,7 +413,8 @@ void CTEVColorCombiner::InitCombinerCycle12(void)
 		m_pOGLRender->SetAllTexelRepeatFlag();
 
 		gRDP.colorsAreReloaded = false;
-		gRDP.texturesAreReloaded = false; 
+		gRDP.texturesAreReloaded = false;
+		gGX.GXupdateCombiner = false;
 #ifdef SHOW_DEBUG
 //		DisplayTEVMuxString(m_lastIndex);
 #endif //SHOW_DEBUG

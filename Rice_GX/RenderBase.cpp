@@ -27,6 +27,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern FiddledVtx * g_pVtxBase;
 
+#ifdef __GX__
+static void UpdateGXCombW(Matrix &mtx);
+#endif //__GX__
+
 #define ENABLE_CLIP_TRI
 #define X_CLIP_MAX  0x1
 #define X_CLIP_MIN  0x2
@@ -1757,6 +1761,14 @@ void ProcessVertexDataDKR(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
     Matrix &matWorldProject = gRSP.DKRMatrixes[gRSP.DKRCMatrixIndex];
 
+#ifdef __GX__
+    // DKR's microcode loads its own per-object matrices (gRSP.DKRMatrixes) and never sets gRSP.bMatrixIsUpdated,
+    // so the gRSPworldProject-based GXcombW computed by UpdateCombinedMatrix() above is
+    // unrelated to the matrix actually used to transform these vertices. We need to recompute
+    // it from the real matrix, or the reconstructed Z is wrong for everything, causing imploding gfx.
+    UpdateGXCombW(matWorldProject);
+#endif //__GX__
+
     uint32 i;
     int nOff;
 
@@ -2395,6 +2407,23 @@ void HackZAll()
 extern XMATRIX reverseXY;
 extern XMATRIX reverseY;
 
+#ifdef __GX__
+static void UpdateGXCombW(Matrix &mtx)
+{
+	gGX.GXupdateMtx = true;
+	guMtx44Inverse(mtx.m, gGX.GXprojTemp);
+
+	if(gGX.GXprojTemp[2][3] != 0.0f)
+	{
+		gGX.GXcombW[2][3] = GXprojZScale / gGX.GXprojTemp[2][3];
+		gGX.GXcombW[2][2] = -GXprojZOffset + (gGX.GXcombW[2][3] * gGX.GXprojTemp[3][3]);
+		gGX.GXuseCombW = true;
+	}
+	else
+		gGX.GXuseCombW = false;
+}
+#endif //__GX__
+
 void UpdateCombinedMatrix()
 {
     if( gRSP.bMatrixIsUpdated )
@@ -2424,38 +2453,7 @@ void UpdateCombinedMatrix()
 
 #ifdef __GX__
 		//Note: UpdateCombineMatrix() is called for every ProcessVertexData*(), so we only need GX matrix code here.
-		//Note: It seems like CRender::DrawTriangles() is called everytime tris are added already.
-		//if (OGL.numTriangles)
-		//	OGL_DrawTriangles();
-		gGX.GXupdateMtx = true;
-
-		//if(gSP.matrix.combined[2][3] != 0)
-		if(gRSPworldProject.m[2][3] != 0)
-		{
-			gGX.GXcombW[2][2] = -GXprojZOffset - (GXprojZScale*gRSPworldProject.m[2][2]/gRSPworldProject.m[2][3]);
-			gGX.GXcombW[2][3] = GXprojZScale*(gRSPworldProject.m[3][2] - (gRSPworldProject.m[2][2]*gRSPworldProject.m[3][3]/gRSPworldProject.m[2][3]));
-//			gGX.GXcombW[2][3] = gGX.GXcombW[2][3]-0.25;
-			gGX.GXuseCombW = true;
-
-			//Transform for zPrime
-			if (gRSPworldProject.m[2][2] != 0)
-			{
-				gGX.GXzPrimeScale		= -gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2];
-				gGX.GXzPrimeTranslate	= -(gRSPworldProject.m[3][2] - (gRSPworldProject.m[2][2]*gRSPworldProject.m[3][3]/gRSPworldProject.m[2][3]))*(gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2]);
-//				gGX.GXzPrimeScale		= gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2];
-//				gGX.GXzPrimeTranslate	= -(gRSPworldProject.m[3][2] + (gRSPworldProject.m[2][2]*gRSPworldProject.m[3][3]/gRSPworldProject.m[2][3]))*(gRSPworldProject.m[2][3]/gRSPworldProject.m[2][2]);
-			}
-			else
-			{
-				gGX.GXzPrimeScale = gGX.GXzPrimeTranslate = 0;
-# ifdef SHOW_DEBUG
-				//sprintf(txtbuffer,"gSPCombineMtx: zPrime Error!");
-				//DEBUG_print(txtbuffer,6+1); 
-# endif
-			}
-		}
-		else
-			gGX.GXuseCombW = false;
+		UpdateGXCombW(gRSPworldProject);
 #endif //__GX__
     }
 
