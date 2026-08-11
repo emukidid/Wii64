@@ -176,16 +176,22 @@ void Func_Settings()
 	pMenuContext->setActiveFrame(MenuContext::FRAME_SETTINGS,SettingsFrame::SUBMENU_GENERAL);
 }
 
+#define VERSION "1.4.3"
+#ifdef RICE_GFX
+	#define GFX_PLUGIN "Rice"
+#else
+	#define GFX_PLUGIN "glN64"
+#endif
+#ifdef HW_RVL
+	#define PLATFORM "Wii"
+#else
+	#define PLATFORM "Cube"
+#endif
+
 void Func_Credits()
 {
 	char CreditsInfo[512] = "";
-#ifdef HW_RVL
-  int iosversion = IOS_GetVersion();
-  int isWiiVC = SYS_GetCoreMultiplier() >= 5.0;
-  sprintf(CreditsInfo,"Wii64 Beta 1.4.2 - IOS %i %s\n",iosversion,isWiiVC ? "WiiVC!":"");
-#else
-	strcat(CreditsInfo,"Cube64 Beta 1.4.2\n");
-#endif
+	sprintf(CreditsInfo,"%s64 %s - %s GFX\n",PLATFORM, VERSION, GFX_PLUGIN);
 	strcat(CreditsInfo,"\n");
 	strcat(CreditsInfo,"Wii64 Team:\n");
 	strcat(CreditsInfo,"tehpola - core\n");
