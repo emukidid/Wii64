@@ -1504,8 +1504,11 @@ void gSPBgRect1Cyc( u32 bg )
 	f32 frameY = _FIXED2FLOAT( objScaleBg->frameY, 2 );
 	f32 frameW = _FIXED2FLOAT( objScaleBg->frameW, 2 );
 	f32 frameH = _FIXED2FLOAT( objScaleBg->frameH, 2 );
-	f32 scaleW = _FIXED2FLOAT( objScaleBg->scaleW, 10 );
-	f32 scaleH = _FIXED2FLOAT( objScaleBg->scaleH, 10 );
+	// Malformed display lists can send a zero scale (GLideN64's
+	// 9eddde6e/af637370 fixes).
+	// Clamp before converting so this can't divide by zero
+	f32 scaleW = _FIXED2FLOAT( max( objScaleBg->scaleW, (u16)1 ), 10 );
+	f32 scaleH = _FIXED2FLOAT( max( objScaleBg->scaleH, (u16)1 ), 10 );
 
 	f32 frameX0 = frameX;
 	f32 frameY0 = frameY;
@@ -1595,8 +1598,10 @@ void gSPObjRectangle( u32 sp )
 	u32 address = RSP_SegmentToPhysical( sp );
 	uObjSprite *objSprite = (uObjSprite*)&RDRAM[address];
 
-	f32 scaleW = _FIXED2FLOAT( objSprite->scaleW, 10 );
-	f32 scaleH = _FIXED2FLOAT( objSprite->scaleH, 10 );
+	// Clamp against a zero scale from a malformed display list
+	// (GLideN64's 9eddde6e/af637370 division-by-zero fixes).
+	f32 scaleW = _FIXED2FLOAT( max( objSprite->scaleW, (u16)1 ), 10 );
+	f32 scaleH = _FIXED2FLOAT( max( objSprite->scaleH, (u16)1 ), 10 );
 	f32 objX = _FIXED2FLOAT( objSprite->objX, 2 );
 	f32 objY = _FIXED2FLOAT( objSprite->objY, 2 );
 	u32 imageW = objSprite->imageW >> 2;
@@ -1639,8 +1644,9 @@ void gSPObjSprite( u32 sp )
 	u32 address = RSP_SegmentToPhysical( sp );
 	uObjSprite *objSprite = (uObjSprite*)&RDRAM[address];
 
-	f32 scaleW = _FIXED2FLOAT( objSprite->scaleW, 10 );
-	f32 scaleH = _FIXED2FLOAT( objSprite->scaleH, 10 );
+	// Clamp against a zero scale from a malformed display list (GLideN64 commit 9eddde6e).
+	f32 scaleW = _FIXED2FLOAT( max( objSprite->scaleW, (u16)1 ), 10 );
+	f32 scaleH = _FIXED2FLOAT( max( objSprite->scaleH, (u16)1 ), 10 );
 	f32 objX = _FIXED2FLOAT( objSprite->objX, 2 );
 	f32 objY = _FIXED2FLOAT( objSprite->objY, 2 );
 	u32 imageW = objSprite->imageW >> 5;
