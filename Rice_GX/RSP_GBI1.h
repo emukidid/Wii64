@@ -328,7 +328,7 @@ void RSP_MoveMemLight(uint32 dwLight, uint32 dwAddr)
     }
 }
 
-void RSP_MoveMemViewport(uint32 dwAddr)
+void RSP_MoveMemViewport(uint32 dwAddr, bool bAllowMirror)
 {
     if( dwAddr+16 >= g_dwRamSize )
     {
@@ -356,6 +356,9 @@ void RSP_MoveMemViewport(uint32 dwAddr)
     int nWidth   = scale[0]/4;
     int nHeight  = scale[1]/4;
 
+    // A negative viewport X scale is how Destruction Derby 64's Professional mode flips the screen horizontally.
+    bool bMirrorX = bAllowMirror && (nWidth < 0);
+
     // Check for some strange games
     if( nWidth < 0 )    nWidth = -nWidth;
     if( nHeight < 0 )   nHeight = -nHeight;
@@ -368,7 +371,7 @@ void RSP_MoveMemViewport(uint32 dwAddr)
     //int maxZ = scale[2];
     int maxZ = 0x3FF;
 
-    CRender::g_pRender->SetViewport(nLeft, nTop, nRight, nBottom, maxZ);
+    CRender::g_pRender->SetViewport(nLeft, nTop, nRight, nBottom, maxZ, bMirrorX);
 
 
     LOG_UCODE("        Scale: %d %d %d %d = %d,%d", scale[0], scale[1], scale[2], scale[3], nWidth, nHeight);

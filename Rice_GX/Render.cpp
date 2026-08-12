@@ -1110,7 +1110,7 @@ void CRender::RestoreFogFlag()
     TurnFogOnOff(m_bFogStateSave);
 }
 
-void CRender::SetViewport(int nLeft, int nTop, int nRight, int nBottom, int maxZ)
+void CRender::SetViewport(int nLeft, int nTop, int nRight, int nBottom, int maxZ, bool bMirrorX)
 {
     if( status.bHandleN64RenderTexture )
         return;
@@ -1119,6 +1119,7 @@ void CRender::SetViewport(int nLeft, int nTop, int nRight, int nBottom, int maxZ
 
     if( gRSP.nVPLeftN == nLeft && gRSP.nVPTopN == nTop &&
         gRSP.nVPRightN == nRight && gRSP.nVPBottomN == nBottom &&
+        gRSP.bViewportMirrorX == bMirrorX &&
         MultX==windowSetting.fMultX && MultY==windowSetting.fMultY)
     {
         // no changes
@@ -1135,6 +1136,7 @@ void CRender::SetViewport(int nLeft, int nTop, int nRight, int nBottom, int maxZ
     gRSP.nVPBottomN = nBottom;
     gRSP.nVPWidthN = nRight - nLeft + 1;
     gRSP.nVPHeightN = nBottom - nTop + 1;
+    gRSP.bViewportMirrorX = bMirrorX;
 
     UpdateClipRectangle();
     SetViewportRender();

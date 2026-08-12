@@ -657,6 +657,7 @@ void InitRenderBase()
     gRSP.nVPBottomN = 640;
     gRSP.nVPWidthN = 640;
     gRSP.nVPHeightN = 640;
+    gRSP.bViewportMirrorX = false;
     gRDP.scissor.left=gRDP.scissor.top=0;
     gRDP.scissor.right=gRDP.scissor.bottom=640;
     
@@ -1450,6 +1451,10 @@ void ProcessVertexDataNoSSE(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
 
         Vec3Transform(&g_vtxTransformed[i], (XVECTOR3*)&g_vtxNonTransformed[i], &gRSPworldProject); // Convert to w=1
 
+        // mirrored RSP viewport, Destruction Derby 64 Profressional (mirrored) mode fix
+        if( gRSP.bViewportMirrorX )
+            g_vtxTransformed[i].x = -g_vtxTransformed[i].x;
+
         g_vecProjected[i].w = 1.0f / g_vtxTransformed[i].w;
         g_vecProjected[i].x = g_vtxTransformed[i].x * g_vecProjected[i].w;
         g_vecProjected[i].y = g_vtxTransformed[i].y * g_vecProjected[i].w;
@@ -1619,9 +1624,9 @@ bool IsTriangleVisible(uint32 dwV0, uint32 dwV1, uint32 dwV2)
             }
         }
     }
-    
+
 #ifdef ENABLE_CLIP_TRI
-    //if( gRSP.bRejectVtx && (g_clipFlag[dwV0]|g_clipFlag[dwV1]|g_clipFlag[dwV2]) ) 
+    //if( gRSP.bRejectVtx && (g_clipFlag[dwV0]|g_clipFlag[dwV1]|g_clipFlag[dwV2]) )
     //  return;
     if( g_clipFlag2[dwV0]&g_clipFlag2[dwV1]&g_clipFlag2[dwV2] )
     {

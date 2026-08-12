@@ -134,6 +134,7 @@ typedef struct
     uint32  maxVertexID;
 
     int     nVPLeftN, nVPTopN, nVPRightN, nVPBottomN, nVPWidthN, nVPHeightN, maxZ;
+    bool    bViewportMirrorX;      // true if the RSP viewport's X scale was negative
     int     clip_ratio_negx,    clip_ratio_negy,    clip_ratio_posx,    clip_ratio_posy;
     int     clip_ratio_left,    clip_ratio_top, clip_ratio_right,   clip_ratio_bottom;
     int     real_clip_scissor_left, real_clip_scissor_top,  real_clip_scissor_right,    real_clip_scissor_bottom;

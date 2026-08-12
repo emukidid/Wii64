@@ -739,7 +739,7 @@ void RSP_GBI2_MoveMem(Gfx *gfx)
     {
     case RSP_GBI2_MV_MEM__VIEWPORT:
         {
-            RSP_MoveMemViewport(addr);
+            RSP_MoveMemViewport(addr, true);
         }
         break;
     case RSP_GBI2_MV_MEM__LIGHT:

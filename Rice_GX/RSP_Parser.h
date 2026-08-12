@@ -683,7 +683,7 @@ void PrepareTextures();
 void RDP_InitRenderState();
 void DisplayVertexInfo(uint32 dwAddr, uint32 dwV0, uint32 dwN);
 void RSP_MoveMemLight(uint32 dwLight, uint32 dwAddr);
-void RSP_MoveMemViewport(uint32 dwAddr);
+void RSP_MoveMemViewport(uint32 dwAddr, bool bAllowMirror = false);
 void RDP_NOIMPL_WARN(const char* op);
 void RSP_GFX_Force_Matrix(uint32 dwAddr);
 void RSP_GFX_InitGeometryMode();
