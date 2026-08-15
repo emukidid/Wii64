@@ -942,57 +942,172 @@ void OGL_UpdateStates()
 		}
 	}
 #else // !__GX__
-	u8 GXblenddstfactor, GXblendsrcfactor, GXblendmode;
+	static u8 GXblenddstfactor, GXblendsrcfactor, GXblendmode;
 
 	if ((gDP.changed & CHANGED_RENDERMODE) || (gDP.changed & CHANGED_CYCLETYPE))
 	{
-		if ((gDP.otherMode.forceBlender) &&
-			(gDP.otherMode.cycleType != G_CYC_COPY) &&
-			(gDP.otherMode.cycleType != G_CYC_FILL) &&
-			!(gDP.otherMode.alphaCvgSel))
-		{
-// 			glEnable( GL_BLEND );
-			GXblendmode = GX_BM_BLEND;
 
-			switch (gDP.otherMode.l >> 16)
+		// Ported from GLideN64's GraphicsDrawer::_legacyBlending()
+		const unsigned int blendmode = gDP.otherMode.l >> 16;
+
+		// 0x7000 = CVG_X_ALPHA|ALPHA_CVG_SEL|FORCE_BL
+		if (gDP.otherMode.alphaCvgSel != 0 && (gDP.otherMode.l & 0x7000) != 0x7000)
+		{
+			switch (blendmode)
 			{
-				case 0x0448: // Add
-				case 0x055A:
-//					glBlendFunc( GL_ONE, GL_ONE );
-					GXblendsrcfactor = GX_BL_ONE;
-					GXblenddstfactor = GX_BL_ONE;
-					break;
-				case 0x0C08: // 1080 Sky
-				case 0x0F0A: // Used LOTS of places
-//					glBlendFunc( GL_ONE, GL_ZERO );
-					GXblendsrcfactor = GX_BL_ONE;
-					GXblenddstfactor = GX_BL_ZERO;
-					break;
-				case 0xC810: // Blends fog
-				case 0xC811: // Blends fog
-				case 0x0C18: // Standard interpolated blend
-				case 0x0C19: // Used for antialiasing
-				case 0x0050: // Standard interpolated blend
-				case 0x0055: // Used for antialiasing
-//					glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-					GXblendsrcfactor = GX_BL_SRCALPHA;
-					GXblenddstfactor = GX_BL_INVSRCALPHA;
-					break;
-				case 0x0FA5: // Seems to be doing just blend color - maybe combiner can be used for this?
-				case 0x5055: // Used in Paper Mario intro, I'm not sure if this is right...
-//					glBlendFunc( GL_ZERO, GL_ONE );
+				case 0x4055: // Mario Golf
+				case 0x5055: // Paper Mario intro clr_mem * a_in + clr_mem * a_mem
+					GXblendmode = GX_BM_BLEND;
 					GXblendsrcfactor = GX_BL_ZERO;
 					GXblenddstfactor = GX_BL_ONE;
 					break;
 				default:
-//					glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+					GXblendmode = GX_BM_NONE;
+					GXblendsrcfactor = GX_BL_ONE;
+					GXblenddstfactor = GX_BL_ZERO;
+					break;
+			}
+		}
+		else if ((gDP.otherMode.forceBlender) && (gDP.otherMode.cycleType < G_CYC_COPY))
+		{
+			GXblendmode = GX_BM_BLEND;
+
+			switch (blendmode)
+			{
+				// Mace objects
+				case 0x0382:
+				// 1080 Sky
+				case 0x0091:
+				// Used LOTS of places
+				case 0x0C08:
+				//DK64 blue prints
+				case 0x0F0A:
+				// Bomberman 2 special blend mode
+				case 0x0302:
+				//Sin and Punishment
+				case 0xA500:
+				// Battlezone
+				case 0xCB02:
+				// Conker BFD
+				case 0xC800:
+				case 0x07C2:
+				case 0x00C0:
+				//ISS64
+				case 0xC302:
+				// Donald Duck
+				case 0xC702:
+					GXblendsrcfactor = GX_BL_ONE;
+					GXblenddstfactor = GX_BL_ZERO;
+					break;
+
+				case 0x55f0:
+					// Bust-A-Move 3 DX
+					GXblendsrcfactor = GX_BL_ONE;
+					GXblenddstfactor = GX_BL_SRCALPHA;
+					break;
+
+				case 0x0F1A:
+					if (gDP.otherMode.cycleType == G_CYC_1CYCLE) {
+						GXblendsrcfactor = GX_BL_ONE;
+						GXblenddstfactor = GX_BL_ZERO;
+					} else {
+						GXblendsrcfactor = GX_BL_ZERO;
+						GXblenddstfactor = GX_BL_ONE;
+					}
+					break;
+
+				// Space Invaders
+				case 0x0448: // Add
+				case 0x055A:
+					GXblendsrcfactor = GX_BL_ONE;
+					GXblenddstfactor = GX_BL_ONE;
+					break;
+
+				case 0xc712: // Pokemon Stadium?
+				case 0xAF50: // LOT in Zelda: MM
+				case 0x0F5A: // LOT in Zelda: MM
+				case 0x0FA5: // Seems to be doing just blend color - maybe combiner can be used for this?
+				case 0x5055: // Used in Paper Mario intro, I'm not sure if this is right...
+					GXblendsrcfactor = GX_BL_ZERO;
+					GXblenddstfactor = GX_BL_ONE;
+					break;
+
+				case 0x5F50: //clr_mem * 0 + clr_mem * (1-a)
+					GXblendsrcfactor = GX_BL_ZERO;
+					GXblenddstfactor = GX_BL_INVSRCALPHA;
+					break;
+
+				case 0xF550: //clr_fog * a_fog + clr_mem * (1-a)
+				case 0x0150: // spiderman
+				case 0x0D18: //clr_in * a_fog + clr_mem * (1-a)
+					GXblendsrcfactor = GX_BL_SRCALPHA;
+					GXblenddstfactor = GX_BL_INVSRCALPHA;
+					break;
+
+				case 0x0550: // bomberman 64 title screen dim layer
+					GXblendsrcfactor = GX_BL_ONE;
+					GXblenddstfactor = GX_BL_ONE;
+					break;
+
+				case 0xC912: //40 winks, clr_in * a_fog + clr_mem * 1
+					GXblendsrcfactor = GX_BL_SRCALPHA;
+					GXblenddstfactor = GX_BL_ONE;
+					break;
+
+				case 0x0040: // Fzero
+				case 0xC810: // Blends fog
+				case 0x0C18: // Standard interpolated blend
+				case 0x0050: // Standard interpolated blend
+				case 0x0051: // Standard interpolated blend
+				case 0x0055: // Used for antialiasing
+					GXblendsrcfactor = GX_BL_SRCALPHA;
+					GXblenddstfactor = GX_BL_INVSRCALPHA;
+					break;
+
+				case 0x0C19: // Used for antialiasing
+				case 0xC811: // Blends fog
+					GXblendsrcfactor = GX_BL_SRCALPHA;
+					GXblenddstfactor = GX_BL_DSTALPHA;
+					break;
+
+				case 0x5000: // V8 explosions
+					GXblendsrcfactor = GX_BL_INVSRCALPHA;
+					GXblenddstfactor = GX_BL_SRCALPHA;
+					break;
+
+				case 0xFA00: // Bomberman second attack
+					GXblendsrcfactor = GX_BL_ONE;
+					GXblenddstfactor = GX_BL_ZERO;
+					break;
+
+				default:
 					GXblendsrcfactor = GX_BL_SRCALPHA;
 					GXblenddstfactor = GX_BL_INVSRCALPHA;
 					break;
 			}
 		}
+		else if (gDP.otherMode.clearOnCvg != 0)
+		{
+			// CLR_ON_CVG - just use second mux of blender
+			bool useMemColor = false;
+			if (gDP.otherMode.cycleType == G_CYC_1CYCLE) {
+				if (gDP.otherMode.c1_m2a == 1)
+					useMemColor = true;
+			} else if (gDP.otherMode.cycleType == G_CYC_2CYCLE) {
+				if (gDP.otherMode.c2_m2a == 1)
+					useMemColor = true;
+			}
+			if (useMemColor) {
+				GXblendmode = GX_BM_BLEND;
+				GXblendsrcfactor = GX_BL_ZERO;
+				GXblenddstfactor = GX_BL_ONE;
+			} else {
+				GXblendmode = GX_BM_NONE;
+				GXblendsrcfactor = GX_BL_ONE;
+				GXblenddstfactor = GX_BL_ZERO;
+			}
+		}
 		else {
-//			glDisable( GL_BLEND );
 			GXblendmode = GX_BM_NONE;
 			GXblendsrcfactor = GX_BL_ONE;
 			GXblenddstfactor = GX_BL_ZERO;
@@ -1000,22 +1115,22 @@ void OGL_UpdateStates()
 
 		if (gDP.otherMode.cycleType == G_CYC_FILL)
 		{
-//			glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-//			glEnable( GL_BLEND );
 			GXblendmode = GX_BM_BLEND;
 			GXblendsrcfactor = GX_BL_SRCALPHA;
 			GXblenddstfactor = GX_BL_INVSRCALPHA;
 		}
-		GX_SetBlendMode(GXblendmode, GXblendsrcfactor, GXblenddstfactor, GX_LO_CLEAR); 
-		GX_SetColorUpdate(GX_ENABLE);
-		GX_SetAlphaUpdate(GX_ENABLE);
-		GX_SetDstAlpha(GX_DISABLE, 0xFF);
+
+	}
+
+	GX_SetBlendMode(GXblendmode, GXblendsrcfactor, GXblenddstfactor, GX_LO_CLEAR);
+	GX_SetColorUpdate(GX_ENABLE);
+	GX_SetAlphaUpdate(GX_ENABLE);
+	GX_SetDstAlpha(GX_DISABLE, 0xFF);
 
 #ifdef GLN64_SDLOG
-		sprintf(txtbuffer,"SetBlendMode: GXblendmode %d, SrcFactor %d, DestFactor %d\n", GXblendmode, GXblendsrcfactor, GXblenddstfactor);
-		DEBUG_print(txtbuffer,DBG_SDGECKOPRINT);
+	sprintf(txtbuffer,"SetBlendMode: GXblendmode %d, SrcFactor %d, DestFactor %d\n", GXblendmode, GXblendsrcfactor, GXblenddstfactor);
+	DEBUG_print(txtbuffer,DBG_SDGECKOPRINT);
 #endif // GLN64_SDLOG
-	}
 #endif // __GX__
 
 	gDP.changed &= CHANGED_TILE | CHANGED_TMEM;
