@@ -815,6 +815,43 @@ void DLParser_MoveMem_Conker(Gfx *gfx)
     }
 }
 
+void RSP_GBI2_DMA_IO_FZeroX(Gfx *gfx)
+{
+    gRSP.dwZeroXAlphaAddr = RSPSegmentAddr((gfx->words.w1));
+    LOG_UCODE("    F-Zero X DMA_IO, alpha ramp addr=%08X", gRSP.dwZeroXAlphaAddr);
+}
+
+void DLParser_MoveMem_FZeroX(Gfx *gfx)
+{
+    uint32 dwType = ((gfx->words.w0)) & 0xFE;
+
+    if( dwType == RSP_GBI2_MV_MEM__LIGHT )
+    {
+        uint32 dwOffset2 = ((gfx->words.w0) >> 5) & 0x3FFF;
+        if( dwOffset2 == 0x18 )    // LOOKATY slot -> F-Zero X's alpha light
+        {
+            uint32 dwAddr = RSPSegmentAddr((gfx->words.w1));
+            short * psBase = (short*)(g_pRDRAMs8 + dwAddr);
+
+            float x = (float)psBase[4 ^ S16] / 256.0f;
+            float y = (float)psBase[5 ^ S16] / 256.0f;
+            float z = (float)psBase[6 ^ S16] / 256.0f;
+
+            float w = sqrtf(x*x + y*y + z*z);
+            if( w != 0.0f )
+            {
+                gRSP.fZeroXAlphaDir[0] = x/w;
+                gRSP.fZeroXAlphaDir[1] = y/w;
+                gRSP.fZeroXAlphaDir[2] = z/w;
+            }
+            LOG_UCODE("    F-Zero X alpha light dir: %f, %f, %f", x, y, z);
+            return;
+        }
+    }
+
+    RSP_GBI2_MoveMem(gfx);
+}
+
 extern void ProcessVertexDataConker(uint32 dwAddr, uint32 dwV0, uint32 dwNum);
 void RSP_Vtx_Conker(Gfx *gfx)
 {

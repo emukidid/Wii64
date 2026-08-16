@@ -48,10 +48,10 @@ void F3DEX2_MoveMem( u32 w0, u32 w1 )
 			{
 				gSPLight( w1, (offset - 24) / 24);
 			}
-/*			else
+			else
 			{
-				// Do lookat stuff
-			}*/
+				gSPLookAt( w1, offset / 24 );
+			}
 			break;
 	}
 }
@@ -239,6 +239,7 @@ void F3DEX2_GeometryMode( u32 w0, u32 w1 )
 
 void F3DEX2_DMAIO( u32 w0, u32 w1 )
 {
+	gSP.DMAIO_address = RSP_SegmentToPhysical( w1 );
 }
 
 void F3DEX2_Special_1( u32 w0, u32 w1 )

@@ -31,6 +31,7 @@
 #include "F3DWRUS.h"
 #include "F3DPD.h"
 #include "F3DCBFD.h"
+#include "F3DFLX2.h"
 #include "Types.h"
 #include "Debug.h"
 #ifndef __LINUX__
@@ -425,7 +426,12 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 			{
 				current->NoN = (strncmp( &uc_str[20], ".NoN", 4 ) == 0);
 
-				if (strncmp( &uc_str[14], "F3D", 3 ) == 0)
+				if (strncmp( &uc_str[14], "F3DFLX", 6 ) == 0)
+				{
+					// F-Zero X's vehicle-rendering microcode
+					type = F3DFLX2;
+				}
+				else if (strncmp( &uc_str[14], "F3D", 3 ) == 0)
 				{
 					if (uc_str[28] == '0')
 						type = F3DEX;
@@ -524,6 +530,7 @@ void GBI_MakeCurrent( MicrocodeInfo *current )
 			case F3DWRUS:	F3DWRUS_Init();	break;
 			case F3DPD:		F3DPD_Init();	break;
 			case F3DCBFD:	F3DCBFD_Init();	break;
+			case F3DFLX2:	F3DFLX2_Init();	break;
 		}
 	}
 

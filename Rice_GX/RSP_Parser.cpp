@@ -70,6 +70,7 @@ UcodeMap *ucodeMaps[] =
     NULL,                   // ucode 18 - World Driver Championship
     NULL,                   // ucode 19 - Last Legion UX
     &ucodeMap1,             // ucode 20 - ZSortp
+    NULL,                   // ucode 21 - F-Zero X F3DFLX
 };
 
 uint32 vertexMultVals[] =
@@ -92,10 +93,11 @@ uint32 vertexMultVals[] =
     10, // ucode 15 - ucode 0 with sprite2D
     5,  // ucode 16 - Star War, Shadow of Empire
 
-    2,  // ucode 17 - Star Wars - Rogue Squadron, 
+    2,  // ucode 17 - Star Wars - Rogue Squadron,
     2,  // ucode 18 - World Driver Championship, check me here
     2,  // ucode 19 - Last Legion UX, check me here
     2,  // ucode 20 - ZSortp
+    2,  // ucode 21 - F-Zero X F3DFLX
 };
 
 unsigned char gLastMicrocodeString[ 300 ] = "";
@@ -166,7 +168,7 @@ static UcodeData g_UcodeData[] =
     {5, 0x3e083afa, 0x722f97cc, (unsigned char*)"RSP Gfx ucode F3DEX.NoN   fifo 2.03  Yoshitaka Yasumoto 1998 Nintendo.",1}, // F-Zero X, 
     {5, 0xa8050bd1, 0xa8050bd1, (unsigned char*)"RSP Gfx ucode F3DEX       fifo 2.03  Yoshitaka Yasumoto 1998 Nintendo.",}, // F-Zero X, 
     {5, 0x4e8055f0, 0x4e8055f0, (unsigned char*)"RSP Gfx ucode F3DLX.Rej   fifo 2.03  Yoshitaka Yasumoto 1998 Nintendo.",0,1}, // F-Zero X, 
-    {5, 0xabf001f5, 0xabf001f5, (unsigned char*)"RSP Gfx ucode F3DFLX.Rej  fifo 2.03F Yoshitaka Yasumoto 1998 Nintendo.",0,1}, // F-Zero X, 
+    {21,0xabf001f5, 0xabf001f5, (unsigned char*)"RSP Gfx ucode F3DFLX.Rej  fifo 2.03F Yoshitaka Yasumoto 1998 Nintendo.",0,1}, // F-Zero X, vehicle rendering
     {5, 0xadb4b686, 0xadb4b686, (unsigned char*)"RSP Gfx ucode F3DEX       fifo 2.04  Yoshitaka Yasumoto 1998 Nintendo.",}, // Top Gear Rally 2, 
     {5, 0x779e2a9b, 0x779e2a9b, (unsigned char*)"RSP Gfx ucode F3DEX.NoN   fifo 2.04  Yoshitaka Yasumoto 1998 Nintendo.",1}, // California Speed, 
     {5, 0xa8cb3e09, 0xa8cb3e09, (unsigned char*)"RSP Gfx ucode L3DEX       fifo 2.04  Yoshitaka Yasumoto 1998 Nintendo.",}, // In-Fisherman Bass Hunter 64, 
@@ -506,6 +508,12 @@ void RDP_SetUcodeMap(int ucode)
         LoadedUcodeMap[0x80]=DLParser_RSP_Last_Legion_0x80;
         LoadedUcodeMap[0x00]=DLParser_RSP_Last_Legion_0x00;
         LoadedUcodeMap[0xe4]=DLParser_TexRect_Last_Legion;
+        status.bUseModifiedUcodeMap = true;
+        break;
+    case 21: // F-Zero X vehicle rendering (F3DFLX)
+        memcpy( &LoadedUcodeMap, &ucodeMap5, sizeof(UcodeMap));
+        LoadedUcodeMap[0xd6]=RSP_GBI2_DMA_IO_FZeroX;
+        LoadedUcodeMap[0xdc]=DLParser_MoveMem_FZeroX;
         status.bUseModifiedUcodeMap = true;
         break;
     default:

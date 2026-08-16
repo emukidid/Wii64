@@ -213,23 +213,51 @@ void gSPProcessVertex( u32 v )
 
 		if (gSP.geometryMode & G_TEXTURE_GEN)
 		{
-			TransformVector( &gSP.vertices[v].nx, gSP.matrix.projection );
-
-#ifndef __GX__
-			Normalize( &gSP.vertices[v].nx );
-#else //!__GX__
-			guVecNormalize((guVector*) &gSP.vertices[v].nx,(guVector*) &gSP.vertices[v].nx );
-#endif //__GX__
-
-			if (gSP.geometryMode & G_TEXTURE_GEN_LINEAR)
-			{   
-				gSP.vertices[v].s = acosf(gSP.vertices[v].nx) * 325.94931f;
-				gSP.vertices[v].t = acosf(gSP.vertices[v].ny) * 325.94931f;
-			}
-			else // G_TEXTURE_GEN
+			if ((GBI.current != NULL) && (GBI.current->type == F3DFLX2))
 			{
-				gSP.vertices[v].s = (gSP.vertices[v].nx + 1.0f) * 512.0f;
-				gSP.vertices[v].t = (gSP.vertices[v].ny + 1.0f) * 512.0f;
+				f32 intensity = (gSP.vertices[v].nx * gSP.lookat.xyz[0][0] +
+								  gSP.vertices[v].ny * gSP.lookat.xyz[0][1] +
+								  gSP.vertices[v].nz * gSP.lookat.xyz[0][2]) * 128.0f;
+				s16 index = (s16)intensity;
+#ifndef _BIG_ENDIAN
+				gSP.vertices[v].a = RDRAM[(gSP.DMAIO_address + 128 + index) ^ 3] * 0.0039215689f;
+#else // !_BIG_ENDIAN
+				gSP.vertices[v].a = RDRAM[(gSP.DMAIO_address + 128 + index) ^ 0] * 0.0039215689f;
+#endif // _BIG_ENDIAN
+			}
+			else
+			{
+				f32 x, y;
+
+				if (gSP.lookat.enable)
+				{
+					x = gSP.vertices[v].nx * gSP.lookat.xyz[0][0] +
+						gSP.vertices[v].ny * gSP.lookat.xyz[0][1] +
+						gSP.vertices[v].nz * gSP.lookat.xyz[0][2];
+					y = gSP.vertices[v].nx * gSP.lookat.xyz[1][0] +
+						gSP.vertices[v].ny * gSP.lookat.xyz[1][1] +
+						gSP.vertices[v].nz * gSP.lookat.xyz[1][2];
+				}
+				else
+				{
+					x = gSP.vertices[v].nx;
+					y = gSP.vertices[v].ny;
+				}
+
+				if (gSP.geometryMode & G_TEXTURE_GEN_LINEAR)
+				{
+					if (x < -1.0f) x = -1.0f;
+					if (x >  1.0f) x =  1.0f;
+					if (y < -1.0f) y = -1.0f;
+					if (y >  1.0f) y =  1.0f;
+					gSP.vertices[v].s = acosf(-x) * 325.94931f;
+					gSP.vertices[v].t = acosf(-y) * 325.94931f;
+				}
+				else // G_TEXTURE_GEN
+				{
+					gSP.vertices[v].s = (x + 1.0f) * 512.0f;
+					gSP.vertices[v].t = (y + 1.0f) * 512.0f;
+				}
 			}
 		}
 	}
@@ -467,7 +495,7 @@ void gSPLight( u32 l, s32 n )
 
 	Light *light = (Light*)&RDRAM[address];
 
-	if (n < 8)
+	if (n >= 0 && n < 8)
 	{
 		gSP.lights[n].r = GXcastu8f32( light->r );
 		gSP.lights[n].g = GXcastu8f32( light->g );
@@ -494,8 +522,36 @@ void gSPLight( u32 l, s32 n )
 #endif
 }
 
-void gSPLookAt( u32 l )
+void gSPLookAt( u32 l, u32 n )
 {
+	u32 address = RSP_SegmentToPhysical( l );
+
+	if ((address + sizeof( Light )) > RDRAMSize)
+	{
+#ifdef DEBUG
+		DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// Attempting to load lookat from invalid address\n" );
+		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPLookAt( 0x%08X, LOOKAT_%i );\n", l, n );
+#endif
+		return;
+	}
+
+	Light *light = (Light*)&RDRAM[address];
+
+	gSP.lookat.xyz[n][0] = light->x;
+	gSP.lookat.xyz[n][1] = light->y;
+	gSP.lookat.xyz[n][2] = light->z;
+
+	gSP.lookat.enable = (n == 0) || (light->x != 0 || light->y != 0);
+
+#ifndef __GX__
+	Normalize( gSP.lookat.xyz[n] );
+#else //!__GX__
+	guVecNormalize((guVector*) gSP.lookat.xyz[n],(guVector*) gSP.lookat.xyz[n] );
+#endif //__GX__
+
+#ifdef DEBUG
+	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPLookAt( 0x%08X, LOOKAT_%i );\n", l, n );
+#endif
 }
 
 void gSPVertex( u32 v, u32 n, u32 v0 )

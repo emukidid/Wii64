@@ -938,7 +938,9 @@ void InitVertex(uint32 dwV, uint32 vtxIndex, bool bTexture, bool openGL)
     {
         // If the vert is already lit, then there is no normal (and hence we can't generate tex coord)
         // Only scale if not generated automatically
-        if (gRSP.bTextureGen && gRSP.bLightingEnable)
+        // F-Zero X's F3DFLX sets bTextureGen for the alpha-ramp trick, but
+        // g_fVtxTxtCoords still holds the raw vertex tu/tv, not a texgen result so we scale it normally.
+        if (gRSP.bTextureGen && gRSP.bLightingEnable && gRSP.ucode != 21)
         {
             // Correction for texGen result
             float u0,u1,v0,v1;
@@ -1527,12 +1529,26 @@ void ProcessVertexDataNoSSE(uint32 dwAddr, uint32 dwV0, uint32 dwNum)
         // can't generate tex coord)
         if (gRSP.bTextureGen && gRSP.bLightingEnable )
         {
-            TexGen(g_fVtxTxtCoords[i].x, g_fVtxTxtCoords[i].y);
+            if( gRSP.ucode == 21 )     // F-Zero X, use alpha "glow/shine" ramp instead of texgen
+            {
+                float intensity = (g_normal.x*gRSP.fZeroXAlphaDir[0] +
+                                    g_normal.y*gRSP.fZeroXAlphaDir[1] +
+                                    g_normal.z*gRSP.fZeroXAlphaDir[2]) * 128.0f;
+                int index = (short)intensity;
+                *(((uint8*)&(g_dwVtxDifColor[i]))+(0^S8)) =
+                    g_pRDRAMu8[(gRSP.dwZeroXAlphaAddr + 128 + index) ^ S8];
+                g_fVtxTxtCoords[i].x = (float)vert.tu;
+                g_fVtxTxtCoords[i].y = (float)vert.tv;
+            }
+            else
+            {
+                TexGen(g_fVtxTxtCoords[i].x, g_fVtxTxtCoords[i].y);
+            }
         }
         else
         {
             g_fVtxTxtCoords[i].x = (float)vert.tu;
-            g_fVtxTxtCoords[i].y = (float)vert.tv; 
+            g_fVtxTxtCoords[i].y = (float)vert.tv;
         }
     }
 

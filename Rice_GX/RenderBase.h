@@ -158,6 +158,12 @@ typedef struct
     Matrix  DKRMatrixes[4];
     XVECTOR4        DKRBaseVec;
 
+    // F-Zero X's F3DFLX ucode for the alpha-ramp "shine/glow" direction vector (loaded via
+    // the LOOKATY MoveMem slot) and the RDRAM address of the ramp table (set
+    // via the ucode's DMA_IO command).
+    float   fZeroXAlphaDir[3];
+    uint32  dwZeroXAlphaAddr;
+
     int     ucode;
     int     vertexMult; 
     bool    bNearClip;
