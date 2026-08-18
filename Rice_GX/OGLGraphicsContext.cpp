@@ -578,10 +578,10 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
 		GX_SetScissor((u32) 0,(u32) 0,(u32) windowSetting.uDisplayWidth,(u32) windowSetting.uDisplayHeight);
 		GX_SetAlphaCompare(GX_ALWAYS,0,GX_AOP_AND,GX_ALWAYS,0);
 		GX_SetZCompLoc(GX_TRUE);
-
+		
 #ifdef HW_DOL
 		VI_GX_showLoadIcon();
-#endif
+#endif  
 		VI_GX_showFPS();
 		VI_GX_showDEBUG();
 
@@ -624,7 +624,12 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
         glClear(GL_DEPTH_BUFFER_BIT);
     }
 #else //!__GX__
-
+ if( !g_curRomInfo.bForceScreenClear ) 
+    {
+		gGX.GXclearDepthBuffer = true;
+		gGX.GXclearDepth = 1.0;
+		CRender::GetRender()->GXclearEFB();
+    }
 #endif //__GX__
     if( g_curRomInfo.bForceScreenClear )
         needCleanScene = true;
