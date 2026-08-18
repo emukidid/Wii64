@@ -32,6 +32,8 @@
 #include "F3DPD.h"
 #include "F3DCBFD.h"
 #include "F3DFLX2.h"
+#include "F3DGOLDEN.h"
+#include "F3DZEX2.h"
 #include "Types.h"
 #include "Debug.h"
 #ifndef __LINUX__
@@ -52,15 +54,16 @@ char uc_str[256];
 
 SpecialMicrocodeInfo specialMicrocodes[] =
 {
-	{ F3DWRUS,	FALSE,	0x81FA4A32, (char*) "RSP SW Version: 2.0D, 04-01-96" },
-	{ F3DWRUS,	FALSE,	0xE7FA4491, (char*) "RSP SW Version: 2.0D, 04-01-96" },
-	{ F3DDKR,	FALSE,	0x3BFF208D, (char*) "Diddy Kong Racing" },
-	{ F3DDKR,	FALSE,	0x8F9AE489, (char*) "Diddy Kong Racing" },
-	{ F3DDKR,	FALSE,	0x83421788, (char*) "JET FORCE GEMINI" },
-	{ F3DPD,	FALSE,	0xC543D0A8, (char*) "Perfect Dark" },
-	{ F3DCBFD,	TRUE,	0x99E222AC, (char*) "RSP Gfx ucode F3DEXBG.NoN fifo 2.08  Yoshitaka Yasumoto 1999 Nintendo." },
-	{ F3DEX2,	TRUE,	0x1DACFAF1, (char*) "ANIMAL FOREST" },
-	{ S2DEX2,	FALSE,	0x8E050E8E, (char*) "ANIMAL FOREST" },
+	{ F3DWRUS,		FALSE,	0x81FA4A32, (char*) "RSP SW Version: 2.0D, 04-01-96" },
+	{ F3DWRUS,		FALSE,	0xE7FA4491, (char*) "RSP SW Version: 2.0D, 04-01-96" },
+	{ F3DDKR,		FALSE,	0x3BFF208D, (char*) "Diddy Kong Racing" },
+	{ F3DDKR,		FALSE,	0x8F9AE489, (char*) "Diddy Kong Racing" },
+	{ F3DDKR,		FALSE,	0x83421788, (char*) "JET FORCE GEMINI" },
+	{ F3DPD,		FALSE,	0xC543D0A8, (char*) "Perfect Dark" },
+	{ F3DGOLDEN,	FALSE,	0x302BCA09, (char*) "RSP SW Version: 2.0G, 09-30-96" }, // GoldenEye 007
+	{ F3DCBFD,		TRUE,	0x99E222AC, (char*) "RSP Gfx ucode F3DEXBG.NoN fifo 2.08  Yoshitaka Yasumoto 1999 Nintendo." },
+	{ F3DEX2,		TRUE,	0x1DACFAF1, (char*) "ANIMAL FOREST" },
+	{ S2DEX2,		FALSE,	0x8E050E8E, (char*) "ANIMAL FOREST" },
 };
 
 u32 G_RDPHALF_1, G_RDPHALF_2, G_RDPHALF_CONT;
@@ -431,6 +434,11 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 					// F-Zero X's vehicle-rendering microcode
 					type = F3DFLX2;
 				}
+				else if (strncmp( &uc_str[14], "F3DZEX", 6 ) == 0)
+				{
+					// Zelda: Ocarina of Time / Majora's Mask
+					type = F3DZEX2;
+				}
 				else if (strncmp( &uc_str[14], "F3D", 3 ) == 0)
 				{
 					if (uc_str[28] == '0')
@@ -531,6 +539,8 @@ void GBI_MakeCurrent( MicrocodeInfo *current )
 			case F3DPD:		F3DPD_Init();	break;
 			case F3DCBFD:	F3DCBFD_Init();	break;
 			case F3DFLX2:	F3DFLX2_Init();	break;
+			case F3DGOLDEN:	F3DGOLDEN_Init();	break;
+			case F3DZEX2:	F3DZEX2_Init();	break;
 		}
 	}
 

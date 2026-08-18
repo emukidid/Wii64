@@ -25,7 +25,9 @@
 #define F3DWRUS	    10
 #define F3DCBFD		11
 #define F3DFLX2		12
-#define NONE		13
+#define F3DGOLDEN	13
+#define F3DZEX2		14
+#define NONE		15
 
 #ifdef MAINDEF
 const char *MicrocodeTypes[] =
@@ -43,13 +45,15 @@ const char *MicrocodeTypes[] =
 	"Waverace US",
 	"CBFD",
 	"F-Zero X",
+	"GoldenEye",
+	"Zelda OOT/MM",
 	"None"
 };
 #else
 extern const char *MicrocodeTypes[];
 #endif
 
-static const int numMicrocodeTypes = 13;
+static const int numMicrocodeTypes = 15;
 
 
 // Fixed point conversion factors
@@ -137,6 +141,7 @@ static inline u16 GXcastf32u16( f32 val )
 #define G_TEXTURE_GEN			0x00040000
 #define G_TEXTURE_GEN_LINEAR	0x00080000
 #define G_LOD					0x00100000
+#define G_POINT_LIGHTING		0x00400000
 
 #define G_MV_MMTX		2	
 #define G_MV_PMTX		6

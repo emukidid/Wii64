@@ -147,6 +147,19 @@ void gSPProcessVertex( u32 v )
 	if (gSP.changed & CHANGED_MATRIX)
 		gSPCombineMatrices();
 
+	// Point lighting (Zelda OOT/MM) needs the vertex's eye-space position,
+	// which requires the pre-projection object-space coordinates. Better save
+	// them now, before they're overwritten by the combined-matrix transform.
+	f32 objPos[4];
+	bool bPointLighting = (gSP.geometryMode & G_LIGHTING) && (gSP.geometryMode & G_POINT_LIGHTING);
+	if (bPointLighting)
+	{
+		objPos[0] = gSP.vertices[v].x;
+		objPos[1] = gSP.vertices[v].y;
+		objPos[2] = gSP.vertices[v].z;
+		objPos[3] = gSP.vertices[v].w;
+	}
+
 	TransformVertex( &gSP.vertices[v].x, gSP.matrix.combined );
 
 #ifdef __GX__
@@ -187,19 +200,76 @@ void gSPProcessVertex( u32 v )
 		g = gSP.lights[gSP.numLights].g;
 		b = gSP.lights[gSP.numLights].b;
 
-		for (int i = 0; i < gSP.numLights; i++)
+		if (bPointLighting)
 		{
+			// Zelda OOT/MM: lights with ca != 0 are point lights, attenuated
+			// by distance using the light's la/qa coefficients rather than a
+			// plain directional dot product.
+			f32 eyePos[4] = { objPos[0], objPos[1], objPos[2], objPos[3] };
+			TransformVertex( eyePos, gSP.matrix.modelView[gSP.matrix.modelViewi] );
+
+			for (int i = 0; i < gSP.numLights; i++)
+			{
+				if (gSP.lights[i].ca != 0.0f)
+				{
+					f32 dx = gSP.lights[i].posx - eyePos[0];
+					f32 dy = gSP.lights[i].posy - eyePos[1];
+					f32 dz = gSP.lights[i].posz - eyePos[2];
+
+					f32 K = dx * dx + dy * dy + dz * dz * 2.0f;
+					f32 KS = sqrtf( K );
+
+					f32 dirx = dx, diry = dy, dirz = dz;
+					if (KS != 0.0f)
+					{
+						dirx = 4.0f * dx / KS;
+						diry = 4.0f * dy / KS;
+						dirz = 4.0f * dz / KS;
+					}
+					if (dirx < -1.0f) dirx = -1.0f; else if (dirx > 1.0f) dirx = 1.0f;
+					if (diry < -1.0f) diry = -1.0f; else if (diry > 1.0f) diry = 1.0f;
+					if (dirz < -1.0f) dirz = -1.0f; else if (dirz > 1.0f) dirz = 1.0f;
+
+					intensity = dirx * gSP.vertices[v].nx + diry * gSP.vertices[v].ny + dirz * gSP.vertices[v].nz;
+					if (intensity < -1.0f) intensity = -1.0f; else if (intensity > 1.0f) intensity = 1.0f;
+
+					f32 KSF = floorf( KS );
+					f32 D = (KSF * gSP.lights[i].la * 2.0f + KSF * KSF * gSP.lights[i].qa * 0.125f) * FIXED2FLOATRECIP16 + 1.0f;
+					intensity = (D != 0.0f) ? (intensity / D) : 0.0f;
+				}
+				else
+				{
 #ifndef __GX__
-			intensity = DotProduct( &gSP.vertices[v].nx, &gSP.lights[i].x );
+					intensity = DotProduct( &gSP.vertices[v].nx, &gSP.lights[i].x );
 #else //!__GX__
-			intensity = guVecDotProduct((guVector*) &gSP.vertices[v].nx,(guVector*) &gSP.lights[i].x );
+					intensity = guVecDotProduct((guVector*) &gSP.vertices[v].nx,(guVector*) &gSP.lights[i].x );
+#endif //__GX__
+				}
+
+				if (intensity > 0.0f)
+				{
+					r += gSP.lights[i].r * intensity;
+					g += gSP.lights[i].g * intensity;
+					b += gSP.lights[i].b * intensity;
+				}
+			}
+		}
+		else
+		{
+			for (int i = 0; i < gSP.numLights; i++)
+			{
+#ifndef __GX__
+				intensity = DotProduct( &gSP.vertices[v].nx, &gSP.lights[i].x );
+#else //!__GX__
+				intensity = guVecDotProduct((guVector*) &gSP.vertices[v].nx,(guVector*) &gSP.lights[i].x );
 #endif //__GX__
 
-			if (intensity < 0.0f) intensity = 0.0f;
+				if (intensity < 0.0f) intensity = 0.0f;
 
-			r += gSP.lights[i].r * intensity;
-			g += gSP.lights[i].g * intensity;
-			b += gSP.lights[i].b * intensity;
+				r += gSP.lights[i].r * intensity;
+				g += gSP.lights[i].g * intensity;
+				b += gSP.lights[i].b * intensity;
+			}
 		}
 
 #ifdef GLN64_SDLOG
@@ -483,7 +553,7 @@ void gSPLight( u32 l, s32 n )
 	n--;
 	u32 address = RSP_SegmentToPhysical( l );
 
-	if ((address + sizeof( Light )) > RDRAMSize)
+	if ((address + 16) > RDRAMSize)
 	{
 #ifdef DEBUG
 		DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// Attempting to load light from invalid address\n" );
@@ -504,6 +574,25 @@ void gSPLight( u32 l, s32 n )
 		gSP.lights[n].x = light->x;
 		gSP.lights[n].y = light->y;
 		gSP.lights[n].z = light->z;
+
+		// Zelda OOT/MM point light fields (ca/la/qa attenuation + position).
+		// ca overlays the same byte as ordinary lights' unused "type" byte:
+		// a nonzero value here is what marks this record as a point light.
+#ifndef _BIG_ENDIAN
+		gSP.lights[n].ca = (f32)RDRAM[(address +  3) ^ 3];
+		gSP.lights[n].la = (f32)RDRAM[(address +  7) ^ 3];
+		gSP.lights[n].qa = (f32)RDRAM[(address + 14) ^ 3];
+		gSP.lights[n].posx = (f32)(((s16*)RDRAM)[((address >> 1) + 4) ^ 1]);
+		gSP.lights[n].posy = (f32)(((s16*)RDRAM)[((address >> 1) + 5) ^ 1]);
+		gSP.lights[n].posz = (f32)(((s16*)RDRAM)[((address >> 1) + 6) ^ 1]);
+#else //!_BIG_ENDIAN
+		gSP.lights[n].ca = (f32)RDRAM[(address +  3) ^ 0];
+		gSP.lights[n].la = (f32)RDRAM[(address +  7) ^ 0];
+		gSP.lights[n].qa = (f32)RDRAM[(address + 14) ^ 0];
+		gSP.lights[n].posx = (f32)(((s16*)RDRAM)[((address >> 1) + 4) ^ 0]);
+		gSP.lights[n].posy = (f32)(((s16*)RDRAM)[((address >> 1) + 5) ^ 0]);
+		gSP.lights[n].posz = (f32)(((s16*)RDRAM)[((address >> 1) + 6) ^ 0]);
+#endif //_BIG_ENDIAN
 
 #ifndef __GX__
 		Normalize( &gSP.lights[n].x );
@@ -973,6 +1062,29 @@ void gSPBranchLessZ( u32 branchdl, u32 vtx, f32 zval )
 #ifdef DEBUG
 		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPBranchLessZ( 0x%08X, %i, %i );\n",
 			branchdl, vtx, zval );
+#endif
+}
+
+void gSPBranchLessW( u32 branchdl, u32 vtx, f32 wval )
+{
+	u32 address = RSP_SegmentToPhysical( branchdl );
+
+	if ((address + 8) > RDRAMSize)
+	{
+#ifdef DEBUG
+		DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// Specified display list at invalid address\n" );
+		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPBranchLessW( 0x%08X, %i, %i );\n",
+			branchdl, vtx, wval );
+#endif
+		return;
+	}
+
+	if (gSP.vertices[vtx].w < wval)
+		RSP.PC[RSP.PCi] = address;
+
+#ifdef DEBUG
+		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPBranchLessW( 0x%08X, %i, %i );\n",
+			branchdl, vtx, wval );
 #endif
 }
 

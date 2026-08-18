@@ -32,6 +32,17 @@ void F3DPD_VtxColorBase( u32 w0, u32 w1 )
 	gSPSetVertexColorBase( w1 );
 }
 
+void F3DPD_TriX( u32 w0, u32 w1 )
+{
+	for (u32 i = 0; i < 4; i++)
+	{
+		if ((w1 >> (i * 8)) == 0)
+			break;
+
+		gSP1Triangle( _SHIFTR( w0, i * 4, 4 ), _SHIFTR( w1, i * 8, 4 ), _SHIFTR( w1, i * 8 + 4, 4 ) );
+	}
+}
+
 void F3DPD_Init()
 {
 	// Set GeometryMode flags
@@ -65,7 +76,7 @@ void F3DPD_Init()
 	GBI_SetGBI( G_RDPHALF_1,			F3D_RDPHALF_1,			F3D_RDPHalf_1 );
 	GBI_SetGBI( G_RDPHALF_2,			F3D_RDPHALF_2,			F3D_RDPHalf_2 );
 	GBI_SetGBI( G_RDPHALF_CONT,			F3D_RDPHALF_CONT,		F3D_RDPHalf_Cont );
-	GBI_SetGBI( G_TRI4,					F3D_TRI4,				F3D_Tri4 );
+	GBI_SetGBI( G_TRI4,					F3D_TRI4,				F3DPD_TriX );
 
 	gSPSetDMAOffsets( 0, 0 );
 }

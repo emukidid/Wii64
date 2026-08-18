@@ -62,6 +62,10 @@ struct gSPInfo
 	{
 		f32	r, g, b;
 		f32	x, y, z;
+		// Zelda OOT/MM point lights: position, and attenuation coefficients.
+		// ca == 0 means this is an ordinary directional light.
+		f32	posx, posy, posz;
+		f32	ca, la, qa;
 	} lights[8];
 
 	struct
@@ -129,6 +133,7 @@ void gSPDisplayList( u32 dl );
 void gSPDMADisplayList( u32 dl, u32 n );
 void gSPBranchList( u32 dl );
 void gSPBranchLessZ( u32 branchdl, u32 vtx, f32 zval );
+void gSPBranchLessW( u32 branchdl, u32 vtx, f32 wval );
 void gSPSprite2DBase( u32 base );
 void gSP1Triangle( s32 v0, s32 v1, s32 v2 );
 void gSP2Triangles( s32 v00, s32 v01, s32 v02,
