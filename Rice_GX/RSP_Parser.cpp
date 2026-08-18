@@ -366,6 +366,7 @@ void RDP_SetUcodeMap(int ucode)
         //LoadedUcodeMap[0xaf]=RSP_GBI1_LoadUCode;
         //LoadedUcodeMap[0xb0]=RSP_GBI1_BranchZ;
         LoadedUcodeMap[0xb4]=DLParser_RDPHalf_1_0xb4_GoldenEye;
+        LoadedUcodeMap[0xbd]=RSP_GBI1_MoveWord;
         status.bUseModifiedUcodeMap = true;
         break;
     case 3: // S2DEX GBI2

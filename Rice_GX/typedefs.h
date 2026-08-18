@@ -273,6 +273,9 @@ typedef struct
         };
     };
 
+    // Zelda OOT/MM point light attenuation coefficients
+    float ca, la, qa;
+
     union {
         struct {
             uint8 r;

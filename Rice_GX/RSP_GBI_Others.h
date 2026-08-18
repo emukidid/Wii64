@@ -635,6 +635,9 @@ void RSP_Tri4_PD(Gfx *gfx)
         BOOL bVisible;
         for( uint32 i=0; i<4; i++)
         {
+            // Perfect Dark's TriX command encodes 1-4 triangles per pair
+            if ((w1>>(i<<3)) == 0)
+                break;
             uint32 v0 = (w1>>(4+(i<<3))) & 0xF;
             uint32 v1 = (w1>>(  (i<<3))) & 0xF;
             uint32 v2 = (w0>>(  (i<<2))) & 0xF;

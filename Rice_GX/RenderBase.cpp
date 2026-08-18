@@ -1027,7 +1027,7 @@ uint32 LightVert(XVECTOR4 & norm, int vidx)
     {
         for (register unsigned int l=0; l < gRSPnumLights; l++)
         {
-            fCosT = norm.x*gRSPlights[l].x + norm.y*gRSPlights[l].y + norm.z*gRSPlights[l].z; 
+            fCosT = norm.x*gRSPlights[l].x + norm.y*gRSPlights[l].y + norm.z*gRSPlights[l].z;
 
             if (fCosT > 0 )
             {
@@ -1066,20 +1066,28 @@ uint32 LightVert(XVECTOR4 & norm, int vidx)
                 }
 
                 XVECTOR3 dir(gRSPlights[l].x - v.x, gRSPlights[l].y - v.y, gRSPlights[l].z - v.z);
-                //XVECTOR3 dir(v.x-gRSPlights[l].x, v.y-gRSPlights[l].y, v.z-gRSPlights[l].z);
-                float d2 = sqrtf(dir.x*dir.x+dir.y*dir.y+dir.z*dir.z);
-                dir.x /= d2;
-                dir.y /= d2;
-                dir.z /= d2;
 
-                fCosT = norm.x*dir.x + norm.y*dir.y + norm.z*dir.z; 
+                float K = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z*2.0f;
+                float KS = sqrtf(K);
+
+                if (KS != 0.0f)
+                {
+                    dir.x = 4.0f * dir.x / KS;
+                    dir.y = 4.0f * dir.y / KS;
+                    dir.z = 4.0f * dir.z / KS;
+                }
+                if (dir.x < -1.0f) dir.x = -1.0f; else if (dir.x > 1.0f) dir.x = 1.0f;
+                if (dir.y < -1.0f) dir.y = -1.0f; else if (dir.y > 1.0f) dir.y = 1.0f;
+                if (dir.z < -1.0f) dir.z = -1.0f; else if (dir.z > 1.0f) dir.z = 1.0f;
+
+                fCosT = norm.x*dir.x + norm.y*dir.y + norm.z*dir.z;
+                if (fCosT < -1.0f) fCosT = -1.0f; else if (fCosT > 1.0f) fCosT = 1.0f;
 
                 if (fCosT > 0 )
                 {
-                    //float f = d2/gRSPlights[l].range*50;
-                    float f = d2/15000*50;
-                    f = 1 - min(f,1);
-                    fCosT *= f*f;
+                    float KSF = floorf(KS);
+                    float D = (KSF*gRSPlights[l].la*2.0f + KSF*KSF*gRSPlights[l].qa*0.125f) * (1.0f/65536.0f) + 1.0f;
+                    fCosT = (D != 0.0f) ? (fCosT / D) : 0.0f;
 
                     r += gRSPlights[l].fr * fCosT;
                     g += gRSPlights[l].fg * fCosT;
@@ -2302,7 +2310,7 @@ void SetLightCol(uint32 dwLight, uint32 dwCol)
     LIGHT_DUMP(TRACE2("Set Light %d color: %08X", dwLight, dwCol));
 }
 
-void SetLightDirection(uint32 dwLight, float x, float y, float z, float range)
+void SetLightDirection(uint32 dwLight, float x, float y, float z, float range, float la, float qa)
 {
     //gRSP.bLightIsUpdated = true;
 
@@ -2316,6 +2324,9 @@ void SetLightDirection(uint32 dwLight, float x, float y, float z, float range)
     gRSPlights[dwLight].y = y/w;
     gRSPlights[dwLight].z = z/w;
     gRSPlights[dwLight].range = range;
+    gRSPlights[dwLight].ca = range;
+    gRSPlights[dwLight].la = la;
+    gRSPlights[dwLight].qa = qa;
     DEBUGGER_PAUSE_AND_DUMP(NEXT_SET_LIGHT,TRACE5("Set Light %d dir: %.4f, %.4f, %.4f, %.4f", dwLight, x, y, z, range));
 }
 

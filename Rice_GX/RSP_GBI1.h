@@ -275,8 +275,16 @@ void RSP_MoveMemLight(uint32 dwLight, uint32 dwAddr)
     uint32 * pdwBase = (uint32 *)pcBase;
 
 
-    float range = 0, x, y, z;
-    if( options.enableHackForGames == HACK_FOR_ZELDA_MM && (pdwBase[0]&0xFF) == 0x08 && (pdwBase[1]&0xFF) == 0xFF )
+    // Majora's Mask point lights: a nonzero "ca" byte marks this record as a
+    // point light rather than a directional one; la/qa are its attenuation
+    // coefficients. Only enabled for MM, matching Rice's original behavior -
+    // OOT runs an earlier ucode revision whose light data doesn't reliably
+    // fit this detection (causes weird flicker on the triforce pedestal in the temple of time if enabled for it).
+    bool bZeldaPointLights = (options.enableHackForGames == HACK_FOR_ZELDA_MM);
+    float ca = bZeldaPointLights ? (float)(uint8)pcBase[3 ^ S8] : 0.0f;
+
+    float range = 0, x, y, z, la = 0, qa = 0;
+    if( ca != 0.0f )
     {
         gRSPn64lights[dwLight].dwRGBA       = pdwBase[0];
         gRSPn64lights[dwLight].dwRGBACopy   = pdwBase[1];
@@ -284,7 +292,9 @@ void RSP_MoveMemLight(uint32 dwLight, uint32 dwAddr)
         x       = pdwBase16[4 ^ S16];
         y       = pdwBase16[5 ^ S16];
         z       = pdwBase16[6 ^ S16];
-        range   = pdwBase16[7 ^ S16];
+        la      = (float)(uint8)pcBase[7 ^ S8];
+        qa      = (float)(uint8)pcBase[14 ^ S8];
+        range   = ca;
     }
     else
     {
@@ -324,7 +334,7 @@ void RSP_MoveMemLight(uint32 dwLight, uint32 dwAddr)
         {
             LOG_UCODE("      Light is invalid");
         }
-        SetLightDirection(dwLight, x, y, z, range);
+        SetLightDirection(dwLight, x, y, z, range, la, qa);
     }
 }
 
