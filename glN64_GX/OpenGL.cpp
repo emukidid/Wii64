@@ -11,6 +11,9 @@
 
 #ifdef __GX__
 #include <gccore.h>
+extern "C" {
+#include "../main/gamehacks.h"
+}
 #include "../gui/DEBUG.h"
 #include <math.h>
 #include "3DMath.h"
@@ -1769,8 +1772,11 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 	OGL.GXuseMinMagNearest = false;
 #endif // __GX__
 
-	SetConstant( rect[0].color, combiner.vertex.color, combiner.vertex.alpha );
-
+    SetConstant( rect[0].color, combiner.vertex.color, combiner.vertex.alpha );
+	if(GetGameSpecificHack() == &hack_dukenukem) {
+		rect[0].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+	}
+	
 	if (OGL.EXT_secondary_color)
 		SetConstant( rect[0].secondaryColor, combiner.vertex.secondaryColor, combiner.vertex.alpha );
 
