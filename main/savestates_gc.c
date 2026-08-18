@@ -60,6 +60,7 @@
 char* statesmagic = "W64";
 char* statespath = "/wii64/saves/";
 void LoadingBar_showBar(float percent, const char* string);
+extern void init_vi_clock_refresh_rate();
 #define SAVE_STATE_MSG "Saving State .."
 #define LOAD_STATE_MSG "Loading State .."
 #define STATE_VERSION 3
@@ -236,6 +237,7 @@ int savestates_save(unsigned int slot, u8* fb_tex)
 	stateWrite(f, &dps_register, sizeof(DPS_register));
 	progress += 0.05f;
 	LoadingBar_showBar(progress, SAVE_STATE_MSG);
+	init_vi_clock_refresh_rate();
 	
 	// RSP, r4300 struct and interrupt queue (95%->100%)
 	stateWrite(f, SP_DMEM, 0x1000);
