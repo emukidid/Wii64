@@ -4670,7 +4670,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 					for(i = 0; i < count; i++){
 						unsigned int phys = (i*2) + (constant & 0x7FFFFE);
 						int rt = mapRegisterNewUnsigned(_rt + i);
-						GEN_LHA(rt, phys, DYNAREG_RDRAM);
+						GEN_LHZ(rt, phys, DYNAREG_RDRAM);
 					}
 				}
 				else {
