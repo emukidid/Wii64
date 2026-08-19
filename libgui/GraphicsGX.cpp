@@ -51,7 +51,7 @@ Graphics::Graphics(GXRModeObj *rmode)
 		memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
 		break;
 	case VIDEOMODE_240P:
-		vmode = &TVEurgb60Hz240DsAa;
+		vmode = &TVNtsc240DsAa;
 		memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
 		break;
 	case VIDEOMODE_480P:
@@ -579,7 +579,7 @@ GXRModeObj* Graphics::getVmode() {
 }
 
 void Graphics::setNativeOut(bool is_pal) {
-	GXRModeObj* m = &TVEurgb60Hz240Ds;
+	GXRModeObj* m = &TVNtsc240Ds;
 	if(is_pal) {
 		m = &TVPal264Ds;
 	}
