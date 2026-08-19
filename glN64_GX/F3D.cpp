@@ -9,17 +9,19 @@
 
 #ifdef __GX__
 #include <gccore.h>
+#include <math.h>
 #endif // __GX__
 
 #include "glN64.h"
 #include "Debug.h"
 #include "F3D.h"
 #include "N64.h"
-#include "RSP.h"	
+#include "RSP.h"
 #include "RDP.h"
 #include "gSP.h"
 #include "gDP.h"
 #include "GBI.h"
+#include "OpenGL.h"
 
 void F3D_SPNoOp( u32 w0, u32 w1 )
 {
@@ -328,33 +330,243 @@ void F3D_Quad( u32 w0, u32 w1 )
 	gSP1Quadrangle( _SHIFTR( w1, 24, 8 ) / 10, _SHIFTR( w1, 16, 8 ) / 10, _SHIFTR( w1, 8, 8 ) / 10, _SHIFTR( w1, 0, 8 ) / 10 );
 }
 
+
+// GoldenEye 007 sky/water hackery (cause it's better than just a black sky, I guess...)
+
+// Initially I'd brought across the clouds texture hack from Rice but decided I wanted something different here.
+// After looking at certain sources, and GLideN64, I came up with a hack
+// which the edge-coefficient decode below is based on (layout and fixed-point conversions ported from
+// GLideN64's gDPLLETriangle() in gDP.cpp). It reconstructs 
+// the same small vertex fan/strip that decoder would produce, and we take its
+// bounding box as a plain rect, drawn as a translucent flat colour "fog" wash using
+// the triangle's own decoded shade colour rather than the actual cloud/water texture.
+// I felt like this felt more authentic than what Rice_GX does, but to each their own until it's done properly one day.
+
+
+#define F3DGOLDEN_MAX_CMD_WORDS 44
+
+static u32 f3dGoldenCmdWords[F3DGOLDEN_MAX_CMD_WORDS];
+static u32 f3dGoldenCmdWordCount = 0;
+static bool f3dGoldenCmdActive = false;
+
+static inline s32 F3DGOLDEN_SignExtend( s32 v, s32 bits )
+{
+	s32 shift = 32 - bits;
+	return (v << shift) >> shift;
+}
+
+static void F3DGOLDEN_DrawTriangleCommand( const u32 *pData, u32 wordCount )
+{
+	if (wordCount < 8)
+		return;
+
+	const s32 *pDataSigned = (const s32*) pData;
+
+	u32 header = _SHIFTR( pData[0], 24, 8 );
+	bool shade = (header == G_TRI_SHADE) || (header == G_TRI_SHADE_TXTR) ||
+	             (header == G_TRI_SHADE_ZBUFF) || (header == G_TRI_SHADE_TXTR_ZBUFF);
+	bool textured = (header == G_TRI_TXTR) || (header == G_TRI_SHADE_TXTR) ||
+	                (header == G_TRI_TXTR_ZBUFF) || (header == G_TRI_SHADE_TXTR_ZBUFF);
+
+	if (shade && wordCount < 24)
+		return;
+	if (textured && wordCount < 40)
+		return;
+
+	// Edge coefficients
+	s32 yl = F3DGOLDEN_SignExtend( pDataSigned[0], 14 );
+	s32 ym = F3DGOLDEN_SignExtend( pDataSigned[1] >> 16, 14 );
+	s32 yh = F3DGOLDEN_SignExtend( pDataSigned[1], 14 );
+	yh &= ~3;
+
+	s32 xl = F3DGOLDEN_SignExtend( pDataSigned[2], 28 );
+	s32 xh = F3DGOLDEN_SignExtend( pDataSigned[4], 28 );
+	s32 xm = F3DGOLDEN_SignExtend( pDataSigned[6], 28 );
+	s32 dxldy = F3DGOLDEN_SignExtend( pDataSigned[3], 30 );
+	s32 dxhdy = F3DGOLDEN_SignExtend( pDataSigned[5], 30 );
+	s32 dxmdy = F3DGOLDEN_SignExtend( pDataSigned[7], 30 );
+
+	f32 xhf = _FIXED2FLOAT( (f32)(xh & ~1), 16 );
+	f32 xmf = _FIXED2FLOAT( (f32)(xm & ~1), 16 );
+	f32 yhf = (f32) yh;
+	f32 ymf = (f32) ym;
+	f32 ylf = (f32) yl;
+	f32 hk = _FIXED2FLOAT( (f32)((dxhdy >> 2) & ~1), 16 );
+	f32 mk = _FIXED2FLOAT( (f32)((dxmdy >> 2) & ~1), 16 );
+	f32 hc = xhf - hk * yhf;
+	f32 mc = xmf - mk * yhf;
+	f32 xlf = _FIXED2FLOAT( (f32)(xl & ~1), 16 );
+	f32 lk = _FIXED2FLOAT( (f32)((dxldy >> 2) & ~1), 16 );
+
+	struct { f32 x, y; } vertices[8];
+	u32 vtxCount = 0;
+
+	// Reconstruct screen-space vertex positions from the edge coefficients
+	f32 hkmk = hk - mk;
+	if ((hkmk > -0.00000001f) && (hkmk < 0.00000001f))
+	{
+		auto *vtx = &vertices[vtxCount++];
+		vtx->x = hk * yhf + hc;
+		vtx->y = yhf * 0.25f;
+
+		if (mc != hc)
+		{
+			vtx = &vertices[vtxCount++];
+			vtx->x = mk * yhf + mc;
+			vtx->y = yhf * 0.25f;
+		}
+
+		f32 xhym = (hk * ymf + hc);
+		f32 xmym = (mk * ymf + mc);
+
+		vtx = &vertices[vtxCount++];
+		vtx->x = xhym;
+		vtx->y = ymf * 0.25f;
+
+		vtx = &vertices[vtxCount++];
+		vtx->x = xmym;
+		vtx->y = ymf * 0.25f;
+
+		if (dxldy != dxmdy && ym < yl)
+		{
+			f32 lc = xlf - lk * ymf;
+			f32 y4f = (lc - hc) / (hk - lk);
+			vtx = &vertices[vtxCount++];
+			vtx->x = hk * y4f + hc;
+			vtx->y = y4f * 0.25f;
+		}
+	}
+	else
+	{
+		f32 y0f = (mc - hc) / (hk - mk);
+
+		auto *vtx = &vertices[vtxCount++];
+		vtx->x = hk * y0f + hc;
+		vtx->y = y0f * 0.25f;
+
+		f32 y1f = ymf;
+		f32 lc = xlf - lk * y1f;
+
+		vtx = &vertices[vtxCount++];
+		vtx->x = xlf;
+		vtx->y = y1f * 0.25f;
+
+		if (hk == lk)
+		{
+			f32 lrx = lk * ylf + lc;
+			vtx = &vertices[vtxCount++];
+			vtx->x = lrx;
+			vtx->y = ylf * 0.25f - (vertices[1].y - vertices[0].y);
+
+			vtx = &vertices[vtxCount++];
+			vtx->x = lrx;
+			vtx->y = ylf * 0.25f;
+		}
+		else if (mk == lk)
+		{
+			vtx = &vertices[vtxCount++];
+			vtx->x = hk * ylf + hc;
+			vtx->y = ylf * 0.25f;
+		}
+		else
+		{
+			f32 y2f = (yl == ym) ? (lc - mc) / (mk - lk) : (lc - hc) / (hk - lk);
+			vtx = &vertices[vtxCount++];
+			vtx->x = hk * y2f + hc;
+			vtx->y = y2f * 0.25f;
+		}
+	}
+
+	if (!shade)
+		return;
+
+	// Draw as a translucent flat colour fog wash instead of the actual cloud/water texture.
+	s32 r = (s32)( (pData[8]  & 0xffff0000) | ((pData[12] >> 16) & 0x0000ffff) );
+	s32 g = (s32)( ((pData[8]  << 16) & 0xffff0000) | (pData[12] & 0x0000ffff) );
+	s32 b = (s32)( (pData[9]  & 0xffff0000) | ((pData[13] >> 16) & 0x0000ffff) );
+	s32 rc = r << 2; rc = (rc > 0x3ff0000) ? 0x3ff0000 : ((rc < 0) ? 0 : rc);
+	s32 gc = g << 2; gc = (gc > 0x3ff0000) ? 0x3ff0000 : ((gc < 0) ? 0 : gc);
+	s32 bc = b << 2; bc = (bc > 0x3ff0000) ? 0x3ff0000 : ((bc < 0) ? 0 : bc);
+	f32 rf = _FIXED2FLOAT( (f32)(rc >> 18), 8 );
+	f32 gf = _FIXED2FLOAT( (f32)(gc >> 18), 8 );
+	f32 bf = _FIXED2FLOAT( (f32)(bc >> 18), 8 );
+
+	// Bounding box of the reconstructed vertices, used as a plain screen-space rect.
+	f32 minX = vertices[0].x, maxX = vertices[0].x;
+	f32 minY = vertices[0].y, maxY = vertices[0].y;
+	for (u32 vi = 1; vi < vtxCount; vi++)
+	{
+		if (vertices[vi].x < minX) minX = vertices[vi].x;
+		if (vertices[vi].x > maxX) maxX = vertices[vi].x;
+		if (vertices[vi].y < minY) minY = vertices[vi].y;
+		if (vertices[vi].y > maxY) maxY = vertices[vi].y;
+	}
+
+	// Deliberately translucent for a hazy "fog" look rather than a solid colour
+	const f32 FOG_ALPHA = 0.45f;
+	// Slightly darken the decoded shade colour because it felt off before
+	const f32 FOG_DARKEN = 0.8f;
+	f32 color[4] = { rf * FOG_DARKEN, gf * FOG_DARKEN, bf * FOG_DARKEN, FOG_ALPHA };
+
+	OGL_DrawRect( (int) minX, (int) minY, (int) maxX, (int) maxY, color );
+}
+
+static void F3DGOLDEN_BeginTriangleCommand( u32 w1 )
+{
+	f3dGoldenCmdWords[0] = w1;
+	f3dGoldenCmdWordCount = 1;
+	f3dGoldenCmdActive = true;
+}
+
+static void F3DGOLDEN_AppendTriangleWord( u32 w1 )
+{
+	if (f3dGoldenCmdWordCount < F3DGOLDEN_MAX_CMD_WORDS)
+		f3dGoldenCmdWords[f3dGoldenCmdWordCount++] = w1;
+}
+
+static void F3DGOLDEN_EndTriangleCommand( u32 w1 )
+{
+	F3DGOLDEN_AppendTriangleWord( w1 );
+	f3dGoldenCmdActive = false;
+	F3DGOLDEN_DrawTriangleCommand( f3dGoldenCmdWords, f3dGoldenCmdWordCount );
+}
+
 void F3D_RDPHalf_1( u32 w0, u32 w1 )
 {
-/*	if (_SHIFTR( w1, 24, 8 ) == 0xCE)
+	if (GBI.current->type == F3DGOLDEN)
 	{
-		u32 w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
-		RSP.PC[RSP.PCi] += 8;
+		if (f3dGoldenCmdActive)
+		{
+			F3DGOLDEN_AppendTriangleWord( w1 );
+			return;
+		}
 
-		gDPTextureRectangle( gDP.scissor.ulx,									// ulx
-							_FIXED2FLOAT( _SHIFTR( w2,  0, 16 ), 2 ),			// uly
-							gDP.scissor.lrx,			// lrx
-							_FIXED2FLOAT( _SHIFTR( w2,  16, 16 ), 2 ),			// lry
-							0,													// tile
-							0,		// s
-							0,		// t
-							1,		// dsdx
-							1 );		// dsdy
-	}*/
+		u32 top = _SHIFTR( w1, 24, 8 );
+		if ((top >= G_TRI_FILL) && (top <= G_TRI_SHADE_TXTR_ZBUFF))
+		{
+			F3DGOLDEN_BeginTriangleCommand( w1 );
+			return;
+		}
+	}
+
 	gDP.half_1 = w1;
 }
 
 void F3D_RDPHalf_2( u32 w0, u32 w1 )
 {
+	if (f3dGoldenCmdActive)
+	{
+		F3DGOLDEN_EndTriangleCommand( w1 );
+		return;
+	}
+
 	gDP.half_2 = w1;
 }
 
 void F3D_RDPHalf_Cont( u32 w0, u32 w1 )
 {
+	if (f3dGoldenCmdActive)
+		F3DGOLDEN_AppendTriangleWord( w1 );
 }
 
 void F3D_Tri4( u32 w0, u32 w1 )

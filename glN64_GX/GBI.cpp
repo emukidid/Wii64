@@ -60,7 +60,7 @@ SpecialMicrocodeInfo specialMicrocodes[] =
 	{ F3DDKR,		FALSE,	0x8F9AE489, (char*) "Diddy Kong Racing" },
 	{ F3DDKR,		FALSE,	0x83421788, (char*) "JET FORCE GEMINI" },
 	{ F3DPD,		FALSE,	0xC543D0A8, (char*) "Perfect Dark" },
-	{ F3DGOLDEN,	FALSE,	0x302BCA09, (char*) "RSP SW Version: 2.0G, 09-30-96" }, // GoldenEye 007
+	{ F3DGOLDEN,	FALSE,	0x9CBA9D04, (char*) "RSP SW Version: 2.0G, 09-30-96" }, // GoldenEye 007
 	{ F3DCBFD,		TRUE,	0x99E222AC, (char*) "RSP Gfx ucode F3DEXBG.NoN fifo 2.08  Yoshitaka Yasumoto 1999 Nintendo." },
 	{ F3DEX2,		TRUE,	0x1DACFAF1, (char*) "ANIMAL FOREST" },
 	{ S2DEX2,		FALSE,	0x8E050E8E, (char*) "ANIMAL FOREST" },
