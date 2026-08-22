@@ -341,7 +341,7 @@ void gDPUpdateColorImage(void)
 
 	// This is hacky (uses xfb, makes many assumptions, no depth buffer) so lets only enable it for Mario Kart 64.
     const u32 w = gDP.colorImage.width  * OGL.scaleX;
-    const u32 h = gDP.colorImage.height * OGL.scaleY;
+    //const u32 h = gDP.colorImage.height * OGL.scaleY;
 
     u16 *xfb = (u16*)VI.xfb[VI.which_fb];
     u16 *dst = (u16*)&RDRAM[gDP.colorImage.address];
@@ -673,7 +673,7 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 
 	address = gDP.textureImage.address + gDP.loadTile->ult * gDP.textureImage.bpl + (gDP.loadTile->uls << gDP.textureImage.size >> 1);
 	dest = &TMEM[gDP.loadTile->tmem];
-	bpl = (gDP.loadTile->lrs - gDP.loadTile->uls + 1) << gDP.loadTile->size >> 1;
+	bpl = gDP.loadTile->line << 3;
 	height = gDP.loadTile->lrt - gDP.loadTile->ult + 1;
 	src = &RDRAM[address];
 
@@ -912,7 +912,13 @@ void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
 	gDP.colorImage.changed = TRUE;
-	gDP.colorImage.height = MAX( gDP.colorImage.height, (unsigned int)lry );
+	if (gDP.otherMode.cycleType == G_CYC_FILL) {
+		if (lry > (s32)VI.height)
+			gDP.colorImage.height = (u32)MAX((s32)gDP.colorImage.height, lry - 1);
+		else
+			gDP.colorImage.height = (u32)MAX((s32)gDP.colorImage.height, lry);
+	} else
+		gDP.colorImage.height = MAX( gDP.colorImage.height, (u32)gDP.scissor.lry );
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPFillRectangle( %i, %i, %i, %i );\n",
