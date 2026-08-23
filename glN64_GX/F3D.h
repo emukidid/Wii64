@@ -102,5 +102,6 @@ void F3D_RDPHalf_2( u32 w0, u32 w1 );
 void F3D_RDPHalf_Cont( u32 w0, u32 w1 );
 void F3D_Tri4( u32 w0, u32 w1 );
 void F3D_Init();
+void F3DGOLDEN_NewFrame();
 #endif
 

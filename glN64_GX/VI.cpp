@@ -33,6 +33,7 @@
 #include "RSP.h"
 #include "FrameBuffer.h"
 #include "Debug.h"
+#include "F3D.h"
 #ifdef __GX__
 #include "Textures.h"
 #endif // __GX__
@@ -127,6 +128,10 @@ void GX_CheckResChange() {
 
 void VI_UpdateScreen()
 {
+	if (GBI.current && GBI.current->type == F3DGOLDEN) {
+		F3DGOLDEN_NewFrame();
+	}
+
 #ifndef __GX__
 	glFinish();
 

@@ -32,4 +32,5 @@ void GameSpecificHackSetup();
 void hack_winback();
 void hack_paperboy();
 void hack_dukenukem();
+void hack_scars();
 #endif

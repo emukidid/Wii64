@@ -953,7 +953,7 @@ void gDPSetKeyGB(u32 cG, u32 sG, u32 wG, u32 cB, u32 sB, u32 wB )
 	gDP.key.width.b = GXcastu8f32( wB );
 }
 
-void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f32 t, f32 dsdx, f32 dtdy )
+void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f32 t, f32 dsdx, f32 dtdy, const f32 *colorOverride )
 {
  	if (gDP.otherMode.cycleType == G_CYC_COPY)
 	{
@@ -977,16 +977,16 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	if (lrs > s)
 	{
 		if (lrt > t)
-			OGL_DrawTexturedRect( ulx, uly, lrx, lry, s, t, lrs, lrt, (RSP.cmd == G_TEXRECTFLIP) );
+			OGL_DrawTexturedRect( ulx, uly, lrx, lry, s, t, lrs, lrt, (RSP.cmd == G_TEXRECTFLIP), colorOverride );
 		else
-			OGL_DrawTexturedRect( ulx, lry, lrx, uly, s, lrt, lrs, t, (RSP.cmd == G_TEXRECTFLIP) );
+			OGL_DrawTexturedRect( ulx, lry, lrx, uly, s, lrt, lrs, t, (RSP.cmd == G_TEXRECTFLIP), colorOverride );
 	}
 	else
 	{
 		if (lrt > t)
-			OGL_DrawTexturedRect( lrx, uly, ulx, lry, lrs, t, s, lrt, (RSP.cmd == G_TEXRECTFLIP) );
+			OGL_DrawTexturedRect( lrx, uly, ulx, lry, lrs, t, s, lrt, (RSP.cmd == G_TEXRECTFLIP), colorOverride );
 		else
-			OGL_DrawTexturedRect( lrx, lry, ulx, uly, lrs, lrt, s, t, (RSP.cmd == G_TEXRECTFLIP) );
+			OGL_DrawTexturedRect( lrx, lry, ulx, uly, lrs, lrt, s, t, (RSP.cmd == G_TEXRECTFLIP), colorOverride );
 	}
 
 	gSP.textureTile[0] = &gDP.tiles[gSP.texture.tile];

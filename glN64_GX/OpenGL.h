@@ -207,7 +207,7 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 );
 void OGL_DrawTriangles();
 void OGL_DrawLine( SPVertex *vertices, int v0, int v1, float width );
 void OGL_DrawRect( int ulx, int uly, int lrx, int lry, float *color );
-void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls, float ult, float lrs, float lrt, bool flip );
+void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls, float ult, float lrs, float lrt, bool flip, const float *colorOverride = NULL );
 void OGL_UpdateScale();
 void OGL_ClearDepthBuffer();
 void OGL_ClearColorBuffer( float *color );

@@ -833,6 +833,10 @@ void OGL_UpdateStates()
 			Combiner_SetCombine( EncodeCombineMode( 0, 0, 0, SHADE, 0, 0, 0, 1, 0, 0, 0, SHADE, 0, 0, 0, 1 ) );
 		else
 			Combiner_SetCombine( gDP.combine.mux );
+
+		// S.C.A.R.S red track hack/fix
+		if(GetGameSpecificHack() == &hack_scars && gDP.combine.mux == 0x00127E61F0FFF83EULL)
+			Combiner_SetCombine( EncodeCombineMode( TEXEL0, 0, SHADE, NOISE, 0, 0, 0, SHADE, 0, 0, 0, COMBINED, 0, 0, 0, 1 ) );
 	}
 
 	if (gDP.changed & CHANGED_COMBINE_COLORS)
@@ -1562,7 +1566,7 @@ void OGL_DrawRect( int ulx, int uly, int lrx, int lry, float *color )
 #endif // __GX__
 }
 
-void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls, float ult, float lrs, float lrt, bool flip )
+void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls, float ult, float lrs, float lrt, bool flip, const float *colorOverride )
 {
 #ifdef __GX__
 	OGL.GXrenderTexRect = true;
@@ -1772,11 +1776,21 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 	OGL.GXuseMinMagNearest = false;
 #endif // __GX__
 
-    SetConstant( rect[0].color, combiner.vertex.color, combiner.vertex.alpha );
-	if(GetGameSpecificHack() == &hack_dukenukem) {
-		rect[0].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+    if (colorOverride)
+	{
+		rect[0].color.r = colorOverride[0];
+		rect[0].color.g = colorOverride[1];
+		rect[0].color.b = colorOverride[2];
+		rect[0].color.a = colorOverride[3];
 	}
-	
+	else
+	{
+		SetConstant( rect[0].color, combiner.vertex.color, combiner.vertex.alpha );
+		if(GetGameSpecificHack() == &hack_dukenukem) {
+			rect[0].color = { 0.0f, 0.0f, 0.0f, 0.0f };
+		}
+	}
+
 	if (OGL.EXT_secondary_color)
 		SetConstant( rect[0].secondaryColor, combiner.vertex.secondaryColor, combiner.vertex.alpha );
 

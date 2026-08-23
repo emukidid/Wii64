@@ -22,6 +22,8 @@
 #include "gDP.h"
 #include "GBI.h"
 #include "OpenGL.h"
+#include "Combiner.h"
+#include "Textures.h"
 
 void F3D_SPNoOp( u32 w0, u32 w1 )
 {
@@ -349,6 +351,24 @@ static u32 f3dGoldenCmdWords[F3DGOLDEN_MAX_CMD_WORDS];
 static u32 f3dGoldenCmdWordCount = 0;
 static bool f3dGoldenCmdActive = false;
 
+// Hacky sky clouds for GoldenEye, implement a manual zoom/scroll window (not positional)
+// One day I'll do the whole LLE thing, but for now this looks better than no clouds (maybe :P)
+static f32 f3dGoldenScrollS = 0.0f;
+static f32 f3dGoldenScrollT = 0.0f;
+static const f32 F3DGOLDEN_SCROLL_WINDOW = 16.0f; // zoomed-in slice/window
+static f32 f3dGoldenTexWidth = 0.0f;
+static f32 f3dGoldenTexHeight = 0.0f;
+static const f32 F3DGOLDEN_SCROLL_SPEED_S = 0.01f;
+static const f32 F3DGOLDEN_SCROLL_SPEED_T = 0.01f;
+
+void F3DGOLDEN_NewFrame()
+{
+	if (f3dGoldenTexWidth > 0.0f && f3dGoldenTexHeight > 0.0f) {
+		f3dGoldenScrollS = fmodf( f3dGoldenScrollS + F3DGOLDEN_SCROLL_SPEED_S, f3dGoldenTexWidth );
+		f3dGoldenScrollT = fmodf( f3dGoldenScrollT + F3DGOLDEN_SCROLL_SPEED_T, f3dGoldenTexHeight );
+	}
+}
+
 static inline s32 F3DGOLDEN_SignExtend( s32 v, s32 bits )
 {
 	s32 shift = 32 - bits;
@@ -506,9 +526,42 @@ static void F3DGOLDEN_DrawTriangleCommand( const u32 *pData, u32 wordCount )
 	const f32 FOG_ALPHA = 0.45f;
 	// Slightly darken the decoded shade colour because it felt off before
 	const f32 FOG_DARKEN = 0.8f;
-	f32 color[4] = { rf * FOG_DARKEN, gf * FOG_DARKEN, bf * FOG_DARKEN, FOG_ALPHA };
 
-	OGL_DrawRect( (int) minX, (int) minY, (int) maxX, (int) maxY, color );
+	f32 whiteness = rf;
+	if (gf < whiteness) whiteness = gf;
+	if (bf < whiteness) whiteness = bf;
+	const f32 WHITE_ALPHA_REDUCTION = 0.5f;
+	const f32 WHITE_DARKEN_EXTRA = 0.35f;
+	f32 fogAlpha = FOG_ALPHA * (1.0f - whiteness * WHITE_ALPHA_REDUCTION);
+	f32 fogDarken = FOG_DARKEN * (1.0f - whiteness * WHITE_DARKEN_EXTRA);
+
+	f32 color[4] = { rf * fogDarken, gf * fogDarken, bf * fogDarken, fogAlpha };
+
+	if (textured)
+	{
+		// Sample a small, fixed-size sub-window of the cloud/water texture and stretch it evenly across the whole visible rect
+		f32 rectWidth = maxX - minX;
+		f32 rectHeight = maxY - minY;
+		if (rectWidth < 1.0f) rectWidth = 1.0f;
+		if (rectHeight < 1.0f) rectHeight = 1.0f;
+
+		f32 dsdx = F3DGOLDEN_SCROLL_WINDOW / rectWidth;
+		f32 dtdy = F3DGOLDEN_SCROLL_WINDOW / rectHeight;
+
+		// Fog and texture are baked into this single draw
+		gDPTextureRectangle( minX, minY, maxX, maxY, gSP.texture.tile, f3dGoldenScrollS, f3dGoldenScrollT, dsdx, dtdy, color );
+
+		// Grab the real texture size now
+		if (combiner.usesT0 && cache.current[0])
+		{
+			f3dGoldenTexWidth = (f32) cache.current[0]->width;
+			f3dGoldenTexHeight = (f32) cache.current[0]->height;
+		}
+	}
+	else
+	{
+		OGL_DrawRect( (int) minX, (int) minY, (int) maxX, (int) maxY, color );
+	}
 }
 
 static void F3DGOLDEN_BeginTriangleCommand( u32 w1 )

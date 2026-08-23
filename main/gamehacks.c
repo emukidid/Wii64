@@ -169,6 +169,10 @@ void hack_dukenukem() {
 	// NOP
 }
 
+void hack_scars() {
+	// NOP
+}
+
 #ifndef RICE_GFX
 // Pilot Wings 64 (U)
 void hack_pilotwings_u() {
@@ -380,6 +384,11 @@ void GameSpecificHackSetup() {
 	}
 	else if(curCRC[0] == 0x1AA05AD5 && curCRC[1] == 0x46F52D80) {
 		game_specific_hack = &hack_pilotwings_e;
+		restore_count_per_op();
+	}
+	else if((curCRC[0] == 0x918E2D60 && curCRC[1] == 0xF865683E) ||
+			(curCRC[0] == 0x769147F3 && curCRC[1] == 0x2033C10E)) {
+		game_specific_hack = &hack_scars;
 		restore_count_per_op();
 	}
 #endif
