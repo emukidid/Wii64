@@ -386,12 +386,12 @@ void GameSpecificHackSetup() {
 		game_specific_hack = &hack_pilotwings_e;
 		restore_count_per_op();
 	}
+#endif
 	else if((curCRC[0] == 0x918E2D60 && curCRC[1] == 0xF865683E) ||
 			(curCRC[0] == 0x769147F3 && curCRC[1] == 0x2033C10E)) {
 		game_specific_hack = &hack_scars;
 		restore_count_per_op();
 	}
-#endif
 	else if(strncmp((char *)ROM_HEADER.Name, "THE LEGEND OF ZELDA", 19) == 0) {
 		zelda_subscreen_address = 0;
         if (curCRC[0] == 0xEC7011B7 && curCRC[1] == 0x7616D72B) {

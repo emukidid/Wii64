@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "stdafx.h"
+extern "C" {
+#include "../main/gamehacks.h"
+};
 
 //static BOOL g_bHiliteRGBAHack = FALSE;
 
@@ -403,6 +406,13 @@ void CColorCombiner::UpdateCombiner(uint32 dwMux0, uint32 dwMux1)
         m_DecodedMuxList.clear();
     }
 #endif
+
+    if( GetGameSpecificHack() == &hack_scars && dwMux0 == 0x00127E61 && dwMux1 == 0xF0FFF83E )
+    {
+        // S.C.A.R.S red track fix/hack, reuse a mux already used elsewhere in this ROM to fix the pinned red issue.
+        dwMux0 = 0x00127FFF;
+        dwMux1 = 0xFFFFF238;
+    }
 
     DecodedMux &m_decodedMux = *m_pDecodedMux;
     if( m_decodedMux.m_dwMux0 != dwMux0 || m_decodedMux.m_dwMux1 != dwMux1 )
