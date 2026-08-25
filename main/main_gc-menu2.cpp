@@ -536,6 +536,7 @@ static void gfx_info_init(void){
 	gfx_info.VI_V_BURST_REG = &(vi_register.vi_v_burst);
 	gfx_info.VI_X_SCALE_REG = &(vi_register.vi_x_scale);
 	gfx_info.VI_Y_SCALE_REG = &(vi_register.vi_y_scale);
+	gfx_info.SP_STATUS_REG = &(sp_register.sp_status_reg);
 	gfx_info.CheckInterrupts = check_interupt;
 	initiateGFX(gfx_info);
 }

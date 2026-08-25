@@ -41,6 +41,8 @@ struct N64Regs
 	unsigned long *VI_V_BURST;
 	unsigned long *VI_X_SCALE;
 	unsigned long *VI_Y_SCALE;
+
+	unsigned long *SP_STATUS;
 };
 
 extern N64Regs REG;

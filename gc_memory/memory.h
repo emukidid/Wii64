@@ -109,6 +109,7 @@ typedef struct _SP_register
    unsigned long sp_dma_full_reg;
    unsigned long sp_dma_busy_reg;
    unsigned long sp_semaphore_reg;
+   int sp_task_pending;
 } SP_register;
 
 typedef struct _RSP_register
@@ -154,6 +155,7 @@ typedef struct _DPC_register
    unsigned long dpc_bufbusy;
    unsigned long dpc_pipebusy;
    unsigned long dpc_tmem;
+   int do_on_unfreeze; // DELAY_DP_INT / DELAY_UPDATESCREEN
 } DPC_register;
 
 typedef struct _DPS_register
@@ -447,7 +449,7 @@ void write_pifb();
 void write_pifh();
 void write_pifd();
 
-void do_SP_Task(int delayedDP, int cycles);
+void do_SP_task();
 void update_SP();
 void update_DPC();
 

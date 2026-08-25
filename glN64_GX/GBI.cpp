@@ -375,6 +375,7 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 	current->dataAddress = uc_dstart;
 	current->dataSize = uc_dsize;
 	current->NoN = FALSE;
+	current->combineMatrices = FALSE;
 	current->type = F3D;
 
 	// See if we can identify it by CRC
@@ -446,7 +447,10 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 					else if (uc_str[28] == '1')
 						type = F3DEX;
 					else if (uc_str[31] == '2')
+					{
 						type = F3DEX2;
+						current->combineMatrices = (uc_str[35] == 'H');
+					}
 				}
 				else if (strncmp( &uc_str[14], "L3D", 3 ) == 0)
 				{

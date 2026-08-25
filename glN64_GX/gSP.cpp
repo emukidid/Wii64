@@ -112,7 +112,7 @@ void gSPLoadUcodeEx( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 #endif
 }
 
-void gSPCombineMatrices()
+static void _gSPCombineMatrices()
 {
 	CopyMatrix( gSP.matrix.combined, gSP.matrix.projection );
 	MultMatrix( gSP.matrix.combined, gSP.matrix.modelView[gSP.matrix.modelViewi] );
@@ -139,13 +139,19 @@ void gSPCombineMatrices()
 #endif //__GX__
 }
 
+void gSPCombineMatrices( u32 mode )
+{
+	if (mode == 1)
+		_gSPCombineMatrices();
+}
+
 void gSPProcessVertex( u32 v )
 {
 	f32 intensity;
 	f32 r, g, b;
 
 	if (gSP.changed & CHANGED_MATRIX)
-		gSPCombineMatrices();
+		_gSPCombineMatrices();
 
 	// Point lighting (Zelda OOT/MM) needs the vertex's eye-space position,
 	// which requires the pre-projection object-space coordinates. Better save
@@ -946,6 +952,7 @@ void gSPDisplayList( u32 dl )
 #endif
 		RSP.PCi++;
 		RSP.PC[RSP.PCi] = address;
+		RSP.nextCmd = _SHIFTR( *(u32*)&RDRAM[address], 24, 8 );
 	}
 #ifdef DEBUG
 	else
@@ -1034,11 +1041,15 @@ void gSPBranchList( u32 dl )
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPBranchList( 0x%08X );\n",
 		dl );
 #endif
-	if(address == RSP.PC[RSP.PCi]-8) {	// Gauntlet Legends fix
+	if(address == RSP.PC[RSP.PCi]-8) {	// Gauntlet Legends fix, display list branches to itself to idle the RSP
+		RSP.infloop = TRUE;
+		RSP.PC[RSP.PCi] -= 8;
+		RSP.halt = TRUE;
 		return;
 	}
 	else {
 		RSP.PC[RSP.PCi] = address;
+		RSP.nextCmd = _SHIFTR( *(u32*)&RDRAM[address], 24, 8 );
 	}
 }
 
@@ -1086,6 +1097,41 @@ void gSPBranchLessW( u32 branchdl, u32 vtx, f32 wval )
 		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPBranchLessW( 0x%08X, %i, %i );\n",
 			branchdl, vtx, wval );
 #endif
+}
+
+void gSPDlistCount( u32 count, u32 v )
+{
+	u32 address = RSP_SegmentToPhysical( v );
+
+	if ((address == 0) || ((address + 8) > RDRAMSize))
+	{
+#ifdef DEBUG
+		DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// Attempting to branch to display list at invalid address\n" );
+		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPDlistCount( %i, 0x%08X );\n",
+			count, v );
+#endif
+		return;
+	}
+
+	if (RSP.PCi >= (GBI.PCStackSize - 1))
+	{
+#ifdef DEBUG
+		DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// ** DL stack overflow **\n" );
+		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPDlistCount( %i, 0x%08X );\n",
+			count, v );
+#endif
+		return;
+	}
+
+#ifdef DEBUG
+	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPDlistCount( %i, 0x%08X );\n",
+		count, v );
+#endif
+
+	RSP.PCi++;								// go to the next PC in the stack
+	RSP.PC[RSP.PCi] = address;				// jump to the address
+	RSP.nextCmd = _SHIFTR( *(u32*)&RDRAM[address], 24, 8 );
+	RSP.count = count + 1;
 }
 
 void gSPSetDMAOffsets( u32 mtxoffset, u32 vtxoffset )
@@ -1348,7 +1394,7 @@ void gSPInsertMatrix( u32 where, u32 num )
 	f32 fraction, integer;
 
 	if (gSP.changed & CHANGED_MATRIX)
-		gSPCombineMatrices();
+		_gSPCombineMatrices();
 
 	if ((where & 0x3) || (where > 0x3C))
 	{

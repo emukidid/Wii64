@@ -149,6 +149,8 @@ void dma_pi_read()
 	// Not that it matters, but actual N64 hardware will repeat pi_dram_addr_reg>>16 
 	// over the unmapped ROM region past the end of ROM, which we don't do.
 	dma_length = (pi_register.pi_rd_len_reg & UINT32_C(0x00ffffff)) + 1;
+	// The PI treats the first 128 bytes of a transfer differently
+	if (dma_length >= 0x7f && (dma_length & 1)) dma_length += 1;
 	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
 	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEMMASK ?
@@ -219,6 +221,11 @@ void dma_pi_write()
 	// Not that it matters, but actual N64 hardware will repeat pi_dram_addr_reg>>16 
 	// over the unmapped ROM region past the end of ROM, which we don't do.
 	dma_length = (pi_register.pi_wr_len_reg & UINT32_C(0x00ffffff)) + 1;
+	// Another "first 128 bytes" PI quirk
+	if (dma_length >= 0x7f && (dma_length & 1)) dma_length += 1;
+	if (dma_length <= 0x80)
+		dma_length = dma_length >= (pi_register.pi_dram_addr_reg & 0x7) ?
+					 dma_length - (pi_register.pi_dram_addr_reg & 0x7) : 0;
 	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
 	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEMMASK ?
@@ -274,25 +281,65 @@ void dma_pi_write()
 void dma_sp_write()
 {
 	unsigned char *spMemType = (unsigned char*)SP_DMEM;
+	unsigned long length, count, skip, memaddr, dramaddr, i, memoff, chunk;
+
 	if ((sp_register.sp_mem_addr_reg & 0x1000) > 0)
 	{
 		spMemType = (unsigned char*)SP_IMEM;
 	}
-	memcpy(	&spMemType[((sp_register.sp_mem_addr_reg & 0xFF8))^S8],
-			&rdramb[((sp_register.sp_dram_addr_reg & 0xFFFFF8))^S8],
-			((sp_register.sp_rd_len_reg & 0xFFF)+1));
+
+	length   = ((sp_register.sp_rd_len_reg & 0xFFF) | 7) + 1;
+	count    = ((sp_register.sp_rd_len_reg >> 12) & 0xFF) + 1;
+	skip     = (sp_register.sp_rd_len_reg >> 20) & 0xFFF;
+	memaddr  = sp_register.sp_mem_addr_reg & 0xFF8;
+	dramaddr = sp_register.sp_dram_addr_reg & 0xFFFFF8;
+
+	for (i = 0; i < count; i++)
+	{
+		memoff = memaddr & 0xFFF;
+		chunk = (0x1000 - memoff < length) ? (0x1000 - memoff) : length;
+		memcpy(&spMemType[memoff^S8], &rdramb[dramaddr^S8], chunk);
+		if (chunk < length)
+			memcpy(&spMemType[0^S8], &rdramb[(dramaddr+chunk)^S8], length-chunk);
+		memaddr  += length;
+		dramaddr += length + skip;
+	}
+
+	sp_register.sp_mem_addr_reg  = memaddr & 0xFFF;
+	sp_register.sp_dram_addr_reg = dramaddr & 0xFFFFFF;
+	sp_register.sp_rd_len_reg    = 0xFF8;
 }
 
 void dma_sp_read()
 {
 	unsigned char *spMemType = (unsigned char*)SP_DMEM;
+	unsigned long length, count, skip, memaddr, dramaddr, i, memoff, chunk;
+
 	if ((sp_register.sp_mem_addr_reg & 0x1000) > 0)
 	{
 		spMemType = (unsigned char*)SP_IMEM;
 	}
-	memcpy(	&rdramb[((sp_register.sp_dram_addr_reg & 0xFFFFF8))^S8],
-			&spMemType[((sp_register.sp_mem_addr_reg & 0xFF8))^S8],
-			((sp_register.sp_wr_len_reg & 0xFFF)+1));
+
+	length   = ((sp_register.sp_wr_len_reg & 0xFFF) | 7) + 1;
+	count    = ((sp_register.sp_wr_len_reg >> 12) & 0xFF) + 1;
+	skip     = (sp_register.sp_wr_len_reg >> 20) & 0xFFF;
+	memaddr  = sp_register.sp_mem_addr_reg & 0xFF8;
+	dramaddr = sp_register.sp_dram_addr_reg & 0xFFFFF8;
+
+	for (i = 0; i < count; i++)
+	{
+		memoff = memaddr & 0xFFF;
+		chunk = (0x1000 - memoff < length) ? (0x1000 - memoff) : length;
+		memcpy(&rdramb[dramaddr^S8], &spMemType[memoff^S8], chunk);
+		if (chunk < length)
+			memcpy(&rdramb[(dramaddr+chunk)^S8], &spMemType[0^S8], length-chunk);
+		memaddr  += length;
+		dramaddr += length + skip;
+	}
+
+	sp_register.sp_mem_addr_reg  = memaddr & 0xFFF;
+	sp_register.sp_dram_addr_reg = dramaddr & 0xFFFFFF;
+	sp_register.sp_wr_len_reg    = 0xFF8;
 }
 
 void dma_si_write()

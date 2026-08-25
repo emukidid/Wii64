@@ -671,9 +671,22 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 	if (gDP.loadTile->line == 0)
 		return;
 
+	void (*Interleave)( void *mem, u32 numDWords );
+
+	if (gDP.loadTile->size == G_IM_SIZ_32b)
+	{
+		line = gDP.loadTile->line << 1;
+		Interleave = QWordInterleave;
+	}
+	else
+	{
+		line = gDP.loadTile->line;
+		Interleave = DWordInterleave;
+	}
+
 	address = gDP.textureImage.address + gDP.loadTile->ult * gDP.textureImage.bpl + (gDP.loadTile->uls << gDP.textureImage.size >> 1);
 	dest = &TMEM[gDP.loadTile->tmem];
-	bpl = gDP.loadTile->line << 3;
+	bpl = line << 3;
 	height = gDP.loadTile->lrt - gDP.loadTile->ult + 1;
 	src = &RDRAM[address];
 
@@ -705,21 +718,6 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 		}
 	}
 
-	// Line given for 32-bit is half what it seems it should since they split the
-	// high and low words. I'm cheating by putting them together.
-	void (*Interleave)( void *mem, u32 numDWords );
-
-	if (gDP.loadTile->size == G_IM_SIZ_32b)
-	{
-		line = gDP.loadTile->line << 1;
-		Interleave = QWordInterleave;
-	}
-	else
-	{
-		line = gDP.loadTile->line;
-		Interleave = DWordInterleave;
-	}
-
 	for (y = 0; y < height; y++)
 	{
 #ifndef _BIG_ENDIAN
@@ -748,11 +746,13 @@ void gDPLoadBlock( u32 tile, u32 uls, u32 ult, u32 lrs, u32 dxt )
 	gDPSetTileSize( tile, uls, ult, lrs, dxt );
 	gDP.loadTile = &gDP.tiles[tile];
 
- 	u32 bytes = (lrs + 1) << gDP.loadTile->size >> 1;
+ 	u32 bytes = (((lrs - uls + 1) & 0x0FFF) << gDP.loadTile->size) >> 1;
+	if ((bytes & 7) != 0)
+		bytes = (bytes & ~7U) + 8;
 	u32 address = gDP.textureImage.address + ult * gDP.textureImage.bpl + (uls << gDP.textureImage.size >> 1);
 
-	if ((bytes == 0) || 
-		((address + bytes) > RDRAMSize) || 
+	if ((bytes == 0) ||
+		((address + bytes) > RDRAMSize) ||
 		(((gDP.loadTile->tmem << 3) + bytes) > 4096))
 	{
 #ifdef DEBUG
@@ -784,38 +784,48 @@ void gDPLoadBlock( u32 tile, u32 uls, u32 ult, u32 lrs, u32 dxt )
 	u64* src = (u64*)&RDRAM[address];
 	u64* dest = &TMEM[gDP.loadTile->tmem];
 
-	if (dxt > 0)
+#ifndef _BIG_ENDIAN
+	UnswapCopy( src, dest, bytes );
+#else // !_BIG_ENDIAN
+	memcpy( dest, src, bytes );
+#endif // _BIG_ENDIAN
+
+	if (dxt != 0)
 	{
 		void (*Interleave)( void *mem, u32 numDWords );
-
-		u32 line = (2047 + dxt) / dxt;
-		u32 bpl = line << 3;
-		u32 height = bytes / bpl;
 
 		if (gDP.loadTile->size == G_IM_SIZ_32b)
 			Interleave = QWordInterleave;
 		else
 			Interleave = DWordInterleave;
 
-		for (u32 y = 0; y < height; y++)
+		u32 tmemAddr = gDP.loadTile->tmem;
+		u32 qwords = bytes >> 3;
+		u32 dxtCounter = 0;
+		u32 line = 0;
+		while (true)
 		{
-#ifndef _BIG_ENDIAN
-			UnswapCopy( src, dest, bpl );
-#else // !_BIG_ENDIAN
-			memcpy( dest, src, bpl );
-#endif // _BIG_ENDIAN
-			if (y & 1) Interleave( dest, line );
-
-			src += line;
-			dest += line;
+			do
+			{
+				++tmemAddr;
+				if (--qwords == 0)
+					goto end_dxt;
+				dxtCounter += dxt;
+			} while ((dxtCounter & 0x800) == 0);
+			do
+			{
+				++line;
+				if (--qwords == 0)
+					goto end_dxt;
+				dxtCounter += dxt;
+			} while ((dxtCounter & 0x800) != 0);
+			Interleave( &TMEM[tmemAddr], line );
+			tmemAddr += line;
+			line = 0;
 		}
+end_dxt:
+		if (line > 0) Interleave( &TMEM[tmemAddr], line );
 	}
-	else
-#ifndef _BIG_ENDIAN
-		UnswapCopy( src, dest, bytes );
-#else // !_BIG_ENDIAN
-		memcpy( dest, src, bytes );
-#endif // _BIG_ENDIAN
 
 	gDP.textureMode = TEXTUREMODE_NORMAL;
 	gDP.loadType = LOADTYPE_BLOCK;
@@ -831,28 +841,35 @@ void gDPLoadTLUT( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 {
 	gDPSetTileSize( tile, uls, ult, lrs, lrt );
 
-    u16 count = (gDP.tiles[tile].lrs - gDP.tiles[tile].uls + 1) * (gDP.tiles[tile].lrt - gDP.tiles[tile].ult + 1);
-	u32	address = gDP.textureImage.address + gDP.tiles[tile].ult * gDP.textureImage.bpl + (gDP.tiles[tile].uls << gDP.textureImage.size >> 1);
-
-	if (gDP.tiles[tile].tmem < 0 ||
-		gDP.tiles[tile].tmem + count > 512)
-	{
+	if (gDP.tiles[tile].tmem < 256) {
+#ifdef DEBUG
+		DebugMsg(DEBUG_NORMAL | DEBUG_ERROR, "gDPLoadTLUT wrong tile tmem addr: tile[%d].tmem=%04x;\n", tile, gDP.tiles[tile].tmem);
+#endif
 		return;
 	}
-	u64 *dest = &TMEM[gDP.tiles[tile].tmem];
-	u16 *src = (u16*)&RDRAM[address];
+
+	u16 count = (u16)((gDP.tiles[tile].lrs - gDP.tiles[tile].uls + 1) * (gDP.tiles[tile].lrt - gDP.tiles[tile].ult + 1));
+	u32 address = gDP.textureImage.address + gDP.tiles[tile].ult * gDP.textureImage.bpl + (gDP.tiles[tile].uls << gDP.textureImage.size >> 1);
+	u16 pal = (u16)((gDP.tiles[tile].tmem - 256) >> 4);
+	u32 destIdx = gDP.tiles[tile].tmem << 2;
+
+	if (pal != 0)
+		count = 16;
 
 	int i = 0;
-	while (i < count)
-	{
-		for (u16 j = 0; (j < 16) && (i < count); j++, i++)
-		{
+	while (i < count) {
+		for (u16 j = 0; (j < 16) && (i < count); ++j, ++i) {
+			u64 *dest = &TMEM[((destIdx | 0x0400) & 0x07FF) >> 2];
 #ifndef _BIG_ENDIAN
-			*dest++ = swapword( src[i^1] );
+			*dest = (u64) swapword( *(u16*)(RDRAM + (address ^ 2)) );
 #else // !_BIG_ENDIAN
-			*dest++ = ((u64) src[i] << 48);
+			*dest = (u64) *(u16*)(RDRAM + address) << 48;
 #endif // _BIG_ENDIAN
+			address += 2;
+			destIdx += 4;
 		}
+
+		pal = (pal + 1) & 0x0F;
 	}
 
 	gDP.changed |= CHANGED_TMEM;

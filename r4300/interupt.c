@@ -295,14 +295,12 @@ void init_interupt()
 {
   SPECIAL_done = 1;
   r4300.next_vi = r4300.next_interrupt = 5000;
-  vi_register.vi_delay = r4300.next_vi;
   r4300.vi_field = 0;
   if (qbase != NULL) free(qbase);
   qbase = (interupt_queue *) malloc(sizeof(interupt_queue) * QUEUE_SIZE );
   memset(qbase,0,sizeof(interupt_queue) * QUEUE_SIZE );
   qstackindex=0;
   clear_queue();
-  add_interupt_event_count(VI_INT, r4300.next_vi);
   add_interupt_event_count(SPECIAL_INT, 0);
 }
 
@@ -388,25 +386,23 @@ void gen_interupt()
       return;
     break;
     case VI_INT:
-			updateScreen();
+			// If the DP is still frozen with a completion signal pending, this frame isn't
+			// really done yet. Defer presenting it until do_SP_task/update_DPC unfreezes
+			// and fires it for us, instead of showing a broken framw now.
+			if (dpc_register.do_on_unfreeze & DELAY_DP_INT)
+				dpc_register.do_on_unfreeze |= DELAY_UPDATESCREEN;
+			else
+				updateScreen();
 #ifdef PROFILE
       refresh_stat();
 #endif
       new_vi();
 	  
-#if 0
-	  vi_register.vi_delay = (vi_register.vi_v_sync == 0) ? 500000 : vi_register.vi_delay;
-      unsigned long next_vi = get_event(VI_INT) + vi_register.vi_delay;
-      r4300.vi_field = (vi_register.vi_status&0x40) ? 1-r4300.vi_field : 0; 
-      remove_interupt_event();
-      add_interupt_event_count(VI_INT, next_vi);
-#else
-      vi_register.vi_delay = (vi_register.vi_v_sync == 0) ? 500000 : ((vi_register.vi_v_sync + 1)*1500);
+      if (vi_register.vi_v_sync == 0) vi_register.vi_delay = 500000;
       r4300.next_vi += vi_register.vi_delay;
-      r4300.vi_field = (vi_register.vi_status&0x40) ? 1-r4300.vi_field : 0; 
+      r4300.vi_field = (vi_register.vi_status&0x40) ? 1-r4300.vi_field : 0;
       remove_interupt_event();
       add_interupt_event_count(VI_INT, r4300.next_vi);
-#endif
  
       MI_register.mi_intr_reg |= 0x08;
       if(!chk_status(1)) {
@@ -463,6 +459,28 @@ void gen_interupt()
         ai_register.ai_status &= ~0x40000000;
       }
       MI_register.mi_intr_reg |= 0x04;
+      if(!chk_status(1)) {
+        return;
+      }
+    break;
+
+    case SP_INT:
+      remove_interupt_event();
+      sp_register.sp_task_pending = 0;
+      sp_register.sp_status_reg |= 0x203; // halt | broke | taskdone
+      if (!(sp_register.sp_status_reg & 0x40)) { // interrupt-on-break not enabled
+        return;
+      }
+      MI_register.mi_intr_reg |= MI_INTR_SP;
+      if(!chk_status(1)) {
+        return;
+      }
+    break;
+
+    case DP_INT:
+      // Actually deliver the DP completion signal do_SP_task deferred
+      remove_interupt_event();
+      MI_register.mi_intr_reg |= MI_INTR_DP;
       if(!chk_status(1)) {
         return;
       }

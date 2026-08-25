@@ -48,7 +48,7 @@ typedef struct
 # endif // !__LINUX__
 #endif // RSPTHREAD
 
-	u32 PC[18], PCi, busy, halt, close, DList, uc_start, uc_dstart, cmd, nextCmd, count;
+	u32 PC[18], PCi, busy, halt, infloop, close, DList, uc_start, uc_dstart, cmd, nextCmd, count;
 } RSPInfo;
 
 extern RSPInfo RSP;

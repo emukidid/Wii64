@@ -236,56 +236,69 @@ DWORD WINAPI RSP_ThreadProc( LPVOID lpParameter )
 }
 #endif // RSPTHREAD
 
+#define SP_STATUS_HALT		0x0001
+#define SP_STATUS_BROKE		0x0002
+#define SP_STATUS_TASKDONE	0x0200
+
 void RSP_ProcessDList()
 {
-	VI_UpdateSize();
-	OGL_UpdateScale();
+	if (RSP.infloop)
+	{
+		// Resuming a display list that ended by branching to itself (e.g. Gauntlet Legends)
+		RSP.infloop = FALSE;
+		RSP.halt = FALSE;
+	}
+	else
+	{
+		VI_UpdateSize();
+		OGL_UpdateScale();
 
-	RSP.PC[0] = *(u32*)&DMEM[0x0FF0];
-	RSP.PCi = 0;
-	RSP.count = 0;
+		RSP.PC[0] = *(u32*)&DMEM[0x0FF0];
+		RSP.PCi = 0;
+		RSP.count = -1;
 
-	RSP.halt = FALSE;
-	RSP.busy = TRUE;
+		RSP.halt = FALSE;
+		RSP.busy = TRUE;
 
-	gSP.matrix.stackSize = MIN( 32, *(u32*)&DMEM[0x0FE4] >> 6 );
-	gSP.matrix.modelViewi = 0;
-	gSP.changed |= CHANGED_MATRIX;
+		gSP.matrix.stackSize = MIN( 32, *(u32*)&DMEM[0x0FE4] >> 6 );
+		gSP.matrix.modelViewi = 0;
+		gSP.changed |= CHANGED_MATRIX;
 
-	for (int i = 0; i < 4; i++)
-		for (int j = 0; j < 4; j++)
-			gSP.matrix.modelView[0][i][j] = 0.0f;
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				gSP.matrix.modelView[0][i][j] = 0.0f;
 
-	gSP.matrix.modelView[0][0][0] = 1.0f;
-	gSP.matrix.modelView[0][1][1] = 1.0f;
-	gSP.matrix.modelView[0][2][2] = 1.0f;
-	gSP.matrix.modelView[0][3][3] = 1.0f;
+		gSP.matrix.modelView[0][0][0] = 1.0f;
+		gSP.matrix.modelView[0][1][1] = 1.0f;
+		gSP.matrix.modelView[0][2][2] = 1.0f;
+		gSP.matrix.modelView[0][3][3] = 1.0f;
 
-	u32 uc_start = *(u32*)&DMEM[0x0FD0];
-	u32 uc_dstart = *(u32*)&DMEM[0x0FD8];
-	u32 uc_dsize = *(u32*)&DMEM[0x0FDC];
+		u32 uc_start = *(u32*)&DMEM[0x0FD0];
+		u32 uc_dstart = *(u32*)&DMEM[0x0FD8];
+		u32 uc_dsize = *(u32*)&DMEM[0x0FDC];
 
-	if ((uc_start != RSP.uc_start) || (uc_dstart != RSP.uc_dstart))
-		gSPLoadUcodeEx( uc_start, uc_dstart, uc_dsize );
+		if ((uc_start != RSP.uc_start) || (uc_dstart != RSP.uc_dstart))
+			gSPLoadUcodeEx( uc_start, uc_dstart, uc_dsize );
 
-	gDPSetAlphaCompare( G_AC_NONE );
-	gDPSetDepthSource( G_ZS_PIXEL );
-	gDPSetRenderMode( 0, 0 );
-	gDPSetAlphaDither( G_AD_DISABLE );
-	gDPSetColorDither( G_CD_DISABLE );
-	gDPSetCombineKey( G_CK_NONE );
-	gDPSetTextureConvert( G_TC_FILT );
-	gDPSetTextureFilter( G_TF_POINT );
-	gDPSetTextureLUT( G_TT_NONE );
-	gDPSetTextureLOD( G_TL_TILE );
-	gDPSetTextureDetail( G_TD_CLAMP );
-	gDPSetTexturePersp( G_TP_PERSP );
-	gDPSetCycleType( G_CYC_1CYCLE );
-	gDPPipelineMode( G_PM_NPRIMITIVE );
+		gDPSetAlphaCompare( G_AC_NONE );
+		gDPSetDepthSource( G_ZS_PIXEL );
+		gDPSetRenderMode( 0, 0 );
+		gDPSetAlphaDither( G_AD_DISABLE );
+		gDPSetColorDither( G_CD_DISABLE );
+		gDPSetCombineKey( G_CK_NONE );
+		gDPSetTextureConvert( G_TC_FILT );
+		gDPSetTextureFilter( G_TF_POINT );
+		gDPSetTextureLUT( G_TT_NONE );
+		gDPSetTextureLOD( G_TL_TILE );
+		gDPSetTextureDetail( G_TD_CLAMP );
+		gDPSetTexturePersp( G_TP_PERSP );
+		gDPSetCycleType( G_CYC_1CYCLE );
+		gDPPipelineMode( G_PM_NPRIMITIVE );
 
 #ifdef __GX__
-	OGL_GXinitDlist();
+		OGL_GXinitDlist();
 #endif //__GX__
+	}
 
 	while (!RSP.halt)
 	{
@@ -328,9 +341,24 @@ void RSP_ProcessDList()
 #endif
 
 		RSP.PC[RSP.PCi] += 8;
-		RSP.nextCmd = _SHIFTR( *(u32*)&RDRAM[RSP.PC[RSP.PCi]], 24, 8 );
+		{
+			u32 pci = RSP.PCi;
+			if (RSP.count == 1)
+				--pci;
+			RSP.nextCmd = _SHIFTR( *(u32*)&RDRAM[RSP.PC[pci]], 24, 8 );
+		}
 
 		GBI.cmd[RSP.cmd]( w0, w1 );
+
+		if (RSP.count != 0xFFFFFFFF)
+		{
+			--RSP.count;
+			if (RSP.count == 0)
+			{
+				RSP.count = (u32)-1;
+				--RSP.PCi;
+			}
+		}
 	}
 
 /*	if (OGL.frameBufferTextures && gDP.colorImage.changed)
@@ -338,6 +366,12 @@ void RSP_ProcessDList()
 		FrameBuffer_SaveBuffer( gDP.colorImage.address, gDP.colorImage.size, gDP.colorImage.width, gDP.colorImage.height );
 		gDP.colorImage.changed = FALSE;
 	}*/
+
+	if (RSP.infloop && REG.SP_STATUS)
+	{
+		*REG.SP_STATUS &= ~(SP_STATUS_TASKDONE | SP_STATUS_HALT | SP_STATUS_BROKE);
+		return;
+	}
 
 	RSP.busy = FALSE;
 	RSP.DList++;
@@ -379,6 +413,7 @@ void RSP_Init()
 
 	RSP.DList = 0;
 	RSP.uc_start = RSP.uc_dstart = 0;
+	RSP.infloop = FALSE;
 
 	gDP.loadTile = &gDP.tiles[7];
 	gSP.textureTile[0] = &gDP.tiles[0];

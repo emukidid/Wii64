@@ -294,6 +294,8 @@ EXPORT BOOL CALL InitiateGFX (GFX_INFO Gfx_Info)
 	REG.VI_X_SCALE = Gfx_Info.VI_X_SCALE_REG;
 	REG.VI_Y_SCALE = Gfx_Info.VI_Y_SCALE_REG;
 
+	REG.SP_STATUS = Gfx_Info.SP_STATUS_REG;
+
 	CheckInterrupts = Gfx_Info.CheckInterrupts;
 
 	return TRUE;

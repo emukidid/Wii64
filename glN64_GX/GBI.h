@@ -818,6 +818,7 @@ struct MicrocodeInfo
 	u32 NoN;
 	u32 crc;
 	u32 *text;
+	u32 combineMatrices; // some F3DEX2 overload G_SPECIAL_1 for this instead of gSPDlistCount
 
 	MicrocodeInfo *higher, *lower;
 };

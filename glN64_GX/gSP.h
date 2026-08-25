@@ -120,6 +120,7 @@ extern gSPInfo gSP;
 void gSPLoadUcodeEx( u32 uc_start, u32 uc_dstart, u16 uc_dsize );
 void gSPNoOp();
 void gSPMatrix( u32 matrix, u8 param );
+void gSPCombineMatrices( u32 mode );
 void gSPDMAMatrix( u32 matrix, u8 index, u8 multiply );
 void gSPViewport( u32 v );
 void gSPForceMatrix( u32 mptr );
@@ -134,6 +135,7 @@ void gSPDMADisplayList( u32 dl, u32 n );
 void gSPBranchList( u32 dl );
 void gSPBranchLessZ( u32 branchdl, u32 vtx, f32 zval );
 void gSPBranchLessW( u32 branchdl, u32 vtx, f32 wval );
+void gSPDlistCount( u32 count, u32 v );
 void gSPSprite2DBase( u32 base );
 void gSP1Triangle( s32 v0, s32 v1, s32 v2 );
 void gSP2Triangles( s32 v00, s32 v01, s32 v02,

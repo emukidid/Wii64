@@ -21,8 +21,9 @@
 #include <math.h>
 #include "Gui.h"
 #include "GraphicsGX.h"
+#include "IPLFont.h"
 #include "../main/wii64config.h"
-
+#include "../r4300/r4300.h"
 #ifdef HW_RVL
 #include "../gc_memory/MEM2.h"
 #endif
@@ -572,6 +573,24 @@ void Graphics::setInGameVMode() {
 	VIDEO_Flush ();
 	// Set deflicker
 	//GX_SetCopyFilter(vmode->aa,vmode->sample_pattern,deflicker ? GX_TRUE : GX_FALSE,vmode->vfilter);
+
+	if(r4300.pc == 0xa4000040) {
+		GXColor fontColor = {150, 255, 150, 255};
+		IplFont::getInstance().drawInit(fontColor);
+
+		for (int i = 0; i < 2; i++)
+		{
+			clearEFB((GXColor){0, 0, 0, 0xFF}, GX_MAX_Z24);
+			IplFont::getInstance().drawString(50,50,"Booting...", 0.5, true);
+			GX_DrawDone();
+			GX_CopyDisp(xfb[which_fb], GX_TRUE);
+			GX_Flush();
+			VIDEO_SetNextFramebuffer(xfb[which_fb]);
+			VIDEO_Flush();
+			VIDEO_WaitVSync();
+			which_fb ^= 1;
+		}
+	}
 }
 
 GXRModeObj* Graphics::getVmode() {

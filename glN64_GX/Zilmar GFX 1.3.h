@@ -83,6 +83,8 @@ typedef struct {
 	DWORD * VI_X_SCALE_REG;
 	DWORD * VI_Y_SCALE_REG;
 
+	DWORD * SP_STATUS_REG;
+
 	void (*CheckInterrupts)( void );
 } GFX_INFO;
 
