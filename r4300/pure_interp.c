@@ -542,7 +542,7 @@ static void BLTZ()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -572,7 +572,7 @@ static void BGEZ()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -602,7 +602,7 @@ static void BLTZL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -635,7 +635,7 @@ static void BGEZL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -671,7 +671,7 @@ static void BLTZAL()
 		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
-			 Count += (skip & 0xFFFFFFFC);
+			 Count += (skip - (skip % (count_per_op << 1)));
 			 return;
 		      }
 		 }
@@ -706,7 +706,7 @@ static void BGEZAL()
 		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
-			 Count += (skip & 0xFFFFFFFC);
+			 Count += (skip - (skip % (count_per_op << 1)));
 			 return;
 		      }
 		 }
@@ -741,7 +741,7 @@ static void BLTZALL()
 		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
-			 Count += (skip & 0xFFFFFFFC);
+			 Count += (skip - (skip % (count_per_op << 1)));
 			 return;
 		      }
 		 }
@@ -779,7 +779,7 @@ static void BGEZALL()
 		    skip = r4300.next_interrupt - Count;
 		    if (skip > 3)
 		      {
-			 Count += (skip & 0xFFFFFFFC);
+			 Count += (skip - (skip % (count_per_op << 1)));
 			 return;
 		      }
 		 }
@@ -1278,7 +1278,7 @@ static void BC1F()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -1307,7 +1307,7 @@ static void BC1T()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -1336,7 +1336,7 @@ static void BC1FL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -1369,7 +1369,7 @@ static void BC1TL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2261,7 +2261,7 @@ static void J()
 	     skip = r4300.next_interrupt - Count;
 	     if (skip > 3)
 	       {
-		  Count += (skip & 0xFFFFFFFC);
+		  Count += (skip - (skip % (count_per_op << 1)));
 		  return;
 	       }
 	  }
@@ -2288,7 +2288,7 @@ static void JAL()
 	     skip = r4300.next_interrupt - Count;
 	     if (skip > 3)
 	       {
-		  Count += (skip & 0xFFFFFFFC);
+		  Count += (skip - (skip % (count_per_op << 1)));
 		  return;
 	       }
 	  }
@@ -2324,7 +2324,7 @@ static void BEQ()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2355,7 +2355,7 @@ static void BNE()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2385,7 +2385,7 @@ static void BLEZ()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2415,7 +2415,7 @@ static void BGTZ()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2513,7 +2513,7 @@ static void BEQL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2551,7 +2551,7 @@ static void BNEL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2588,7 +2588,7 @@ static void BLEZL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
@@ -2625,7 +2625,7 @@ static void BGTZL()
 	       skip = r4300.next_interrupt - Count;
 	       if (skip > 3)
 		 {
-		    Count += (skip & 0xFFFFFFFC);
+		    Count += (skip - (skip % (count_per_op << 1)));
 		    return;
 		 }
 	    }
