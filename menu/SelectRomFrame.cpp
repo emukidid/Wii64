@@ -680,6 +680,7 @@ void selectRomFrame_FillPage()
 			if(dir_entries[i+(current_page*NUM_FILE_SLOTS)].attr & FILE_BROWSER_ATTR_DIR)
 			{
 				FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,50,50,255});
+				FRAME_BUTTONS[btn_ind].button->setBoxTall(false);
 				memset(fileTextures[i], 0xFF, BOXART_TEX_SIZE);
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 			}
@@ -690,13 +691,20 @@ void selectRomFrame_FillPage()
 				//			rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1);
 				//load boxart
 				BOXART_Init();
-				BOXART_LoadTexture(rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1,(char*) fileTextures[i]);
+				bool found = BOXART_LoadTexture(rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1,(char*) fileTextures[i]);
+#ifdef SHOW_DEBUG
+				if(!found) {
+					print_gecko("Boxart miss %s with CRC: %08X\r\n",&rom_headers[i+(current_page*NUM_FILE_SLOTS)].Name, rom_headers[i+(current_page*NUM_FILE_SLOTS)].CRC1);
+				}
+#endif
 				DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
+				FRAME_BUTTONS[btn_ind].button->setBoxTall(rom_headers[i+(current_page*NUM_FILE_SLOTS)].Country_code == 0x4A);
 			}
 		}
 		else
 		{
 			FRAME_BUTTONS[btn_ind].button->setLabelColor((GXColor) {255,255,255,128});
+			FRAME_BUTTONS[btn_ind].button->setBoxTall(false);
 			memset(fileTextures[i], 0xFF, BOXART_TEX_SIZE);
 			DCFlushRange(fileTextures[i], BOXART_TEX_SIZE);
 		}

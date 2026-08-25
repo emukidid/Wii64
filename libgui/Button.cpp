@@ -50,7 +50,8 @@ Button::Button(int style, char** label, float x, float y, float width, float hei
 		  boxFocusSize(2.0),
 		  clickedFunc(0),
 		  returnFunc(0),
-		  boxTexture(0)
+		  boxTexture(0),
+		  boxTall(false)
 {
 						//Focus color			Inactive color		  Active color			Selected color		  Label color
 	GXColor colors[5] = {{ 89,  89, 133, 190}, {255, 255, 255,  70}, { 65,  65,  65, 130}, {255, 255, 255, 255}, {255, 255, 255, 255}};
@@ -179,6 +180,11 @@ void Button::setBoxSize(float size, float focusSize)
 	boxFocusSize = focusSize;
 }
 
+void Button::setBoxTall(bool tall)
+{
+	boxTall = tall;
+}
+
 #define SCROLL_PERIOD 4.0f
 
 void Button::drawComponent(Graphics& gfx)
@@ -268,6 +274,7 @@ void Button::drawComponent(Graphics& gfx)
 			menu::Gui::getInstance().menuBox3D->setLocation(x+width/2, y+height/2, -100.0);
 		}
 		menu::Gui::getInstance().menuBox3D->setTexture(boxTexture);
+		menu::Gui::getInstance().menuBox3D->setRotateTall(boxTall);
 		menu::Gui::getInstance().menuBox3D->setTransparency(labelColor.a);
 		menu::Gui::getInstance().menuBox3D->setVisible(true);
 		menu::Gui::getInstance().menuBox3D->draw(gfx);

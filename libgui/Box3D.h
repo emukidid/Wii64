@@ -33,6 +33,7 @@ public:
 	~Box3D();
 	void setLocation(float x, float y, float z);
 	void setEnableRotate(bool enable);
+	void setRotateTall(bool tall);
 	void setSize(float size);
 	void setMode(int mode);
 	void setTexture(u8* texture);
@@ -53,6 +54,7 @@ private:
 	float x, y, z, size;
 	float rotateAuto, rotateX, rotateY;
 	bool enableRotate;
+	bool rotateTall;
 	u8 transparency;
 	Image *activeBoxartFrontImage, *activeBoxartSpineImage, *activeBoxartBackImage;
 	Image *customBoxartFrontImage, *customBoxartSpineImage, *customBoxartBackImage;

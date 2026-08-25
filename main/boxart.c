@@ -72,13 +72,13 @@ void BOXART_DeInit()
 
 /* Pass In a CRC and a aligned buffer of size BOXART_TEX_SIZE
 	- a RGB565 image will be returned */
-void BOXART_LoadTexture(u32 CRC, char *buffer)
+bool BOXART_LoadTexture(u32 CRC, char *buffer)
 {
 	memset(buffer, 0x5A, BOXART_TEX_SIZE);
 	if(!boxartFile)
 	{
 		memcpy(buffer,&missBoxArt,missBoxArt_length);
-		return;
+		return false;
 	}
 		
 	int i = 0;
@@ -88,10 +88,11 @@ void BOXART_LoadTexture(u32 CRC, char *buffer)
 		{
 			fseek(boxartFile,boxartHeader[i+1],SEEK_SET);
 			fread(buffer, 1, BOXART_TEX_SIZE, boxartFile);
-			return;
+			return true;
 		}
 	}
 	// if we didn't find it, then return the default image
 	memcpy(buffer,&missBoxArt,missBoxArt_length);
+	return false;
 }
 #endif

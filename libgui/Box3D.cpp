@@ -87,6 +87,7 @@ Box3D::Box3D()
 		  rotateX(0),
 		  rotateY(0),
 		  enableRotate(true),
+		  rotateTall(false),
 		  transparency(255),
 		  activeBoxartFrontImage(0),
 		  activeBoxartSpineImage(0),
@@ -117,6 +118,11 @@ void Box3D::setLocation(float newX, float newY, float newZ)
 void Box3D::setEnableRotate(bool enable)
 {
 	enableRotate = enable;
+}
+
+void Box3D::setRotateTall(bool tall)
+{
+	rotateTall = tall;
 }
 
 void Box3D::setSize(float newSize)
@@ -170,11 +176,12 @@ void Box3D::updateTime(float deltaTime)
 void Box3D::drawComponent(Graphics& gfx)
 {
 	Mtx v, m, mv, mvi, tmp;            // view, model, modelview, modelview inverse, and perspective matrices
-	guVector cam = { 0.0F, 0.0F, 0.0F }, 
-		up = {0.0F, 1.0F, 0.0F}, 
+	guVector cam = { 0.0F, 0.0F, 0.0F },
+		up = {0.0F, 1.0F, 0.0F},
 		look = {0.0F, 0.0F, -1.0F},
 		axisX = {1.0F, 0.0F, 0.0F},
-		axisY = {0.0F, 1.0F, 0.0F};
+		axisY = {0.0F, 1.0F, 0.0F},
+		axisZ = {0.0F, 0.0F, 1.0F};
 	s8 stickX,stickY;
 	u8 selColor = 0;
 
@@ -201,20 +208,28 @@ void Box3D::drawComponent(Graphics& gfx)
 	// move the logo out in front of us and rotate it
 	guMtxIdentity (m);
 	{
+		if(rotateTall)
+		{
+			guMtxRotAxisDeg (tmp, &axisZ, 90);			//rotate left 90deg for tall (JP) boxart
+			guMtxConcat (m, tmp, m);
+		}
 //		guMtxRotAxisDeg (tmp, &axisX, 25);			//change to isometric view
 //		guMtxConcat (m, tmp, m);
 		guMtxRotAxisDeg (tmp, &axisX, 180);			//flip rightside-up
 		guMtxConcat (m, tmp, m);
 		if(enableRotate)
 		{
-			guMtxRotAxisDeg (tmp, &axisX, -rotateY);
+			guVector *tiltAxis = rotateTall ? &axisY : &axisX;
+			guVector *spinAxis = rotateTall ? &axisX : &axisY;
+			guMtxRotAxisDeg (tmp, tiltAxis, -rotateY);
 			guMtxConcat (m, tmp, m);
-			guMtxRotAxisDeg (tmp, &axisY, rotateX);
+			guMtxRotAxisDeg (tmp, spinAxis, rotateTall ? -rotateX : rotateX);
 			guMtxConcat (m, tmp, m);
-			guMtxRotAxisDeg (tmp, &axisY, -rotateAuto);		//slowly rotate logo
+			guMtxRotAxisDeg (tmp, spinAxis, -rotateAuto);		//slowly rotate logo
 			guMtxConcat (m, tmp, m);
 		}
-		guMtxScale (tmp, size, size, size);
+		float sizeAdj = rotateTall && size <= 1.6f ? 1.2f : size;
+		guMtxScale (tmp, sizeAdj, sizeAdj, sizeAdj);
 		guMtxConcat (m, tmp, m);
 	}
 	guMtxTransApply (m, m, x, y, z); //Move box to x, y, z coords

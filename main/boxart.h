@@ -20,7 +20,7 @@
 
 void BOXART_Init();
 void BOXART_DeInit();
-void BOXART_LoadTexture(u32 CRC, char *buffer);
+bool BOXART_LoadTexture(u32 CRC, char *buffer);
 
 #endif
 

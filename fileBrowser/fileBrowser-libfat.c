@@ -100,7 +100,6 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir, i
 	
 	DIR* dp = opendir( file->name );
 	if(!dp) return FILE_BROWSER_ERROR;
-	struct stat fstat;
 	fileBrowser_file *direntry = malloc(sizeof(fileBrowser_file));
 	
 	// Read each entry of the directory
@@ -112,10 +111,9 @@ int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir, i
 		// Create a temporary entry for this directory entry.
 		memset(direntry, 0, sizeof(fileBrowser_file));
 		sprintf(direntry->name, "%s/%s", file->name, entry->d_name);
-		stat(direntry->name,&fstat);
 		direntry->offset = 0;
-		direntry->size   = fstat.st_size;
-		direntry->attr   = (fstat.st_mode & _IFDIR) ?
+		direntry->size   = entry->d_stat.st_size;
+		direntry->attr   = (entry->d_type == DT_DIR) ?
 							FILE_BROWSER_ATTR_DIR : 0;
 		
 		// If recursive, search all directories

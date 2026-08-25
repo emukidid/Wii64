@@ -57,6 +57,7 @@ public:
 	void setSelectedFocusImage(Image *image);
 	void setBoxTexture(u8* texture);
 	void setBoxSize(float size, float focusSize);
+	void setBoxTall(bool tall);
 	void updateTime(float deltaTime);
 	void drawComponent(Graphics& gfx);
 	Component* updateFocus(int direction, int buttonsPressed);
@@ -94,6 +95,7 @@ private:
 	GXColor	focusColor, inactiveColor, activeColor, selectedColor, labelColor;
 	ButtonFunc clickedFunc, returnFunc;
 	u8*	boxTexture;
+	bool boxTall;
 
 };
 

@@ -144,14 +144,10 @@ void Gui::draw()
 			}
 #endif
 			if(shutdown==1)	//Power off System
-				SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+				SYS_ResetSystem(SYS_POWEROFF, 0, FALSE);
 			else			//Return to Loader
 			{
-#ifdef WII
 				exit(0);
-#endif
-				void (*rld)() = (void (*)()) 0x80001800;
-				rld();
 			}
 		}
 

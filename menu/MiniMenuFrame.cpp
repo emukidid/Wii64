@@ -326,6 +326,7 @@ void Func_MMRefreshStateInfo()
 	savestates_select_slot(which_slot);
 	FRAME_STRINGS[8][5] = which_slot + '0';
 	FRAME_STRINGS[2][11] = which_slot + '0';
+	FRAME_BUTTONS[7].button->setBoxTall(hasLoadedROM && ROM_HEADER.Country_code == 0x4A);
 	if(!hasLoadedROM)
 	{ //Clear State FB Image
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_STATE_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
