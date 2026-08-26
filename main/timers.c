@@ -62,19 +62,29 @@ void InitTimer(void) {
 extern unsigned int usleep(unsigned int us);
 typedef void (*GameSpecificHack) (void);
 
+// To handle a ucode that yields part-way through a display list
+static int Dlist_Incomplete = 0;
+
+void dlist_incomplete(void) {
+	Dlist_Incomplete = 1;
+}
+
 void new_frame(void) {
 	DWORD CurrentFPSTime;
 	static DWORD CounterTime;
 	static int Fps_Counter=0;
-	
+	const int dlistCompleted = !Dlist_Incomplete;
+	Dlist_Incomplete = 0;
+
 	if (r4300.stop) {
 		CounterTime = ticks_to_microsecs(gettick());
 		Fps_Counter = 0;
 		return;
 	}
-	
+
 	//if (!Config.showFPS) return;
-	Fps_Counter++;
+	if (dlistCompleted)
+		Fps_Counter++;
 	Timers.frameDrawn = 1;
 	
 	CurrentFPSTime = ticks_to_microsecs(gettick());

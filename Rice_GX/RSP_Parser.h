@@ -673,6 +673,9 @@ extern DListStack   gDlistStack[MAX_DL_STACK_SIZE];
 
 extern int              gDlistStackPointer;
 
+extern bool             g_RSPhalt;
+extern bool             g_RSPinfloop;
+
 void DLParser_Init();
 void RDP_GFX_Reset();
 void RDP_Cleanup();

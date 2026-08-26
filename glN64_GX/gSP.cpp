@@ -1567,6 +1567,12 @@ void gSPPerspNormalize( u16 scale )
 #endif
 }
 
+// From GLideN64 commit c28ea61b, "Fix for texture issues in Stunt Racer"
+bool needReplaceTex1ByTex0()
+{
+	return (gDP.otherMode.textureLOD == G_TL_LOD) && (gSP.texture.level == 0);
+}
+
 void gSPTexture( f32 sc, f32 tc, s32 level, s32 tile, s32 on )
 {
 	gSP.texture.scales = sc;
@@ -1580,7 +1586,7 @@ void gSPTexture( f32 sc, f32 tc, s32 level, s32 tile, s32 on )
 
 	gSP.texture.tile = tile;
 	gSP.textureTile[0] = &gDP.tiles[tile];
-	gSP.textureTile[1] = &gDP.tiles[(tile < 7) ? (tile + 1) : tile];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[(tile < 7) ? (tile + 1) : tile];
 
 	gSP.changed |= CHANGED_TEXTURE;
 

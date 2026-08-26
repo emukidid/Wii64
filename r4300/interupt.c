@@ -466,8 +466,8 @@ void gen_interupt()
 
     case SP_INT:
       remove_interupt_event();
-      sp_register.sp_task_pending = 0;
-      sp_register.sp_status_reg |= 0x203; // halt | broke | taskdone
+      if (!sp_register.sp_task_pending)
+        sp_register.sp_status_reg |= 0x203; // halt | broke | taskdone
       if (!(sp_register.sp_status_reg & 0x40)) { // interrupt-on-break not enabled
         return;
       }

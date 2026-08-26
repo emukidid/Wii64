@@ -246,6 +246,8 @@ RenderTextureInfo g_ZI_saves[2];
 
 DListStack  gDlistStack[MAX_DL_STACK_SIZE];
 int     gDlistStackPointer= -1;
+bool    g_RSPhalt = false;
+bool    g_RSPinfloop = false;
 
 TMEMLoadMapInfo g_tmemLoadAddrMap[0x200];   // Totally 4KB TMEM
 TMEMLoadMapInfo g_tmemInfo0;                // Info for Tmem=0
@@ -787,11 +789,22 @@ uint32 DLParser_CheckUcode(uint32 ucStart, uint32 ucDStart, uint32 ucSize, uint3
 extern int dlistMtxCount;
 extern bool bHalfTxtScale;
 
+#define SP_STATUS_HALT     0x0001
+#define SP_STATUS_BROKE    0x0002
+#define SP_STATUS_TASKDONE 0x0200
+
 void DLParser_Process(OSTask * pTask)
 {
     static int skipframe=0;
     //BOOL menuWaiting = FALSE;
 
+    if (g_RSPinfloop)
+    {
+        g_RSPinfloop = false;
+        g_RSPhalt = false;
+    }
+    else
+    {
     dlistMtxCount = 0;
     bHalfTxtScale = false;
 
@@ -820,7 +833,7 @@ void DLParser_Process(OSTask * pTask)
     }
 
     g_pOSTask = pTask;
-    
+
     DebuggerPauseCountN( NEXT_DLIST );
     struct timeval tv;
     gettimeofday(&tv, 0);
@@ -870,11 +883,12 @@ void DLParser_Process(OSTask * pTask)
     CRender::g_pRender->BeginRendering();
     CRender::g_pRender->SetViewport(0, 0, windowSetting.uViWidth, windowSetting.uViHeight, 0x3FF);
     CRender::g_pRender->SetFillMode(options.bWinFrameMode? RICE_FILLMODE_WINFRAME : RICE_FILLMODE_SOLID);
+    }
 
     try
     {
         // The main loop
-        while( gDlistStackPointer >= 0 )
+        while( gDlistStackPointer >= 0 && !g_RSPhalt )
         {
 #ifdef _DEBUG
             DEBUGGER_PAUSE_COUNT_N(NEXT_UCODE);
@@ -913,6 +927,12 @@ void DLParser_Process(OSTask * pTask)
     {
         TRACE0("Unknown exception happens in ProcessDList");
         TriggerDPInterrupt();
+    }
+
+    if (g_RSPinfloop && g_GraphicsInfo.SP_STATUS_REG)
+    {
+        *g_GraphicsInfo.SP_STATUS_REG &= ~(SP_STATUS_TASKDONE | SP_STATUS_HALT | SP_STATUS_BROKE);
+        return;
     }
 
     CRender::g_pRender->EndRendering();

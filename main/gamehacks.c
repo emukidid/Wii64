@@ -143,19 +143,6 @@ void hack_topgear_od_u() {
 	compare_hword_write_hword(0x80001B4E, 0x80001B4E, 0x0001, 0);
 }
 
-// World Driver Championship (U) //jal 8006ED70 osRecvMesg #14
-void hack_worlddriver_u() {
-	word = 0;
-	address = 0x80023FE4;
-	write_word_in_memory();
-}
-
-// World Driver Championship (E) //jal 800706D0 osRecvMesg #14
-void hack_worlddriver_e() {
-	word = 0;
-	address = 0x800241D4;
-	write_word_in_memory();
-}
 
 void hack_paperboy() {
 	// NOP
@@ -343,14 +330,7 @@ void GameSpecificHackSetup() {
 		game_specific_hack = &hack_topgear_od_u;
 		restore_count_per_op();
 	}
-	else if(curCRC[0] == 0x308DFEC8 && curCRC[1] == 0xCE2EB5F6) {
-		game_specific_hack = &hack_worlddriver_u;
-		restore_count_per_op();
-	}
-	else if(curCRC[0] == 0xAC062778 && curCRC[1] == 0xDFADFCB8) {
-		game_specific_hack = &hack_worlddriver_e;
-		restore_count_per_op();
-	}
+
 	else if((curCRC[0] == 0xAC976B38 && curCRC[1] == 0xC3A9C97A) ||
 			(curCRC[0] == 0x3E198D9E && curCRC[1] == 0xF2E1267E)) {
 		game_specific_hack = &hack_paperboy;

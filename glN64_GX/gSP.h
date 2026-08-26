@@ -157,6 +157,7 @@ void gSPLightColor( u32 lightNum, u32 packedColor );
 void gSPFogFactor( s16 fm, s16 fo );
 void gSPPerspNormalize( u16 scale );
 void gSPTexture( f32 sc, f32 tc, s32 level, s32 tile, s32 on );
+bool needReplaceTex1ByTex0();
 void gSPEndDisplayList();
 void gSPGeometryMode( u32 clear, u32 set );
 void gSPSetGeometryMode( u32 mode );

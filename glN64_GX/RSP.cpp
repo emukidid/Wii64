@@ -29,6 +29,7 @@
 #include "F3D.h"
 #include "3DMath.h"
 #include "VI.h"
+#include "../main/timers.h"
 #include "Combiner.h"
 //#include "textures.h"
 //#include "Config.h"
@@ -298,6 +299,12 @@ void RSP_ProcessDList()
 #ifdef __GX__
 		OGL_GXinitDlist();
 #endif //__GX__
+		if (GBI.current && (GBI.current->type == ZSortBOSS) && REG.SP_STATUS)
+		{
+			RSP.PC[1] = *(u32*)&DMEM[0x0FF8];
+			*REG.SP_STATUS &= ~0x300; // clear sig1 | sig2
+			*REG.SP_STATUS |= 0x800;  // set sig4
+		}
 	}
 
 	while (!RSP.halt)
@@ -370,6 +377,8 @@ void RSP_ProcessDList()
 	if (RSP.infloop && REG.SP_STATUS)
 	{
 		*REG.SP_STATUS &= ~(SP_STATUS_TASKDONE | SP_STATUS_HALT | SP_STATUS_BROKE);
+		// Didn't finish the display list, mark it as such for our D/L's counter
+		dlist_incomplete();
 		return;
 	}
 

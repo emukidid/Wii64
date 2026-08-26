@@ -32,6 +32,10 @@
 
 #include "../fileBrowser/fileBrowser.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int rom_read(fileBrowser_file*);
 int fill_header(fileBrowser_file*);
 void calculateMD5(fileBrowser_file*, unsigned char digest[16]);
@@ -80,5 +84,9 @@ void byte_swap(char* buffer, unsigned int length, int byte_swap_type);
 
 void countrycodestring(unsigned short countrycode, char *string);
 char *saveregionstr();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1161,6 +1161,12 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 #endif // __GX__
 }
 
+// Fixes for ZSortBOSS (WDC/Stunt Racer) 2D screens
+bool TextureCache_UseMirrorFixes()
+{
+	return (GBI.current != NULL) && (GBI.current->type == ZSortBOSS);
+}
+
 void TextureCache_Load( CachedTexture *texInfo )
 {
 	u8 *dest = NULL, *scaledDest;
@@ -1173,8 +1179,8 @@ void TextureCache_Load( CachedTexture *texInfo )
 
 	u64 *src;
 	u16 x, y, i, j, tx, ty, line;
-	u16 mirrorSBit, maskSMask, clampSClamp;
-	u16 mirrorTBit, maskTMask, clampTClamp;
+	u16 mirrorSBit, maskSMask, clampSClamp, postClampS;
+	u16 mirrorTBit, maskTMask, clampTClamp, postClampT;
 	GetTexelFunc	GetTexel;
 
 #ifndef __GX__
@@ -1258,7 +1264,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 #ifdef SHOW_DEBUG
 	else
 		DEBUG_print((char*)"Textures: Trying to malloc a 0 byte GX texture",DBG_TXINFO);
-#endif	
+#endif
 
 #endif // __GX__
 
@@ -1267,28 +1273,54 @@ void TextureCache_Load( CachedTexture *texInfo )
 	if (((texInfo->format == G_IM_FMT_YUV) && (texInfo->size == G_IM_SIZ_16b)) || (texInfo->size == G_IM_SIZ_32b))
 		line <<= 1;
 
+	const bool mirrorFix = TextureCache_UseMirrorFixes();
+	const u16 dataClampS = (u16)(texInfo->clampS ? texInfo->clampWidth - 1 : (texInfo->width << 1) - 1);
+	const u16 dataClampT = (u16)(texInfo->clampT ? texInfo->clampHeight - 1 : (texInfo->height << 1) - 1);
+
 	if (texInfo->maskS)
 	{
-		clampSClamp = texInfo->clampS ? texInfo->clampWidth - 1 : (texInfo->mirrorS ? (texInfo->width << 1) - 1 : texInfo->width - 1);
+		if (mirrorFix && texInfo->mirrorS)
+		{
+			clampSClamp = 0xFFFF;
+			postClampS = dataClampS;
+		}
+		else
+		{
+			clampSClamp = texInfo->clampS ? texInfo->clampWidth - 1
+				: (texInfo->mirrorS ? (u16)((texInfo->width << 1) - 1) : (u16)(texInfo->width - 1));
+			postClampS = 0xFFFF;
+		}
 		maskSMask = (1 << texInfo->maskS) - 1;
 		mirrorSBit = texInfo->mirrorS ? 1 << texInfo->maskS : 0;
 	}
 	else
 	{
 		clampSClamp = texInfo->clampS ? texInfo->clampWidth - 1 : texInfo->width - 1;
+		postClampS = 0xFFFF;
 		maskSMask = 0xFFFF;
 		mirrorSBit = 0x0000;
 	}
 
 	if (texInfo->maskT)
 	{
-		clampTClamp = texInfo->clampT ? texInfo->clampHeight - 1 : (texInfo->mirrorT ? (texInfo->height << 1) - 1: texInfo->height - 1);
+		if (mirrorFix && texInfo->mirrorT)
+		{
+			clampTClamp = 0xFFFF;
+			postClampT = dataClampT;
+		}
+		else
+		{
+			clampTClamp = texInfo->clampT ? texInfo->clampHeight - 1
+				: (texInfo->mirrorT ? (u16)((texInfo->height << 1) - 1) : (u16)(texInfo->height - 1));
+			postClampT = 0xFFFF;
+		}
 		maskTMask = (1 << texInfo->maskT) - 1;
 		mirrorTBit = texInfo->mirrorT ?	1 << texInfo->maskT : 0;
 	}
 	else
 	{
 		clampTClamp = texInfo->clampT ? texInfo->clampHeight - 1 : texInfo->height - 1;
+		postClampT = 0xFFFF;
 		maskTMask = 0xFFFF;
 		mirrorTBit = 0x0000;
 	}
@@ -1312,6 +1344,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 						ty = min(y+k, clampTClamp) & maskTMask;
 						if ((y+k) & mirrorTBit)
 							ty ^= maskTMask;
+						ty = min(ty, postClampT);
 						src = &TMEM[(texInfo->tMem + line * ty) & 0x1FF];
 						i = (ty & 1) << 1;
 						for (l = 0; l < 8; l++)
@@ -1319,6 +1352,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 							tx = min(x+l, clampSClamp) & maskSMask;
 							if ((x+l) & mirrorSBit)
 								tx ^= maskSMask;
+							tx = min(tx, postClampS);
 							((u8*)dest)[j++] = (u8) GetTexel( src, tx, i, texInfo->palette );
 						}
 					}
@@ -1340,6 +1374,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 						ty = min(y+k, clampTClamp) & maskTMask;
 						if ((y+k) & mirrorTBit)
 							ty ^= maskTMask;
+						ty = min(ty, postClampT);
 						src = &TMEM[(texInfo->tMem + line * ty) & 0x1FF];
 						i = (ty & 1) << 1;
 						for (l = 0; l < 4; l++)
@@ -1347,6 +1382,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 							tx = min(x+l, clampSClamp) & maskSMask;
 							if ((x+l) & mirrorSBit)
 								tx ^= maskSMask;
+							tx = min(tx, postClampS);
 							((u16*)dest)[j++] = (u16) GetTexel( src, tx, i, texInfo->palette );
 						}
 					}
@@ -1369,6 +1405,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 						ty = min(y+k, clampTClamp) & maskTMask;
 						if ((y+k) & mirrorTBit)
 							ty ^= maskTMask;
+						ty = min(ty, postClampT);
 						src = &TMEM[(texInfo->tMem + line * ty) & 0x1FF];
 						i = (ty & 1) << 1;
 						for (l = 0; l < 4; l++)
@@ -1376,6 +1413,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 							tx = min(x+l, clampSClamp) & maskSMask;
 							if ((x+l) & mirrorSBit)
 								tx ^= maskSMask;
+							tx = min(tx, postClampS);
 							((u16*)dest)[j] =		(u16) GetTexel( src, tx, i, 0 );	// AARR texels
 							((u16*)dest)[j+16] =	(u16) GetTexel( src, tx, i, 1 );	// GGBB texels -> next 32B block
 							j++;
@@ -1403,6 +1441,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 	
 			if (y & mirrorTBit)
 				ty ^= maskTMask;
+			ty = min(ty, postClampT);
 	
 			src = &TMEM[(texInfo->tMem + line * ty) & 0x1FF];
 	
@@ -1413,6 +1452,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 	
 				if (x & mirrorSBit)
 					tx ^= maskSMask;
+				tx = min(tx, postClampS);
 
 				if (GXsize == 1)		// 1 byte per GX texel -> GXGetIA31_IA4, GXGetI4_IA4, GXGetIA44_IA4
 					((u8*)dest)[j++] = GetTexel( src, tx, i, texInfo->palette );
@@ -1467,6 +1507,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 
 		if (y & mirrorTBit)
 			ty ^= maskTMask;
+		ty = min(ty, postClampT);
 
 		src = &TMEM[texInfo->tMem] + line * ty;
 
@@ -1477,6 +1518,7 @@ void TextureCache_Load( CachedTexture *texInfo )
 
 			if (x & mirrorSBit)
 				tx ^= maskSMask;
+			tx = min(tx, postClampS);
 
 			if (glInternalFormat == GL_RGBA8)
 				((u32*)dest)[j++] = GetTexel( src, tx, i, texInfo->palette );
@@ -1758,17 +1800,24 @@ void TextureCache_Update( u32 t )
 		return;
 	}
 
+	gSP.textureTile[t]->masks = gSP.textureTile[t]->originalMaskS;
+	gSP.textureTile[t]->maskt = gSP.textureTile[t]->originalMaskT;
+
 	maxTexels = imageFormat[gDP.otherMode.textureLUT][gSP.textureTile[t]->size][gSP.textureTile[t]->format].maxTexels;
 
 	// Here comes a bunch of code that just calculates the texture size...I wish there was an easier way...
-	tileWidth = gSP.textureTile[t]->lrs - gSP.textureTile[t]->uls + 1;
-	tileHeight = gSP.textureTile[t]->lrt - gSP.textureTile[t]->ult + 1;
+
+	// taken from GLideN64's _calcTileSizes()
+	tileWidth = ((gSP.textureTile[t]->lrs - gSP.textureTile[t]->uls) & 0x03FF) + 1;
+	tileHeight = ((gSP.textureTile[t]->lrt - gSP.textureTile[t]->ult) & 0x03FF) + 1;
+
+	const bool mirrorFix = TextureCache_UseMirrorFixes();
 
 	maskWidth = 1 << gSP.textureTile[t]->masks;
 	maskHeight = 1 << gSP.textureTile[t]->maskt;
 
-	loadWidth = gDP.loadTile->lrs - gDP.loadTile->uls + 1;
-	loadHeight = gDP.loadTile->lrt - gDP.loadTile->ult + 1;
+	loadWidth = ((gDP.loadTile->lrs - gDP.loadTile->uls) & 0x03FF) + 1;
+	loadHeight = ((gDP.loadTile->lrt - gDP.loadTile->ult) & 0x03FF) + 1;
 
 	lineWidth = gSP.textureTile[t]->line << imageFormat[gDP.otherMode.textureLUT][gSP.textureTile[t]->size][gSP.textureTile[t]->format].lineShift;
 
@@ -1777,7 +1826,36 @@ void TextureCache_Update( u32 t )
 	else
 		lineHeight = 0;
 
+
+	gDPLoadTileInfo &loadedInfo = gDP.loadInfo[gSP.textureTile[t]->tmem & 0x1FF];
+	const bool useLoadedInfo = (gDP.textureMode == TEXTUREMODE_TEXRECT) && (loadedInfo.loadType == LOADTYPE_TILE);
+
 	if (gDP.textureMode == TEXTUREMODE_TEXRECT)
+	{
+		if (gSP.textureTile[t]->tmem == gDP.loadTile->tmem)
+		{
+			if ((gDP.loadTile->loadWidth != 0) && (gDP.loadTile->masks == 0))
+				loadedInfo.width = (u16)gDP.loadTile->loadWidth;
+			if ((gDP.loadTile->loadHeight != 0) && (gDP.loadTile->maskt == 0))
+				loadedInfo.height = (u16)gDP.loadTile->loadHeight;
+		}
+		gDP.loadTile->loadWidth = gDP.loadTile->loadHeight = 0;
+	}
+
+	if (useLoadedInfo)
+	{
+		height = loadedInfo.height;
+		if (height == 0)
+			height = tileHeight;
+
+		width = (loadedInfo.texWidth != 0) ? min( (u32)loadedInfo.width, (u32)loadedInfo.texWidth ) : loadedInfo.width;
+		if (width == 0)
+			width = tileWidth;
+
+		if (mirrorFix && (lineWidth > width) && ((lineWidth * height) <= maxTexels))
+			width = lineWidth;
+	}
+	else if (gDP.textureMode == TEXTUREMODE_TEXRECT)
 	{
 		u16 texRectWidth = gDP.texRect.width - gSP.textureTile[t]->uls;
 		u16 texRectHeight = gDP.texRect.height - gSP.textureTile[t]->ult;
@@ -1856,14 +1934,15 @@ void TextureCache_Update( u32 t )
 	if (clampHeight > 256)
 		gSP.textureTile[t]->clampt = 0;
 
-	// Make sure masking is valid
-	if (maskWidth > width) 
+	// Make sure masking is valid.
+
+	if ((maskWidth > width) && !(mirrorFix && gSP.textureTile[t]->mirrors && (maskWidth <= 128)))
 	{
 		gSP.textureTile[t]->masks = powof( width );
 		maskWidth = 1 << gSP.textureTile[t]->masks;
 	}
 
-	if (maskHeight > height)
+	if ((maskHeight > height) && !(mirrorFix && gSP.textureTile[t]->mirrort && (maskHeight <= 128)))
 	{
 		gSP.textureTile[t]->maskt = powof( height );
 		maskHeight = 1 << gSP.textureTile[t]->maskt;
@@ -1968,14 +2047,14 @@ void TextureCache_Update( u32 t )
 
 	if (cache.current[t]->clampS)
 		cache.current[t]->realWidth = pow2( clampWidth );
-	else if (cache.current[t]->mirrorS)
+	else if (cache.current[t]->mirrorS && (!mirrorFix || (maskWidth <= 128)))
 		cache.current[t]->realWidth = maskWidth << 1;
 	else
 		cache.current[t]->realWidth = pow2( width );
 
 	if (cache.current[t]->clampT)
 		cache.current[t]->realHeight = pow2( clampHeight );
-	else if (cache.current[t]->mirrorT)
+	else if (cache.current[t]->mirrorT && (!mirrorFix || (maskHeight <= 128)))
 		cache.current[t]->realHeight = maskHeight << 1;
 	else
 		cache.current[t]->realHeight = pow2( height );

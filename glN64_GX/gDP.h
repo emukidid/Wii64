@@ -136,9 +136,19 @@ struct gDPTile
 
 	FrameBuffer *frameBuffer;
 	u32 maskt, masks;
+	u32 originalMaskS, originalMaskT;
 	u32 shiftt, shifts;
 	f32 fuls, fult, flrs, flrt;
 	u32 uls, ult, lrs, lrt;
+	u32 loadWidth, loadHeight;
+};
+
+// Tracks what a LoadTile actually copied into a given TMEM address
+struct gDPLoadTileInfo
+{
+	u16 width, height;
+	u16 texWidth;
+	u32 loadType;
 };
 
 struct gDPInfo
@@ -268,6 +278,7 @@ struct gDPInfo
 	gDPCombine combine;
 
 	gDPTile tiles[8], *loadTile;
+	gDPLoadTileInfo loadInfo[512];
 
 	struct
 	{
@@ -328,6 +339,7 @@ struct gDPInfo
 	struct
 	{
 		u32 width, height;
+		f32 dsdx, dtdy;
 	} texRect;
 
 	u32 changed;

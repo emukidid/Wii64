@@ -34,6 +34,7 @@
 #include "F3DFLX2.h"
 #include "F3DGOLDEN.h"
 #include "F3DZEX2.h"
+#include "ZSortBOSS.h"
 #include "Types.h"
 #include "Debug.h"
 #ifndef __LINUX__
@@ -64,6 +65,9 @@ SpecialMicrocodeInfo specialMicrocodes[] =
 	{ F3DCBFD,		TRUE,	0x99E222AC, (char*) "RSP Gfx ucode F3DEXBG.NoN fifo 2.08  Yoshitaka Yasumoto 1999 Nintendo." },
 	{ F3DEX2,		TRUE,	0x1DACFAF1, (char*) "ANIMAL FOREST" },
 	{ S2DEX2,		FALSE,	0x8E050E8E, (char*) "ANIMAL FOREST" },
+	{ ZSortBOSS,	FALSE,	0xe1932671, (char*) "World Driver Championship" },
+	{ ZSortBOSS,	FALSE,	0x9a2b06e8, (char*) "Stunt Racer 64" },
+	{ ZSortBOSS,	FALSE,	0x39799101, (char*) "World Driver Championship (Euro)" },
 };
 
 u32 G_RDPHALF_1, G_RDPHALF_2, G_RDPHALF_CONT;
@@ -545,6 +549,7 @@ void GBI_MakeCurrent( MicrocodeInfo *current )
 			case F3DFLX2:	F3DFLX2_Init();	break;
 			case F3DGOLDEN:	F3DGOLDEN_Init();	break;
 			case F3DZEX2:	F3DZEX2_Init();	break;
+			case ZSortBOSS:	ZSortBOSS_Init();	break;
 		}
 	}
 

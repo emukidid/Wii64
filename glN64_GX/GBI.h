@@ -27,7 +27,8 @@
 #define F3DFLX2		12
 #define F3DGOLDEN	13
 #define F3DZEX2		14
-#define NONE		15
+#define ZSortBOSS	15
+#define NONE		16
 
 #ifdef MAINDEF
 const char *MicrocodeTypes[] =
@@ -47,13 +48,14 @@ const char *MicrocodeTypes[] =
 	"F-Zero X",
 	"GoldenEye",
 	"Zelda OOT/MM",
+	"ZSortBOSS",
 	"None"
 };
 #else
 extern const char *MicrocodeTypes[];
 #endif
 
-static const int numMicrocodeTypes = 15;
+static const int numMicrocodeTypes = 16;
 
 
 // Fixed point conversion factors

@@ -767,10 +767,13 @@ void update_SP()
 	if ((sp_register.w_sp_status_reg & 0x1800000) == 0x1000000) // set signal 7
 		sp_register.sp_status_reg |= 0x4000;
 
-	if (!((sp_register.w_sp_status_reg & 0x3) == 0x1) &&
-		!(sp_register.w_sp_status_reg & 0x4)) return;
+
 
 	if (sp_register.sp_task_pending && get_event(SP_INT)) return;
+	if (!((sp_register.w_sp_status_reg & 0x3) == 0x1) &&
+		!(sp_register.w_sp_status_reg & 0x4) &&
+		!sp_register.sp_task_pending) return;
+
 	if (!(sp_register.sp_status_reg & 0x1)) // !halt
 		do_SP_task();
 }

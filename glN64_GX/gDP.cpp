@@ -607,8 +607,8 @@ void gDPSetTile( u32 format, u32 size, u32 line, u32 tmem, u32 tile, u32 palette
 	gDP.tiles[tile].palette = palette;
 	gDP.tiles[tile].cmt = cmt;
 	gDP.tiles[tile].cms = cms;
-	gDP.tiles[tile].maskt = maskt;
-	gDP.tiles[tile].masks = masks;
+	gDP.tiles[tile].maskt = gDP.tiles[tile].originalMaskT = maskt;
+	gDP.tiles[tile].masks = gDP.tiles[tile].originalMaskS = masks;
 	gDP.tiles[tile].shiftt = shiftt;
 	gDP.tiles[tile].shifts = shifts;
 
@@ -690,6 +690,32 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 	height = gDP.loadTile->lrt - gDP.loadTile->ult + 1;
 	src = &RDRAM[address];
 
+
+
+	// Record what this load actually put at this TMEM address
+	{
+		const u32 loadedWidth = (gDP.loadTile->lrs - gDP.loadTile->uls + 1) & 0x03FF;
+		gDPLoadTileInfo &info = gDP.loadInfo[gDP.loadTile->tmem & 0x1FF];
+		info.width = (u16)((gDP.loadTile->masks != 0) ? MIN( loadedWidth, (u32)1 << gDP.loadTile->masks ) : loadedWidth);
+		info.height = (u16)((gDP.loadTile->maskt != 0) ? MIN( height, (u32)1 << gDP.loadTile->maskt ) : height);
+		info.texWidth = (u16)gDP.textureImage.width;
+		info.loadType = LOADTYPE_TILE;
+
+		if (gDP.loadTile->masks == 0)
+			gDP.loadTile->loadWidth = MAX( gDP.loadTile->loadWidth, (u32)info.width );
+
+		if (gDP.loadTile->maskt == 0)
+		{
+			if ((gDP.otherMode.cycleType != G_CYC_2CYCLE) && (line != 0) && ((gDP.loadTile->tmem % line) == 0))
+			{
+				const u32 theight = (u32)info.height + gDP.loadTile->tmem / line;
+				gDP.loadTile->loadHeight = MAX( gDP.loadTile->loadHeight, theight );
+			}
+			else
+				gDP.loadTile->loadHeight = MAX( gDP.loadTile->loadHeight, (u32)info.height );
+		}
+	}
+
 	if (((address + height * bpl) > RDRAMSize) ||
 		(((gDP.loadTile->tmem << 3) + bpl * height) > 4096)) // Stay within TMEM
 	{
@@ -745,6 +771,8 @@ void gDPLoadBlock( u32 tile, u32 uls, u32 ult, u32 lrs, u32 dxt )
 {
 	gDPSetTileSize( tile, uls, ult, lrs, dxt );
 	gDP.loadTile = &gDP.tiles[tile];
+
+	gDP.loadInfo[gDP.loadTile->tmem & 0x1FF].loadType = LOADTYPE_BLOCK;
 
  	u32 bytes = (((lrs - uls + 1) & 0x0FFF) << gDP.loadTile->size) >> 1;
 	if ((bytes & 7) != 0)
@@ -980,7 +1008,7 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	}
 
 	gSP.textureTile[0] = &gDP.tiles[tile];
-	gSP.textureTile[1] = &gDP.tiles[tile < 7 ? tile + 1 : tile];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[tile < 7 ? tile + 1 : tile];
 
 	f32 lrs = s + (lrx - ulx - 1) * dsdx;
 	f32 lrt = t + (lry - uly - 1) * dtdy;
@@ -988,8 +1016,12 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	if (gDP.textureMode == TEXTUREMODE_NORMAL)
 		gDP.textureMode = TEXTUREMODE_TEXRECT;
 
-	gDP.texRect.width = (unsigned long)(MAX( lrs, s ) + dsdx);
-	gDP.texRect.height = (unsigned long)(MAX( lrt, t ) + dtdy);
+	f32 texRectWidthF = MAX( lrs, s ) + dsdx;
+	f32 texRectHeightF = MAX( lrt, t ) + dtdy;
+	gDP.texRect.width = (texRectWidthF > 0.0f) ? (unsigned long)texRectWidthF : 0;
+	gDP.texRect.height = (texRectHeightF > 0.0f) ? (unsigned long)texRectHeightF : 0;
+	gDP.texRect.dsdx = (dsdx < 0.0f) ? -dsdx : dsdx;
+	gDP.texRect.dtdy = (dtdy < 0.0f) ? -dtdy : dtdy;
 
 	if (lrs > s)
 	{
@@ -1007,7 +1039,7 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	}
 
 	gSP.textureTile[0] = &gDP.tiles[gSP.texture.tile];
-	gSP.textureTile[1] = &gDP.tiles[gSP.texture.tile < 7 ? gSP.texture.tile + 1 : gSP.texture.tile];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[gSP.texture.tile] : &gDP.tiles[gSP.texture.tile < 7 ? gSP.texture.tile + 1 : gSP.texture.tile];
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
 	gDP.colorImage.changed = TRUE;

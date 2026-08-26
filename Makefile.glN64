@@ -33,7 +33,8 @@ OBJ_GLN64_GX	=glN64_GX/glN64.o \
 		glN64_GX/F3DCBFD.o \
 		glN64_GX/F3DFLX2.o \
 		glN64_GX/F3DGOLDEN.o \
-		glN64_GX/F3DZEX2.o
+		glN64_GX/F3DZEX2.o \
+		glN64_GX/ZSortBOSS.o
 
 ALL_OBJ		+= $(OBJ_GLN64_GX)
 

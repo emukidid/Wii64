@@ -853,7 +853,9 @@ void RSP_GBI2_DL(Gfx *gfx)
         LOG_UCODE("    Jumping to ZeldaDisplayList 0x%08x", dwAddr);
         if( gDlistStack[gDlistStackPointer].pc == dwAddr+8 )    //Is this a loop
         {
-            //Hack for Gauntlet Legends
+            //Gauntlet Legends fix
+            g_RSPinfloop = true;
+            g_RSPhalt = true;
             gDlistStack[gDlistStackPointer].pc = dwAddr+8;
         }
         else

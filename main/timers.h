@@ -20,6 +20,8 @@ typedef struct {
 
 void InitTimer();
 
+void dlist_incomplete(void);
+
 #endif // __TIMERS_H__
 #ifdef __cplusplus
 }

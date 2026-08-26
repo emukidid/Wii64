@@ -1603,10 +1603,12 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 
 	if (combiner.usesT0)
 	{
+		const f32 edgeS0 = gDP.texRect.dsdx * cache.current[0]->shiftScaleS;
+		const f32 edgeT0 = gDP.texRect.dtdy * cache.current[0]->shiftScaleT;
 		rect[0].s0 = rect[0].s0 * cache.current[0]->shiftScaleS - gSP.textureTile[0]->fuls;
 		rect[0].t0 = rect[0].t0 * cache.current[0]->shiftScaleT - gSP.textureTile[0]->fult;
-		rect[1].s0 = (rect[1].s0 + 1.0f) * cache.current[0]->shiftScaleS - gSP.textureTile[0]->fuls;
-		rect[1].t0 = (rect[1].t0 + 1.0f) * cache.current[0]->shiftScaleT - gSP.textureTile[0]->fult;
+		rect[1].s0 = rect[1].s0 * cache.current[0]->shiftScaleS + edgeS0 - gSP.textureTile[0]->fuls;
+		rect[1].t0 = rect[1].t0 * cache.current[0]->shiftScaleT + edgeT0 - gSP.textureTile[0]->fult;
 		if ((cache.current[0]->maskS) && (fmod( rect[0].s0, cache.current[0]->width ) == 0.0f) && !(cache.current[0]->mirrorS))
 		{
 			rect[1].s0 -= rect[0].s0;
@@ -1666,8 +1668,10 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 	{
 		rect[0].s1 = rect[0].s1 * cache.current[1]->shiftScaleS - gSP.textureTile[1]->fuls;
 		rect[0].t1 = rect[0].t1 * cache.current[1]->shiftScaleT - gSP.textureTile[1]->fult;
-		rect[1].s1 = (rect[1].s1 + 1.0f) * cache.current[1]->shiftScaleS - gSP.textureTile[1]->fuls;
-		rect[1].t1 = (rect[1].t1 + 1.0f) * cache.current[1]->shiftScaleT - gSP.textureTile[1]->fult;
+		const f32 edgeS1 = gDP.texRect.dsdx * cache.current[1]->shiftScaleS;
+		const f32 edgeT1 = gDP.texRect.dtdy * cache.current[1]->shiftScaleT;
+		rect[1].s1 = rect[1].s1 * cache.current[1]->shiftScaleS + edgeS1 - gSP.textureTile[1]->fuls;
+		rect[1].t1 = rect[1].t1 * cache.current[1]->shiftScaleT + edgeT1 - gSP.textureTile[1]->fult;
 
 		if ((cache.current[1]->maskS) && (fmod( rect[0].s1, cache.current[1]->width ) == 0.0f) && !(cache.current[1]->mirrorS))
 		{
