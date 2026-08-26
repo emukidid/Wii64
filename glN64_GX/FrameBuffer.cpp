@@ -156,6 +156,10 @@ FrameBuffer *FrameBuffer_AddTop()
 
 void FrameBuffer_MoveToTop( FrameBuffer *newtop )
 {
+#ifdef __GX__
+	newtop->texture->VIcount = 0;
+#endif //__GX__
+
 	if (newtop == frameBuffer.top)
 		return;
 
@@ -175,10 +179,7 @@ void FrameBuffer_MoveToTop( FrameBuffer *newtop )
 	frameBuffer.top->higher = newtop;
 	frameBuffer.top = newtop;
 
-	TextureCache_MoveToTop( newtop->texture );
-#ifdef __GX__
-	newtop->texture->VIcount = 0;
-#endif //__GX__
+	TextureCache_MoveToTop( newtop->texture );	// VIcount already reset above
 }
 
 void FrameBuffer_Destroy()
