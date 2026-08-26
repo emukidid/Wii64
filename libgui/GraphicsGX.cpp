@@ -22,7 +22,6 @@
 #include "Gui.h"
 #include "GraphicsGX.h"
 #include "IPLFont.h"
-#include "../gui/DEBUG.h"
 #include "../main/wii64config.h"
 #include "../r4300/r4300.h"
 #ifdef HW_RVL
@@ -582,15 +581,16 @@ void Graphics::setInGameVMode() {
 		IplFont::getInstance().drawInit(fontColor);
 
 		char countryString[32];
+		char buf[200];
 		countrycodestring(ROM_HEADER.Country_code & 0xFF, countryString);
 
 		for (int i = 0; i < 2; i++)
 		{
 			clearEFB((GXColor){0, 0, 0, 0xFF}, GX_MAX_Z24);
-			sprintf(txtbuffer, "Starting ROM: [%s]", ROM_SETTINGS.goodname);
-			IplFont::getInstance().drawString(80,300,txtbuffer, 0.5, false);
-			sprintf(txtbuffer, "Region: [%s]", countryString);
-			IplFont::getInstance().drawString(80,340,txtbuffer, 0.5, false);
+			sprintf(buf, "Starting ROM: [%s]", ROM_SETTINGS.goodname);
+			IplFont::getInstance().drawString(80,300,buf, 0.5, false);
+			sprintf(buf, "Region: [%s]", countryString);
+			IplFont::getInstance().drawString(80,340,buf, 0.5, false);
 			GX_DrawDone();
 			GX_CopyDisp(xfb[which_fb], GX_TRUE);
 			GX_Flush();
