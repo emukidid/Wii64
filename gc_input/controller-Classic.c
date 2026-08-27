@@ -95,6 +95,7 @@ static button_t buttons[] = {
 static button_t analog_sources[] = {
 	{ 0, L_STICK_AS_ANALOG,  "Left Stick" },
 	{ 1, R_STICK_AS_ANALOG,  "Right Stick" },
+	{ 2, BUTTON_AS_ANALOG,   "D-Pad" },
 };
 
 static button_t menu_combos[] = {
@@ -242,6 +243,15 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 		c->X_AXIS = getStickValue(&wpad->exp.classic.rjs, maxRMag, STICK_X, 80);
 		c->Y_AXIS = getStickValue(&wpad->exp.classic.rjs, maxRMag, STICK_Y, 80);
 		//sprintf(txtbuffer,"GetKeys: ctr %d, ang %f, mag %f, max %f, posx %x, posy %x, x %d, y %d", Control, wpad->exp.classic.rjs.ang, wpad->exp.classic.rjs.mag, maxRMag, wpad->exp.classic.rjs.pos.x, wpad->exp.classic.rjs.pos.y, c->X_AXIS, c->Y_AXIS);
+	} else if(config->analog->mask == BUTTON_AS_ANALOG){
+		if(b & CLASSIC_CTRL_BUTTON_RIGHT)
+			c->X_AXIS = +80;
+		else if(b & CLASSIC_CTRL_BUTTON_LEFT)
+			c->X_AXIS = -80;
+		if(b & CLASSIC_CTRL_BUTTON_UP)
+			c->Y_AXIS = +80;
+		else if(b & CLASSIC_CTRL_BUTTON_DOWN)
+			c->Y_AXIS = -80;
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 

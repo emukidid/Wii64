@@ -563,6 +563,19 @@ void Func_ToggleAnalogStick()
 	currentButton = (currentButton+1) %virtualControllers[activePad].control->num_analog_sources;
 	currentConfig->analog = &virtualControllers[activePad].control->analog_sources[currentButton];
 	strcpy(FRAME_STRINGS[19], currentConfig->analog->name);
+
+	if (currentConfig->analog->mask == BUTTON_AS_ANALOG)
+	{
+		button_t* none = &virtualControllers[activePad].control->buttons[0];
+		currentConfig->DU = none;
+		currentConfig->DL = none;
+		currentConfig->DR = none;
+		currentConfig->DD = none;
+		strcpy(FRAME_STRINGS[8],  currentConfig->DU->name);
+		strcpy(FRAME_STRINGS[9],  currentConfig->DL->name);
+		strcpy(FRAME_STRINGS[10], currentConfig->DR->name);
+		strcpy(FRAME_STRINGS[11], currentConfig->DD->name);
+	}
 }
 
 void Func_ToggleInvertY()

@@ -43,6 +43,8 @@ typedef struct {
 	char* name;
 } button_t;
 
+#define BUTTON_AS_ANALOG 4
+
 typedef button_t* button_tp;
 
 #define CONTROLLER_CONFIG_VERSION 1

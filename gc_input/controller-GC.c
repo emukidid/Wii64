@@ -69,6 +69,7 @@ static button_t buttons[] = {
 static button_t analog_sources[] = {
 	{ 0, ANALOG_AS_ANALOG,  "Analog Stick" },
 	{ 1, C_STICK_AS_ANALOG, "C-Stick" },
+	{ 2, BUTTON_AS_ANALOG,  "D-Pad" },
 };
 
 static button_t menu_combos[] = {
@@ -137,6 +138,15 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	} else if(config->analog->mask == C_STICK_AS_ANALOG){
 		c->X_AXIS = 5*PAD_SubStickX(Control)/6;
 		c->Y_AXIS = 5*PAD_SubStickY(Control)/6;
+	} else if(config->analog->mask == BUTTON_AS_ANALOG){
+		if(b & PAD_BUTTON_RIGHT)
+			c->X_AXIS = +80;
+		else if(b & PAD_BUTTON_LEFT)
+			c->X_AXIS = -80;
+		if(b & PAD_BUTTON_UP)
+			c->Y_AXIS = +80;
+		else if(b & PAD_BUTTON_DOWN)
+			c->Y_AXIS = -80;
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 

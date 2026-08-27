@@ -46,9 +46,10 @@ static int getStickValue(joystick_t* j, int axis, int maxAbsValue){
 }
 
 enum {
-	NUNCHUK_AS_ANALOG, IR_AS_ANALOG,
-	TILT_AS_ANALOG, WHEEL_AS_ANALOG,
-	BUTTON_AS_ANALOG, NO_ANALOG,
+	NUNCHUK_AS_ANALOG = 0, IR_AS_ANALOG = 1,
+	TILT_AS_ANALOG = 2, WHEEL_AS_ANALOG = 3,
+	// 4 is BUTTON_AS_ANALOG,
+	NO_ANALOG = 5,
 };
 
 enum {
@@ -253,6 +254,7 @@ static void configure(int Control, controller_config_t* config){
 		WPAD_DATA_IR,        // IR
 		WPAD_DATA_ACCEL,     // Tilt
 		WPAD_DATA_ACCEL,     // Wheel
+		WPAD_DATA_BUTTONS,   // D-Pad
 		WPAD_DATA_BUTTONS,   // None
 	};
 	WPAD_SetDataFormat(Control, analog_fmts[config->analog->mask]);

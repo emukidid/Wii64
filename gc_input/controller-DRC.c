@@ -91,6 +91,7 @@ static button_t buttons[] = {
 static button_t analog_sources[] = {
 	{ 0, L_STICK_AS_ANALOG,  "Left Stick" },
 	{ 1, R_STICK_AS_ANALOG,  "Right Stick" },
+	{ 2, BUTTON_AS_ANALOG,   "D-Pad" },
 };
 
 static button_t menu_combos[] = {
@@ -170,6 +171,15 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	} else if(config->analog->mask == R_STICK_AS_ANALOG){
 		c->X_AXIS = getDRCValue(WiiDRC_rStickX());
 		c->Y_AXIS = getDRCValue(WiiDRC_rStickY());
+	} else if(config->analog->mask == BUTTON_AS_ANALOG){
+		if(b & WIIDRC_BUTTON_RIGHT)
+			c->X_AXIS = +80;
+		else if(b & WIIDRC_BUTTON_LEFT)
+			c->X_AXIS = -80;
+		if(b & WIIDRC_BUTTON_UP)
+			c->Y_AXIS = +80;
+		else if(b & WIIDRC_BUTTON_DOWN)
+			c->Y_AXIS = -80;
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 
