@@ -489,7 +489,7 @@ void SelectRomFrame::drawChildren(menu::Graphics &gfx)
 		for (int i = 0; i < NUM_FILE_SLOTS; i++)
 		{
 			int btn_ind = i+5;
-			if (FRAME_BUTTONS[btn_ind].button->getFocus() && ((current_page*NUM_FILE_SLOTS) + i < num_entries))
+			if (FRAME_BUTTONS[btn_ind].button->getFocus() && dir_entries && ((current_page*NUM_FILE_SLOTS) + i < num_entries))
 			{
 				FRAME_TEXTBOXES[1].textBoxString = filenameFromAbsPath(dir_entries[i+(current_page*NUM_FILE_SLOTS)].name);
 			}
@@ -550,6 +550,10 @@ void Func_ReturnFromSelectRomFrame()
 	}
 	if(dir_entries){ free(dir_entries); dir_entries = NULL; }
 	if(rom_headers){ free(rom_headers); rom_headers = NULL; }
+
+	num_entries = 0;
+	current_page = 0;
+	max_page = 0;
 		
 	pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 }
@@ -606,15 +610,19 @@ void selectRomFrame_OpenDirectory(fileBrowser_file* dir)
 //	if(menu_items){  free(menu_items);  menu_items  = NULL; }
 	if(dir_entries){ free(dir_entries); dir_entries = NULL; }
 	if(rom_headers){ free(rom_headers); rom_headers = NULL; }
+	num_entries = 0;
+	current_page = 0;
+	max_page = 0;
 		
 	// Read the directories and return on error
-	num_entries = romFile_readDir(dir, &dir_entries, 1, 1);
-	if(num_entries <= 0)
+	int entries = romFile_readDir(dir, &dir_entries, 1, 1);
+	if(entries <= 0)
 	{ 
 		if(dir_entries) { free(dir_entries); dir_entries = NULL; } 
-		selectRomFrame_Error(dir, num_entries); 
+		selectRomFrame_Error(dir, entries); 
 		return;
 	}
+	num_entries = entries;
 	
 	// Sort the listing
 	qsort(dir_entries, num_entries, sizeof(fileBrowser_file), dir_comparator);
