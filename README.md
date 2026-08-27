@@ -147,4 +147,5 @@ Report and view any open issues on the [issue tracker](https://github.com/emukid
  * Artwork: drmr
  * Wii64 Demo ROM: marshallh
  * Compiled using [devKitPro](https://devkitpro.org/) and [libogc2](https://github.com/extremscorner/libogc2))
+ * [GLideN64](https://github.com/gonetz/GLideN64/) gonetz and others
  * Visit the official code repo on [GitHub](https://github.com/emukidid/Wii64)

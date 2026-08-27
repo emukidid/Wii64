@@ -581,16 +581,16 @@ void Graphics::setInGameVMode() {
 		IplFont::getInstance().drawInit(fontColor);
 
 		char countryString[32];
-		char buf[200];
+		char buf[400];
 		countrycodestring(ROM_HEADER.Country_code & 0xFF, countryString);
 
 		for (int i = 0; i < 2; i++)
 		{
 			clearEFB((GXColor){0, 0, 0, 0xFF}, GX_MAX_Z24);
 			sprintf(buf, "Starting ROM: [%s]", ROM_SETTINGS.goodname);
-			IplFont::getInstance().drawString(80,300,buf, 0.5, false);
-			sprintf(buf, "Region: [%s]", countryString);
-			IplFont::getInstance().drawString(80,340,buf, 0.5, false);
+			IplFont::getInstance().drawString(80,280,buf, 0.5, false);
+			sprintf(buf, "Region: [%s] CRC [%08X:%08X]", countryString, ROM_HEADER.CRC1, ROM_HEADER.CRC2 );
+			IplFont::getInstance().drawString(80,310,buf, 0.5, false);
 			GX_DrawDone();
 			GX_CopyDisp(xfb[which_fb], GX_TRUE);
 			GX_Flush();
@@ -607,7 +607,7 @@ GXRModeObj* Graphics::getVmode() {
 }
 
 void Graphics::setNativeOut(bool is_pal) {
-	GXRModeObj* m = &TVEurgb60Hz240Ds;
+	GXRModeObj* m = &TVNtsc240Ds;
 	if(is_pal) {
 		m = &TVPal264Ds;
 	}

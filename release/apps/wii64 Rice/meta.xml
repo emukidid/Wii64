@@ -2,12 +2,12 @@
  <app version="1.3">
    <name>Wii64 | Rice GFX</name>
    <coder>Wii64 Team</coder>
-   <version>1.4.4</version>
-   <release_date>202608230953</release_date>
+   <version>1.4.5</version>
+   <release_date>202608271846</release_date>
    <short_description>N64 Emulator for Wii</short_description>
    <long_description>
 
-Wii64 1.4.4 (Wii version with Rice GFX Plugin)
+Wii64 1.4.5 (Wii version with Rice GFX Plugin)
 Wii64 is a port of Mupen64 0.5.1 to the Wii/GameCube
 
 It currently runs most games at full speed or close to it, there are some known graphical and/or core issues.
@@ -20,6 +20,7 @@ marshallh - Wii64 Demo ROM
 wiibrew - wiki &amp; forums
 shagkur/WinterMute - libogc/devkitPPC
 Team Twiizers for Wii homebrew
+GLideN64 gonetz and others
 
 Wii64 and the Wii64 logo are trademarks of the Wii64 Team and should not be used in unofficial builds.
    </long_description>
