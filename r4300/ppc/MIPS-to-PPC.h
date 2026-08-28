@@ -44,6 +44,7 @@ extern int is_j_dst(int i);
 extern unsigned int get_src_pc(void);
 // Adjust code_addr to not include flushing of previous mappings
 void reset_code_addr(void);
+void reset_code_addr_burst(int count);
 /* Adds src and dst address, and src jump address to tables
     it returns a unique address identifier.
    This data should be used to fill in addresses in pass two. */

@@ -88,6 +88,8 @@ unsigned int get_src_pc(void){ return addr_first + ((src-1-src_first)<<2); }
 void set_next_dst(PowerPC_instr i){ *(ppc_dst++) = i; ++code_length; }
 // Adjusts the code_addr for the current instruction to account for flushes
 void reset_code_addr(void){ if(src<=src_last) code_addr[src-1-src_first] = ppc_dst; }
+// Same, but for multiple swallowed source instructions.
+void reset_code_addr_burst(int count){ if(src<=src_last) code_addr[src-count-src_first] = ppc_dst; }
 
 static inline unsigned short extractUpper16(void* address){
 	unsigned int addr = (unsigned int)address;

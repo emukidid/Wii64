@@ -36,7 +36,7 @@ extern unsigned long instructionCount;
 extern void (*interp_ops[64])(void);
 extern unsigned long update_invalid_addr(unsigned long addr);
 unsigned int dyna_check_cop1_unusable(unsigned int, int);
-unsigned int dyna_mem(unsigned int, unsigned int, int, memType, unsigned int, int);
+unsigned int dyna_mem(unsigned int, unsigned int, int, memType, unsigned int, int, int);
 
 static PowerPC_instr* link_branch = NULL;
 static PowerPC_func* last_func;
@@ -240,9 +240,18 @@ void invalidate_func(unsigned int addr){
 	}
 }
 
+void invalidate_func_range(unsigned int addr, unsigned int bytes){
+	unsigned int i;
+	for(i = 0; i < bytes; i += 4) invalidate_func(addr + i);
+}
+
 unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
-                      memType type, unsigned int pc, int isDelaySlot){
+                      memType type, unsigned int pc, int isDelaySlot,
+                      int reverse){
 	int i;
+	const int istart = reverse ? count - 1 : 0;
+	const int iend   = reverse ? -1        : count;
+	const int istep  = reverse ? -1        : 1;
 
 	//start_section(DYNAMEM_SECTION);
 	r4300.pc = pc;
@@ -256,7 +265,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 
 	switch(type){
 		case MEM_LW:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*4;
 				read_word_in_memory();
 				if(!address) break;
@@ -264,7 +273,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LWU:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*4;
 				read_word_in_memory();
 				if(!address) break;
@@ -272,7 +281,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LH:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*2;
 				read_hword_in_memory();
 				if(!address) break;
@@ -280,7 +289,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LHU:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*2;
 				read_hword_in_memory();
 				if(!address) break;
@@ -288,7 +297,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LB:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i;
 				read_byte_in_memory();
 				if(!address) break;
@@ -296,7 +305,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LBU:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i;
 				read_byte_in_memory();
 				if(!address) break;
@@ -304,7 +313,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LD:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*8;
 				read_dword_in_memory();
 				if(!address) break;
@@ -312,7 +321,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LWC1:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*4;
 				read_word_in_memory();
 				if(!address) break;
@@ -320,7 +329,7 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_LDC1:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*8;
 				read_dword_in_memory();
 				if(!address) break;
@@ -383,52 +392,52 @@ unsigned int dyna_mem(unsigned int addr, unsigned int value, int count,
 			}
 			break;
 		case MEM_SW:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*4;
 				word = r4300.gpr[value + i];
 				write_word_in_memory();
 			}
-			if(needsCheck) invalidate_func(addr);
+			if(needsCheck) invalidate_func_range(addr, count*4);
 			break;
 		case MEM_SH:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*2;
 				hword = r4300.gpr[value + i];
 				write_hword_in_memory();
 			}
-			if(needsCheck) invalidate_func(addr);
+			if(needsCheck) invalidate_func_range(addr, count*2);
 			break;
 		case MEM_SB:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i;
 				byte = r4300.gpr[value + i];
 				write_byte_in_memory();
 			}
-			if(needsCheck) invalidate_func(addr);
+			if(needsCheck) invalidate_func_range(addr, count*1);
 			break;
 		case MEM_SD:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*8;
 				dword = r4300.gpr[value + i];
 				write_dword_in_memory();
 			}
-			if(needsCheck) invalidate_func(addr);
+			if(needsCheck) invalidate_func_range(addr, count*8);
 			break;
 		case MEM_SWC1:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*4;
 				word = *((long*)r4300.fpr_single[value + i*2]);
 				write_word_in_memory();
 			}
-			if(needsCheck) invalidate_func(addr);
+			if(needsCheck) invalidate_func_range(addr, count*4);
 			break;
 		case MEM_SDC1:
-			for(i = 0; i < count; i++){
+			for(i = istart; i != iend; i += istep){
 				address = addr + i*8;
 				dword = *((long long*)r4300.fpr_double[value + i*2]);
 				write_dword_in_memory();
 			}
-			if(needsCheck) invalidate_func(addr);
+			if(needsCheck) invalidate_func_range(addr, count*8);
 			break;
 		case MEM_SC:
 			if(r4300.llbit){

@@ -153,8 +153,8 @@ void dma_pi_read()
 	if (dma_length >= 0x7f && (dma_length & 1)) dma_length += 1;
 	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
-	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEMMASK ?
-				 (MEMMASK - pi_register.pi_dram_addr_reg) : dma_length;
+	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEM_SIZE ?
+				 (MEM_SIZE - pi_register.pi_dram_addr_reg) : dma_length;
 
 	if(i>rom_length || pi_register.pi_dram_addr_reg > MEMMASK)
 	{
@@ -166,7 +166,7 @@ void dma_pi_read()
 	
 	if(!interpcore)
 	{
-		for (i=0; i<dma_length; i++)
+		for (i=0; i<dma_length; i+=4)
 		{
 			unsigned long rom_address1 = pi_register.pi_cart_addr_reg+i+0x80000000;
 			unsigned long rom_address2 = pi_register.pi_cart_addr_reg+i+0xa0000000;
@@ -228,8 +228,8 @@ void dma_pi_write()
 					 dma_length - (pi_register.pi_dram_addr_reg & 0x7) : 0;
 	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
-	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEMMASK ?
-				 (MEMMASK - pi_register.pi_dram_addr_reg) : dma_length;
+	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEM_SIZE ?
+				 (MEM_SIZE - pi_register.pi_dram_addr_reg) : dma_length;
 
 	if(i>rom_length || pi_register.pi_dram_addr_reg > MEMMASK)
 	{
@@ -250,11 +250,10 @@ void dma_pi_write()
 	// Dynarec, invalidate any code we wrote over.
 	if(!interpcore)
 	{
-		for (i=0; i<dma_length; i++)
+		for (i=0; i<dma_length; i+=4)
 		{
 			unsigned long rdram_address1 = pi_register.pi_dram_addr_reg+i+0x80000000;
 			unsigned long rdram_address2 = pi_register.pi_dram_addr_reg+i+0xa0000000;
-
 			invalidate_func(rdram_address1);
 			invalidate_func(rdram_address2);
 		}

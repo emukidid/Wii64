@@ -31,7 +31,6 @@
 #include "../Recomp-Cache.h"
 #include "../../gc_memory/memory.h"
 #include "../../gui/DEBUG.h"
-#include "../../main/gamehacks.h"
 #include <math.h>
 #include "../Invalid_Code.h"
 
@@ -54,7 +53,7 @@ static void genCallInterp(MIPS_instr);
 static void genJumpTo(unsigned int loc, unsigned int type);
 static void genUpdateCount(int checkCount);
 static void genCheckFP(void);
-static void genCallDynaMem(memType type, int count, int _rs, int _rt, short immed);
+static void genCallDynaMem(memType type, int count, int reverse, int _rs, int _rt, short immed);
 static void emit_update_count_lazy(int checkCount);
 static void emit_genCheckFp_lazy(void);
 void RecompCache_Update(PowerPC_func*);
@@ -507,10 +506,11 @@ static int branch(short offset, condition cond, int link, int likely){
 #endif
 }
 
-#define check_memory() \
+#define check_memory_range(nbytes) \
 { \
 invalidateRegisters(); \
-GEN_B(add_jump((unsigned long)&invalidate_func, 1, 1), 0, 1); \
+GEN_LI(R4, (nbytes)); \
+GEN_B(add_jump((unsigned long)&invalidate_func_range, 1, 1), 0, 1); \
 GEN_LWZ(R0, DYNAOFF_LR, R1); \
 GEN_MTLR(R0); \
 }
@@ -580,7 +580,7 @@ int convert(void){
 						// Set R3 = virtual address for invalidate_func
 						GEN_LIS(R3, vaddr_sw >> 16);
 						GEN_ORI(R3, R3, vaddr_sw & 0xFFFF);
-						check_memory();
+						check_memory_range(4);
 
 						// Consume SW
 						get_next_src();
@@ -968,7 +968,7 @@ static int LDL(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LDL
-	genCallDynaMem(MEM_LDL, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_LDL, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -978,7 +978,7 @@ static int LDR(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LDR
-	genCallDynaMem(MEM_LDR, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_LDR, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -989,6 +989,7 @@ static int LB(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LB
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1032,6 +1033,7 @@ static int LB(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1039,7 +1041,7 @@ static int LB(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LB, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LB, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1050,6 +1052,7 @@ static int LH(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LH
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1093,6 +1096,7 @@ static int LH(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1100,7 +1104,7 @@ static int LH(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LH, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LH, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1110,7 +1114,7 @@ static int LWL(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LWL
-	genCallDynaMem(MEM_LWL, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_LWL, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1121,6 +1125,7 @@ static int LW(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LW
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1146,7 +1151,7 @@ static int LW(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
-			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 4 && (GetGameSpecificHack() != &hack_paperboy)){
+			} else if(MIPS_GET_RT(peek) == _rt - 1 && MIPS_GET_IMMED(peek) == immed - 4){
 				mips = get_next_src();
 				count++;
 				while(has_next_src() && !is_j_dst(1)){
@@ -1164,6 +1169,7 @@ static int LW(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1171,7 +1177,7 @@ static int LW(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LW, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LW, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1182,6 +1188,7 @@ static int LBU(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LBU
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1225,6 +1232,7 @@ static int LBU(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1232,7 +1240,7 @@ static int LBU(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LBU, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LBU, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1243,6 +1251,7 @@ static int LHU(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LHU
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1286,6 +1295,7 @@ static int LHU(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1293,7 +1303,7 @@ static int LHU(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LHU, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LHU, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1303,7 +1313,7 @@ static int LWR(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LWR
-	genCallDynaMem(MEM_LWR, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_LWR, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1314,6 +1324,7 @@ static int LWU(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LWU
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1357,6 +1368,7 @@ static int LWU(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1364,7 +1376,7 @@ static int LWU(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LWU, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LWU, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1375,6 +1387,7 @@ static int SB(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SB
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1414,6 +1427,7 @@ static int SB(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1421,7 +1435,7 @@ static int SB(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_SB, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_SB, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1432,6 +1446,7 @@ static int SH(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SH
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1471,6 +1486,7 @@ static int SH(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1478,7 +1494,7 @@ static int SH(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_SH, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_SH, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1488,7 +1504,7 @@ static int SWL(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SWL
-	genCallDynaMem(MEM_SWL, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_SWL, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1499,6 +1515,7 @@ static int SW(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SW
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1538,6 +1555,7 @@ static int SW(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1545,7 +1563,7 @@ static int SW(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_SW, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_SW, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1555,7 +1573,7 @@ static int SDL(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SDL
-	genCallDynaMem(MEM_SDL, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_SDL, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1565,7 +1583,7 @@ static int SDR(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SDR
-	genCallDynaMem(MEM_SDR, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_SDR, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1575,7 +1593,7 @@ static int SWR(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SWR
-	genCallDynaMem(MEM_SWR, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_SWR, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1586,6 +1604,7 @@ static int LD(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LD
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1629,6 +1648,7 @@ static int LD(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1636,7 +1656,7 @@ static int LD(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LD, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LD, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1647,6 +1667,7 @@ static int SD(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SD
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1686,6 +1707,7 @@ static int SD(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1693,7 +1715,7 @@ static int SD(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_SD, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_SD, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1704,6 +1726,7 @@ static int LWC1(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LWC1
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1743,6 +1766,7 @@ static int LWC1(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1750,7 +1774,7 @@ static int LWC1(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LWC1, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LWC1, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1761,6 +1785,7 @@ static int LDC1(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_LDC1
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1800,6 +1825,7 @@ static int LDC1(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1807,7 +1833,7 @@ static int LDC1(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_LDC1, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_LDC1, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1818,6 +1844,7 @@ static int SWC1(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SWC1
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1857,6 +1884,7 @@ static int SWC1(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1864,7 +1892,7 @@ static int SWC1(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_SWC1, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_SWC1, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1875,6 +1903,7 @@ static int SDC1(MIPS_instr mips){
 	return INTERPRETED;
 #else // INTERPRET_SDC1
 	int count = 1;
+	int reverse = 0;
 	int _rs = MIPS_GET_RS(mips), _rt = MIPS_GET_RT(mips);
 	short immed = MIPS_GET_IMMED(mips);
 
@@ -1914,6 +1943,7 @@ static int SDC1(MIPS_instr mips){
 					mips = get_next_src();
 					count++;
 				}
+				reverse = 1;
 				_rt = MIPS_GET_RT(mips);
 				immed = MIPS_GET_IMMED(mips);
 			}
@@ -1921,7 +1951,7 @@ static int SDC1(MIPS_instr mips){
 	}
 #endif
 
-	genCallDynaMem(MEM_SDC1, count, _rs, _rt, immed);
+	genCallDynaMem(MEM_SDC1, count, reverse, _rs, _rt, immed);
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1935,7 +1965,7 @@ static int LL(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_LL
-	genCallDynaMem(MEM_LL, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_LL, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -1945,7 +1975,7 @@ static int SC(MIPS_instr mips){
 	genCallInterp(mips);
 	return INTERPRETED;
 #else // INTERPRET_SC
-	genCallDynaMem(MEM_SC, 1, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
+	genCallDynaMem(MEM_SC, 1, 0, MIPS_GET_RS(mips), MIPS_GET_RT(mips), MIPS_GET_IMMED(mips));
 	return CONVERT_SUCCESS;
 #endif
 }
@@ -4500,7 +4530,7 @@ static void genCheckFP(void){
 #endif
 }
 
-static void genCallDynaMem(memType type, int count, int _rs, int _rt, short immed){
+static void genCallDynaMem(memType type, int count, int reverse, int _rs, int _rt, short immed){
 	int isPhysical = 1, isVirtual = 1, isUnsafe = 1;
 	int isConstant = isRegisterConstant(_rs);
 	int constant = getRegisterConstant(_rs) + immed;
@@ -4563,7 +4593,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 	if(isVirtual || isUnsafe){
 		if(!hotNoFlush){
 			flushRegisters();
-			reset_code_addr();
+			reset_code_addr_burst(count);
 		}
 	}
 
@@ -4852,7 +4882,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 						}
 					}
 				}
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(count*4);
 				break;
 			}
 			case MEM_SH:
@@ -4875,7 +4905,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 						}
 					}
 				}
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(count*2);
 				break;
 			}
 			case MEM_SB:
@@ -4898,7 +4928,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 						}
 					}
 				}
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(count*1);
 				break;
 			}
 			case MEM_SD:
@@ -4913,7 +4943,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 					}
 					GEN_STW(rt.lo, i*8+4, tmp);
 				}
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(count*8);
 				break;
 			}
 			case MEM_SWC1:
@@ -4927,7 +4957,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 						GEN_STFS(rt, i*4, tmp);
 					}
 				}
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(count*4);
 				break;
 			}
 			case MEM_SDC1:
@@ -4941,7 +4971,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 						GEN_STFD(rt, i*8, tmp);
 					}
 				}
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(count*8);
 				break;
 			}
 			case MEM_SC:
@@ -4952,7 +4982,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 				GEN_BEQ(CR2, 6, 0, 0);
 				GEN_RLWINM(tmp, rd, 0, 8, 29);
 				GEN_STWUX(rt, tmp, DYNAREG_RDRAM);
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(4);
 				GEN_MFCR(tmp);
 				GEN_RLWINM(mapRegisterNewUnsigned(_rt), tmp, 10, 31, 31);
 				GEN_STW(DYNAREG_ZERO, offsetof(R4300,llbit), DYNAREG_R4300);
@@ -4972,7 +5002,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 				GEN_SRW(R0, rt, R0);
 				GEN_OR(R0, word, R0);
 				GEN_STW(R0, 0, tmp);
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(4);
 				unmapRegisterTemp(word);
 				unmapRegisterTemp(mask);
 				break;
@@ -4992,7 +5022,7 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 				GEN_SLW(R0, rt, R0);
 				GEN_OR(R0, word, R0);
 				GEN_STW(R0, 0, tmp);
-				if(isUnsafe) check_memory();
+				if(isUnsafe) check_memory_range(4);
 				unmapRegisterTemp(word);
 				unmapRegisterTemp(mask);
 				break;
@@ -5042,6 +5072,8 @@ static void genCallDynaMem(memType type, int count, int _rs, int _rt, short imme
 		GEN_ORI(R7, R7, get_src_pc()+4);
 		// isDelaySlot as arg 6
 		GEN_LI(R8, isDelaySlot);
+		// reverse as arg 7
+		GEN_LI(R9, reverse);
 		// call dyna_mem
 		GEN_B(add_jump((unsigned long)&dyna_mem, 1, 1), 0, 1);
 		// Load old LR
