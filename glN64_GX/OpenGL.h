@@ -117,6 +117,7 @@ struct GLInfo
 	Mtx44	GXprojTemp;
 	Mtx		GXmodelViewIdent;
 	BOOL	GXuseCombW;
+	BOOL	GXcombWok;
 	BOOL	GXupdateMtx;
 	int		GXnumVtxMP;
 	bool	GXuseAlphaCompare;

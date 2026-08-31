@@ -231,13 +231,30 @@ void RDP_LoadSync( u32 w0, u32 w1 )
 	gDPLoadSync();
 }
 
-void RDP_TexRectFlip( u32 w0, u32 w1 )
+// Mirrors _getTexRectParams() in GLideN64's RDP.cpp
+static void _getTexRectParams( u32 &w2, u32 &w3 )
 {
-	u32 w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
+	if (GBI.current != NULL &&
+		(GBI.current->type == F5Rogue || GBI.current->type == F5Indi_Naboo))
+	{
+		w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 8];
+		w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 12];
+		RSP.PC[RSP.PCi] += 8;
+		return;
+	}
+
+	w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
 	RSP.PC[RSP.PCi] += 8;
 
-	u32 w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
+	w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
 	RSP.PC[RSP.PCi] += 8;
+}
+
+void RDP_TexRectFlip( u32 w0, u32 w1 )
+{
+	u32 w2, w3;
+
+	_getTexRectParams( w2, w3 );
 
 	gDPTextureRectangleFlip( _FIXED2FLOAT( (u16)_SHIFTR( w1, 12, 12 ), 2 ),		// ulx
 							 _FIXED2FLOAT( (u16)_SHIFTR( w1,  0, 12 ), 2 ),		// uly
@@ -254,11 +271,9 @@ void RDP_TexRect( u32 w0, u32 w1 )
 {
 	u32 cmd1 = (*(u32*)&RDRAM[RSP.PC[RSP.PCi] + 0]) >> 24;
 	u32 cmd2 = (*(u32*)&RDRAM[RSP.PC[RSP.PCi] + 8]) >> 24;
-	u32 w2 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
-	RSP.PC[RSP.PCi] += 8;
+	u32 w2, w3;
 
-	u32 w3 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
-	RSP.PC[RSP.PCi] += 8;
+	_getTexRectParams( w2, w3 );
 #ifdef __GX__
 	// Winback floating square hack, retrofitted version of https://github.com/gonetz/GLideN64/issues/63
 	if(GetGameSpecificHack() == &hack_winback) {

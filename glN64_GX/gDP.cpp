@@ -881,7 +881,7 @@ void gDPLoadTLUT( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 	u16 pal = (u16)((gDP.tiles[tile].tmem - 256) >> 4);
 	u32 destIdx = gDP.tiles[tile].tmem << 2;
 
-	if (pal != 0)
+	if (pal != 0)	// TODO I think we should get rid of this.
 		count = 16;
 
 	int i = 0;
@@ -1010,8 +1010,9 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	gSP.textureTile[0] = &gDP.tiles[tile];
 	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[tile < 7 ? tile + 1 : tile];
 
-	f32 lrs = s + (lrx - ulx - 1) * dsdx;
-	f32 lrt = t + (lry - uly - 1) * dtdy;
+	const bool rectFlip = (RSP.cmd == G_TEXRECTFLIP);
+	f32 lrs = s + ((rectFlip ? (lry - uly) : (lrx - ulx)) - 1) * dsdx;
+	f32 lrt = t + ((rectFlip ? (lrx - ulx) : (lry - uly)) - 1) * dtdy;
 
 	if (gDP.textureMode == TEXTUREMODE_NORMAL)
 		gDP.textureMode = TEXTUREMODE_TEXRECT;
@@ -1053,7 +1054,7 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 
 void gDPTextureRectangleFlip( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f32 t, f32 dsdx, f32 dtdy )
 {
-	gDPTextureRectangle( ulx, uly, lrx, lry, tile, s + (lrx - ulx) * dsdx, t + (lry - uly) * dtdy, -dsdx, -dtdy );
+	gDPTextureRectangle( ulx, uly, lrx, lry, tile, s, t, dsdx, dtdy );
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPTextureRectangleFlip( %f, %f, %f, %f, %i, %i, %f, %f, %f, %f );\n",

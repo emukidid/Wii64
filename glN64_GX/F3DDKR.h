@@ -19,5 +19,6 @@
 #define F3DDKR_DMA_OFFSETS		0xBF
 
 void F3DDKR_Init();
+void F3DJFG_Init();
 #endif
 

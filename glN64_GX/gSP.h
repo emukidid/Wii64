@@ -34,6 +34,9 @@ struct SPVertex
 
 typedef SPVertex SPTriangle[3];
 
+#define SP_VERTEX_COUNT	256
+#define SP_VERTEX_MASK	(SP_VERTEX_COUNT - 1)
+
 struct gSPInfo
 {
 	u32 segment[16];
@@ -53,7 +56,7 @@ struct gSPInfo
 		f32 baseScaleX, baseScaleY;
 	} objMatrix;
 
-	SPVertex vertices[80];
+	SPVertex vertices[SP_VERTEX_COUNT];
 
 	u32 vertexColorBase;
 	u32 vertexi;
@@ -97,6 +100,9 @@ struct gSPInfo
 		s16 multiplier, offset;
 	} fog;
 
+	u32 textureCoordScale[2];
+	u32 textureCoordScaleOrg;
+
 	struct
 	{
 		u32 address, width, height, format, size, palette;
@@ -125,8 +131,10 @@ void gSPDMAMatrix( u32 matrix, u8 index, u8 multiply );
 void gSPViewport( u32 v );
 void gSPForceMatrix( u32 mptr );
 void gSPLight( u32 l, s32 n );
+void gSPLightAcclaim( u32 l, s32 n );
 void gSPLookAt( u32 l, u32 n );
 void gSPVertex( u32 v, u32 n, u32 v0 );
+void gSPF3DAMVertex( u32 v, u32 n, u32 v0 );
 void gSPNIVertex( u32 v, u32 n, u32 v0 );
 void gSPCIVertex( u32 v, u32 n, u32 v0 );
 void gSPDMAVertex( u32 v, u32 n, u32 v0 );
@@ -137,6 +145,8 @@ void gSPBranchLessZ( u32 branchdl, u32 vtx, f32 zval );
 void gSPBranchLessW( u32 branchdl, u32 vtx, f32 wval );
 void gSPDlistCount( u32 count, u32 v );
 void gSPSprite2DBase( u32 base );
+void gSPProcessVertex( u32 v );
+void gSPTriangle( s32 v0, s32 v1, s32 v2 );
 void gSP1Triangle( s32 v0, s32 v1, s32 v2 );
 void gSP2Triangles( s32 v00, s32 v01, s32 v02,
 				    s32 v10, s32 v11, s32 v12 );

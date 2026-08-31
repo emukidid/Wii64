@@ -66,6 +66,24 @@ void F3DDKR_DMA_Vtx( u32 w0, u32 w1 )
 	gSP.vertexi += n;
 }
 
+// Jet Force Gemini counts vertices from zero where DKR counts from one
+void F3DJFG_DMA_Vtx( u32 w0, u32 w1 )
+{
+	if ((w0 & F3DDKR_VTX_APPEND))
+	{
+		if (gSP.matrix.billboard)
+			gSP.vertexi = 1;
+	}
+	else
+		gSP.vertexi = 0;
+
+	u32 n = _SHIFTR( w0, 19, 5 );
+
+	gSPDMAVertex( w1, n, gSP.vertexi + _SHIFTR( w0, 9, 5 ) );
+
+	gSP.vertexi += n;
+}
+
 void F3DDKR_DMA_Tri( u32 w0, u32 w1 )
 {
 	gSP.texture.on = _SHIFTR( w0, 16, 4 );
@@ -134,3 +152,8 @@ void F3DDKR_Init()
 	gSPSetDMAOffsets( 0, 0 );
 }
 
+void F3DJFG_Init()
+{
+	F3DDKR_Init();
+	GBI_SetGBI( G_DMA_VTX,				F3DDKR_DMA_VTX,			F3DJFG_DMA_Vtx );
+}

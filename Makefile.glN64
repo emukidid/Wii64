@@ -29,12 +29,18 @@ OBJ_GLN64_GX	=glN64_GX/glN64.o \
 		glN64_GX/S2DEX2.o \
 		glN64_GX/F3DPD.o \
 		glN64_GX/F3DDKR.o \
-		glN64_GX/F3DWRUS.o \
 		glN64_GX/F3DCBFD.o \
 		glN64_GX/F3DFLX2.o \
 		glN64_GX/F3DGOLDEN.o \
 		glN64_GX/F3DZEX2.o \
-		glN64_GX/ZSortBOSS.o
+		glN64_GX/ZSortBOSS.o \
+		glN64_GX/F5Rogue.o \
+		glN64_GX/F3DBETA.o \
+		glN64_GX/F3DSETA.o \
+		glN64_GX/F3DEX095.o \
+		glN64_GX/Turbo3D.o \
+		glN64_GX/F3DAM.o \
+		glN64_GX/F3DEX2ACCLAIM.o
 
 ALL_OBJ		+= $(OBJ_GLN64_GX)
 

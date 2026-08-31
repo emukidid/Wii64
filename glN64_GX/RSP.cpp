@@ -36,6 +36,7 @@
 #include "FrameBuffer.h"
 #include "DepthBuffer.h"
 #include "GBI.h"
+#include "Turbo3D.h"
 
 RSPInfo		RSP;
 
@@ -241,6 +242,43 @@ DWORD WINAPI RSP_ThreadProc( LPVOID lpParameter )
 #define SP_STATUS_BROKE		0x0002
 #define SP_STATUS_TASKDONE	0x0200
 
+
+static
+void _ProcessDListFactor5()
+{
+	while (!RSP.halt)
+	{
+		if ((RSP.PC[RSP.PCi] + 8) > RDRAMSize)
+			break;
+
+		u32 w0 = *(u32*)&RDRAM[RSP.PC[RSP.PCi]];
+		u32 w1 = *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 4];
+		RSP.cmd = _SHIFTR( w0, 24, 8 );
+
+		// Upstream reads this unguarded; the peek is one command past the one
+		// being executed, so it can run off the end of RDRAM on a malformed
+		// list.
+		if ((RSP.PC[RSP.PCi] + 16) <= RDRAMSize)
+			RSP.nextCmd = _SHIFTR( *(u32*)&RDRAM[RSP.PC[RSP.PCi] + 8], 24, 8 );
+		else
+			RSP.nextCmd = 0;
+
+		GBI.cmd[RSP.cmd]( w0, w1 );
+
+		RSP.PC[RSP.PCi] += 8;
+
+		if (RSP.count != 0xFFFFFFFF)
+		{
+			--RSP.count;
+			if (RSP.count == 0)
+			{
+				RSP.count = (u32)-1;
+				--RSP.PCi;
+			}
+		}
+	}
+}
+
 void RSP_ProcessDList()
 {
 	if (RSP.infloop)
@@ -305,7 +343,24 @@ void RSP_ProcessDList()
 			*REG.SP_STATUS &= ~0x300; // clear sig1 | sig2
 			*REG.SP_STATUS |= 0x800;  // set sig4
 		}
+		else if (GBI.current && (GBI.current->type == F5Rogue))
+		{
+			RSP.F5DL[0] = _SHIFTR( *(u32*)&RDRAM[RSP.PC[0]], 0, 24 );
+			RSP.PC[0] += 8;
+
+			static const u32 vAddrToClear[7] = { 0x11C >> 2, 0x120 >> 2, 0x124 >> 2,
+				0x37C >> 2, 0x58C >> 2, 0x5B0 >> 2, 0x5B4 >> 2 };
+			u32 * pDmem32 = (u32*)DMEM;
+			for (u32 i = 0; i < 7; ++i)
+				pDmem32[vAddrToClear[i]] = 0U;
+		}
 	}
+
+	if (GBI.current && (GBI.current->type == F5Rogue || GBI.current->type == F5Indi_Naboo))
+		_ProcessDListFactor5();
+	else if (GBI.current && (GBI.current->type == Turbo3D))
+		RunTurbo3D();
+	else
 
 	while (!RSP.halt)
 	{

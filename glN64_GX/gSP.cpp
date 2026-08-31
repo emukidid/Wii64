@@ -128,11 +128,13 @@ static void _gSPCombineMatrices()
 	{
 		OGL.GXcombW[2][3] = GXprojZScale / OGL.GXprojTemp[2][3];
 		OGL.GXcombW[2][2] = -GXprojZOffset + (OGL.GXcombW[2][3] * OGL.GXprojTemp[3][3]);
+		OGL.GXcombWok = true;
 		OGL.GXuseCombW = true;
 		OGL.GXupdateMtx = true;
 	}
 	else
 	{
+		OGL.GXcombWok = false;
 		OGL.GXuseCombW = false;
 		OGL.GXupdateMtx = true;
 	}
@@ -494,6 +496,10 @@ void gSPViewport( u32 v )
 	gSP.viewport.vtrans[3] = *(s16*)&RDRAM[address + 14];
 #endif // _BIG_ENDIAN
 
+
+	if (gSP.viewport.vscale[1] < 0.0f && GBI.current != NULL && !GBI.current->negativeY)
+		gSP.viewport.vscale[1] = -gSP.viewport.vscale[1];
+
 	gSP.viewport.x		= gSP.viewport.vtrans[0] - gSP.viewport.vscale[0];
 	gSP.viewport.y		= gSP.viewport.vtrans[1] - gSP.viewport.vscale[1];
 	gSP.viewport.width	= gSP.viewport.vscale[0] * 2;
@@ -537,11 +543,13 @@ void gSPForceMatrix( u32 mptr )
 	{
 		OGL.GXcombW[2][3] = GXprojZScale / OGL.GXprojTemp[2][3];
 		OGL.GXcombW[2][2] = -GXprojZOffset + (OGL.GXcombW[2][3] * OGL.GXprojTemp[3][3]);
+		OGL.GXcombWok = true;
 		OGL.GXuseCombW = true;
 		OGL.GXupdateMtx = true;
 	}
 	else
 	{
+		OGL.GXcombWok = false;
 		OGL.GXuseCombW = false;
 		OGL.GXupdateMtx = true;
 	}
@@ -617,6 +625,35 @@ void gSPLight( u32 l, s32 n )
 #endif
 }
 
+void gSPLightAcclaim( u32 l, s32 n )
+{
+	u32 addrByte = RSP_SegmentToPhysical( l );
+
+	if ((addrByte + 16) > RDRAMSize)
+	{
+#ifdef DEBUG
+		DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// Attempting to load light from invalid address\n" );
+		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPLightAcclaim( 0x%08X, LIGHT_%i );\n", l, n );
+#endif
+		return;
+	}
+
+	if (n >= 0 && n < 8)
+	{
+		const u32 addrShort = addrByte >> 1;
+		gSP.lights[n].posx = (f32)(((s16*)RDRAM)[(addrShort + 0) ^ 0]);
+		gSP.lights[n].posy = (f32)(((s16*)RDRAM)[(addrShort + 1) ^ 0]);
+		gSP.lights[n].posz = (f32)(((s16*)RDRAM)[(addrShort + 2) ^ 0]);
+		gSP.lights[n].ca   = (f32)(((s16*)RDRAM)[(addrShort + 5) ^ 0]);
+		gSP.lights[n].la   = _FIXED2FLOAT( ((u16*)RDRAM)[(addrShort + 6) ^ 0], 16 );
+		gSP.lights[n].qa   = (f32)(((u16*)RDRAM)[(addrShort + 7) ^ 0]);
+		gSP.lights[n].r = GXcastu8f32( RDRAM[(addrByte + 6) ^ 0] );
+		gSP.lights[n].g = GXcastu8f32( RDRAM[(addrByte + 7) ^ 0] );
+		gSP.lights[n].b = GXcastu8f32( RDRAM[(addrByte + 8) ^ 0] );
+
+	}
+}
+
 void gSPLookAt( u32 l, u32 n )
 {
 	u32 address = RSP_SegmentToPhysical( l );
@@ -665,7 +702,7 @@ void gSPVertex( u32 v, u32 n, u32 v0 )
 
 	Vertex *vertex = (Vertex*)&RDRAM[address];
 
-	if ((n + v0) < (80))
+	if ((n + v0) < SP_VERTEX_COUNT)
 	{
 		for (unsigned int i = v0; i < n + v0; i++)
 		{
@@ -725,6 +762,71 @@ void gSPVertex( u32 v, u32 n, u32 v0 )
 #endif
 }
 
+static void calcF3DAMTexCoords( const Vertex *_vertex, SPVertex &_vtx )
+{
+	const u32 s0 = (u32)_vertex->s;
+	const u32 t0 = (u32)_vertex->t;
+	const u32 acum_0 = ((_SHIFTR( gSP.textureCoordScaleOrg, 0, 16 ) * t0) << 1) + 0x8000;
+	const u32 acum_1 = ((_SHIFTR( gSP.textureCoordScale[1], 0, 16 ) * t0) << 1) + 0x8000;
+	const u32 sres = ((_SHIFTR( gSP.textureCoordScaleOrg, 16, 16 ) * s0) << 1) + acum_0;
+	const u32 tres = ((_SHIFTR( gSP.textureCoordScale[1], 16, 16 ) * s0) << 1) + acum_1;
+	const s16 s = _SHIFTR( sres, 16, 16 ) + _SHIFTR( gSP.textureCoordScale[0], 16, 16 );
+	const s16 t = _SHIFTR( tres, 16, 16 ) + _SHIFTR( gSP.textureCoordScale[0], 0, 16 );
+
+	_vtx.s = _FIXED2FLOAT( s, 5 );
+	_vtx.t = _FIXED2FLOAT( t, 5 );
+}
+
+void gSPF3DAMVertex( u32 v, u32 n, u32 v0 )
+{
+	u32 address = RSP_SegmentToPhysical( v );
+
+	if ((address + sizeof( Vertex ) * n) > RDRAMSize)
+	{
+#ifdef DEBUG
+		DebugMsg( DEBUG_HIGH | DEBUG_ERROR | DEBUG_VERTEX, "// Attempting to load vertices from invalid address\n" );
+#endif
+		return;
+	}
+
+	Vertex *vertex = (Vertex*)&RDRAM[address];
+
+	if ((n + v0) < SP_VERTEX_COUNT)
+	{
+		for (unsigned int i = v0; i < n + v0; i++)
+		{
+			gSP.vertices[i].x = vertex->x;
+			gSP.vertices[i].y = vertex->y;
+			gSP.vertices[i].z = vertex->z;
+			gSP.vertices[i].flag = vertex->flag;
+			calcF3DAMTexCoords( vertex, gSP.vertices[i] );
+
+			if (gSP.geometryMode & G_LIGHTING)
+			{
+				gSP.vertices[i].nx = vertex->normal.x;
+				gSP.vertices[i].ny = vertex->normal.y;
+				gSP.vertices[i].nz = vertex->normal.z;
+				gSP.vertices[i].a = GXcastu8f32( vertex->color.a );
+			}
+			else
+			{
+				gSP.vertices[i].r = GXcastu8f32( vertex->color.r );
+				gSP.vertices[i].g = GXcastu8f32( vertex->color.g );
+				gSP.vertices[i].b = GXcastu8f32( vertex->color.b );
+				gSP.vertices[i].a = GXcastu8f32( vertex->color.a );
+			}
+
+			gSPProcessVertex( i );
+
+			vertex++;
+		}
+	}
+#ifdef DEBUG
+	else
+		DebugMsg( DEBUG_HIGH | DEBUG_ERROR | DEBUG_VERTEX, "// Attempting to load vertices past vertex buffer size\n" );
+#endif
+}
+
 void gSPNIVertex( u32 v, u32 n, u32 v0 )
 {
 	u32 address = RSP_SegmentToPhysical( v );
@@ -736,7 +838,7 @@ void gSPNIVertex( u32 v, u32 n, u32 v0 )
 
 	Vertex* vertex = (Vertex*)&RDRAM[address];
 
-	if ((n + v0) < (80))
+	if ((n + v0) < SP_VERTEX_COUNT)
 	{
 		for (unsigned int i = v0; i < n + v0; i++)
 		{
@@ -794,7 +896,7 @@ void gSPCIVertex( u32 v, u32 n, u32 v0 )
 
 	PDVertex *vertex = (PDVertex*)&RDRAM[address];
 
-	if ((n + v0) < (80))
+	if ((n + v0) < SP_VERTEX_COUNT)
 	{
 		for (unsigned int i = v0; i < n + v0; i++)
 		{
@@ -869,7 +971,7 @@ void gSPDMAVertex( u32 v, u32 n, u32 v0 )
 		return;
 	}
 
-	if ((n + v0) < (80))
+	if ((n + v0) < SP_VERTEX_COUNT)
 	{
 		for (unsigned int i = v0; i < n + v0; i++)
 		{
@@ -1189,8 +1291,10 @@ void gSPInterpolateVertex( SPVertex *dest, f32 percent, SPVertex *first, SPVerte
 
 void gSPTriangle( s32 v0, s32 v1, s32 v2 )
 {
-	if ((v0 < 80) && (v1 < 80) && (v2 < 80))
+	if ((v0 < SP_VERTEX_COUNT) && (v1 < SP_VERTEX_COUNT) && (v2 < SP_VERTEX_COUNT))
+	{
 		OGL_AddTriangle( gSP.vertices, v0, v1, v2 );
+	}
 #ifdef DEBUG
 	else
 		DebugMsg( DEBUG_HIGH | DEBUG_ERROR | DEBUG_TRIANGLE, "// Vertex index out of range\n" );
@@ -1452,11 +1556,13 @@ void gSPInsertMatrix( u32 where, u32 num )
 	{
 		OGL.GXcombW[2][3] = GXprojZScale / OGL.GXprojTemp[2][3];
 		OGL.GXcombW[2][2] = -GXprojZOffset + (OGL.GXcombW[2][3] * OGL.GXprojTemp[3][3]);
+		OGL.GXcombWok = true;
 		OGL.GXuseCombW = true;
 		OGL.GXupdateMtx = true;
 	}
 	else
 	{
+		OGL.GXcombWok = false;
 		OGL.GXuseCombW = false;
 		OGL.GXupdateMtx = true;
 	}

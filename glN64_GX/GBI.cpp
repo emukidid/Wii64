@@ -28,13 +28,19 @@
 #include "S2DEX.h"
 #include "S2DEX2.h"
 #include "F3DDKR.h"
-#include "F3DWRUS.h"
 #include "F3DPD.h"
 #include "F3DCBFD.h"
 #include "F3DFLX2.h"
 #include "F3DGOLDEN.h"
 #include "F3DZEX2.h"
 #include "ZSortBOSS.h"
+#include "F5Rogue.h"
+#include "F3DBETA.h"
+#include "F3DSETA.h"
+#include "F3DEX095.h"
+#include "F3DAM.h"
+#include "F3DEX2ACCLAIM.h"
+//#include "F5Indi_Naboo.h"
 #include "Types.h"
 #include "Debug.h"
 #ifndef __LINUX__
@@ -55,22 +61,43 @@ char uc_str[256];
 
 SpecialMicrocodeInfo specialMicrocodes[] =
 {
-	{ F3DWRUS,		FALSE,	0x81FA4A32, (char*) "RSP SW Version: 2.0D, 04-01-96" },
-	{ F3DWRUS,		FALSE,	0xE7FA4491, (char*) "RSP SW Version: 2.0D, 04-01-96" },
-	{ F3DDKR,		FALSE,	0x3BFF208D, (char*) "Diddy Kong Racing" },
-	{ F3DDKR,		FALSE,	0x8F9AE489, (char*) "Diddy Kong Racing" },
-	{ F3DDKR,		FALSE,	0x83421788, (char*) "JET FORCE GEMINI" },
-	{ F3DPD,		FALSE,	0xC543D0A8, (char*) "Perfect Dark" },
-	{ F3DGOLDEN,	FALSE,	0x9CBA9D04, (char*) "RSP SW Version: 2.0G, 09-30-96" }, // GoldenEye 007
-	{ F3DCBFD,		TRUE,	0x99E222AC, (char*) "RSP Gfx ucode F3DEXBG.NoN fifo 2.08  Yoshitaka Yasumoto 1999 Nintendo." },
-	{ F3DEX2,		TRUE,	0x1DACFAF1, (char*) "ANIMAL FOREST" },
-	{ S2DEX2,		FALSE,	0x8E050E8E, (char*) "ANIMAL FOREST" },
-	{ ZSortBOSS,	FALSE,	0xe1932671, (char*) "World Driver Championship" },
-	{ ZSortBOSS,	FALSE,	0x9a2b06e8, (char*) "Stunt Racer 64" },
-	{ ZSortBOSS,	FALSE,	0x39799101, (char*) "World Driver Championship (Euro)" },
+	{ F3DDKR,		FALSE,	TRUE,	FALSE,	0x3BFF208D, (char*) "Diddy Kong Racing" },
+	{ F3DDKR,		FALSE,	TRUE,	FALSE,	0x8F9AE489, (char*) "Diddy Kong Racing" },
+	{ F3DJFG,		FALSE,	TRUE,	TRUE,	0x83421788, (char*) "JET FORCE GEMINI" },
+	{ F3DPD,		FALSE,	TRUE,	FALSE,	0xC543D0A8, (char*) "Perfect Dark" },
+	{ F3DGOLDEN,	FALSE,	TRUE,	FALSE,	0x9CBA9D04, (char*) "RSP SW Version: 2.0G, 09-30-96" }, // GoldenEye 007
+	{ F3DCBFD,		TRUE,	TRUE,	FALSE,	0x99E222AC, (char*) "RSP Gfx ucode F3DEXBG.NoN fifo 2.08  Yoshitaka Yasumoto 1999 Nintendo." },
+	{ F3DEX2,		TRUE,	TRUE,	FALSE,	0x1DACFAF1, (char*) "ANIMAL FOREST" },
+	{ S2DEX2,		FALSE,	TRUE,	FALSE,	0x8E050E8E, (char*) "ANIMAL FOREST" },
+	{ ZSortBOSS,	FALSE,	TRUE,	FALSE,	0xe1932671, (char*) "World Driver Championship" },
+	{ ZSortBOSS,	FALSE,	TRUE,	FALSE,	0x9a2b06e8, (char*) "Stunt Racer 64" },
+	{ ZSortBOSS,	FALSE,	TRUE,	FALSE,	0x39799101, (char*) "World Driver Championship (Euro)" },
+	{ F5Rogue,		FALSE,	TRUE,	FALSE,	0x415ef7d5, (char*) "Star Wars Rogue Squadron" },
+	{ F3DEX095,		FALSE,	FALSE,	TRUE,	0xcd02d1ad, (char*) "Mario Kart 64, F3DEX 0.95" },
+	{ F3D,			FALSE,	FALSE,	FALSE,	0x725db47a, (char*) "AeroFighters Assault" },
+	{ F3D,			FALSE,	FALSE,	TRUE,	0xf823e896, (char*) "Wayne Gretzky's 3D Hockey (U)" },
+	{ F3D,			FALSE,	TRUE,	TRUE,	0x38477317, (char*) "Pilot Wings 64, Blast Corps" },
+	{ F3D,			FALSE,	FALSE,	TRUE,	0x2f9c5063, (char*) "Mischief Makers, MK Trilogy, J.League Live" },
+	{ F3DEX,		TRUE,	TRUE,	TRUE,	0x5eef1b83, (char*) "Power League" },
+	{ F3D,			FALSE,	FALSE,	TRUE,	0x11d4da6c, (char*) "Super Mario 64" },
+	{ F3D,			FALSE,	FALSE,	TRUE,	0xbcebbc25, (char*) "Dark Rift" },
+	{ L3D,			FALSE,	TRUE,	TRUE,	0x02668ab6, (char*) "Blast Corps (Line3D)" },
+	{ F3D,			FALSE,	FALSE,	FALSE,	0x3a32dce1, (char*) "Pachinko nichi 365" },
+	{ F3DBETA,		FALSE,	TRUE,	TRUE,	0xe7fa4491, (char*) "Star Wars: Shadows of the Empire" },
+	{ F3DBETA,		FALSE,	TRUE,	TRUE,	0x81fa4a32, (char*) "Wave Race 64 (U)" },
+	{ F3D,			FALSE,	FALSE,	TRUE,	0x217b638a, (char*) "Cruis'n USA" },
+	{ F3D,			FALSE,	FALSE,	FALSE,	0x3b30eb5d, (char*) "Eikou no Saint Andrews" },
+	{ F3D,			FALSE,	TRUE,	FALSE,	0x00000000, (char*) "Fast3D" },
+	{ F3DEX095,		FALSE,	FALSE,	TRUE,	0x00c2d08f, (char*) "Mario Kart 64, F3DLX 0.95" },
+	{ F3D,			FALSE,	TRUE,	FALSE,	0x00000000, (char*) "Caribbean Nights" },
+	{ Turbo3D,		FALSE,	TRUE,	FALSE,	0x42c29cd9, (char*) "Dark Rift (Turbo3D)" },
+	{ F3DEX2ACCLAIM,FALSE,	TRUE,	FALSE,	0x8b47d88a, (char*) "Turok 2/3, Armorines, South Park" },
+	//{ F5Indi_Naboo,	FALSE,	FALSE,	FALSE,	0x5d7bdce3, (char*) "SW Ep.1 Battle for Naboo" },
+	//{ F5Indi_Naboo,	FALSE,	FALSE,	FALSE,	0x37afc470, (char*) "Indiana Jones and the Infernal Machine" },
 };
 
 u32 G_RDPHALF_1, G_RDPHALF_2, G_RDPHALF_CONT;
+u32 G_PERSPNORM;
 u32 G_SPNOOP;
 u32 G_SETOTHERMODE_H, G_SETOTHERMODE_L;
 u32 G_DL, G_ENDDL, G_CULLDL, G_BRANCH_Z;
@@ -379,6 +406,9 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 	current->dataAddress = uc_dstart;
 	current->dataSize = uc_dsize;
 	current->NoN = FALSE;
+	current->negativeY = TRUE;   // Y inverted is the normal case
+	current->fast3DPersp = FALSE;
+	current->texturePersp = TRUE;
 	current->combineMatrices = FALSE;
 	current->type = F3D;
 
@@ -390,9 +420,13 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 #endif // __GX__
 	for (u32 i = 0; i < sizeof( specialMicrocodes ) / sizeof( SpecialMicrocodeInfo ); i++)
 	{
-		if (uc_crc == specialMicrocodes[i].crc)
+		if (specialMicrocodes[i].crc != 0 && uc_crc == specialMicrocodes[i].crc)
 		{
 			current->type = specialMicrocodes[i].type;
+			current->NoN = specialMicrocodes[i].NoN;
+			current->negativeY = specialMicrocodes[i].negativeY;
+			current->fast3DPersp = specialMicrocodes[i].fast3DPersp;
+			current->text = specialMicrocodes[i].text;
 			return current;
 		}
 	}
@@ -432,7 +466,7 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 			}
 			else if (strncmp( &uc_str[4], "Gfx", 3 ) == 0)
 			{
-				current->NoN = (strncmp( &uc_str[20], ".NoN", 4 ) == 0);
+				current->NoN = FALSE; /*(strncmp( &uc_str[20], ".NoN", 4 ) == 0);*/ // Now that NoN actually does something, lets leave it off until we find more titles that need it.
 
 				if (strncmp( &uc_str[14], "F3DFLX", 6 ) == 0)
 				{
@@ -444,6 +478,10 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 					// Zelda: Ocarina of Time / Majora's Mask
 					type = F3DZEX2;
 				}
+				else if (strstr( uc_str, "F3DAM" ) != NULL)
+				{
+					type = F3DAM;
+				}
 				else if (strncmp( &uc_str[14], "F3D", 3 ) == 0)
 				{
 					if (uc_str[28] == '0')
@@ -454,6 +492,16 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 					{
 						type = F3DEX2;
 						current->combineMatrices = (uc_str[35] == 'H');
+					}
+
+					if (strncmp( &uc_str[14], "F3DLX.Rej", 9 ) == 0)
+					{
+						current->NoN = TRUE;
+					}
+					else if (strncmp( &uc_str[14], "F3DLP.Rej", 9 ) == 0)
+					{
+						current->texturePersp = FALSE;
+						current->NoN = TRUE;
 					}
 				}
 				else if (strncmp( &uc_str[14], "L3D", 3 ) == 0)
@@ -469,6 +517,7 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 						type = S2DEX;
 					else if (uc_str[31] == '2')
 						type = S2DEX2;
+					current->texturePersp = FALSE;
 				}
 			}
 
@@ -487,6 +536,9 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 		if (strcmp( uc_str, specialMicrocodes[i].text ) == 0)
 		{
 			current->type = specialMicrocodes[i].type;
+			current->NoN = specialMicrocodes[i].NoN;
+			current->negativeY = specialMicrocodes[i].negativeY;
+			current->fast3DPersp = specialMicrocodes[i].fast3DPersp;
 			return current;
 		}
 	}
@@ -543,13 +595,28 @@ void GBI_MakeCurrent( MicrocodeInfo *current )
 			case S2DEX:		S2DEX_Init();	break;
 			case S2DEX2:	S2DEX2_Init();	break;
 			case F3DDKR:	F3DDKR_Init();	break;
-			case F3DWRUS:	F3DWRUS_Init();	break;
 			case F3DPD:		F3DPD_Init();	break;
 			case F3DCBFD:	F3DCBFD_Init();	break;
 			case F3DFLX2:	F3DFLX2_Init();	break;
 			case F3DGOLDEN:	F3DGOLDEN_Init();	break;
 			case F3DZEX2:	F3DZEX2_Init();	break;
 			case ZSortBOSS:	ZSortBOSS_Init();	break;
+			case F5Rogue:	F5Rogue_Init();		break;
+			case F3DBETA:	F3DBETA_Init();		break;
+			case F3DSETA:	F3DSETA_Init();		break;
+			case F3DEX095:	F3DEX095_Init();	break;
+			case F3DJFG:	F3DJFG_Init();		break;
+			case F3DAM:		F3DAM_Init();		break;
+			case F3DEX2ACCLAIM:	F3DEX2ACCLAIM_Init();	break;
+			//case F5Indi_Naboo:	F5Indi_Naboo_Init();	break;
+		}
+
+		//GLideN64 #1303.
+		if (current->fast3DPersp)
+		{
+			GBI_SetGBI( G_PERSPNORM,	F3DBETA_PERSPNORM,	F3DBETA_Perpnorm );
+			GBI_SetGBI( G_RDPHALF_1,	F3DBETA_RDPHALF_1,	F3D_RDPHalf_1 );
+			GBI_SetGBI( G_RDPHALF_2,	F3DBETA_RDPHALF_2,	F3D_RDPHalf_2 );
 		}
 	}
 

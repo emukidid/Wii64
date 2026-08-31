@@ -22,13 +22,21 @@
 #define S2DEX2		7
 #define F3DPD		8
 #define F3DDKR		9
-#define F3DWRUS	    10
-#define F3DCBFD		11
-#define F3DFLX2		12
-#define F3DGOLDEN	13
-#define F3DZEX2		14
-#define ZSortBOSS	15
-#define NONE		16
+#define F3DCBFD		10
+#define F3DFLX2		11
+#define F3DGOLDEN	12
+#define F3DZEX2		13
+#define ZSortBOSS	14
+#define F5Rogue		15
+#define F3DBETA		16
+#define F3DSETA		17
+#define F3DEX095	18
+#define F3DJFG		19
+#define Turbo3D		20
+#define F3DAM		21
+#define F3DEX2ACCLAIM	22
+#define F5Indi_Naboo	23
+#define NONE		24
 
 #ifdef MAINDEF
 const char *MicrocodeTypes[] =
@@ -43,19 +51,27 @@ const char *MicrocodeTypes[] =
 	"S2DEX2",
 	"Perfect Dark",
 	"DKR/JFG",
-	"Waverace US",
 	"CBFD",
 	"F-Zero X",
 	"GoldenEye",
 	"Zelda OOT/MM",
 	"ZSortBOSS",
+	"Rogue Squadron",
+	"Fast3D BETA",
+	"Fast3D SETA",
+	"F3DEX 0.95",
+	"Jet Force Gemini",
+	"Turbo3D",
+	"F3DAM",
+	"Acclaim F3DEX2",
+	"Indi/Naboo",
 	"None"
 };
 #else
 extern const char *MicrocodeTypes[];
 #endif
 
-static const int numMicrocodeTypes = 16;
+static const int numMicrocodeTypes = NONE;
 
 
 // Fixed point conversion factors
@@ -687,6 +703,10 @@ extern u32 G_OBJ_RECTANGLE, G_OBJ_SPRITE, G_OBJ_MOVEMEM;
 extern u32 G_SELECT_DL, G_OBJ_RENDERMODE, G_OBJ_RECTANGLE_R;
 extern u32 G_OBJ_LOADTXTR, G_OBJ_LDTX_SPRITE, G_OBJ_LDTX_RECT, G_OBJ_LDTX_RECT_R;
 extern u32 G_RDPHALF_0;
+extern u32 G_PERSPNORM;
+
+#define GBI_IsNoN()		(GBI.current != NULL ? GBI.current->NoN : FALSE)
+#define GBI_IsTexturePersp()	(GBI.current != NULL ? GBI.current->texturePersp : TRUE)
 
 #define LIGHT_1	1
 #define LIGHT_2	2
@@ -808,6 +828,8 @@ struct SpecialMicrocodeInfo
 {
 	u32 type;
 	u32 NoN;
+	u32 negativeY;
+	u32 fast3DPersp; // Fast3D family ucode with a standalone G_PERSPNORMALIZE
 	u32 crc;
 	char *text;
 };
@@ -818,8 +840,11 @@ struct MicrocodeInfo
 	u16 dataSize;
 	u32 type;
 	u32 NoN;
+	u32 negativeY;
+	u32 fast3DPersp;
+	u32 texturePersp;
 	u32 crc;
-	u32 *text;
+	char *text;
 	u32 combineMatrices; // some F3DEX2 overload G_SPECIAL_1 for this instead of gSPDlistCount
 
 	MicrocodeInfo *higher, *lower;

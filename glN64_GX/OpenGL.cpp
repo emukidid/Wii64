@@ -1148,6 +1148,35 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 {
 	int v[] = { v0, v1, v2 };
 
+#ifdef __GX__
+	// TODO gate on MK4 only.
+	if (OGL.GXcombWok && GBI_IsNoN())
+	{
+		u32 onNear = 0;
+		for (int c = 0; c < 3; c++)
+		{
+			const SPVertex &pv = vertices[v[c]];
+			if (pv.w > 0.0f && (pv.z + pv.w) == 0.0f)
+				onNear++;
+		}
+		const BOOL useCombW = (onNear == 3) ? FALSE : TRUE;
+		if (useCombW != OGL.GXuseCombW)
+		{
+			if (OGL.numTriangles)
+				OGL_DrawTriangles();
+			OGL.GXuseCombW = useCombW;
+			OGL.GXupdateMtx = TRUE;
+		}
+	}
+
+	if (!OGL.GXuseCombW)
+	{
+		for (int c = 0; c < 3; c++)
+			if (vertices[v[c]].w <= 0.0f)
+				return;
+	}
+#endif // __GX__
+
 	if (gSP.changed || gDP.changed)
 		OGL_UpdateStates();
 
@@ -1200,34 +1229,38 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 		//Fog is taken care of in hardware with GX.
 #endif //__GX__
 
+		const f32 texPerspHalf = (GBI_IsTexturePersp() && gDP.otherMode.texturePersp == 0)
+		                         ? 0.5f : 1.0f;
+		const f32 texPerspScaleS = gSP.texture.scales * texPerspHalf;
+		const f32 texPerspScaleT = gSP.texture.scalet * texPerspHalf;
 		if (combiner.usesT0)
 		{
 			if (cache.current[0]->frameBufferTexture)
 			{
-/*				OGL.vertices[OGL.numVertices].s0 = (cache.current[0]->offsetS + (vertices[v[i]].s * cache.current[0]->shiftScaleS * gSP.texture.scales - gSP.textureTile[0]->fuls)) * cache.current[0]->scaleS;
-				OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT - (vertices[v[i]].t * cache.current[0]->shiftScaleT * gSP.texture.scalet - gSP.textureTile[0]->fult)) * cache.current[0]->scaleT;*/
+/*				OGL.vertices[OGL.numVertices].s0 = (cache.current[0]->offsetS + (vertices[v[i]].s * cache.current[0]->shiftScaleS * texPerspScaleS - gSP.textureTile[0]->fuls)) * cache.current[0]->scaleS;
+				OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT - (vertices[v[i]].t * cache.current[0]->shiftScaleT * texPerspScaleT - gSP.textureTile[0]->fult)) * cache.current[0]->scaleT;*/
 
 				if (gSP.textureTile[0]->masks)
-					OGL.vertices[OGL.numVertices].s0 = (cache.current[0]->offsetS + (vertices[v[i]].s * cache.current[0]->shiftScaleS * gSP.texture.scales - fmod( gSP.textureTile[0]->fuls, 1 << gSP.textureTile[0]->masks ))) * cache.current[0]->scaleS;
+					OGL.vertices[OGL.numVertices].s0 = (cache.current[0]->offsetS + (vertices[v[i]].s * cache.current[0]->shiftScaleS * texPerspScaleS - fmod( gSP.textureTile[0]->fuls, 1 << gSP.textureTile[0]->masks ))) * cache.current[0]->scaleS;
 				else
-					OGL.vertices[OGL.numVertices].s0 = (cache.current[0]->offsetS + (vertices[v[i]].s * cache.current[0]->shiftScaleS * gSP.texture.scales - gSP.textureTile[0]->fuls)) * cache.current[0]->scaleS;
+					OGL.vertices[OGL.numVertices].s0 = (cache.current[0]->offsetS + (vertices[v[i]].s * cache.current[0]->shiftScaleS * texPerspScaleS - gSP.textureTile[0]->fuls)) * cache.current[0]->scaleS;
 
 #ifndef __GX__
 				if (gSP.textureTile[0]->maskt)
-					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT - (vertices[v[i]].t * cache.current[0]->shiftScaleT * gSP.texture.scalet - fmod( gSP.textureTile[0]->fult, 1 << gSP.textureTile[0]->maskt ))) * cache.current[0]->scaleT;
+					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT - (vertices[v[i]].t * cache.current[0]->shiftScaleT * texPerspScaleT - fmod( gSP.textureTile[0]->fult, 1 << gSP.textureTile[0]->maskt ))) * cache.current[0]->scaleT;
 				else
-					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT - (vertices[v[i]].t * cache.current[0]->shiftScaleT * gSP.texture.scalet - gSP.textureTile[0]->fult)) * cache.current[0]->scaleT;
+					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT - (vertices[v[i]].t * cache.current[0]->shiftScaleT * texPerspScaleT - gSP.textureTile[0]->fult)) * cache.current[0]->scaleT;
 #else //!__GX__
 				if (gSP.textureTile[0]->maskt)
-					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT + (vertices[v[i]].t * cache.current[0]->shiftScaleT * gSP.texture.scalet - fmod( gSP.textureTile[0]->fult, 1 << gSP.textureTile[0]->maskt ))) * cache.current[0]->scaleT;
+					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT + (vertices[v[i]].t * cache.current[0]->shiftScaleT * texPerspScaleT - fmod( gSP.textureTile[0]->fult, 1 << gSP.textureTile[0]->maskt ))) * cache.current[0]->scaleT;
 				else
-					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT + (vertices[v[i]].t * cache.current[0]->shiftScaleT * gSP.texture.scalet - gSP.textureTile[0]->fult)) * cache.current[0]->scaleT;
+					OGL.vertices[OGL.numVertices].t0 = (cache.current[0]->offsetT + (vertices[v[i]].t * cache.current[0]->shiftScaleT * texPerspScaleT - gSP.textureTile[0]->fult)) * cache.current[0]->scaleT;
 #endif //__GX__
 			}
 			else
 			{
-				OGL.vertices[OGL.numVertices].s0 = (vertices[v[i]].s * cache.current[0]->shiftScaleS * gSP.texture.scales - gSP.textureTile[0]->fuls + cache.current[0]->offsetS) * cache.current[0]->scaleS; 
-				OGL.vertices[OGL.numVertices].t0 = (vertices[v[i]].t * cache.current[0]->shiftScaleT * gSP.texture.scalet - gSP.textureTile[0]->fult + cache.current[0]->offsetT) * cache.current[0]->scaleT;
+				OGL.vertices[OGL.numVertices].s0 = (vertices[v[i]].s * cache.current[0]->shiftScaleS * texPerspScaleS - gSP.textureTile[0]->fuls + cache.current[0]->offsetS) * cache.current[0]->scaleS; 
+				OGL.vertices[OGL.numVertices].t0 = (vertices[v[i]].t * cache.current[0]->shiftScaleT * texPerspScaleT - gSP.textureTile[0]->fult + cache.current[0]->offsetT) * cache.current[0]->scaleT;
 			}
 		}
 
@@ -1235,17 +1268,17 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 		{
 			if (cache.current[0]->frameBufferTexture)
 			{
-				OGL.vertices[OGL.numVertices].s1 = (cache.current[1]->offsetS + (vertices[v[i]].s * cache.current[1]->shiftScaleS * gSP.texture.scales - gSP.textureTile[1]->fuls)) * cache.current[1]->scaleS;
+				OGL.vertices[OGL.numVertices].s1 = (cache.current[1]->offsetS + (vertices[v[i]].s * cache.current[1]->shiftScaleS * texPerspScaleS - gSP.textureTile[1]->fuls)) * cache.current[1]->scaleS;
 #ifndef __GX__
-				OGL.vertices[OGL.numVertices].t1 = (cache.current[1]->offsetT - (vertices[v[i]].t * cache.current[1]->shiftScaleT * gSP.texture.scalet - gSP.textureTile[1]->fult)) * cache.current[1]->scaleT;
+				OGL.vertices[OGL.numVertices].t1 = (cache.current[1]->offsetT - (vertices[v[i]].t * cache.current[1]->shiftScaleT * texPerspScaleT - gSP.textureTile[1]->fult)) * cache.current[1]->scaleT;
 #else //!__GX__
-				OGL.vertices[OGL.numVertices].t1 = (cache.current[1]->offsetT + (vertices[v[i]].t * cache.current[1]->shiftScaleT * gSP.texture.scalet - gSP.textureTile[1]->fult)) * cache.current[1]->scaleT;
+				OGL.vertices[OGL.numVertices].t1 = (cache.current[1]->offsetT + (vertices[v[i]].t * cache.current[1]->shiftScaleT * texPerspScaleT - gSP.textureTile[1]->fult)) * cache.current[1]->scaleT;
 #endif //__GX__
 			}
 			else
 			{
-				OGL.vertices[OGL.numVertices].s1 = (vertices[v[i]].s * cache.current[1]->shiftScaleS * gSP.texture.scales - gSP.textureTile[1]->fuls + cache.current[1]->offsetS) * cache.current[1]->scaleS; 
-				OGL.vertices[OGL.numVertices].t1 = (vertices[v[i]].t * cache.current[1]->shiftScaleT * gSP.texture.scalet - gSP.textureTile[1]->fult + cache.current[1]->offsetT) * cache.current[1]->scaleT;
+				OGL.vertices[OGL.numVertices].s1 = (vertices[v[i]].s * cache.current[1]->shiftScaleS * texPerspScaleS - gSP.textureTile[1]->fuls + cache.current[1]->offsetS) * cache.current[1]->scaleS; 
+				OGL.vertices[OGL.numVertices].t1 = (vertices[v[i]].t * cache.current[1]->shiftScaleT * texPerspScaleT - gSP.textureTile[1]->fult + cache.current[1]->offsetT) * cache.current[1]->scaleT;
 			}
 		}
 		OGL.numVertices++;

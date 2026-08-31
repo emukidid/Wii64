@@ -1284,6 +1284,12 @@ void TextureCache_Load( CachedTexture *texInfo )
 			clampSClamp = 0xFFFF;
 			postClampS = dataClampS;
 		}
+		else if (!texInfo->clampS && !texInfo->mirrorS &&
+				 (u32)(1 << texInfo->maskS) > texInfo->width)
+		{
+			clampSClamp = 0xFFFF;
+			postClampS = 0xFFFF;
+		}
 		else
 		{
 			clampSClamp = texInfo->clampS ? texInfo->clampWidth - 1
@@ -1307,6 +1313,13 @@ void TextureCache_Load( CachedTexture *texInfo )
 		{
 			clampTClamp = 0xFFFF;
 			postClampT = dataClampT;
+		}
+		else if (!texInfo->clampT && !texInfo->mirrorT &&
+				 (u32)(1 << texInfo->maskT) > texInfo->height)
+		{
+			// Same as the S axis above.
+			clampTClamp = 0xFFFF;
+			postClampT = 0xFFFF;
 		}
 		else
 		{
