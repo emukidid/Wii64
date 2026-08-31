@@ -109,9 +109,15 @@ int deleteSram(fileBrowser_file* savepath){
 	return saveFile_deleteFile(&saveFile);
 }
 
+#define PI_ADVANCE_ADDR(len) do { \
+	pi_register.pi_dram_addr_reg = (pi_register.pi_dram_addr_reg + (len) + 7) & ~7UL; \
+	pi_register.pi_cart_addr_reg = (pi_register.pi_cart_addr_reg + (len) + 1) & ~1UL; \
+} while (0)
+
 void dma_pi_read()
 {
 	unsigned long dma_length;
+	unsigned long req_length;
 	int i;
 	
 	if (pi_register.pi_cart_addr_reg < 0x10000000)
@@ -152,6 +158,7 @@ void dma_pi_read()
 	// The PI treats the first 128 bytes of a transfer differently
 	if (dma_length >= 0x7f && (dma_length & 1)) dma_length += 1;
 	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
+	req_length = dma_length;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
 	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEM_SIZE ?
 				 (MEM_SIZE - pi_register.pi_dram_addr_reg) : dma_length;
@@ -159,6 +166,7 @@ void dma_pi_read()
 	if(i>rom_length || pi_register.pi_dram_addr_reg > MEMMASK)
 	{
 		pi_register.read_pi_status_reg |= 3;
+		PI_ADVANCE_ADDR(req_length);
 		update_count();
 		add_interupt_event(PI_INT, dma_length/8);
 		return;
@@ -184,6 +192,7 @@ void dma_pi_read()
 void dma_pi_write()
 {
 	unsigned long dma_length;
+	unsigned long req_length;
 	int i;
 
 	// Non Cart region DMA
@@ -227,6 +236,7 @@ void dma_pi_write()
 		dma_length = dma_length >= (pi_register.pi_dram_addr_reg & 0x7) ?
 					 dma_length - (pi_register.pi_dram_addr_reg & 0x7) : 0;
 	i = (pi_register.pi_cart_addr_reg-0x10000000)&0x3FFFFFE;
+	req_length = dma_length;
 	dma_length = (i + dma_length) > rom_length ? (rom_length - i) : dma_length;
 	dma_length = (pi_register.pi_dram_addr_reg + dma_length) > MEM_SIZE ?
 				 (MEM_SIZE - pi_register.pi_dram_addr_reg) : dma_length;
@@ -234,6 +244,7 @@ void dma_pi_write()
 	if(i>rom_length || pi_register.pi_dram_addr_reg > MEMMASK)
 	{
 		pi_register.read_pi_status_reg |= 3;
+		PI_ADVANCE_ADDR(req_length);
 		update_count();
 		add_interupt_event(PI_INT, dma_length/8);
 		return;
@@ -272,6 +283,7 @@ void dma_pi_write()
 	}
 
 	pi_register.read_pi_status_reg |= 3;
+	PI_ADVANCE_ADDR(req_length);
 	update_count();
 	add_interupt_event(PI_INT, dma_length/8);
 	return;
@@ -341,8 +353,41 @@ void dma_sp_read()
 	sp_register.sp_wr_len_reg    = 0xFF8;
 }
 
+#define SI_NO_DMA    0
+#define SI_DMA_READ  1
+#define SI_DMA_WRITE 2
+static int si_dma_dir = SI_NO_DMA;
+
+static unsigned long si_dram_word_index(void)
+{
+	unsigned long a = si_register.si_dram_addr & MEMMASK & ~3UL;
+	if (a > (unsigned long)(MEM_SIZE - 64))
+		a = (unsigned long)(MEM_SIZE - 64);
+	return a >> 2;
+}
+
+void si_end_of_dma(void)
+{
+	int i;
+	if (si_dma_dir == SI_DMA_WRITE)
+	{
+		update_pif_write();
+	}
+	else if (si_dma_dir == SI_DMA_READ)
+	{
+		for (i=0; i<(64/4); i++)
+			rdram[si_dram_word_index()+i] = sl(PIF_RAM[i]);
+	}
+	si_dma_dir = SI_NO_DMA;
+}
+
 void dma_si_write()
 {
+	if (si_register.si_status & 0x1)
+	{
+		si_register.si_status |= 0x8;
+		return;
+	}
 	int i;
 	if (si_register.si_pif_addr_wr64b != 0x1FC007C0)
 	{
@@ -350,23 +395,28 @@ void dma_si_write()
 		r4300.stop=1;
 	}
 	for (i=0; i<(64/4); i++)
-		PIF_RAM[i] = sl(rdram[si_register.si_dram_addr/4+i]);
-	update_pif_write();
+		PIF_RAM[i] = sl(rdram[si_dram_word_index()+i]);
+	si_dma_dir = SI_DMA_WRITE;
+	si_register.si_status |= 0x1;
 	update_count();
 	add_interupt_event(SI_INT, /*0x100*/0x900);
 }
 
 void dma_si_read()
 {
-	int i;
+	if (si_register.si_status & 0x1)
+	{
+		si_register.si_status |= 0x8;
+		return;
+	}
 	if (si_register.si_pif_addr_rd64b != 0x1FC007C0)
 	{
 		//	printf("unknown SI use\n");
 		r4300.stop=1;
 	}
 	update_pif_read();
-    for (i=0; i<(64/4); i++)
-		rdram[si_register.si_dram_addr/4+i] = sl(PIF_RAM[i]);
+	si_dma_dir = SI_DMA_READ;
+	si_register.si_status |= 0x1;
 	update_count();
 	add_interupt_event(SI_INT, /*0x100*/0x900);
 }

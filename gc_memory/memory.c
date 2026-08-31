@@ -579,6 +579,7 @@ static void update_MI_intr_mask_reg()
 void do_SP_task()
 {
 	int save_pc = rsp_register.rsp_pc & ~0xFFF;
+	unsigned long sp_delay_time;
     if (SP_DMEM[0xFC0/4] == 1)
     {
 		if (dpc_register.dpc_status & 0x2) // DP frozen (DK64, BC)
@@ -633,16 +634,7 @@ void do_SP_task()
 			}
 		}
 
-		if (!(sp_register.sp_status_reg & 0x1)) // !halt
-		{
-			sp_register.sp_task_pending = 1;
-			update_count();
-			add_interupt_event(SP_INT, 1000);
-		}
-		else
-		{
-			sp_register.sp_task_pending = 0;
-		}
+		sp_delay_time = 1000;
 
 		new_frame();
 
@@ -687,24 +679,45 @@ void do_SP_task()
 				}
 			}
 		}
-		return;
 	}
-
-	if (SP_DMEM[0xFC0/4] == 2)
+	else if (SP_DMEM[0xFC0/4] == 2)
     {
         //audio.processAList();
         rsp_register.rsp_pc &= 0xFFF;
         start_section(AUDIO_SECTION);
         doRspCycles(0xffffffff);
         end_section(AUDIO_SECTION);
-        rsp_register.rsp_pc |= save_pc;       
+        rsp_register.rsp_pc |= save_pc;
+
+       sp_delay_time = 4000;
     }
     else
     {
         rsp_register.rsp_pc &= 0xFFF;
         doRspCycles(0xffffffff);
         rsp_register.rsp_pc |= save_pc;
+
+        sp_delay_time = 0;
     }
+
+	sp_register.sp_task_pending = 0;
+	interrupt_unsafe_state &= ~INTR_UNSAFE_RSP;
+
+	if ((sp_register.sp_status_reg & 0x3) == 0)
+	{
+		sp_register.sp_task_pending = 1;
+		interrupt_unsafe_state |= INTR_UNSAFE_RSP;
+		MI_register.mi_intr_reg |= MI_INTR_SP;
+	}
+
+	if (MI_register.mi_intr_reg & MI_INTR_SP)
+	{
+		MI_register.mi_intr_reg &= ~MI_INTR_SP;
+		remove_event(CHECK_INT);
+		check_interupt();
+		update_count();
+		add_interupt_event(SP_INT, sp_delay_time);
+	}
 }
 
 void update_SP()
@@ -2017,16 +2030,32 @@ void write_vid()
 	*readvi[*address_low+4] = dword & 0xFFFFFFFF;
 }
 
+static unsigned long ai_remaining_dma_length(void)
+{
+	unsigned long *next_ai_event;
+
+	if (ai_register.current_delay == 0)
+		return 0;
+
+	update_count();
+
+	next_ai_event = get_event(AI_INT);
+	if (next_ai_event == NULL)
+		return 0;
+
+	if ((*next_ai_event - Count) >= 0x80000000) /* event already passed */
+		return 0;
+
+	return (unsigned long)((((*next_ai_event - Count) * (long long)ai_register.current_len)
+		/ ai_register.current_delay)) & ~7UL;
+}
+
 void read_ai()
 {
 	switch(*address_low)
 	{
 		case 0x4:
-			update_count();
-			if (ai_register.current_delay != 0 && get_event(AI_INT) != 0 && (get_event(AI_INT)-Count) < 0x80000000)
-				word = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
-			else
-				word = 0;
+			word = ai_remaining_dma_length();
 		return;
 		break;
 	}
@@ -2042,11 +2071,7 @@ void read_aib()
 		case 0x5:
 		case 0x6:
 		case 0x7:
-			update_count();
-			if (ai_register.current_delay != 0 && get_event(AI_INT) != 0)
-				len = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
-			else
-				len = 0;
+			len = ai_remaining_dma_length();
 			byte = *((unsigned char*)&len + ((*address_low&3)^S8) );
 			return;
 		break;
@@ -2061,11 +2086,7 @@ void read_aih()
 	{
 		case 0x4:
 		case 0x6:
-			update_count();
-			if (ai_register.current_delay != 0 && get_event(AI_INT) != 0)
-				len = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
-			else
-				len = 0;
+			len = ai_remaining_dma_length();
 			hword = *((unsigned short*)((unsigned char*)&len + ((*address_low&3)^S16) ));
 			return;
 		break;
@@ -2075,12 +2096,13 @@ void read_aih()
 
 void read_aid()
 {
+	unsigned long len;
 	switch(*address_low)
 	{
 		case 0x0:
-			update_count();
-			if (ai_register.current_delay != 0 && get_event(AI_INT) != 0)
-				dword = ((get_event(AI_INT)-Count)*(long long)ai_register.current_len)/ai_register.current_delay;
+			len = ai_remaining_dma_length();
+			if (len != 0)
+				dword = len;
 			else
 				dword = (unsigned long long)ai_register.ai_dram_addr << 32 & 0xFFFFFFFF00000000LL;
 			return;
@@ -2104,7 +2126,7 @@ void write_ai()
 	switch(*address_low)
 	{
 		case 0x4:
-			ai_register.ai_len = word;
+			ai_register.ai_len = word & 0xFFFFFFF8;
 			aiLenChanged();
 			delay = get_dma_duration();
 			if (no_audio_delay) delay = 0;
@@ -2172,9 +2194,10 @@ void write_aib()
 		case 0x7:
 			temp = ai_register.ai_len;
 			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
-			ai_register.ai_len = temp;
+			ai_register.ai_len = temp & 0xFFFFFFF8;
 			aiLenChanged();
 			delay = get_dma_duration();
+			if (no_audio_delay) delay = 0;
 			if (ai_register.ai_status & 0x40000000) // busy
 			{
 				ai_register.next_delay = delay;
@@ -2186,7 +2209,7 @@ void write_aib()
 				ai_register.current_delay = delay;
 				ai_register.current_len = ai_register.ai_len;
 				update_count();
-				add_interupt_event(AI_INT, delay/2);
+				add_interupt_event(AI_INT, delay);
 				ai_register.ai_status |= 0x40000000;
 			}
 			return;
@@ -2245,7 +2268,7 @@ void write_aih()
 		case 0x6:
 			temp = ai_register.ai_len;
 			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
-			ai_register.ai_len = temp;
+			ai_register.ai_len = temp & 0xFFFFFFF8;
 			aiLenChanged();
 			delay = get_dma_duration();
 			if (no_audio_delay) delay = 0;
@@ -2260,7 +2283,7 @@ void write_aih()
 				ai_register.current_delay = delay;
 				ai_register.current_len = ai_register.ai_len;
 				update_count();
-				add_interupt_event(AI_INT, delay/2);
+				add_interupt_event(AI_INT, delay);
 				ai_register.ai_status |= 0x40000000;
 			}
 			return;
@@ -2312,7 +2335,7 @@ void write_aid()
 	{
 		case 0x0:
 			ai_register.ai_dram_addr = dword >> 32;
-			ai_register.ai_len = dword & 0xFFFFFFFF;
+			ai_register.ai_len = dword & 0xFFFFFFF8;
 			aiLenChanged();
 			delay = get_dma_duration();
 			if (no_audio_delay) delay = 0;
@@ -2327,7 +2350,7 @@ void write_aid()
 				ai_register.current_delay = delay;
 				ai_register.current_len = ai_register.ai_len;
 				update_count();
-				add_interupt_event(AI_INT, delay/2);
+				add_interupt_event(AI_INT, delay);
 				ai_register.ai_status |= 0x40000000;
 			}
 			return;

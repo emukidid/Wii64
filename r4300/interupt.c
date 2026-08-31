@@ -34,6 +34,10 @@
 #include "r4300.h"
 #include "macros.h"
 #include "interupt.h"
+#include "../gc_memory/dma.h"
+
+//Non-zero while an RSP task is locked
+unsigned int interrupt_unsafe_state = 0;
 #include "exception.h"
 #include "../config.h"
 #include "../main/plugin.h"
@@ -207,22 +211,23 @@ void remove_interupt_event()
   }
 }
 
-unsigned long get_event(int type)
+// Returns a ptr to the event's count
+unsigned long *get_event(int type)
 {
   interupt_queue *aux = q;
   if (q == NULL) {
-    return 0;
+    return NULL;
   }
   if (q->type == type) {
-    return q->count;
+    return &q->count;
   }
   while (aux->next != NULL && aux->next->type != type) {
     aux = aux->next;
   }
   if (aux->next != NULL) {
-    return aux->next->count;
+    return &aux->next->count;
   }
-  return 0;
+  return NULL;
 }
 
 void remove_event(int type)
@@ -359,7 +364,7 @@ int chk_status(int chk) {
 
 void gen_interupt()
 {
-  if(savestates_queued_load()) {
+  if(!(interrupt_unsafe_state & INTR_UNSAFE_RSP) && savestates_queued_load()) {
 	return;
   }
 
@@ -378,11 +383,8 @@ void gen_interupt()
 
   switch(q->type) {
     case SPECIAL_INT:
-      if (Count > 0x10000000) {
-        return;
-      }
       remove_interupt_event();
-      add_interupt_event_count(SPECIAL_INT, 0);
+      add_interupt_event_count(SPECIAL_INT, (Count & 0x80000000) ^ 0x80000000);
       return;
     break;
     case VI_INT:
@@ -427,9 +429,11 @@ void gen_interupt()
     break;
   
     case SI_INT:
+      si_end_of_dma();
 	  PIF_RAMb[0x3F] = 0x0;
       remove_interupt_event();
       MI_register.mi_intr_reg |= 0x02;
+      si_register.si_status &= ~0x3;
       si_register.si_status |= 0x1000;
       if(!chk_status(1)) {
         return;
@@ -447,7 +451,8 @@ void gen_interupt()
   
     case AI_INT:
       if (ai_register.ai_status & 0x80000000) { // full
-        unsigned long ai_event = get_event(AI_INT);
+        unsigned long *pai_event = get_event(AI_INT);
+        unsigned long ai_event = pai_event ? *pai_event : 0;
         remove_interupt_event();
         ai_register.ai_status &= ~0x80000000;
         ai_register.current_delay = ai_register.next_delay;

@@ -41,10 +41,14 @@ void translate_event_queue(unsigned long base);
 void remove_event(int type);
 void add_interupt_event_count(int type, unsigned long count);
 void add_interupt_event(int type, unsigned long delay);
-unsigned long get_event(int type);
+unsigned long *get_event(int type);
 
 int save_eventqueue_infos(char *buf);
 void load_eventqueue_infos(char *buf);
+
+#define INTR_UNSAFE_R4300 0x01  /* not wired up here; kept for bit parity */
+#define INTR_UNSAFE_RSP   0x02
+extern unsigned int interrupt_unsafe_state;
 
 #define VI_INT      0x001
 #define COMPARE_INT 0x002

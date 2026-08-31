@@ -1562,7 +1562,12 @@ char * left(char * src, int nchars)
 char * right(char *src, int nchars)
 {
     static char dst[300];           // BUGFIX (STRMNNRM)
-    strncpy(dst, src + strlen(src) - nchars, nchars);
+    int len = (int)strlen(src);
+    if (nchars < 0) nchars = 0;
+    if (nchars > len) nchars = len;
+    if (nchars > (int)sizeof(dst) - 1) nchars = sizeof(dst) - 1;
+
+    strncpy(dst, src + len - nchars, nchars);
     dst[nchars]=0;
     return dst;
 }
@@ -1572,7 +1577,7 @@ char * tidy(char * s)
     char * p = s + strlen(s);
 
     p--;
-    while (p >= s && (*p == ' ' || *p == 0xa || *p == '\n') )
+    while (p >= s && (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') )
     {
         *p = 0;
         p--;
@@ -1610,8 +1615,10 @@ BOOL ReadIniFile()
             if (readinfo[0] == '{') //if a section heading
             {
                 section newsection;
-
-                readinfo[strlen(readinfo)-1]='\0';
+                
+                char *end = readinfo + strlen(readinfo);
+                while (end > readinfo && end[-1] == '}')
+                    *--end = '\0';
                 strcpy(newsection.crccheck, readinfo+1);
 
                 newsection.bDisableTextureCRC = FALSE;
@@ -1648,7 +1655,10 @@ BOOL ReadIniFile()
             }
             else
             {       
-                int sectionno = IniSections.size() - 1;
+                int sectionno = (int)IniSections.size() - 1;
+
+                if (sectionno < 0)
+                    continue;
 
                 if (strcasecmp(left(readinfo,4), "Name")==0)
                     strcpy(IniSections[sectionno].name,right(readinfo,strlen(readinfo)-5));
@@ -1800,7 +1810,10 @@ void WriteIniFile()
             BOOL bFound = FALSE;
             // Start of section
             tidy((char*)szBuf);
-            szBuf[strlen((char*)szBuf)-1]='\0';
+
+            char *end = (char*)szBuf + strlen((char*)szBuf);
+            while (end > (char*)szBuf && end[-1] == '}')
+                *--end = '\0';
 
             for (i = 0; i < IniSections.size(); i++)
             {
