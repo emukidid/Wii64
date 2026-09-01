@@ -668,7 +668,9 @@ void TextureCache_RemoveBottom()
 	glDeleteTextures( 1, &cache.bottom->glName );
 #endif // !__GX__
 
+#ifndef __GX__
 	cache.cachedBytes -= cache.bottom->textureBytes;
+#endif // !__GX__
 
 	if (cache.bottom->frameBufferTexture)
 		FrameBuffer_RemoveBuffer( cache.bottom->address );
@@ -678,8 +680,10 @@ void TextureCache_RemoveBottom()
 
 #ifdef __GX__
 	if( cache.bottom->GXtexture != NULL )
-//		free( cache.bottom->GXtexture );
+	{
+		cache.cachedBytes -= cache.bottom->textureBytes;
 		__lwp_heap_free(GXtexCache, cache.bottom->GXtexture);
+	}
 #endif // __GX__
 	free( cache.bottom );
 
@@ -728,11 +732,14 @@ void TextureCache_Remove( CachedTexture *texture )
 	glDeleteTextures( 1, &texture->glName );
 #endif // !__GX__
 
-	cache.cachedBytes -= texture->textureBytes;
 #ifdef __GX__
 	if( texture->GXtexture != NULL )
-//		free(texture->GXtexture);
+	{
+		cache.cachedBytes -= texture->textureBytes;
 		__lwp_heap_free(GXtexCache, texture->GXtexture);
+	}
+#else // !__GX__
+	cache.cachedBytes -= texture->textureBytes;
 #endif // __GX__
 	free( texture );
 
@@ -764,7 +771,7 @@ CachedTexture *TextureCache_AddTop()
 		newtop = (CachedTexture*)malloc( sizeof( CachedTexture ) );
 	}
 	//print_gecko("Memory %d/%d, next %d/%d\r\n", cache.cachedBytes, cache.maxBytes, cache.numCached, GX_MAX_TEXTURES);
-//	memset( newtop, 0x00, sizeof( CachedTexture ) );
+	memset( newtop, 0x00, sizeof( CachedTexture ) );
 
 #ifndef __GX__
 	glGenTextures( 1, &newtop->glName );
@@ -1864,6 +1871,9 @@ void TextureCache_Update( u32 t )
 		width = (loadedInfo.texWidth != 0) ? min( (u32)loadedInfo.width, (u32)loadedInfo.texWidth ) : loadedInfo.width;
 		if (width == 0)
 			width = tileWidth;
+		
+		if (loadedInfo.size > gSP.textureTile[t]->size)
+			width <<= loadedInfo.size - gSP.textureTile[t]->size;
 
 		if (mirrorFix && (lineWidth > width) && ((lineWidth * height) <= maxTexels))
 			width = lineWidth;
@@ -1939,8 +1949,16 @@ void TextureCache_Update( u32 t )
 		return;
 	}*/
 
- 	clampWidth = gSP.textureTile[t]->clamps ? tileWidth : width;
-	clampHeight = gSP.textureTile[t]->clampt ? tileHeight : height;
+ 	clampWidth = (gSP.textureTile[t]->clamps && (gDP.otherMode.cycleType != G_CYC_COPY)) ? tileWidth : width;
+	clampHeight = (gSP.textureTile[t]->clampt && (gDP.otherMode.cycleType != G_CYC_COPY)) ? tileHeight : height;
+
+	if (useLoadedInfo)
+	{
+		if (gSP.textureTile[t]->clamps && (gSP.textureTile[t]->masks == 0))
+			width = clampWidth;
+		if (gSP.textureTile[t]->clampt && (gSP.textureTile[t]->maskt == 0))
+			height = clampHeight;
+	}
 
 	if (clampWidth > 256)
 		gSP.textureTile[t]->clamps = 0;

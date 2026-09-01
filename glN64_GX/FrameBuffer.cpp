@@ -33,6 +33,14 @@ FrameBufferInfo frameBuffer;
 
 extern GXRModeObj *vmode, *rmode;
 
+// The buffer FrameBuffer_SaveBuffer() is currently building
+static FrameBuffer *fbUnderConstruction = NULL;
+
+void glN64_FBRead( unsigned long addr )
+{
+	(void)addr;
+}
+
 #ifdef __GX__
 extern heap_cntrl* GXtexCache;
 #endif //__GX__
@@ -43,10 +51,14 @@ void FrameBuffer_Init()
 	frameBuffer.top = NULL;
 	frameBuffer.bottom = NULL;
 	frameBuffer.numBuffers = 0;
+	fbUnderConstruction = NULL;
 }
 
 void FrameBuffer_RemoveBottom()
 {
+	if (frameBuffer.bottom == NULL || frameBuffer.bottom == fbUnderConstruction)
+		return;
+
 	FrameBuffer *newBottom = frameBuffer.bottom->higher;
 
 #ifdef __GX__
@@ -133,6 +145,11 @@ FrameBuffer *FrameBuffer_AddTop()
 {
 	FrameBuffer *newtop = (FrameBuffer*)malloc( sizeof( FrameBuffer ) );
 
+	if (newtop == NULL)
+	{
+		return NULL;
+	}
+
 	newtop->texture = TextureCache_AddTop();
 #ifdef __GX__
 	newtop->texture->VIcount = 0;
@@ -195,17 +212,19 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 	// Search through saved frame buffers
 	while (current != NULL)
 	{
+		// height is deliberately not part of the key
 		if ((current->startAddress == address) &&
 			(current->width == width) &&
-			(current->height == height) &&
 			(current->size == size))
 		{
 #ifndef __GX__
 			if ((current->scaleX != OGL.scaleX) ||
-				(current->scaleY != OGL.scaleY))
+				(current->scaleY != OGL.scaleY) ||
+				(current->height < height))
 #else //!__GX__
 			if ((current->scaleX != OGL.GXscaleX) ||
-				(current->scaleY != OGL.GXscaleY))
+				(current->scaleY != OGL.GXscaleY) ||
+				(current->height < height))
 #endif //__GX__
 			{
 				FrameBuffer_Remove( current );
@@ -219,7 +238,12 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 			GX_SetTexCopySrc(OGL.GXorigX, OGL.GXorigY,(u16) current->texture->realWidth,(u16) current->texture->realHeight);
 			GX_SetTexCopyDst((u16) current->texture->realWidth,(u16) current->texture->realHeight, current->texture->GXtexfmt, GX_FALSE);
 			GX_SetCopyFilter(GX_FALSE, NULL, GX_FALSE, NULL);
-			if (current->texture->GXtexture) GX_CopyTex(current->texture->GXtexture, GX_FALSE);
+			if (current->texture->GXtexture)
+			{
+				DCInvalidateRange(current->texture->GXtexture, current->texture->textureBytes);
+				GX_CopyTex(current->texture->GXtexture, GX_FALSE);
+				GX_InvalidateTexAll();
+			}
 			GX_PixModeSync();
 			GX_SetCopyFilter(rmode->aa, rmode->sample_pattern, GX_TRUE, rmode->vfilter);
 #endif // __GX__
@@ -238,6 +262,12 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 
 	// Wasn't found, create a new one
 	current = FrameBuffer_AddTop();
+	if (current == NULL)
+		return;
+
+#ifdef __GX__
+	fbUnderConstruction = current;
+#endif // __GX__
 
 	current->startAddress = address;
 	current->endAddress = address + ((width * height << size >> 1) - 1);
@@ -258,6 +288,8 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 #else //!__GX__
 	current->texture->width = (unsigned long)(current->width * OGL.GXscaleX);
 	current->texture->height = (unsigned long)(current->height * OGL.GXscaleY);
+	if (current->texture->width  > OGL.GXwidth)  current->texture->width  = OGL.GXwidth;
+	if (current->texture->height > OGL.GXheight) current->texture->height = OGL.GXheight;
 #endif //__GX__
 	current->texture->clampS = 1;
 	current->texture->clampT = 1;
@@ -316,11 +348,25 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 #endif //!HW_RVL
 
 	current->texture->GXtexture = (u16*) __lwp_heap_allocate(GXtexCache,current->texture->textureBytes);
-	while(!current->texture->GXtexture)
 	{
-		TextureCache_FreeNextTexture();
-		current->texture->GXtexture = (u16*) __lwp_heap_allocate(GXtexCache,current->texture->textureBytes);
+		unsigned int attempts = 0;
+		// Don't want it to loop infinitely
+		while (!current->texture->GXtexture && attempts < 1000)
+		{
+			++attempts;
+			TextureCache_FreeNextTexture();
+			current->texture->GXtexture = (u16*) __lwp_heap_allocate(GXtexCache,current->texture->textureBytes);
+		}
 	}
+
+	if (current->texture->GXtexture == NULL)
+	{
+		fbUnderConstruction = NULL;
+		FrameBuffer_Remove( current );
+		return;
+	}
+
+	fbUnderConstruction = NULL;
 #endif //__GX__
 	cache.cachedBytes += current->texture->textureBytes;
 
@@ -332,7 +378,12 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 	GX_SetTexCopySrc((u16) OGL.GXorigX, (u16) OGL.GXorigY,(u16) current->texture->realWidth,(u16) current->texture->realHeight);
 	GX_SetTexCopyDst((u16) current->texture->realWidth,(u16) current->texture->realHeight, current->texture->GXtexfmt, GX_FALSE);
 	GX_SetCopyFilter(GX_FALSE, NULL, GX_FALSE, NULL);
-	if (current->texture->GXtexture) GX_CopyTex(current->texture->GXtexture, GX_FALSE);
+	if (current->texture->GXtexture)
+	{
+		DCInvalidateRange(current->texture->GXtexture, current->texture->textureBytes);
+		GX_CopyTex(current->texture->GXtexture, GX_FALSE);
+		GX_InvalidateTexAll();
+	}
 	GX_PixModeSync();
 	GX_SetCopyFilter(rmode->aa, rmode->sample_pattern, GX_TRUE, rmode->vfilter);
 #endif // __GX__

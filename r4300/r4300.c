@@ -49,6 +49,7 @@ R4300 r4300;
 
 unsigned long i, dynacore = 0, interpcore = 0;
 int no_audio_delay = 0;
+int randomize_interrupt = 1;
 int no_compiled_jump = 0;
 unsigned long count_per_op = 2;
 unsigned long dyna_interp = 0;

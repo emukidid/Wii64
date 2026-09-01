@@ -381,6 +381,10 @@ void GBI_Destroy()
 
 		GBI.numMicrocodes--;
 	}
+	GBI.top = NULL;
+	GBI.bottom = NULL;
+	GBI.current = NULL;
+	GBI.numMicrocodes = 0;
 }
 
 MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )

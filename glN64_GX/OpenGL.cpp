@@ -1295,6 +1295,7 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 
 void OGL_DrawTriangles()
 {
+
 	if (OGL.usePolygonStipple && (gDP.otherMode.alphaCompare == G_AC_DITHER) && !(gDP.otherMode.alphaCvgSel))
 	{
 		OGL.lastStipple = (OGL.lastStipple + 1) & 0x7;
@@ -1611,6 +1612,15 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 	};
 
 	OGL_UpdateStates();
+
+#ifdef __GX__
+	// If we have fog applied, we're going to possibly darken the texture here.
+	// Link's subscreen picture was being made way too dark here on GX.
+	// The PC code path doesn't need to do this because with GL_FOG_COORDINATE_SOURCE_EXT
+	// that means "no fog" regardless of what the scene left
+	// enabled and on GX we don't have per-vertex fog, so set to nothing here.
+	GX_SetFog(GX_FOG_NONE, 0.1f, 1.0f, 0.0f, 1.0f, (GXColor){0, 0, 0, 255});
+#endif // __GX__
 
 #ifndef __GX__
 	glDisable( GL_CULL_FACE );
@@ -1957,6 +1967,8 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 	glLoadIdentity();
 #else // !__GX__
 	OGL.GXrenderTexRect = false;
+	// Put back whatever fog the scene had configured.
+	GX_SetFog(OGL.GXfogType, OGL.GXfogStartZ, OGL.GXfogEndZ, -1.0f, 1.0f, OGL.GXfogColor);
 	OGL.GXupdateMtx = true;
 	gDP.changed |= CHANGED_SCISSOR;	//Restore scissor in OGL_UpdateStates() before drawing next geometry.
 #endif // __GX__

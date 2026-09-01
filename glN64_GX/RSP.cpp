@@ -42,7 +42,7 @@ RSPInfo		RSP;
 
 void RSP_LoadMatrix( f32 mtx[4][4], u32 address )
 {
-	f32 recip = 1.5258789e-05f;
+//	f32 recip = 1.5258789e-05f;
 #ifndef __LINUX__
 	__asm {
 		mov		esi, dword ptr [RDRAM];
@@ -478,6 +478,9 @@ void RSP_Init()
 	RSP.DList = 0;
 	RSP.uc_start = RSP.uc_dstart = 0;
 	RSP.infloop = FALSE;
+	
+	memset( &gSP, 0, sizeof( gSPInfo ) );
+	gDP.otherMode._u64 = 0;
 
 	gDP.loadTile = &gDP.tiles[7];
 	gSP.textureTile[0] = &gDP.tiles[0];

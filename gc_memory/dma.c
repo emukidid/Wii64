@@ -168,7 +168,7 @@ void dma_pi_read()
 		pi_register.read_pi_status_reg |= 3;
 		PI_ADVANCE_ADDR(req_length);
 		update_count();
-		add_interupt_event(PI_INT, dma_length/8);
+		add_interupt_event(PI_INT, (dma_length/8) + add_random_interupt_time());
 		return;
 	}
 	
@@ -186,7 +186,7 @@ void dma_pi_read()
 
 	pi_register.read_pi_status_reg |= 3;
 	update_count();
-	add_interupt_event(PI_INT, dma_length/8);
+	add_interupt_event(PI_INT, (dma_length/8) + add_random_interupt_time());
 }
 
 void dma_pi_write()
@@ -246,7 +246,7 @@ void dma_pi_write()
 		pi_register.read_pi_status_reg |= 3;
 		PI_ADVANCE_ADDR(req_length);
 		update_count();
-		add_interupt_event(PI_INT, dma_length/8);
+		add_interupt_event(PI_INT, (dma_length/8) + add_random_interupt_time());
 		return;
 	}
 
@@ -285,7 +285,7 @@ void dma_pi_write()
 	pi_register.read_pi_status_reg |= 3;
 	PI_ADVANCE_ADDR(req_length);
 	update_count();
-	add_interupt_event(PI_INT, dma_length/8);
+	add_interupt_event(PI_INT, (dma_length/8) + add_random_interupt_time());
 	return;
 }
 
@@ -399,7 +399,7 @@ void dma_si_write()
 	si_dma_dir = SI_DMA_WRITE;
 	si_register.si_status |= 0x1;
 	update_count();
-	add_interupt_event(SI_INT, /*0x100*/0x900);
+	add_interupt_event(SI_INT, 0x900 + add_random_interupt_time());
 }
 
 void dma_si_read()
@@ -418,5 +418,5 @@ void dma_si_read()
 	si_dma_dir = SI_DMA_READ;
 	si_register.si_status |= 0x1;
 	update_count();
-	add_interupt_event(SI_INT, /*0x100*/0x900);
+	add_interupt_event(SI_INT, 0x900 + add_random_interupt_time());
 }

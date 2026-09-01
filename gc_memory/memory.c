@@ -411,6 +411,7 @@ int init_memory()
 	rwmem[0x8450] = rw_ai;
 	rwmem[0xa450] = rw_ai;
 	memset(&ai_register, 0, sizeof(AI_register));
+	ai_delayed_carry = 0;
 	readai[0x0] = &ai_register.ai_dram_addr;
 	readai[0x4] = &ai_register.ai_len;
 	readai[0x8] = &ai_register.ai_control;
@@ -526,7 +527,8 @@ int init_memory()
 	flashRAMInfo.use_flashram = 0;
 	init_flashram();
 
-	frameBufferInfos[0].addr = 0;
+	memset(frameBufferInfos, 0, sizeof(frameBufferInfos));
+	memset(framebufferRead, 0, sizeof(framebufferRead));
 	firstFrameBufferSetting = 1;
 
 	//printf("memory initialized\n");
@@ -666,7 +668,7 @@ void do_SP_task()
 					end <<= 4;
 					for(j=start; j<=end; j++)
 					{
-						if(j>=start1 && j<=end1) framebufferRead[j]=1;
+						if(j >= (start1 >> 12) && j <= (end1 >> 12)) framebufferRead[j]=1;
 						else framebufferRead[j] = 0;
 					}
 					if(firstFrameBufferSetting)
@@ -820,6 +822,8 @@ void update_DPC(void)
 		dpc_register.dpc_status &= ~0x4;
 	if (dpc_register.w_dpc_status & 0x20) // set flush
 		dpc_register.dpc_status |= 0x4;
+	if (dpc_register.w_dpc_status & 0x200) // clear clock counter
+		dpc_register.dpc_clock = 0;
 }
 
 void read_nothing()
@@ -1816,12 +1820,27 @@ void write_mid()
 	}
 }
 
+
+static void set_vi_vertical_interupt(void)
+{
+	if (!get_event(VI_INT) && (vi_register.vi_v_intr < vi_register.vi_v_sync))
+	{
+		update_count();
+		r4300.next_vi = Count + vi_register.vi_delay;
+		add_interupt_event(VI_INT, vi_register.vi_delay);
+	}
+}
+
 inline void update_vi_current() {
 
-	update_count();
-	vi_register.vi_current = (vi_register.vi_delay-(r4300.next_vi-Count)) / vi_register.count_per_scanline;
-	if (vi_register.vi_v_sync != 0)
-		vi_register.vi_current = (vi_register.vi_current % vi_register.vi_v_sync);
+	unsigned long *pnext_vi = get_event(VI_INT);
+	if (pnext_vi != NULL && vi_register.count_per_scanline != 0)
+	{
+		update_count();
+		vi_register.vi_current = (vi_register.vi_delay - (*pnext_vi - Count)) / vi_register.count_per_scanline;
+		if (vi_register.vi_v_sync != 0 && vi_register.vi_current >= vi_register.vi_v_sync)
+			vi_register.vi_current -= vi_register.vi_v_sync;
+	}
 	vi_register.vi_current = (vi_register.vi_current&(~1))|r4300.vi_field;
 }
 
@@ -1898,18 +1917,22 @@ void write_vi()
 			check_interupt();
 			return;
 		break;
+		case 0xc:
+			vi_register.vi_v_intr = word;
+			set_vi_vertical_interupt();
+			return;
+		break;
 		case 0x18:
 			// Recompute the real per-scanline/per-frame VI timing
-			vi_register.vi_v_sync = word;
-			vi_register.count_per_scanline = (word == 0) ? 1500 :
-				((vi_register.clock / vi_register.expected_refresh_rate) / (word + 1));
-			vi_register.vi_delay = (word + 1) * vi_register.count_per_scanline;
-
-			if (!get_event(VI_INT) && vi_register.vi_v_intr < word)
+			if (vi_register.vi_v_sync != word)
 			{
-				update_count();
-				r4300.next_vi = Count + vi_register.vi_delay;
-				add_interupt_event(VI_INT, vi_register.vi_delay);
+				vi_register.vi_v_sync = word;
+				vi_register.count_per_scanline =
+					(vi_register.clock / vi_register.expected_refresh_rate) / (word + 1);
+				if (vi_register.count_per_scanline == 0)
+					vi_register.count_per_scanline = 1;
+				vi_register.vi_delay = (word + 1) * vi_register.count_per_scanline;
+				set_vi_vertical_interupt();
 			}
 			return;
 		break;
@@ -2120,30 +2143,45 @@ static unsigned int get_dma_duration()
     return ai_register.ai_len * (cpu_counts_per_sec / (bytes_per_sample * samples_per_sec));
 }
 
+int ai_delayed_carry = 0; // (from ai_controller do_dma/fifo_pop)
+
+static void ai_len_written(void)
+{
+	unsigned long delay;
+
+	if (ai_register.ai_len != 0)
+	{
+		if (ai_delayed_carry)
+			ai_register.ai_dram_addr += 0x2000;
+		ai_delayed_carry = (((ai_register.ai_dram_addr + ai_register.ai_len) & 0x1FFF) == 0);
+	}
+
+	aiLenChanged();
+	delay = get_dma_duration();
+	if (no_audio_delay) delay = 0;
+	if (ai_register.ai_status & 0x40000000) // busy
+	{
+		ai_register.next_delay = delay;
+		ai_register.next_len = ai_register.ai_len;
+		ai_register.ai_status |= 0x80000000;
+	}
+	else
+	{
+		ai_register.current_delay = delay;
+		ai_register.current_len = ai_register.ai_len;
+		update_count();
+		add_interupt_event(AI_INT, delay);
+		ai_register.ai_status |= 0x40000000;
+	}
+}
+
 void write_ai()
 {
-	unsigned long delay=0;
 	switch(*address_low)
 	{
 		case 0x4:
 			ai_register.ai_len = word & 0xFFFFFFF8;
-			aiLenChanged();
-			delay = get_dma_duration();
-			if (no_audio_delay) delay = 0;
-			if (ai_register.ai_status & 0x40000000) // busy
-			{
-				ai_register.next_delay = delay;
-				ai_register.next_len = ai_register.ai_len;
-				ai_register.ai_status |= 0x80000000;
-			}
-			else
-			{
-				ai_register.current_delay = delay;
-				ai_register.current_len = ai_register.ai_len;
-				update_count();
-				add_interupt_event(AI_INT, delay);
-				ai_register.ai_status |= 0x40000000;
-			}
+			ai_len_written();
 			return;
 		break;
 		case 0xc:
@@ -2185,7 +2223,6 @@ void write_ai()
 void write_aib()
 {
 	int temp;
-	unsigned long delay=0;
 	switch(*address_low)
 	{
 		case 0x4:
@@ -2195,23 +2232,7 @@ void write_aib()
 			temp = ai_register.ai_len;
 			*((unsigned char*)&temp + ((*address_low&3)^S8) ) = byte;
 			ai_register.ai_len = temp & 0xFFFFFFF8;
-			aiLenChanged();
-			delay = get_dma_duration();
-			if (no_audio_delay) delay = 0;
-			if (ai_register.ai_status & 0x40000000) // busy
-			{
-				ai_register.next_delay = delay;
-				ai_register.next_len = ai_register.ai_len;
-				ai_register.ai_status |= 0x80000000;
-			}
-			else
-			{
-				ai_register.current_delay = delay;
-				ai_register.current_len = ai_register.ai_len;
-				update_count();
-				add_interupt_event(AI_INT, delay);
-				ai_register.ai_status |= 0x40000000;
-			}
+			ai_len_written();
 			return;
 		break;
 		case 0xc:
@@ -2261,7 +2282,6 @@ void write_aib()
 void write_aih()
 {
 	int temp;
-	unsigned long delay=0;
 	switch(*address_low)
 	{
 		case 0x4:
@@ -2269,23 +2289,7 @@ void write_aih()
 			temp = ai_register.ai_len;
 			*((unsigned short*)((unsigned char*)&temp + ((*address_low&3)^S16) )) = hword;
 			ai_register.ai_len = temp & 0xFFFFFFF8;
-			aiLenChanged();
-			delay = get_dma_duration();
-			if (no_audio_delay) delay = 0;
-			if (ai_register.ai_status & 0x40000000) // busy
-			{
-				ai_register.next_delay = delay;
-				ai_register.next_len = ai_register.ai_len;
-				ai_register.ai_status |= 0x80000000;
-			}
-			else
-			{
-				ai_register.current_delay = delay;
-				ai_register.current_len = ai_register.ai_len;
-				update_count();
-				add_interupt_event(AI_INT, delay);
-				ai_register.ai_status |= 0x40000000;
-			}
+			ai_len_written();
 			return;
 		break;
 		case 0xc:
@@ -2330,29 +2334,12 @@ void write_aih()
 
 void write_aid()
 {
-	unsigned long delay=0;
 	switch(*address_low)
 	{
 		case 0x0:
 			ai_register.ai_dram_addr = dword >> 32;
 			ai_register.ai_len = dword & 0xFFFFFFF8;
-			aiLenChanged();
-			delay = get_dma_duration();
-			if (no_audio_delay) delay = 0;
-			if (ai_register.ai_status & 0x40000000) // busy
-			{
-				ai_register.next_delay = delay;
-				ai_register.next_len = ai_register.ai_len;
-				ai_register.ai_status |= 0x80000000;
-			}
-			else
-			{
-				ai_register.current_delay = delay;
-				ai_register.current_len = ai_register.ai_len;
-				update_count();
-				add_interupt_event(AI_INT, delay);
-				ai_register.ai_status |= 0x40000000;
-			}
+			ai_len_written();
 			return;
 		break;
 		case 0x8:

@@ -149,6 +149,7 @@ struct gDPLoadTileInfo
 	u16 width, height;
 	u16 texWidth;
 	u32 loadType;
+	u8  size;
 };
 
 struct gDPInfo

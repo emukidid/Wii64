@@ -330,15 +330,27 @@ void GameSpecificHackSetup() {
 		game_specific_hack = &hack_topgear_od_u;
 		restore_count_per_op();
 	}
-
-	else if((curCRC[0] == 0xAC976B38 && curCRC[1] == 0xC3A9C97A) ||
-			(curCRC[0] == 0x3E198D9E && curCRC[1] == 0xF2E1267E)) {
-		game_specific_hack = &hack_paperboy;
-		restore_count_per_op();
-	}
-	else if((curCRC[0] == 0x0CAD17E6 && curCRC[1] == 0x71A5B797) ||
-			(curCRC[0] == 0x75A4E247 && curCRC[1] == 0x6008963D) ||
-			(curCRC[0] == 0x6AA4DDE7 && curCRC[1] == 0xE3E2F4E7)) {
+	else if(
+			(curCRC[0] == 0xC16C421B && curCRC[1] == 0xA21580F7) /*||	// Donald Duck Quackers
+			(curCRC[0] == 0x72611D7D && curCRC[1] == 0x9919BDD2) || // HSV Adventure Racing (A)
+			(curCRC[0] == 0xA1B64A61 && curCRC[1] == 0xD014940B) || // Beetle Adventure Racing! (E) (M3)
+			(curCRC[0] == 0x9C7318D2 && curCRC[1] == 0x24AE0DC1) || // Beetle Adventure Racing (J)
+			(curCRC[0] == 0x3DF17480 && curCRC[1] == 0x193DED5A) || // Donald Duck - Quack Attack (E) (M5)
+			(curCRC[0] == 0xF478D8B3 && curCRC[1] == 0x9716DD6D) || // LEGO Racers (E) (M10)
+			(curCRC[0] == 0x096A40EA && curCRC[1] == 0x8ABE0A10) || // LEGO Racers (U) (M10)
+			(curCRC[0] == 0xD3D806FC && curCRC[1] == 0xB43AA2A8) || // Monster Truck Madness 64 (E) (M5)
+			(curCRC[0] == 0xB19AD999 && curCRC[1] == 0x7E585118) || // Monster Truck Madness 64 (U)
+			(curCRC[0] == 0x02D8366A && curCRC[1] == 0x6CABEF9C) || // Road Rash 64 (E)
+			(curCRC[0] == 0xF050746C && curCRC[1] == 0x247B820B) || // Road Rash 64 (U)
+			(curCRC[0] == 0x1AA05AD5 && curCRC[1] == 0x46F52D80) || // Pilotwings 64 (E) (M3)
+			(curCRC[0] == 0x09CC4801 && curCRC[1] == 0xE42EE491) || // Pilotwings 64 (J)
+			(curCRC[0] == 0xC851961C && curCRC[1] == 0x78FCAAFA) || // Pilotwings 64 (U)
+			(curCRC[0] == 0x535DF3E2 && curCRC[1] == 0x609789F1) || // Wave Race 64 - Shindou Edition (J) (V1.2)
+			(curCRC[0] == 0xD4C45A1A && curCRC[1] == 0xF425B25E)  // WCW Nitro (U)
+			(curCRC[0] == 0xCEA8B54F && curCRC[1] == 0x7F21D503) || // Wetrix (E) (M6)
+			(curCRC[0] == 0xDCB6EAFA && curCRC[1] == 0xC6BBCFA3) || // Wetrix (J)
+			*/) 
+	{ // Wetrix (U) (M6)
 				old_count_per_op = count_per_op;
 				count_per_op = COUNT_PER_OP_3;
 	}

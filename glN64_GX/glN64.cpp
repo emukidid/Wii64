@@ -395,6 +395,7 @@ EXPORT void CALL RomClosed (void)
 #else
 	OGL_Stop();
 #endif
+	GBI_Destroy();
 
 #ifdef __GX__
 	GX_SetDrawSyncCallback(NULL);

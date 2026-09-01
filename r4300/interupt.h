@@ -37,6 +37,7 @@ void init_interupt();
 void gen_interupt();
 void check_interupt();
 
+unsigned long add_random_interupt_time(void);
 void translate_event_queue(unsigned long base);
 void remove_event(int type);
 void add_interupt_event_count(int type, unsigned long count);

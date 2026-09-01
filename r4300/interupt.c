@@ -86,6 +86,12 @@ static void clear_queue(void)
     qstackindex = 0;
 }
 
+// from mupen64plus
+unsigned long add_random_interupt_time(void)
+{
+  return randomize_interrupt ? (unsigned long)(rand() & 0x3F) : 0;
+}
+
 void print_queue()
 {
   interupt_queue *aux;
@@ -203,12 +209,7 @@ void remove_interupt_event()
   }
   queue_free(q);
   q = aux;
-  if (q != NULL && (q->count > Count || (Count - q->count) < 0x80000000)) {
-    r4300.next_interrupt = q->count;
-  }
-  else {
-    r4300.next_interrupt = 0;
-  }
+  r4300.next_interrupt = (q != NULL) ? q->count : 0;
 }
 
 // Returns a ptr to the event's count
@@ -260,8 +261,13 @@ void translate_event_queue(unsigned long base)
     aux->count = (aux->count - Count)+base;
     aux = aux->next;
   }
+
+  Count = base;
+  add_interupt_event_count(SPECIAL_INT, (Count & 0x80000000) ^ 0x80000000);
+  // Add count_per_op to avoid wrong event order in case Count == Compare
+  Count += count_per_op;
   add_interupt_event_count(COMPARE_INT, Compare);
-  add_interupt_event_count(SPECIAL_INT, 0);
+  Count -= count_per_op;
 }
 
 // save the queue (for save states)
@@ -294,6 +300,8 @@ void load_eventqueue_infos(char *buf)
     add_interupt_event_count(type, count);
     len += 8;
   }
+  remove_event(SPECIAL_INT);
+  add_interupt_event_count(SPECIAL_INT, (Count & 0x80000000) ^ 0x80000000);
 }
 
 void init_interupt()
@@ -306,16 +314,11 @@ void init_interupt()
   memset(qbase,0,sizeof(interupt_queue) * QUEUE_SIZE );
   qstackindex=0;
   clear_queue();
-  add_interupt_event_count(SPECIAL_INT, 0);
+  add_interupt_event_count(SPECIAL_INT, 0x80000000);
 }
 
 void check_interupt()
 {
-  if (q != NULL && q->type == CHECK_INT) {
-    // Don't add another CHECK_INT if there's one pending
-    // MI_register.mi_intr_reg is a bitmask so interupts can be combined
-    return;
-  }
   if (MI_register.mi_intr_reg & MI_register.mi_intr_mask_reg) {
     Cause = (Cause | 0x400) & 0xFFFFFF83;
   }
@@ -323,6 +326,9 @@ void check_interupt()
     Cause &= ~0x400;
   }
   if ((Status & 7) != 1) {
+    return;
+  }
+  if (q != NULL && q->type == CHECK_INT) {
     return;
   }
   if (Status & Cause & 0xFF00) {
@@ -399,12 +405,15 @@ void gen_interupt()
       refresh_stat();
 #endif
       new_vi();
-	  
-      if (vi_register.vi_v_sync == 0) vi_register.vi_delay = 500000;
-      r4300.next_vi += vi_register.vi_delay;
-      r4300.vi_field = (vi_register.vi_status&0x40) ? 1-r4300.vi_field : 0;
+
+      r4300.vi_field ^= (vi_register.vi_status >> 6) & 1;
+
+
+      unsigned long *pnext_vi = get_event(VI_INT);
+      unsigned long next_vi = (pnext_vi ? *pnext_vi : Count) + vi_register.vi_delay;
       remove_interupt_event();
-      add_interupt_event_count(VI_INT, r4300.next_vi);
+      add_interupt_event_count(VI_INT, next_vi);
+      r4300.next_vi = next_vi;
  
       MI_register.mi_intr_reg |= 0x08;
       if(!chk_status(1)) {
@@ -462,6 +471,7 @@ void gen_interupt()
       else {
         remove_interupt_event();
         ai_register.ai_status &= ~0x40000000;
+        ai_delayed_carry = 0;
       }
       MI_register.mi_intr_reg |= 0x04;
       if(!chk_status(1)) {

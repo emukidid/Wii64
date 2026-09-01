@@ -430,7 +430,8 @@ void gDPUpdateColorImage()
 
 void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 {
-	if (gDP.colorImage.changed &&
+	if (enablegDPUpdateColorImage &&
+		gDP.colorImage.changed &&
 		(gDP.colorImage.address != gDP.depthImageAddress) &&
 		(gDP.colorImage.address != RSP_SegmentToPhysical( address )))
 	{
@@ -699,6 +700,7 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 		info.width = (u16)((gDP.loadTile->masks != 0) ? MIN( loadedWidth, (u32)1 << gDP.loadTile->masks ) : loadedWidth);
 		info.height = (u16)((gDP.loadTile->maskt != 0) ? MIN( height, (u32)1 << gDP.loadTile->maskt ) : height);
 		info.texWidth = (u16)gDP.textureImage.width;
+		info.size = (u8)gDP.textureImage.size;
 		info.loadType = LOADTYPE_TILE;
 
 		if (gDP.loadTile->masks == 0)

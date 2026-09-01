@@ -268,6 +268,7 @@ extern VI_register vi_register;
 extern RSP_register rsp_register;
 extern RI_register ri_register;
 extern AI_register ai_register;
+extern int ai_delayed_carry;
 extern DPC_register dpc_register;
 extern DPS_register dps_register;
 
