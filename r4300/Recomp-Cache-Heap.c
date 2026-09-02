@@ -183,8 +183,9 @@ static void free_func(PowerPC_func* func, unsigned int addr){
 	}
 
 	// Remove any pointers to this code
-	// Remove the func from the block
-	remove_func(&blocks[addr>>12]->funcs, func);
+	// Remove the func from the block.
+	if (blocks[addr>>12])
+		remove_func(&blocks[addr>>12]->funcs, func);
 	// Remove func links
 	unlink_func(func);
 
@@ -375,6 +376,16 @@ void RecompCache_Init(void){
                                         MAX_HEAP_ENTRIES * sizeof(void*));
         maxHeapSize = MAX_HEAP_ENTRIES;
     }
+
+	heapify();
+	while (heapSize) {
+		CacheMetaNode* n = heapPop();
+		if (n) {
+			free_func(n->func, n->addr);
+			__lwp_heap_free(node_heap, n);
+		}
+	}
+	cacheSize = 0;
 }
 
 void* MetaCache_Alloc(unsigned int size){

@@ -37,6 +37,10 @@
 #endif
 extern "C" {
 #include "../gc_memory/memory.h"
+#include "../gc_memory/tlb.h"
+#ifdef USE_TLB_CACHE
+#include "../gc_memory/TLB-Cache.h"
+#endif
 #include "../gc_memory/Saves.h"
 #include "../main/plugin.h"
 #include "../main/rom.h"
@@ -308,6 +312,11 @@ void Func_MMResetROM()
 		romOpen_audio();
 		romOpen_input();
 		cpu_init();
+#ifdef USE_TLB_CACHE
+		TLBCache_reset();
+#elif defined(HW_RVL)
+		tlb_mem2_init();
+#endif
 		//Clear FB image
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);
 		DCFlushRange(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), FB_THUMB_SIZE);

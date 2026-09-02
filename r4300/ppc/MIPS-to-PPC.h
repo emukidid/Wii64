@@ -359,6 +359,8 @@ int convert(void);
 { PowerPC_instr ppc; _BNELR(ppc,cr,lk); set_next_dst(ppc); }
 #define GEN_BLELR(cr,lk) \
 { PowerPC_instr ppc; _BLELR(ppc,cr,lk); set_next_dst(ppc); }
+#define GEN_BGELR(cr,lk) \
+{ PowerPC_instr ppc; _BGELR(ppc,cr,lk); set_next_dst(ppc); }
 #define GEN_ANDIS(rd,ra,immed) \
 { PowerPC_instr ppc; _ANDIS(ppc,rd,ra,immed); set_next_dst(ppc); }
 #define GEN_ORIS(rd,rs,immed) \

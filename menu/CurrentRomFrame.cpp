@@ -29,6 +29,10 @@
 
 extern "C" {
 #include "../gc_memory/memory.h"
+#include "../gc_memory/tlb.h"
+#ifdef USE_TLB_CACHE
+#include "../gc_memory/TLB-Cache.h"
+#endif
 #include "../gc_memory/Saves.h"
 #include "../r4300/interupt.h"
 #include "../main/wii64config.h"
@@ -174,6 +178,11 @@ void Func_ResetROM()
 		romOpen_audio();
 		romOpen_input();
 		cpu_init();
+#ifdef USE_TLB_CACHE
+		TLBCache_reset();
+#elif defined(HW_RVL)
+		tlb_mem2_init();
+#endif
 #if !(defined(GC_BASIC))
 		//Clear FB image
 		memset(menu::Resources::getInstance().getImage(menu::Resources::IMAGE_CURRENT_FB)->getTexture(), 0x00, FB_THUMB_SIZE);

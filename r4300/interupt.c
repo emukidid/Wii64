@@ -45,8 +45,7 @@ unsigned int interrupt_unsafe_state = 0;
 #include "../main/savestates.h"
 #include "../gc_memory/memory.h"
 
-#define QUEUE_SIZE 8
-static int SPECIAL_done = 0;
+#define QUEUE_SIZE 16   /* mupen64plus INTERRUPT_NODES_POOL_CAPACITY */
 static interupt_queue *q = NULL;
 static interupt_queue *qstack[QUEUE_SIZE];
 static unsigned int qstackindex = 0;
@@ -66,13 +65,16 @@ static interupt_queue* queue_malloc(size_t Bytes)
 
 static void queue_free(interupt_queue *qToFree)
 {
-       if (qToFree < qbase || qToFree >= qbase + sizeof(interupt_queue) * QUEUE_SIZE)
+       if (qToFree == NULL)
+               return;
+       if (qToFree < qbase || qToFree >= (qbase + QUEUE_SIZE))
        {
                free(qToFree); //must be a non-stack memory allocation
                return;
        }
-       qstackindex --;
-       qstack[qstackindex] = qToFree;
+       if (qstackindex == 0)
+               return;
+       qstack[--qstackindex] = qToFree;
 }
 
 static void clear_queue(void)
@@ -106,110 +108,69 @@ void print_queue()
 
 int before_event(unsigned long evt1, unsigned long evt2, int type2)
 {
-  if(evt1 - Count < 0x80000000) {
-    if(evt2 - Count < 0x80000000) {
-      if((evt1 - Count) < (evt2 - Count)) {
-        return 1;
-      }
-      else {
-        return 0;
-      }
-    }
-    else {
-      if((Count - evt2) < 0x10000000) {
-        if((type2 == SPECIAL_INT) && (SPECIAL_done)) {
-          return 1;
-        }
-        else {
-          return 0;
-        }     
-      }
-      else {
-        return 1;
-      }
-    }
-  }
-  else {
-    return 0;
-  }
+  unsigned long count = Count;
+
+  if (cp0_cycle_count > 0)
+    count -= (unsigned long)cp0_cycle_count;
+
+  return ((evt1 - count) < (evt2 - count)) ? 1 : 0;
 }
 
 void add_interupt_event(int type, unsigned long delay)
 {
-  unsigned long count = Count + delay;
-  int special = 0;
-  
-  if(type == SPECIAL_INT) {
-    special = 1;
-  }
-  if(Count > 0x80000000) {
-    SPECIAL_done = 0;
-  }
-     
-  if (get_event(type)) {
-    //printf("two events of type %x in queue\n", type);
-  }
-   
-  interupt_queue *aux = q;
-  if (q == NULL) {
-    q = queue_malloc(sizeof(interupt_queue));
-    q->next = NULL;
-    q->count = count;
-    q->type = type;
-	r4300.next_interrupt = q->count;
-    return;
-  }
-   
-  if(before_event(count, q->count, q->type) && !special) {
-    q = queue_malloc(sizeof(interupt_queue));
-    q->next = aux;
-    q->count = count;
-    q->type = type;
-	r4300.next_interrupt = q->count;
-    return;
-  }
-
-  while (aux->next != NULL && (!before_event(count, aux->next->count, aux->next->type) || special)) {
-    aux = aux->next;
-  }
-
-  if (aux->next == NULL) {
-    aux->next = queue_malloc(sizeof(interupt_queue));
-    aux = aux->next;
-    aux->next = NULL;
-    aux->count = count;
-    aux->type = type;
-  }
-  else {
-    interupt_queue *aux2;
-    if (type != SPECIAL_INT) {
-      while(aux->next != NULL && aux->next->count == count) {
-        aux = aux->next;
-      }
-    }
-    aux2 = aux->next;
-    aux->next = queue_malloc(sizeof(interupt_queue));
-    aux = aux->next;
-    aux->next = aux2;
-    aux->count = count;
-    aux->type = type;
-  }
+  add_interupt_event_count(type, Count + delay);
 }
 
 void add_interupt_event_count(int type, unsigned long count)
 {
-  add_interupt_event(type, (count - Count));
+  interupt_queue *event;
+  interupt_queue *e;
+
+  if (get_event(type)) {
+    /* two events of same type in queue */
+  }
+
+  event = queue_malloc(sizeof(interupt_queue));
+  event->count = count;
+  event->type = type;
+
+  if (q == NULL)
+  {
+    q = event;
+    event->next = NULL;
+  }
+  else if (before_event(count, q->count, q->type))
+  {
+    event->next = q;
+    q = event;
+  }
+  else
+  {
+    for (e = q;
+         e->next != NULL && !before_event(count, e->next->count, e->next->type);
+         e = e->next);
+
+    if (e->next == NULL)
+    {
+      e->next = event;
+      event->next = NULL;
+    }
+    else
+    {
+      for (; e->next != NULL && e->next->count == count; e = e->next);
+      event->next = e->next;
+      e->next = event;
+    }
+  }
+  r4300.next_interrupt = q->count;
 }
 
 void remove_interupt_event()
 {
   interupt_queue *aux = q->next;
-  if(q->type == SPECIAL_INT) {
-    SPECIAL_done = 1;
-  }
   queue_free(q);
   q = aux;
-  r4300.next_interrupt = (q != NULL) ? q->count : 0;
+  r4300.next_interrupt = (q != NULL) ? q->count : Count;
 }
 
 // Returns a ptr to the event's count
@@ -306,7 +267,7 @@ void load_eventqueue_infos(char *buf)
 
 void init_interupt()
 {
-  SPECIAL_done = 1;
+  interrupt_unsafe_state = 0;
   r4300.next_vi = r4300.next_interrupt = 5000;
   r4300.vi_field = 0;
   if (qbase != NULL) free(qbase);
@@ -315,10 +276,13 @@ void init_interupt()
   qstackindex=0;
   clear_queue();
   add_interupt_event_count(SPECIAL_INT, 0x80000000);
+  add_interupt_event_count(COMPARE_INT, 0);
 }
 
 void check_interupt()
 {
+  interupt_queue *event;
+
   if (MI_register.mi_intr_reg & MI_register.mi_intr_mask_reg) {
     Cause = (Cause | 0x400) & 0xFFFFFF83;
   }
@@ -332,20 +296,18 @@ void check_interupt()
     return;
   }
   if (Status & Cause & 0xFF00) {
-    if(q == NULL) {
-      q = queue_malloc(sizeof(interupt_queue));
-      q->next = NULL;
-      q->count = Count;
-      q->type = CHECK_INT;
+    event = queue_malloc(sizeof(interupt_queue));
+    event->count = r4300.next_interrupt = Count;
+    event->type = CHECK_INT;
+
+    if (q == NULL) {
+      q = event;
+      event->next = NULL;
     }
     else {
-      interupt_queue* aux = queue_malloc(sizeof(interupt_queue));
-      aux->next = q;
-      aux->count = Count;
-      aux->type = CHECK_INT;
-      q = aux;
+      event->next = q;
+      q = event;
     }
-    r4300.next_interrupt = Count;
   }
 }
 
@@ -370,17 +332,12 @@ int chk_status(int chk) {
 
 void gen_interupt()
 {
-  if(!(interrupt_unsafe_state & INTR_UNSAFE_RSP) && savestates_queued_load()) {
+  if(!interrupt_unsafe_state && savestates_queued_load()) {
 	return;
   }
 
   if (r4300.skip_jump) {
-    if (q->count > Count || (Count - q->count) < 0x80000000) {
-      r4300.next_interrupt = q->count;
-    }
-    else {
-      r4300.next_interrupt = 0;
-    }
+    r4300.next_interrupt = (q != NULL) ? q->count : Count;
     r4300.pc = r4300.skip_jump;
     r4300.last_pc = r4300.pc;
     r4300.skip_jump=0;
@@ -460,13 +417,18 @@ void gen_interupt()
   
     case AI_INT:
       if (ai_register.ai_status & 0x80000000) { // full
+        /* Schedule the queued transfer from the count this event was due at,
+           not from Count.  Upstream's do_dma() uses Count, but it reaches there
+           with Count == the event time; here the dynarec overshoots by up to a
+           block, and adding that to every audio period accumulates.  Same reason
+           the VI handler above re-reads its own queued count. */
         unsigned long *pai_event = get_event(AI_INT);
-        unsigned long ai_event = pai_event ? *pai_event : 0;
+        unsigned long ai_event = pai_event ? *pai_event : Count;
         remove_interupt_event();
         ai_register.ai_status &= ~0x80000000;
         ai_register.current_delay = ai_register.next_delay;
         ai_register.current_len = ai_register.next_len;
-        add_interupt_event_count(AI_INT, ai_event+ai_register.next_delay);
+        add_interupt_event_count(AI_INT, ai_event + ai_register.next_delay);
       }
       else {
         remove_interupt_event();

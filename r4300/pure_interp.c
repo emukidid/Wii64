@@ -64,7 +64,6 @@ extern void update_debugger();
 #endif
 
 unsigned long op;
-static long skip;
 
 void prefetch();
 
@@ -72,7 +71,9 @@ void prefetch();
 
 static void NI()
 {
-   printf("NI:%x\n", (unsigned int)op);
+#ifdef PRINTGECKO
+   print_gecko("NI:%x\n", (unsigned int)op);
+#endif
    r4300.stop=1; 
 #ifdef DEBUGON
   _break();
@@ -133,7 +134,7 @@ static void JR()
    r4300.delay_slot=0;
    r4300.pc = local_rs32;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void JALR()
@@ -155,7 +156,7 @@ static void JALR()
 	r4300.pc = local_rs32;
      }
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void SYSCALL()
@@ -472,7 +473,9 @@ static void TEQ()
 {
    if (rrs == rrt)
      {
-	printf("trap exception in teq\n");
+#ifdef PRINTGECKO
+	print_gecko("trap exception in teq\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -539,10 +542,9 @@ static void BLTZ()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -556,7 +558,7 @@ static void BLTZ()
    if (local_rs < 0)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BGEZ()
@@ -569,10 +571,9 @@ static void BGEZ()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -586,7 +587,7 @@ static void BGEZ()
    if (local_rs >= 0)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BLTZL()
@@ -599,10 +600,9 @@ static void BLTZL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -619,7 +619,7 @@ static void BLTZL()
      }
    else r4300.pc+=8;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BGEZL()
@@ -632,10 +632,9 @@ static void BGEZL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -652,7 +651,7 @@ static void BGEZL()
      }
    else r4300.pc+=8;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BLTZAL()
@@ -668,10 +667,9 @@ static void BLTZAL()
 	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = r4300.next_interrupt - Count;
-		    if (skip > 3)
+		    if (cp0_cycle_count < 0)
 		      {
-			 Count += (skip - (skip % (count_per_op << 1)));
+			 Count = r4300.next_interrupt;
 			 return;
 		      }
 		 }
@@ -687,7 +685,7 @@ static void BLTZAL()
      }
    else printf("erreur dans bltzal\n");
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BGEZAL()
@@ -703,10 +701,9 @@ static void BGEZAL()
 	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = r4300.next_interrupt - Count;
-		    if (skip > 3)
+		    if (cp0_cycle_count < 0)
 		      {
-			 Count += (skip - (skip % (count_per_op << 1)));
+			 Count = r4300.next_interrupt;
 			 return;
 		      }
 		 }
@@ -722,7 +719,7 @@ static void BGEZAL()
      }
    else printf("erreur dans bgezal\n");
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BLTZALL()
@@ -738,10 +735,9 @@ static void BLTZALL()
 	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = r4300.next_interrupt - Count;
-		    if (skip > 3)
+		    if (cp0_cycle_count < 0)
 		      {
-			 Count += (skip - (skip % (count_per_op << 1)));
+			 Count = r4300.next_interrupt;
 			 return;
 		      }
 		 }
@@ -760,7 +756,7 @@ static void BLTZALL()
      }
    else printf("erreur dans bltzall\n");
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BGEZALL()
@@ -776,10 +772,9 @@ static void BGEZALL()
 	       if (probe_nop(r4300.pc+4))
 		 {
 		    update_count();
-		    skip = r4300.next_interrupt - Count;
-		    if (skip > 3)
+		    if (cp0_cycle_count < 0)
 		      {
-			 Count += (skip - (skip % (count_per_op << 1)));
+			 Count = r4300.next_interrupt;
 			 return;
 		      }
 		 }
@@ -798,7 +793,7 @@ static void BGEZALL()
      }
    else printf("erreur dans bgezall\n");
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void (*interp_regimm[32])(void) =
@@ -828,6 +823,12 @@ void TLBWI()
 {
    unsigned int i;
    u32 idx = Index & 0x3F;
+
+   if (idx >= 32)
+     {
+	r4300.pc+=4;
+	return;
+     }
 
    if (r4300.tlb_e[idx].v_even)
      {
@@ -961,7 +962,10 @@ static void TLBWR()
 {
 	unsigned int i;
 	update_count();
-	Random = (Count / count_per_op % (32 - Wired)) + Wired;
+	if (Wired >= 32)
+		Random = (Count / count_per_op) % 32;
+	else
+		Random = (Count / count_per_op % (32 - Wired)) + Wired;
 
 	if (r4300.tlb_e[Random].v_even){
 	for (i=r4300.tlb_e[Random].start_even; i<r4300.tlb_e[Random].end_even; i+=0x1000) {
@@ -1104,7 +1108,9 @@ static void ERET()
    update_count();
    if (Status & 0x4)
      {
-	printf("erreur dans ERET\n");
+#ifdef PRINTGECKO
+	print_gecko("erreur dans ERET\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1118,7 +1124,7 @@ static void ERET()
    r4300.llbit = 0;
    check_interupt();
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void (*interp_tlb[64])(void) =
@@ -1138,7 +1144,9 @@ static void MFC0()
    switch(PC.f.r.nrd)
      {
       case 1:
-	printf("lecture de Random\n");
+#ifdef PRINTGECKO
+	print_gecko("lecture de Random\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1158,7 +1166,9 @@ static void MTC0()
 	Index = rrt & 0x8000003F;
 	if ((Index & 0x3F) > 31)
 	  {
-	     printf ("il y a plus de 32 TLB\n");
+#ifdef PRINTGECKO
+	     print_gecko ("il y a plus de 32 TLB\n");
+#endif
 	     r4300.stop=1;
 #ifdef DEBUGON
        _break();
@@ -1187,11 +1197,10 @@ static void MTC0()
 	break;
       case 9:    // Count
 	update_count();
-	if (r4300.next_interrupt <= Count) gen_interupt();
-
+	interrupt_unsafe_state |= INTR_UNSAFE_R4300;
+	if (cp0_cycle_count >= 0) gen_interupt();
+	interrupt_unsafe_state &= ~INTR_UNSAFE_R4300;
 	translate_event_queue(rrt & 0xFFFFFFFF);
-	Count = rrt & 0xFFFFFFFF;
-
 	break;
       case 10:   // EntryHi
 	EntryHi = rrt & 0xFFFFE0FF;
@@ -1206,13 +1215,16 @@ static void MTC0()
 	Cause = Cause & 0xFFFF7FFF; //Timer interupt is clear
 	break;
       case 12:   // Status
+	rrt &= ~0x080000;
 	if ((rrt & 0x04000000) != (Status & 0x04000000))
 	  set_fpr_pointers(rrt);
 	Status = rrt;
-	update_count();
 	r4300.pc+=4;
+	update_count();
 	check_interupt();
-	if (r4300.next_interrupt <= Count) gen_interupt();
+	interrupt_unsafe_state |= INTR_UNSAFE_R4300;
+	if (cp0_cycle_count >= 0) gen_interupt();
+	interrupt_unsafe_state &= ~INTR_UNSAFE_R4300;
 	r4300.pc-=4;
 	break;
       case 13:   // Cause
@@ -1244,7 +1256,9 @@ static void MTC0()
 	ErrorEPC = rrt;
 	break;
       default:
-	printf("unknown mtc0 write : %d\n", PC.f.r.nrd);
+#ifdef PRINTGECKO
+	print_gecko("unknown mtc0 write : %d\n", PC.f.r.nrd);
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1277,10 +1291,9 @@ static void BC1F()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -1294,7 +1307,7 @@ static void BC1F()
    if ((r4300.fcr31 & 0x800000)==0)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BC1T()
@@ -1306,10 +1319,9 @@ static void BC1T()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -1323,7 +1335,7 @@ static void BC1T()
    if ((r4300.fcr31 & 0x800000)!=0)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BC1FL()
@@ -1335,10 +1347,9 @@ static void BC1FL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -1356,7 +1367,7 @@ static void BC1FL()
    else
      r4300.pc+=8;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BC1TL()
@@ -1368,10 +1379,9 @@ static void BC1TL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -1389,7 +1399,7 @@ static void BC1TL()
    else
      r4300.pc+=8;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void (*interp_cop1_bc[4])(void) =
@@ -1611,7 +1621,9 @@ static void C_SF_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1625,7 +1637,9 @@ static void C_NGLE_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1639,7 +1653,9 @@ static void C_SEQ_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1655,7 +1671,9 @@ static void C_NGL_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1671,7 +1689,9 @@ static void C_LT_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1687,7 +1707,9 @@ static void C_NGE_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1703,7 +1725,9 @@ static void C_LE_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1719,7 +1743,9 @@ static void C_NGT_S()
 {
    if (isnan(*r4300.fpr_single[cffs]) || isnan(*r4300.fpr_single[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1961,7 +1987,9 @@ static void C_SF_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1975,7 +2003,9 @@ static void C_NGLE_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -1989,7 +2019,9 @@ static void C_SEQ_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -2005,7 +2037,9 @@ static void C_NGL_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -2021,7 +2055,9 @@ static void C_LT_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -2037,7 +2073,9 @@ static void C_NGE_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -2053,7 +2091,9 @@ static void C_LE_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -2069,7 +2109,9 @@ static void C_NGT_D()
 {
    if (isnan(*r4300.fpr_double[cffs]) || isnan(*r4300.fpr_double[cfft]))
      {
-	printf("Invalid operation exception in C opcode\n");
+#ifdef PRINTGECKO
+	print_gecko("Invalid operation exception in C opcode\n");
+#endif
 	r4300.stop=1;
 #ifdef DEBUGON
   _break();
@@ -2260,10 +2302,9 @@ static void J()
 	if (probe_nop(r4300.pc+4))
 	  {
 	     update_count();
-	     skip = r4300.next_interrupt - Count;
-	     if (skip > 3)
+	     if (cp0_cycle_count < 0)
 	       {
-		  Count += (skip - (skip % (count_per_op << 1)));
+		  Count = r4300.next_interrupt;
 		  return;
 	       }
 	  }
@@ -2276,7 +2317,7 @@ static void J()
    r4300.delay_slot=0;
    r4300.pc = naddr;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void JAL()
@@ -2287,10 +2328,9 @@ static void JAL()
 	if (probe_nop(r4300.pc+4))
 	  {
 	     update_count();
-	     skip = r4300.next_interrupt - Count;
-	     if (skip > 3)
+	     if (cp0_cycle_count < 0)
 	       {
-		  Count += (skip - (skip % (count_per_op << 1)));
+		  Count = r4300.next_interrupt;
 		  return;
 	       }
 	  }
@@ -2309,7 +2349,7 @@ static void JAL()
 	r4300.pc = naddr;
      }
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BEQ()
@@ -2323,10 +2363,9 @@ static void BEQ()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2340,7 +2379,7 @@ static void BEQ()
    if (local_rs == local_rt)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BNE()
@@ -2354,10 +2393,9 @@ static void BNE()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2371,7 +2409,7 @@ static void BNE()
    if (local_rs != local_rt)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BLEZ()
@@ -2384,10 +2422,9 @@ static void BLEZ()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2401,7 +2438,7 @@ static void BLEZ()
    if (local_rs <= 0)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BGTZ()
@@ -2414,10 +2451,9 @@ static void BGTZ()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2431,7 +2467,7 @@ static void BGTZ()
    if (local_rs > 0)
      r4300.pc += (local_immediate-1)*4;
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void ADDI()
@@ -2512,10 +2548,9 @@ static void BEQL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2536,7 +2571,7 @@ static void BEQL()
 	update_count();
      }
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BNEL()
@@ -2550,10 +2585,9 @@ static void BNEL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2574,7 +2608,7 @@ static void BNEL()
 	update_count();
      }
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BLEZL()
@@ -2587,10 +2621,9 @@ static void BLEZL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2611,7 +2644,7 @@ static void BLEZL()
 	update_count();
      }
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void BGTZL()
@@ -2624,10 +2657,9 @@ static void BGTZL()
 	  if (probe_nop(r4300.pc+4))
 	    {
 	       update_count();
-	       skip = r4300.next_interrupt - Count;
-	       if (skip > 3)
+	       if (cp0_cycle_count < 0)
 		 {
-		    Count += (skip - (skip % (count_per_op << 1)));
+		    Count = r4300.next_interrupt;
 		    return;
 		 }
 	    }
@@ -2648,7 +2680,7 @@ static void BGTZL()
 	update_count();
      }
    r4300.last_pc = r4300.pc;
-   if (r4300.next_interrupt <= Count) gen_interupt();
+   if (cp0_cycle_count >= 0) gen_interupt();
 }
 
 static void DADDI()
@@ -3226,6 +3258,10 @@ static void SD()
 void prefetch()
 {
 	unsigned long *mem = fast_mem_access(r4300.pc);
+	if (mem == NULL)
+	{
+		mem = fast_mem_access(r4300.pc);
+	}
 	if (mem != NULL)
 	{
 		op = *mem;
@@ -3233,6 +3269,9 @@ void prefetch()
 	}
 	else
     {
+#ifdef PRINTGECKO
+		 print_gecko("prefetch exit: pc=%08x\r\n", (unsigned int)r4300.pc);
+#endif
 	     r4300.stop=1;
 #ifdef DEBUGON
        _break();

@@ -149,7 +149,7 @@ void dynarec(unsigned int address){
 		if(!r4300.noCheckInterrupt){
 			r4300.last_pc = r4300.pc;
 			// Check for interrupts
-			if(r4300.next_interrupt <= Count){
+			if(cp0_cycle_count >= 0){
 				link_branch = NULL;
 				gen_interupt();
 				address = r4300.pc;
@@ -165,15 +165,19 @@ unsigned int dyna_cop0_status(unsigned int pc, unsigned int oldStatus,
 	r4300.pc = pc;
 	r4300.delay_slot = isDelaySlot;
 
+	newStatus &= ~0x080000;
 	if ((newStatus & 0x04000000) != (oldStatus & 0x04000000)) {
 	  set_fpr_pointers(newStatus);
 	}
-	update_count();
+	Status = newStatus;
 	r4300.pc+=4;
+	update_count();
 	check_interupt();
-	if (r4300.next_interrupt <= Count)  {
+	interrupt_unsafe_state |= INTR_UNSAFE_R4300;
+	if (cp0_cycle_count >= 0)  {
 		gen_interupt();
 	}
+	interrupt_unsafe_state &= ~INTR_UNSAFE_R4300;
 	r4300.delay_slot = 0;
 
 	if(r4300.pc != pc + 4) r4300.noCheckInterrupt = 1;
@@ -215,7 +219,7 @@ int dyna_update_count(unsigned int pc){
 	}
 #endif
 
-	return r4300.next_interrupt - Count;
+	return cp0_cycle_count;
 }
 
 unsigned int dyna_check_cop1_unusable(unsigned int pc, int isDelaySlot){

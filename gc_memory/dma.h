@@ -35,6 +35,8 @@ void dma_pi_read();
 void dma_si_write();
 void dma_si_read();
 void si_end_of_dma(void);
+void si_reset_dma_dir(void);      // mupen64plus poweron_si()
+void si_set_dma_dir_write(void); // mupen64plus write_pif_mem()
 void dma_sp_write();
 void dma_sp_read();
 

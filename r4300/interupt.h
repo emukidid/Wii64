@@ -30,6 +30,12 @@
 #include "r4300.h"
 #define Count r4300.reg_cop0[9]
 
+/* mupen64plus keeps cp0_cycle_count, but it maintains
+   cycle_count == Count - next_interrupt as an invariant everywhere it touches
+   either one, so we calc it instead of storing a second copy.  Negative
+   while cycles remain before the next event, >= 0 once it is due. */
+#define cp0_cycle_count ((int)((unsigned int)Count - r4300.next_interrupt))
+
 void compare_interupt();
 void gen_dp();
 void init_interupt();
@@ -47,7 +53,7 @@ unsigned long *get_event(int type);
 int save_eventqueue_infos(char *buf);
 void load_eventqueue_infos(char *buf);
 
-#define INTR_UNSAFE_R4300 0x01  /* not wired up here; kept for bit parity */
+#define INTR_UNSAFE_R4300 0x01
 #define INTR_UNSAFE_RSP   0x02
 extern unsigned int interrupt_unsafe_state;
 

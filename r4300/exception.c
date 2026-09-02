@@ -34,6 +34,7 @@
 #include "exception.h"
 #include "../gui/DEBUG.h"
 #include "../gc_memory/memory.h"
+#include "interupt.h"
 
 
 #ifdef DEBUGON
@@ -107,7 +108,7 @@ void TLB_refill_exception(unsigned long address, int w)
    
   if (r4300.delay_slot) {
     r4300.skip_jump = r4300.pc;
-    r4300.next_interrupt = 0;
+    r4300.next_interrupt = Count;
   }
 }
 
@@ -130,6 +131,6 @@ void exception_general()
   
   if (r4300.delay_slot) {
     r4300.skip_jump = r4300.pc;
-    r4300.next_interrupt = 0;
+    r4300.next_interrupt = Count;
   }
 }

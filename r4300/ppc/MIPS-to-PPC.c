@@ -270,8 +270,10 @@ void end_block()
         // Count = r0
         GEN_STW(R0, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 
-		// cmpl   cr3,  tmp, r0  // cr3 = r4300.next_interrupt ? Count
-		GEN_CMPL(CR3, tmp, R0);
+		// subf   tmp, tmp, r0  // tmp = Count - next_interrupt (cycle_count)
+		GEN_SUBF(tmp, tmp, R0);
+		// cmpwi  cr3,  tmp, 0  // cr3 = signed cycle_count ? 0
+		GEN_CMPI(CR3, tmp, 0);
 		
 		GEN_BLR(0)
 		//print_gecko("Generated update_count_check at addr %08X\r\n", update_count_check_addr);
@@ -438,7 +440,7 @@ static int branch(short offset, condition cond, int link, int likely){
 	if(likely) set_jump_special(likely_id, delaySlot+1);
 #endif
 
-	genUpdateCount(1); // Sets cr3 to (r4300.next_interrupt ? Count)
+	genUpdateCount(1); // Sets cr3 to (cycle_count ? 0)
 
 #ifndef INTERPRET_BRANCH
 	// If we're jumping out, we need to trampoline using genJumpTo
@@ -456,7 +458,7 @@ static int branch(short offset, condition cond, int link, int likely){
 		GEN_LIS(R3, extractUpper16(get_src_pc()+4));
 		GEN_ADDI(R3, R3, extractLower16(get_src_pc()+4));
 		// If taking the interrupt, return to the trampoline
-		GEN_BLELR(CR3, 0);
+		GEN_BGELR(CR3, 0);
 
 #ifndef INTERPRET_BRANCH
 	} else {
@@ -472,7 +474,7 @@ static int branch(short offset, condition cond, int link, int likely){
 		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 
 		// If taking the interrupt, return to the trampoline
-		GEN_BLELR(CR3, 0);
+		GEN_BGELR(CR3, 0);
 		// The actual branch
 #if 0
 		// FIXME: Reenable this when blocks are small enough to BC within
@@ -630,7 +632,7 @@ static int J(MIPS_instr mips){
 #ifdef COMPARE_CORE
 	GEN_LI(R4, 1);
 #endif
-	// Sets cr3 to (r4300.next_interrupt ? Count)
+	// Sets cr3 to (cycle_count ? 0)
 	genUpdateCount(1);
 
 #ifdef INTERPRET_J
@@ -645,8 +647,8 @@ static int J(MIPS_instr mips){
 		GEN_ADDI(R3, R3, extractLower16(naddr));
 		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 
-		// if(r4300.next_interrupt <= Count) return;
-		GEN_BLELR(CR3, 0);
+		// if(cycle_count >= 0) return;
+		GEN_BGELR(CR3, 0);
 
 		// Even though this is an absolute branch
 		//   in pass 2, we generate a relative branch
@@ -684,7 +686,7 @@ static int JAL(MIPS_instr mips){
 #ifdef COMPARE_CORE
 	GEN_LI(R4, 1);
 #endif
-	// Sets cr3 to (r4300.next_interrupt ? Count)
+	// Sets cr3 to (cycle_count ? 0)
 	genUpdateCount(1);
 
 	// Set LR to next instruction
@@ -708,8 +710,8 @@ static int JAL(MIPS_instr mips){
 		GEN_ADDI(R3, R3, extractLower16(naddr));
 		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 
-		/// if(r4300.next_interrupt <= Count) return;
-		GEN_BLELR(CR3, 0);
+		/// if(cycle_count >= 0) return;
+		GEN_BGELR(CR3, 0);
 
 		// Even though this is an absolute branch
 		//   in pass 2, we generate a relative branch
@@ -4365,7 +4367,7 @@ static void genJumpTo(unsigned int loc, unsigned int type){
 		GEN_LIS(R3, extractUpper16(loc));
 		GEN_ADDI(R3, R3, extractLower16(loc));
 		// Since we could be linking, return on interrupt
-		GEN_BLELR(CR3, 0);
+		GEN_BGELR(CR3, 0);
 		// Store r4300.last_pc for linking
 		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 		GEN_BLR(1);
@@ -4428,7 +4430,7 @@ static void emit_genCheckFp_lazy(void)
 }
 #endif
 
-// Updates Count, and sets cr3 to (r4300.next_interrupt ? Count)
+// Updates Count, and sets cr3 to (cycle_count ? 0)
 static void genUpdateCount(int checkCount){
 #ifdef LAZY_GEN_CALLS
 	emit_update_count_lazy(checkCount);
@@ -4473,8 +4475,10 @@ static void genUpdateCount(int checkCount){
 	// stw    r0,  9*4(r4300.reg_cop0)    // Count = r0
 	GEN_STW(R0, (9*4)+offsetof(R4300,reg_cop0), DYNAREG_R4300);
 	if(checkCount){
-		// cmpl   cr3,  tmp, r0  // cr3 = r4300.next_interrupt ? Count
-		GEN_CMPL(CR3, tmp, R0);
+		// subf   tmp, tmp, r0  // tmp = Count - next_interrupt (cycle_count)
+		GEN_SUBF(tmp, tmp, R0);
+		// cmpwi  cr3,  tmp, 0  // cr3 = signed cycle_count ? 0
+		GEN_CMPI(CR3, tmp, 0);
 	}
 	// Free tmp register
 	unmapRegisterTemp(tmp);
@@ -4488,7 +4492,7 @@ static void genUpdateCount(int checkCount){
 	GEN_LWZ(R0, DYNAOFF_LR, 1);
 	GEN_MTLR(R0);
 	if(checkCount){
-		// If r4300.next_interrupt <= Count (cr3)
+		// If cycle_count >= 0 (cr3)
 		GEN_CMPI(CR3, R3, 0);
 	}
 #endif

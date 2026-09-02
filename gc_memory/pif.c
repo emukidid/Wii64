@@ -509,6 +509,11 @@ void update_pif_write()
 #endif
 }
 
+void pif_reset_state()
+{
+	cic_challenge = 0;
+}
+
 void update_pif_read()
 {
 	int i=0, channel=0;

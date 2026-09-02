@@ -366,6 +366,16 @@ static unsigned long si_dram_word_index(void)
 	return a >> 2;
 }
 
+void si_reset_dma_dir(void)
+{
+	si_dma_dir = SI_NO_DMA;
+}
+
+void si_set_dma_dir_write(void)
+{
+	si_dma_dir = SI_DMA_WRITE;
+}
+
 void si_end_of_dma(void)
 {
 	int i;

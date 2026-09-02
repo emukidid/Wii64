@@ -1538,6 +1538,12 @@ PowerPC_instr Instruction(int opcode, ...);
 	/* BI: Check GT bit in CR specified */ \
 	_BCLR(ppc, lk, 0x4, (((cr)<<2)+1))
 
+#define _BGELR(ppc,cr,lk) \
+	/* NOTE: This branch is marked unlikely to be taken */ \
+	/* BO: Branch if CR bit is 0 */ \
+	/* BI: Check LT bit in CR specified */ \
+	_BCLR(ppc, lk, 0x4, (((cr)<<2)+0))
+
 #define _ANDIS(ppc,rd,ra,immed) \
 	{ ppc = NEW_PPC_INSTR(); \
 	  PPC_SET_OPCODE(ppc, PPC_OPCODE_ANDIS); \

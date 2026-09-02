@@ -238,6 +238,9 @@ static FrameBufferInfo frameBufferInfos[6];
 static char framebufferRead[0x800];
 static int firstFrameBufferSetting;
 
+static unsigned long last_write;
+static unsigned long rom_written;
+
 int init_memory()
 {
 	int i;
@@ -530,6 +533,11 @@ int init_memory()
 	memset(frameBufferInfos, 0, sizeof(frameBufferInfos));
 	memset(framebufferRead, 0, sizeof(framebufferRead));
 	firstFrameBufferSetting = 1;
+
+	last_write = 0;
+	rom_written = 0;
+	si_reset_dma_dir();
+	pif_reset_state();
 
 	//printf("memory initialized\n");
 	return 0;
@@ -1753,7 +1761,7 @@ void write_mi()
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
-			if (r4300.next_interrupt <= Count) gen_interupt();
+			if (cp0_cycle_count >= 0) gen_interupt();
 		break;
 	}
 }
@@ -1777,7 +1785,7 @@ void write_mib()
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
-			if (r4300.next_interrupt <= Count) gen_interupt();
+			if (cp0_cycle_count >= 0) gen_interupt();
 		break;
 	}
 }
@@ -1797,7 +1805,7 @@ void write_mih()
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
-			if (r4300.next_interrupt <= Count) gen_interupt();
+			if (cp0_cycle_count >= 0) gen_interupt();
 		break;
 	}
 }
@@ -1815,7 +1823,7 @@ void write_mid()
 			update_MI_intr_mask_reg();
 			check_interupt();
 			update_count();
-			if (r4300.next_interrupt <= Count) gen_interupt();
+			if (cp0_cycle_count >= 0) gen_interupt();
 		break;
 	}
 }
@@ -2826,9 +2834,6 @@ void write_flashram_commandb(){}
 void write_flashram_commandh(){}
 void write_flashram_commandd(){}
 
-static unsigned long last_write;
-static unsigned long rom_written;
-
 void read_rom()
 {
 	if (rom_written)
@@ -2890,6 +2895,7 @@ void write_pif()
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
 			PIF_RAMb[0x3F] = 0;
+			si_set_dma_dir_write();
 			update_count();
 			add_interupt_event(SI_INT, /*0x100*/0x900);
 		}
@@ -2906,6 +2912,7 @@ void write_pifb()
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
 			PIF_RAMb[0x3F] = 0;
+			si_set_dma_dir_write();
 			update_count();
 			add_interupt_event(SI_INT, /*0x100*/0x900);
 		}
@@ -2923,6 +2930,7 @@ void write_pifh()
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
 			PIF_RAMb[0x3F] = 0;
+			si_set_dma_dir_write();
 			update_count();
 			add_interupt_event(SI_INT, /*0x100*/0x900);
 		}
@@ -2940,6 +2948,7 @@ void write_pifd()
 		if (PIF_RAMb[0x3F] == 0x08)
 		{
 			PIF_RAMb[0x3F] = 0;
+			si_set_dma_dir_write();
 			update_count();
 			add_interupt_event(SI_INT, /*0x100*/0x900);
 		}
@@ -2953,7 +2962,11 @@ unsigned long *fast_mem_access(unsigned long address)
    /* This code is performance critical, specially on pure interpreter mode.
     * Removing error checking saves some time, but the emulator may crash. */
 	if ((address & 0xc0000000) != 0x80000000)
+	{
 		address = virtual_to_physical_address(address, 2);
+		if (!address)
+			return NULL;
+	}
 
 	address &= 0x1ffffffc;
 

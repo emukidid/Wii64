@@ -81,5 +81,6 @@ unsigned long virtual_to_physical_address(unsigned long vaddr, int w)
 
 int probe_nop(unsigned long address)
 {
-	return *fast_mem_access(address) == 0;
+	unsigned long *mem = fast_mem_access(address);
+	return (mem != NULL) && (*mem == 0);
 }
