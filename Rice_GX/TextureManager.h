@@ -130,8 +130,11 @@ typedef struct TxtrCacheEntry
     ~TxtrCacheEntry()
     {
 #ifdef __GX__
-		if (((CTexture*)g_curBoundTex[0] == pTexture)||((CTexture*)g_curBoundTex[0] == pEnhancedTexture)) g_curBoundTex[0] = NULL;
-		if (((CTexture*)g_curBoundTex[1] == pTexture)||((CTexture*)g_curBoundTex[1] == pEnhancedTexture)) g_curBoundTex[1] = NULL;
+		if (g_curBoundTex)
+		{
+			if (((CTexture*)g_curBoundTex[0] == pTexture)||((CTexture*)g_curBoundTex[0] == pEnhancedTexture)) g_curBoundTex[0] = NULL;
+			if (((CTexture*)g_curBoundTex[1] == pTexture)||((CTexture*)g_curBoundTex[1] == pEnhancedTexture)) g_curBoundTex[1] = NULL;
+		}
 #endif //!__GX__
         SAFE_DELETE(pTexture);
         SAFE_DELETE(pEnhancedTexture);

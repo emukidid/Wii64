@@ -101,8 +101,11 @@ CTextureManager::CTextureManager() :
 #ifdef HW_RVL
 void evictTex(TxtrCacheEntry *pEntry) 
 {
-	if (((CTexture*)g_curBoundTex[0] == pEntry->pTexture)||((CTexture*)g_curBoundTex[0] == pEntry->pEnhancedTexture)) g_curBoundTex[0] = NULL;
-	if (((CTexture*)g_curBoundTex[1] == pEntry->pTexture)||((CTexture*)g_curBoundTex[1] == pEntry->pEnhancedTexture)) g_curBoundTex[1] = NULL;
+	if (g_curBoundTex)
+	{
+		if (((CTexture*)g_curBoundTex[0] == pEntry->pTexture)||((CTexture*)g_curBoundTex[0] == pEntry->pEnhancedTexture)) g_curBoundTex[0] = NULL;
+		if (((CTexture*)g_curBoundTex[1] == pEntry->pTexture)||((CTexture*)g_curBoundTex[1] == pEntry->pEnhancedTexture)) g_curBoundTex[1] = NULL;
+	}
 	SAFE_DELETE(pEntry->pTexture);
 	SAFE_DELETE(pEntry->pEnhancedTexture);
 	__lwp_heap_free(GXtexCache,pEntry);
