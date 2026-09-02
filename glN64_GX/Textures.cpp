@@ -533,8 +533,37 @@ const struct
 };
 #endif // !__GX__
 
+
+static CachedTexture  textureSlots[GX_MAX_TEXTURES];
+static CachedTexture *freeTextureSlots = NULL;
+
+static void TextureCache_InitSlots()
+{
+	freeTextureSlots = NULL;
+	for (u32 i = 0; i < (u32)GX_MAX_TEXTURES; i++)
+	{
+		textureSlots[i].lower = freeTextureSlots;
+		freeTextureSlots = &textureSlots[i];
+	}
+}
+
+static CachedTexture *TextureCache_AllocSlot()
+{
+	CachedTexture *slot = freeTextureSlots;
+	if (slot != NULL)
+		freeTextureSlots = slot->lower;
+	return slot;
+}
+
+static void TextureCache_FreeSlot( CachedTexture *slot )
+{
+	slot->lower = freeTextureSlots;
+	freeTextureSlots = slot;
+}
+
 void TextureCache_Init()
 {
+	TextureCache_InitSlots();
 	cache.current[0] = NULL;
 	cache.current[1] = NULL;
 	cache.top = NULL;
@@ -668,9 +697,7 @@ void TextureCache_RemoveBottom()
 	glDeleteTextures( 1, &cache.bottom->glName );
 #endif // !__GX__
 
-#ifndef __GX__
 	cache.cachedBytes -= cache.bottom->textureBytes;
-#endif // !__GX__
 
 	if (cache.bottom->frameBufferTexture)
 		FrameBuffer_RemoveBuffer( cache.bottom->address );
@@ -680,13 +707,12 @@ void TextureCache_RemoveBottom()
 
 #ifdef __GX__
 	if( cache.bottom->GXtexture != NULL )
-	{
-		cache.cachedBytes -= cache.bottom->textureBytes;
 		__lwp_heap_free(GXtexCache, cache.bottom->GXtexture);
-	}
-#endif // __GX__
-	free( cache.bottom );
 
+	TextureCache_FreeSlot( cache.bottom );
+#else
+	free( cache.bottom );
+#endif // __GX__
     cache.bottom = newBottom;
 	
 	if (cache.bottom)
@@ -732,16 +758,14 @@ void TextureCache_Remove( CachedTexture *texture )
 	glDeleteTextures( 1, &texture->glName );
 #endif // !__GX__
 
+	cache.cachedBytes -= texture->textureBytes;
 #ifdef __GX__
 	if( texture->GXtexture != NULL )
-	{
-		cache.cachedBytes -= texture->textureBytes;
 		__lwp_heap_free(GXtexCache, texture->GXtexture);
-	}
+	TextureCache_FreeSlot( texture );
 #else // !__GX__
-	cache.cachedBytes -= texture->textureBytes;
-#endif // __GX__
 	free( texture );
+#endif // __GX__
 
 	cache.numCached--;
 }
@@ -761,14 +785,22 @@ CachedTexture *TextureCache_AddTop()
 			TextureCache_Remove( cache.dummy->higher );
 	}
 
+#ifdef __GX__
+	CachedTexture *newtop = TextureCache_AllocSlot();
+#else // !__GX__
 	CachedTexture *newtop = (CachedTexture*)malloc( sizeof( CachedTexture ) );
+#endif // __GX__
 	while(!newtop) {
 		if (cache.bottom != cache.dummy)
 			TextureCache_RemoveBottom();
 		else if (cache.dummy->higher)
 			TextureCache_Remove( cache.dummy->higher );
 		//print_gecko("Out of memory %d/%d, next %d/%d\r\n", cache.cachedBytes, cache.maxBytes, cache.numCached, GX_MAX_TEXTURES);
+#ifdef __GX__
+		newtop = TextureCache_AllocSlot();
+#else // !__GX__
 		newtop = (CachedTexture*)malloc( sizeof( CachedTexture ) );
+#endif // __GX__
 	}
 	//print_gecko("Memory %d/%d, next %d/%d\r\n", cache.cachedBytes, cache.maxBytes, cache.numCached, GX_MAX_TEXTURES);
 	memset( newtop, 0x00, sizeof( CachedTexture ) );
@@ -1586,11 +1618,10 @@ void TextureCache_Load( CachedTexture *texInfo )
 u32 TextureCache_CalculateCRC( u32 t, u32 width, u32 height )
 {
 	u32 crc;
-	u32 y, /*i,*/ bpl, lineBytes, line;
+	u32 y, bpl, line;
 	u64 *src;
 
 	bpl = width << gSP.textureTile[t]->size >> 1;
-	lineBytes = gSP.textureTile[t]->line << 3;
 
 	line = gSP.textureTile[t]->line;
  	if (gSP.textureTile[t]->size == G_IM_SIZ_32b)
@@ -1599,8 +1630,10 @@ u32 TextureCache_CalculateCRC( u32 t, u32 width, u32 height )
 	crc = 0xFFFFFFFF;
  	for (y = 0; y < height; y++)
 	{
-		src = (u64*)&TMEM[(gSP.textureTile[t]->tmem + line * y) & 0x1FF];
-		crc = Hash_Calculate( crc, src, bpl );
+		const u32 offset = (gSP.textureTile[t]->tmem + line * y) & 0x1FF;
+		const u32 avail = (512 - offset) << 3;
+		src = (u64*)&TMEM[offset];
+		crc = Hash_Calculate( crc, src, (bpl < avail) ? bpl : avail );
 	}
 
    	if ((gDP.otherMode.textureLUT != G_TT_NONE) || (gSP.textureTile[t]->format == G_IM_FMT_CI))
@@ -1850,17 +1883,14 @@ void TextureCache_Update( u32 t )
 	gDPLoadTileInfo &loadedInfo = gDP.loadInfo[gSP.textureTile[t]->tmem & 0x1FF];
 	const bool useLoadedInfo = (gDP.textureMode == TEXTUREMODE_TEXRECT) && (loadedInfo.loadType == LOADTYPE_TILE);
 
-	if (gDP.textureMode == TEXTUREMODE_TEXRECT)
+	if (gSP.textureTile[t]->tmem == gDP.loadTile->tmem)
 	{
-		if (gSP.textureTile[t]->tmem == gDP.loadTile->tmem)
-		{
-			if ((gDP.loadTile->loadWidth != 0) && (gDP.loadTile->masks == 0))
-				loadedInfo.width = (u16)gDP.loadTile->loadWidth;
-			if ((gDP.loadTile->loadHeight != 0) && (gDP.loadTile->maskt == 0))
-				loadedInfo.height = (u16)gDP.loadTile->loadHeight;
-		}
-		gDP.loadTile->loadWidth = gDP.loadTile->loadHeight = 0;
+		if ((gDP.loadTile->loadWidth != 0) && (gDP.loadTile->masks == 0))
+			loadedInfo.width = (u16)gDP.loadTile->loadWidth;
+		if ((gDP.loadTile->loadHeight != 0) && (gDP.loadTile->maskt == 0))
+			loadedInfo.height = (u16)gDP.loadTile->loadHeight;
 	}
+	gDP.loadTile->loadWidth = gDP.loadTile->loadHeight = 0;
 
 	if (useLoadedInfo)
 	{

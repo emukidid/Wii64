@@ -201,6 +201,7 @@ void FrameBuffer_MoveToTop( FrameBuffer *newtop )
 
 void FrameBuffer_Destroy()
 {
+	fbUnderConstruction = NULL;
 	while (frameBuffer.bottom)
 		FrameBuffer_RemoveBottom();
 }

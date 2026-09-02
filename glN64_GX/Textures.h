@@ -96,7 +96,7 @@ extern TextureCache cache;
 #	define GX_TEXTURE_CACHE_SIZE (0x264000) //2.4 MB for GC
 #  endif
 # endif //!HW_RVL
-# define GX_MAX_TEXTURES (512*1024/sizeof( CachedTexture )) //Allow 512kB of Texture Meta
+# define GX_MAX_TEXTURES ((400*1024)/sizeof( CachedTexture )) //Allow 400kB of Texture Meta
 #endif //__GX__
 
 inline u32 pow2( u32 dim )
