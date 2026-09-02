@@ -438,6 +438,7 @@ void Func_MMAdvancedMenu()
 
 void Func_MMControls()
 {
+	menu::Gui::getInstance().menuLogo->setLocation(580.0, 410.0, -50.0);
 	pMenuContext->setActiveFrame(MenuContext::FRAME_SETTINGS, SettingsFrame::SUBMENU_INPUT);
 }
 

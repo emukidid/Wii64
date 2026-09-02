@@ -208,8 +208,10 @@ EXPORT void CALL GetKeys(int Control, BUTTONS * Keys )
 			assign_controller(Control, &controller_Classic, virtualControllers[Control].number);
 	}
 #endif
-	if(DO_CONTROL(Control, GetKeys, Keys, virtualControllers[Control].config))
+	if(DO_CONTROL(Control, GetKeys, Keys, virtualControllers[Control].config)) {
+		memset(Keys, 0, sizeof(BUTTONS));
 		stop_it();
+	}
 }
 
 /******************************************************************
