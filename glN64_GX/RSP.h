@@ -54,7 +54,7 @@ typedef struct
 
 extern RSPInfo RSP;
 
-#define RSP_SegmentToPhysical( segaddr ) ((gSP.segment[(segaddr >> 24) & 0x0F] + (segaddr & 0x00FFFFFF)) & 0x00FFFFFF)
+#define RSP_SegmentToPhysical( segaddr ) ((gSP.segment[(segaddr >> 24) & 0x0F] + (segaddr & 0x00FFFFFF)) & (RDRAMSize - 1))
 
 void RSP_Init();
 void RSP_ProcessDList();

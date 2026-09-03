@@ -418,6 +418,7 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 
 	// See if we can identify it by CRC
 	uc_crc = crc32( 0, &RDRAM[uc_start & 0x1FFFFFFF], 4096 );
+	current->crc = uc_crc;
 #if 0 //def __GX__
 	sprintf(txtbuffer,"GBI:uc_crc: %x", uc_crc);
 	DEBUG_print(txtbuffer,3); 

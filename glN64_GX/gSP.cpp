@@ -1469,18 +1469,6 @@ void gSPSegment( s32 seg, s32 base )
 #endif
 		return;
 	}
-
-	if ((unsigned int)base > RDRAMSize - 1)
-	{
-#ifdef DEBUG
-		DebugMsg( DEBUG_HIGH | DEBUG_ERROR, "// Attempting to load invalid address into segment array\n",
-			SegmentText[seg], base );
-		DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gSPSegment( %s, 0x%08X );\n",
-			SegmentText[seg], base );
-#endif
-		return;
-	}
-
 	gSP.segment[seg] = base;
 
 #ifdef DEBUG
