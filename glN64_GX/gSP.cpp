@@ -112,6 +112,34 @@ void gSPLoadUcodeEx( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 #endif
 }
 
+#ifdef __GX__
+static void _gSPUpdateCombW()
+{
+	if (OGL.numTriangles)
+		OGL_DrawTriangles();
+
+	guMtx44Inverse( gSP.matrix.combined, OGL.GXprojTemp );
+
+	const f32 zTerm = fabsf( OGL.GXprojTemp[2][3] );
+	if (zTerm != 0.0f &&
+	    fabsf( OGL.GXprojTemp[0][3] ) <= zTerm * 1.0e-4f &&
+	    fabsf( OGL.GXprojTemp[1][3] ) <= zTerm * 1.0e-4f)
+	{
+		OGL.GXcombW[2][3] = GXprojZScale / OGL.GXprojTemp[2][3];
+		OGL.GXcombW[2][2] = -GXprojZOffset + (OGL.GXcombW[2][3] * OGL.GXprojTemp[3][3]);
+		OGL.GXcombWok = true;
+		OGL.GXuseCombW = true;
+	}
+	else
+	{
+		OGL.GXcombWok = false;
+		OGL.GXuseCombW = false;
+	}
+
+	OGL.GXupdateMtx = true;
+}
+#endif // __GX__
+
 static void _gSPCombineMatrices()
 {
 	CopyMatrix( gSP.matrix.combined, gSP.matrix.projection );
@@ -120,24 +148,7 @@ static void _gSPCombineMatrices()
 	gSP.changed &= ~CHANGED_MATRIX;
 
 #ifdef __GX__
-	if (OGL.numTriangles)
-		OGL_DrawTriangles();
-	guMtx44Inverse( gSP.matrix.combined, OGL.GXprojTemp );
-
-	if (OGL.GXprojTemp[2][3] != 0.0f)
-	{
-		OGL.GXcombW[2][3] = GXprojZScale / OGL.GXprojTemp[2][3];
-		OGL.GXcombW[2][2] = -GXprojZOffset + (OGL.GXcombW[2][3] * OGL.GXprojTemp[3][3]);
-		OGL.GXcombWok = true;
-		OGL.GXuseCombW = true;
-		OGL.GXupdateMtx = true;
-	}
-	else
-	{
-		OGL.GXcombWok = false;
-		OGL.GXuseCombW = false;
-		OGL.GXupdateMtx = true;
-	}
+	_gSPUpdateCombW();
 #endif //__GX__
 }
 
@@ -535,24 +546,7 @@ void gSPForceMatrix( u32 mptr )
 	DEBUG_print(txtbuffer,7);
 #endif
 
-	if (OGL.numTriangles)
-		OGL_DrawTriangles();
-	guMtx44Inverse( gSP.matrix.combined, OGL.GXprojTemp );
-
-	if (OGL.GXprojTemp[2][3] != 0.0f)
-	{
-		OGL.GXcombW[2][3] = GXprojZScale / OGL.GXprojTemp[2][3];
-		OGL.GXcombW[2][2] = -GXprojZOffset + (OGL.GXcombW[2][3] * OGL.GXprojTemp[3][3]);
-		OGL.GXcombWok = true;
-		OGL.GXuseCombW = true;
-		OGL.GXupdateMtx = true;
-	}
-	else
-	{
-		OGL.GXcombWok = false;
-		OGL.GXuseCombW = false;
-		OGL.GXupdateMtx = true;
-	}
+	_gSPUpdateCombW();
 #endif //__GX__
 
 	gSP.changed &= ~CHANGED_MATRIX;
@@ -1535,25 +1529,7 @@ void gSPInsertMatrix( u32 where, u32 num )
 	DEBUG_print(txtbuffer,6);
 #endif
 
-	if (OGL.numTriangles)
-		OGL_DrawTriangles();
-
-	guMtx44Inverse( gSP.matrix.combined, OGL.GXprojTemp );
-
-	if (OGL.GXprojTemp[2][3] != 0.0f)
-	{
-		OGL.GXcombW[2][3] = GXprojZScale / OGL.GXprojTemp[2][3];
-		OGL.GXcombW[2][2] = -GXprojZOffset + (OGL.GXcombW[2][3] * OGL.GXprojTemp[3][3]);
-		OGL.GXcombWok = true;
-		OGL.GXuseCombW = true;
-		OGL.GXupdateMtx = true;
-	}
-	else
-	{
-		OGL.GXcombWok = false;
-		OGL.GXuseCombW = false;
-		OGL.GXupdateMtx = true;
-	}
+	_gSPUpdateCombW();
 #endif //__GX__
 
 #ifdef DEBUG
@@ -1680,7 +1656,7 @@ void gSPTexture( f32 sc, f32 tc, s32 level, s32 tile, s32 on )
 
 	gSP.texture.tile = tile;
 	gSP.textureTile[0] = &gDP.tiles[tile];
-	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[(tile < 7) ? (tile + 1) : tile];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[(tile + 1) & 7];
 
 	gSP.changed |= CHANGED_TEXTURE;
 
@@ -1809,6 +1785,7 @@ void gSPBgRect1Cyc( u32 bg )
 	gSP.bgImage.palette = objScaleBg->imagePal;
 	gDP.textureMode = TEXTUREMODE_BGIMAGE;
 
+
 	f32 imageX = _FIXED2FLOAT( objScaleBg->imageX, 5 );
 	f32 imageY = _FIXED2FLOAT( objScaleBg->imageY, 5 );
 	f32 imageW = objScaleBg->imageW >> 2;
@@ -1826,32 +1803,40 @@ void gSPBgRect1Cyc( u32 bg )
 
 	f32 frameX0 = frameX;
 	f32 frameY0 = frameY;
-	f32 frameS0 = imageX;
-	f32 frameT0 = imageY;
 
 	f32 frameX1 = frameX + min( (imageW - imageX) / scaleW, frameW );
 	f32 frameY1 = frameY + min( (imageH - imageY) / scaleH, frameH );
-	//f32 frameS1 = imageX + min( (imageW - imageX) * scaleW, frameW * scaleW );
-	//f32 frameT1 = imageY + min( (imageH - imageY) * scaleH, frameH * scaleH );
-	
+
+	if (frameX1 < frameX0) frameX1 = frameX0;
+	if (frameY1 < frameY0) frameY1 = frameY0;
+	if (frameX1 > frameX0 + frameW) frameX1 = frameX0 + frameW;
+	if (frameY1 > frameY0 + frameH) frameY1 = frameY0 + frameH;
+
 	gDP.otherMode.cycleType = G_CYC_1CYCLE;
 	gDP.changed |= CHANGED_CYCLETYPE;
 	gSPTexture( 1.0f, 1.0f, 0, 0, TRUE );
-	gDPTextureRectangle( frameX0, frameY0, frameX1 - 1, frameY1 - 1, 0, frameS0 - 1, frameT0 - 1, scaleW, scaleH );
 
-	if ((frameX1 - frameX0) < frameW)
+	const f32 spanX[2][2] = { { frameX0, frameX1 }, { frameX1, frameX0 + frameW } };
+	const f32 spanY[2][2] = { { frameY0, frameY1 }, { frameY1, frameY0 + frameH } };
+	const f32 srcX[2] = { imageX, 0.0f };
+	const f32 srcY[2] = { imageY, 0.0f };
+
+	for (int iy = 0; iy < 2; iy++)
 	{
-		f32 frameX2 = frameW - (frameX1 - frameX0) + frameX1;
-		gDPTextureRectangle( frameX1, frameY0, frameX2 - 1, frameY1 - 1, 0, 0, frameT0, scaleW, scaleH );
+		if (spanY[iy][1] <= spanY[iy][0])
+			continue;
+
+		for (int ix = 0; ix < 2; ix++)
+		{
+			if (spanX[ix][1] <= spanX[ix][0])
+				continue;
+
+			gDPTextureRectangle( spanX[ix][0], spanY[iy][0],
+			                     spanX[ix][1], spanY[iy][1],
+			                     0, srcX[ix], srcY[iy], scaleW, scaleH );
+		}
 	}
 
-	if ((frameY1 - frameY0) < frameH)
-	{
-		f32 frameY2 = frameH - (frameY1 - frameY0) + frameY1;
-		gDPTextureRectangle( frameX0, frameY1, frameX1 - 1, frameY2 - 1, 0, frameS0, 0, scaleW, scaleH );
-	}
-
-	gDPTextureRectangle( 0, 0, 319, 239, 0, 0, 0, scaleW, scaleH );
 /*	u32 line = (u32)(frameS1 - frameS0 + 1) << objScaleBg->imageSiz >> 4;
 	u16 loadHeight;
 	if (objScaleBg->imageFmt == G_IM_FMT_CI)
@@ -2008,19 +1993,39 @@ void gSPObjSprite( u32 sp )
     glLoadIdentity();
 	glOrtho( 0, VI.width, VI.height, 0, 0.0f, 32767.0f );
 #else // !__GX__
-	//TODO: Implement this in GX??
-#ifdef SHOW_DEBUG
-	sprintf(txtbuffer,"gSP: Rendering a Sprite Object!");
-	DEBUG_print(txtbuffer,DBG_VIINFO); //6 
-#endif
+	if (OGL.numTriangles)
+		OGL_DrawTriangles();
+
+	const BOOL objSpriteCombW = OGL.GXuseCombW;
+
+	OGL.GXuseCombW = FALSE;
 #endif // __GX__
+
 	OGL_AddTriangle( gSP.vertices, 0, 1, 2 );
 	OGL_AddTriangle( gSP.vertices, 0, 2, 3 );
+
+#ifdef __GX__
+	Mtx44 GXprojection;
+	guOrtho( GXprojection, 0, VI.height, 0, VI.width, 1.0f, -1.0f );
+	GX_LoadProjectionMtx( GXprojection, GX_ORTHOGRAPHIC );
+	GX_LoadPosMtxImm( OGL.GXmodelViewIdent, GX_PNMTX0 );
+	GX_SetViewport( (f32) OGL.GXorigX, (f32) OGL.GXorigY,
+	                (f32) OGL.GXwidth, (f32) OGL.GXheight, 0.0f, 1.0f );
+
+	OGL.GXuseCombW = FALSE;
+	OGL.GXupdateMtx = FALSE;
+#endif // __GX__
+
 	OGL_DrawTriangles();
+
 #ifndef __GX__
 	glLoadIdentity();
 #else // !__GX__
-	//TODO: Implement this in GX??
+	OGL.GXuseCombW  = objSpriteCombW;
+	OGL.GXupdateMtx = TRUE;
+	gDP.changed |= CHANGED_SCISSOR;
+
+	OGL_UpdateViewport();
 #endif // __GX__
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;

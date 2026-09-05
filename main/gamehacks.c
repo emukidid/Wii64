@@ -160,6 +160,10 @@ void hack_scars() {
 	// NOP
 }
 
+void hack_yoshistory() {
+	// NOP
+}
+
 #ifndef RICE_GFX
 // Pilot Wings 64 (U)
 void hack_pilotwings_u() {
@@ -364,6 +368,12 @@ void GameSpecificHackSetup() {
 	else if((curCRC[0] == 0x57BFF74D && curCRC[1] == 0xDE747743) ||
 			(curCRC[0] == 0xA273AB56 && curCRC[1] == 0xDA33DB9A)) {
 		game_specific_hack = &hack_dukenukem;
+		restore_count_per_op();
+	}
+	else if((curCRC[0] == 0x2337D8E8 && curCRC[1] == 0x6B8E7CEC) ||	// Yoshi's Story (U)
+			(curCRC[0] == 0xD3F97D49 && curCRC[1] == 0x6924135B) ||	// Yoshi's Story (E)
+			(curCRC[0] == 0x2DCFCA60 && curCRC[1] == 0x8354B147)) {	// Yoshi's Story (J)
+		game_specific_hack = &hack_yoshistory;
 		restore_count_per_op();
 	}
 	else if(curCRC[0] == 0xC851961C && curCRC[1] == 0x78FCAAFA) {

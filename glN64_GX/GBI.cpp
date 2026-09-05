@@ -471,7 +471,10 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 			}
 			else if (strncmp( &uc_str[4], "Gfx", 3 ) == 0)
 			{
-				current->NoN = FALSE; /*(strncmp( &uc_str[20], ".NoN", 4 ) == 0);*/ // Now that NoN actually does something, lets leave it off until we find more titles that need it.
+				current->NoN = (strstr( uc_str + 4, ".NoN" ) != NULL);
+
+				if (strstr( uc_str + 4, ".Rej" ) != NULL)
+					current->NoN = TRUE;
 
 				if (strncmp( &uc_str[14], "F3DFLX", 6 ) == 0)
 				{

@@ -1149,17 +1149,24 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 	int v[] = { v0, v1, v2 };
 
 #ifdef __GX__
-	// TODO gate on MK4 only.
+
 	if (OGL.GXcombWok && GBI_IsNoN())
 	{
-		u32 onNear = 0;
+		u32 onNear = 0, tooNear = 0, behind = 0;
 		for (int c = 0; c < 3; c++)
 		{
 			const SPVertex &pv = vertices[v[c]];
 			if (pv.w > 0.0f && (pv.z + pv.w) == 0.0f)
 				onNear++;
+
+			if (pv.w <= 0.0f)
+				behind++;
+			else if ((-OGL.GXcombW[2][2] + (OGL.GXcombW[2][3] / pv.w)) < -1.0f)
+				tooNear++;
 		}
-		const BOOL useCombW = (onNear == 3) ? FALSE : TRUE;
+
+		const BOOL useCombW =
+			(onNear == 3 || (behind == 0 && tooNear != 0)) ? FALSE : TRUE;
 		if (useCombW != OGL.GXuseCombW)
 		{
 			if (OGL.numTriangles)
@@ -1169,7 +1176,7 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 		}
 	}
 
-	if (!OGL.GXuseCombW)
+	if (!OGL.GXuseCombW && !(OGL.GXcombWok && GBI_IsNoN()))
 	{
 		for (int c = 0; c < 3; c++)
 			if (vertices[v[c]].w <= 0.0f)
@@ -1383,7 +1390,11 @@ void OGL_DrawTriangles()
 		else
 		{
 			invW = (OGL.vertices[i].w != 0) ? 1/OGL.vertices[i].w : 0.0f;
-			GX_Position3f32( OGL.vertices[i].x*invW, OGL.vertices[i].y*invW, OGL.vertices[i].z*invW );
+			// Clamp rather than let GX clip, GLideN64 does GL_DEPTH_CLAMP.
+			f32 zClamp = OGL.vertices[i].z*invW;
+			if      (zClamp < -1.0f) zClamp = -1.0f;
+			else if (zClamp >  1.0f) zClamp =  1.0f;
+			GX_Position3f32( OGL.vertices[i].x*invW, OGL.vertices[i].y*invW, zClamp );
 		}
 		GXcol.r = GXcastf32u8(OGL.vertices[i].color.r);
 		GXcol.g = GXcastf32u8(OGL.vertices[i].color.g);
@@ -1490,7 +1501,11 @@ void OGL_DrawLine( SPVertex *vertices, int v0, int v1, float width )
 			else
 			{
 				invW = (OGL.vertices[i].w != 0) ? 1/OGL.vertices[i].w : 0.0f;
-				GX_Position3f32( OGL.vertices[i].x*invW, OGL.vertices[i].y*invW, OGL.vertices[i].z*invW );
+				// Same GL_DEPTH_CLAMP as abovev
+				f32 zClamp = OGL.vertices[i].z*invW;
+				if      (zClamp < -1.0f) zClamp = -1.0f;
+				else if (zClamp >  1.0f) zClamp =  1.0f;
+				GX_Position3f32( OGL.vertices[i].x*invW, OGL.vertices[i].y*invW, zClamp );
 			}
 			color.r = vertices[v[i]].r;
 			color.g = vertices[v[i]].g;

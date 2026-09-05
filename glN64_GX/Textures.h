@@ -135,6 +135,7 @@ void TextureCache_ActivateDummy( u32 t );
 BOOL TextureCache_Verify();
 #ifdef __GX__
 void TextureCache_FreeNextTexture();
+BOOL TextureCache_FreeOneTexture();
 #endif // __GX__
 
 #endif

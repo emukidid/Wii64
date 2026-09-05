@@ -561,9 +561,83 @@ static void TextureCache_FreeSlot( CachedTexture *slot )
 	freeTextureSlots = slot;
 }
 
+#define BG_KEEP 4
+static CachedTexture *bgKeep[BG_KEEP] = { NULL, NULL, NULL, NULL };
+static u32 bgKeepNext = 0;
+
+static void TextureCache_KeepBackground( CachedTexture *tex )
+{
+	for (u32 i = 0; i < BG_KEEP; i++)
+		if (bgKeep[i] == tex)
+			return;
+
+	bgKeep[bgKeepNext] = tex;
+	bgKeepNext = (bgKeepNext + 1) % BG_KEEP;
+}
+
+static bool TextureCache_IsKeptBackground( const CachedTexture *tex )
+{
+	for (u32 i = 0; i < BG_KEEP; i++)
+		if (bgKeep[i] == tex)
+			return true;
+
+	return false;
+}
+
+static void TextureCache_ForgetBackground( const CachedTexture *tex )
+{
+	for (u32 i = 0; i < BG_KEEP; i++)
+		if (bgKeep[i] == tex)
+			bgKeep[i] = NULL;
+}
+
+static void TextureCache_ForgetAllBackgrounds()
+{
+	for (u32 i = 0; i < BG_KEEP; i++)
+		bgKeep[i] = NULL;
+
+	bgKeepNext = 0;
+}
+
+#ifdef __GX__
+static bool TextureCache_HasKeptBackgrounds()
+{
+	for (u32 i = 0; i < BG_KEEP; i++)
+		if (bgKeep[i] != NULL)
+			return true;
+
+	return false;
+}
+
+BOOL TextureCache_FreeOneTexture()
+{
+	const u32 numBefore = cache.numCached;
+
+	TextureCache_FreeNextTexture();
+	if (cache.numCached < numBefore)
+		return TRUE;
+
+	if (TextureCache_HasKeptBackgrounds())
+	{
+		TextureCache_ForgetAllBackgrounds();
+		TextureCache_FreeNextTexture();
+		if (cache.numCached < numBefore)
+			return TRUE;
+	}
+
+	if (cache.bottom != NULL && cache.bottom != cache.dummy)
+		TextureCache_RemoveBottom();
+	else if (cache.dummy != NULL && cache.dummy->higher != NULL)
+		TextureCache_Remove( cache.dummy->higher );
+
+	return (cache.numCached < numBefore) ? TRUE : FALSE;
+}
+#endif // __GX__
+
 void TextureCache_Init()
 {
 	TextureCache_InitSlots();
+	TextureCache_ForgetAllBackgrounds();
 	cache.current[0] = NULL;
 	cache.current[1] = NULL;
 	cache.top = NULL;
@@ -691,6 +765,8 @@ BOOL TextureCache_Verify()
 
 void TextureCache_RemoveBottom()
 {
+	TextureCache_ForgetBackground( cache.bottom );
+
 	CachedTexture *newBottom = cache.bottom->higher;
 
 #ifndef __GX__
@@ -723,6 +799,8 @@ void TextureCache_RemoveBottom()
 
 void TextureCache_Remove( CachedTexture *texture )
 {
+	TextureCache_ForgetBackground( texture );
+
 #ifdef __GX__
 	if (texture->frameBufferTexture)
 		FrameBuffer_RemoveBuffer( texture->address );
@@ -775,15 +853,23 @@ CachedTexture *TextureCache_AddTop()
 #ifndef __GX__
 	while (cache.cachedBytes > cache.maxBytes)
 //	while (cache.cachedBytes > 64) //cache.dummy->textureBytes)
-#else //!__GX__
-	while ((cache.cachedBytes > cache.maxBytes) || cache.numCached >= GX_MAX_TEXTURES)
-#endif //__GX__
 	{
 		if (cache.bottom != cache.dummy)
 			TextureCache_RemoveBottom();
 		else if (cache.dummy->higher)
 			TextureCache_Remove( cache.dummy->higher );
 	}
+#else //!__GX__
+	// Evict through TextureCache_FreeOneTexture(), which honours the framebuffer
+	// and background protections but still guarantees progress.
+	// TextureCache_RemoveBottom() takes the LRU entry whatever it is, and the
+	// backgrounds sit at that end by the time the byte budget forces a free.
+	while ((cache.cachedBytes > cache.maxBytes) || cache.numCached >= GX_MAX_TEXTURES)
+	{
+		if (!TextureCache_FreeOneTexture())
+			break;	// nothing evictable left
+	}
+#endif //__GX__
 
 #ifdef __GX__
 	CachedTexture *newtop = TextureCache_AllocSlot();
@@ -791,10 +877,15 @@ CachedTexture *TextureCache_AddTop()
 	CachedTexture *newtop = (CachedTexture*)malloc( sizeof( CachedTexture ) );
 #endif // __GX__
 	while(!newtop) {
+#ifdef __GX__
+		if (!TextureCache_FreeOneTexture())
+			break;
+#else // !__GX__
 		if (cache.bottom != cache.dummy)
 			TextureCache_RemoveBottom();
 		else if (cache.dummy->higher)
 			TextureCache_Remove( cache.dummy->higher );
+#endif // __GX__
 		//print_gecko("Out of memory %d/%d, next %d/%d\r\n", cache.cachedBytes, cache.maxBytes, cache.numCached, GX_MAX_TEXTURES);
 #ifdef __GX__
 		newtop = TextureCache_AllocSlot();
@@ -1002,17 +1093,23 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 	if (texInfo->textureBytes > 0)
 	{
 		dest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
-		while(!dest)
-		{
-			TextureCache_FreeNextTexture();
+		while (!dest && TextureCache_FreeOneTexture())
 			dest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
-		}
 	}
 #ifdef SHOW_DEBUG
 	else
 		DEBUG_print((char*)"Textures: Trying to malloc a 0 byte GX texture",DBG_TXINFO);
 #endif
 
+	if (texInfo->textureBytes > 0 && dest == NULL)
+	{
+		texInfo->GXtexture = NULL;
+		texInfo->textureBytes = 0;
+		return;
+	}
+
+	const u32 wrapS = (texInfo->width  > 0) ? texInfo->width  : 1;
+	const u32 wrapT = (texInfo->height > 0) ? texInfo->height : 1;
 	clampSClamp = texInfo->width - 1;
 	clampTClamp = texInfo->height - 1;
 
@@ -1031,11 +1128,11 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 					__asm__ volatile("dcbz %y0" : "=Z"(*dest) :: "memory");
 					for (k = 0; k < 4; k++)
 					{
-						ty = min(y+k, clampTClamp);
+						ty = (y+k) % wrapT;
 						src = &RDRAM[gSP.bgImage.address + (bpl * ty)];
 						for (l = 0; l < 8; l++)
 						{
-							tx = min(x+l, clampSClamp);
+							tx = (x+l) % wrapS;
 							((u8*)dest)[j++] = (u8) GetTexel( (u64*)src, tx, 0, texInfo->palette );
 						}
 					}
@@ -1054,11 +1151,11 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 					__asm__ volatile("dcbz %y0" : "=Z"(*dest) :: "memory");
 					for (k = 0; k < 4; k++)
 					{
-						ty = min(y+k, clampTClamp);
+						ty = (y+k) % wrapT;
 						src = &RDRAM[gSP.bgImage.address + (bpl * ty)];
 						for (l = 0; l < 4; l++)
 						{
-							tx = min(x+l, clampSClamp);
+							tx = (x+l) % wrapS;
 							((u16*)dest)[j++] = (u16) GetTexel( (u64*)src, tx, 0, texInfo->palette );
 						}
 					}
@@ -1078,11 +1175,11 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 					__asm__ volatile("dcbz %y0" : "=Z"(dest[32]) :: "memory");
 					for (k = 0; k < 4; k++)
 					{
-						ty = min(y+k, clampTClamp);
+						ty = (y+k) % wrapT;
 						src = &RDRAM[gSP.bgImage.address + (bpl * ty)];
 						for (l = 0; l < 4; l++)
 						{
-							tx = min(x+l, clampSClamp);
+							tx = (x+l) % wrapS;
 							((u16*)dest)[j] =		(u16) GetTexel( (u64*)src, tx, 0, 0 );	// AARR texels
 							((u16*)dest)[j+16] =	(u16) GetTexel( (u64*)src, tx, 0, 1 );	// GGBB texels -> next 32B block
 							j++;
@@ -1106,12 +1203,12 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 		j = 0;
 		for (y = 0; y < texInfo->realHeight; y++)
 		{
-			ty = min(y, clampTClamp);
+			ty = y % wrapT;
 			src = &RDRAM[gSP.bgImage.address + (bpl * ty)];
 	
 			for (x = 0; x < texInfo->realWidth; x++)
 			{
-				tx = min(x, clampSClamp);
+				tx = x % wrapS;
 
 				if (GXsize == 1)		// 1 byte per GX texel -> GXGetIA31_IA4, GXGetI4_IA4, GXGetIA44_IA4
 					((u8*)dest)[j++] = (u8) GetTexel( (u64*)src, tx, 0, texInfo->palette );
@@ -1133,10 +1230,15 @@ void TextureCache_LoadBackground( CachedTexture *texInfo )
 		texInfo->textureBytes <<= 2;
 
 		scaledDest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
-		while(!scaledDest)
-		{
-			TextureCache_FreeNextTexture();
+		while (!scaledDest && TextureCache_FreeOneTexture())
 			scaledDest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
+
+		if (!scaledDest)
+		{
+			__lwp_heap_free(GXtexCache, dest);
+			texInfo->GXtexture = NULL;
+			texInfo->textureBytes = 0;
+			return;
 		}
 
 		Interpolator* interpolator;
@@ -1294,16 +1396,20 @@ void TextureCache_Load( CachedTexture *texInfo )
 	if (texInfo->textureBytes > 0)
 	{
 		dest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
-		while(!dest)
-		{
-			TextureCache_FreeNextTexture();
+		while (!dest && TextureCache_FreeOneTexture())
 			dest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
-		}
 	}
 #ifdef SHOW_DEBUG
 	else
 		DEBUG_print((char*)"Textures: Trying to malloc a 0 byte GX texture",DBG_TXINFO);
 #endif
+
+	if (texInfo->textureBytes > 0 && dest == NULL)
+	{
+		texInfo->GXtexture = NULL;
+		texInfo->textureBytes = 0;
+		return;
+	}
 
 #endif // __GX__
 
@@ -1526,10 +1632,15 @@ void TextureCache_Load( CachedTexture *texInfo )
 		texInfo->textureBytes <<= 2;
 
 		scaledDest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
-		while(!scaledDest)
-		{
-			TextureCache_FreeNextTexture();
+		while (!scaledDest && TextureCache_FreeOneTexture())
 			scaledDest = (u8*) __lwp_heap_allocate(GXtexCache,texInfo->textureBytes);
+
+		if (!scaledDest)
+		{
+			__lwp_heap_free(GXtexCache, dest);
+			texInfo->GXtexture = NULL;
+			texInfo->textureBytes = 0;
+			return;
 		}
 
 		Interpolator* interpolator;
@@ -1758,6 +1869,7 @@ void TextureCache_UpdateBackground()
 			TextureCache_ActivateTexture( 0, current );
 //			TextureCache_ActivateDummy( 0 );
 
+			TextureCache_KeepBackground( current );
 			cache.hits++;
 			return;
 		}
@@ -1795,8 +1907,9 @@ void TextureCache_UpdateBackground()
 	cache.current[0]->maskT = 0;
 	cache.current[0]->mirrorS = 0;
 	cache.current[0]->mirrorT = 0;
- 	cache.current[0]->clampS = 1;
+	cache.current[0]->clampS = 1;
 	cache.current[0]->clampT = 1;
+	TextureCache_KeepBackground( cache.current[0] );
 	cache.current[0]->line = 0;
 	cache.current[0]->tMem = 0;
 	cache.current[0]->lastDList = RSP.DList;
@@ -2164,27 +2277,24 @@ void TextureCache_ActivateNoise( u32 t )
 void TextureCache_FreeNextTexture()
 {
 	CachedTexture *current = cache.bottom;
-	if (!OGL.frameBufferTextures)
+
+	while (current)
 	{
-		if (current != cache.dummy)
-			TextureCache_RemoveBottom();
-		else if (cache.dummy->higher)
-			TextureCache_Remove( cache.dummy->higher );
-	}
-	else
-	{
-		while (current)
+		if (current == cache.dummy ||
+		    TextureCache_IsKeptBackground( current ) ||
+		    (OGL.frameBufferTextures && current->frameBufferTexture && current->VIcount < 2))
 		{
-			if (current == cache.dummy || (current->frameBufferTexture && current->VIcount < 2))
-				current = current->higher;
-			else
-			{
-				TextureCache_Remove( current );
-				return;
-			}
+			current = current->higher;
+			continue;
 		}
-		FrameBuffer_RemoveBottom();
+
+		TextureCache_Remove( current );
+		return;
 	}
+
+	// Nothing evictable left; give up a framebuffer if there is one to give.
+	if (OGL.frameBufferTextures)
+		FrameBuffer_RemoveBottom();
 }
 
 #endif // __GX__

@@ -125,6 +125,21 @@ void FrameBuffer_Remove( FrameBuffer *buffer )
 	frameBuffer.numBuffers--;
 }
 
+void FrameBuffer_InvalidateBuffer( u32 address )
+{
+	FrameBuffer *current = frameBuffer.bottom;
+
+	while (current != NULL)
+	{
+		if (current->startAddress == address)
+		{
+			FrameBuffer_Remove( current );
+			return;
+		}
+		current = current->higher;
+	}
+}
+
 void FrameBuffer_RemoveBuffer( u32 address )
 {
 	FrameBuffer *current = frameBuffer.bottom;
@@ -658,11 +673,8 @@ void FrameBuffer_RestoreBuffer( u32 address, u16 size, u16 width )
 		}
 		current = current->lower;
 	}
-#ifndef __GX__
-	//No framebuffer was found
 	float color[4] = {0.0f,0.0f,0.0f,0.0f};
 	OGL_ClearColorBuffer( color );
-#endif //!__GX__
 }
 
 FrameBuffer *FrameBuffer_FindBuffer( u32 address )

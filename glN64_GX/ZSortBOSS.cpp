@@ -917,7 +917,7 @@ void ZSortBOSS_TriangleCommand( u32, u32 _w1 )
 	gSP.texture.tile = _w1 & 0x7;
 
 	gSP.textureTile[0] = &gDP.tiles[gSP.texture.tile];
-	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[gSP.texture.tile] : &gDP.tiles[(gSP.texture.tile < 7) ? (gSP.texture.tile + 1) : gSP.texture.tile];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[gSP.texture.tile] : &gDP.tiles[(gSP.texture.tile + 1) & 7];
 
 	gSP.changed |= CHANGED_TEXTURE;
 

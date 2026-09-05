@@ -452,10 +452,16 @@ void VI_GX_renderCpuFramebuffer()
 #endif
 	}
 	u16* FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2+32);
-	while(!FBtex)
-	{
-		TextureCache_FreeNextTexture();
+	while (!FBtex && TextureCache_FreeOneTexture())
 		FBtex = (u16*) __lwp_heap_allocate(GXtexCache,FBtexW*FBtexH*2+32);
+
+	if (!FBtex)
+	{
+#ifdef SHOW_DEBUG
+		sprintf(txtbuffer,"VI (CpuFramebuffer): out of texture cache");
+		DEBUG_print(txtbuffer,DBG_VIINFO);
+#endif
+		return;
 	}
 	GXTexObj	FBtexObj;
 

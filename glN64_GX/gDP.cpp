@@ -14,6 +14,9 @@
 #include <string.h>
 #include <stdio.h>
 #include "../gui/DEBUG.h"
+extern "C" {
+#include "../main/gamehacks.h"
+}
 #endif // __GX__
 
 #include "glN64.h"
@@ -32,6 +35,8 @@
 #ifdef __GX__
 #include "Textures.h"
 #endif // __GX__
+
+#include <math.h>
 
 #ifdef __LINUX__
 #include <stdlib.h>
@@ -452,6 +457,7 @@ void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 */
 	address = RSP_SegmentToPhysical( address );
 
+
 	if (gDP.colorImage.address != address)
 	{
 		if (OGL.frameBufferTextures)
@@ -699,6 +705,7 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 		gDPLoadTileInfo &info = gDP.loadInfo[gDP.loadTile->tmem & 0x1FF];
 		info.width = (u16)((gDP.loadTile->masks != 0) ? MIN( loadedWidth, (u32)1 << gDP.loadTile->masks ) : loadedWidth);
 		info.height = (u16)((gDP.loadTile->maskt != 0) ? MIN( height, (u32)1 << gDP.loadTile->maskt ) : height);
+		info.texAddress = address;
 		info.texWidth = (u16)gDP.textureImage.width;
 		info.size = (u8)gDP.textureImage.size;
 		info.loadType = LOADTYPE_TILE;
@@ -810,6 +817,8 @@ void gDPLoadBlock( u32 tile, u32 uls, u32 ult, u32 lrs, u32 dxt )
 			return;
 		}
 	}
+
+	gDP.loadInfo[gDP.loadTile->tmem & 0x1FF].texAddress = address;
 
 	u64* src = (u64*)&RDRAM[address];
 	u64* dest = &TMEM[gDP.loadTile->tmem];
@@ -1000,6 +1009,69 @@ void gDPSetKeyGB(u32 cG, u32 sG, u32 wG, u32 cB, u32 sB, u32 wB )
 	gDP.key.width.b = GXcastu8f32( wB );
 }
 
+// Yoshi's Story draws some backgrounds as a texrect into an 8-bit colour image and
+// then reads that image back as a texture. Copy the
+// source texels straight into the colour image in RDRAM instead and skip the draw.
+// (from GLideN64's texturedRectBGCopy())
+static BOOL _gDPTextureRectangleBGCopy( f32 ulx, f32 uly, f32 lrx, f32 lry, f32 s, f32 t,
+                                        f32 dsdx, f32 dtdy )
+{
+	if (!OGL.frameBufferTextures)
+		return FALSE;
+
+	if (gDP.colorImage.size != G_IM_SIZ_8b)
+		return FALSE;
+
+	if (gDP.otherMode.cycleType == G_CYC_COPY)
+		return FALSE;
+
+	if (dsdx != 1.0f || dtdy != 1.0f)
+		return FALSE;
+
+	const f32 flry     = (lry > gDP.scissor.lry) ? gDP.scissor.lry : lry;
+	const s32 texWidth = (s32)(gSP.textureTile[0]->line << 3);
+	const s32 ciWidth  = (s32)gDP.colorImage.width;
+	const u32 texAddr  = gDP.loadInfo[gSP.textureTile[0]->tmem & 0x1FF].texAddress;
+
+	const s32 dstX0 = ((s32)ulx > 0) ? (s32)ulx : 0;
+	const s32 dstX1 = ((s32)lrx < ciWidth) ? (s32)lrx : ciWidth;
+	const s32 dstY0 = ((s32)uly > 0) ? (s32)uly : 0;
+	const s32 dstY1 = (s32)flry;
+	const s32 width = dstX1 - dstX0;
+	const s32 rows  = dstY1 - dstY0;
+
+
+	if (texAddr == 0 || texWidth <= 0 || ciWidth <= 0 || width <= 0 || rows <= 0)
+	{
+		return FALSE;
+	}
+
+	// Clipping moves the source start by the same amount.  s and t are signed.
+	const s32 srcX = (s32)s + (dstX0 - (s32)ulx);
+	const s32 srcY = (s32)t + (dstY0 - (s32)uly);
+
+	const s32 srcBase = (s32)texAddr + srcY * texWidth + srcX;
+	const s32 dstBase = (s32)gDP.colorImage.address + dstX0;
+
+	// Check the whole extent up front; a partial copy leaves the rest of the image
+	// holding the previous frame, which is worse than not copying at all.
+	if (srcBase < 0 || dstBase < 0 ||
+	    (u32)(srcBase + (rows - 1) * texWidth + width) > RDRAMSize ||
+	    (u32)(dstBase + (dstY1 - 1) * ciWidth + width) > RDRAMSize)
+	{
+		return FALSE;
+	}
+
+	for (s32 y = 0; y < rows; y++)
+		memcpy( &RDRAM[dstBase + (dstY0 + y) * ciWidth],
+		        &RDRAM[srcBase + y * texWidth], (size_t)width );
+
+
+
+	FrameBuffer_InvalidateBuffer( gDP.colorImage.address );
+	return TRUE;
+}
+
 void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f32 t, f32 dsdx, f32 dtdy, const f32 *colorOverride )
 {
  	if (gDP.otherMode.cycleType == G_CYC_COPY)
@@ -1008,9 +1080,13 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 		lrx += 1.0f;
 		lry += 1.0f;
 	}
+	else if (lry - uly < 1.0f)
+	{
+		lry = ceilf( lry );
+	}
 
 	gSP.textureTile[0] = &gDP.tiles[tile];
-	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[tile < 7 ? tile + 1 : tile];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[(tile + 1) & 7];
 
 	f32 lrs = s + (lrx - ulx - 1) * dsdx;
 	f32 lrt = t + (lry - uly - 1) * dtdy;
@@ -1025,7 +1101,16 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	gDP.texRect.dsdx = (dsdx < 0.0f) ? -dsdx : dsdx;
 	gDP.texRect.dtdy = (dtdy < 0.0f) ? -dtdy : dtdy;
 
-	if (lrs > s)
+	BOOL blitted = FALSE;
+	if ((RSP.cmd == G_TEXRECT || RSP.cmd == G_TEXRECTFLIP) &&
+	    GetGameSpecificHack() == &hack_yoshistory)
+		blitted = _gDPTextureRectangleBGCopy( ulx, uly, lrx, lry, s, t, dsdx, dtdy );
+
+	if (blitted)
+	{
+		// nothing to do, the rect went straight into RDRAM above
+	}
+	else if (lrs > s)
 	{
 		if (lrt > t)
 			OGL_DrawTexturedRect( ulx, uly, lrx, lry, s, t, lrs, lrt, (RSP.cmd == G_TEXRECTFLIP), colorOverride );
@@ -1041,7 +1126,7 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	}
 
 	gSP.textureTile[0] = &gDP.tiles[gSP.texture.tile];
-	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[gSP.texture.tile] : &gDP.tiles[gSP.texture.tile < 7 ? gSP.texture.tile + 1 : gSP.texture.tile];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[gSP.texture.tile] : &gDP.tiles[(gSP.texture.tile + 1) & 7];
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
 	gDP.colorImage.changed = TRUE;
