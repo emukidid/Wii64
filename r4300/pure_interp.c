@@ -830,6 +830,19 @@ void TLBWI()
 	return;
      }
 
+   if (r4300.pc >= r4300.tlb_e[idx].start_even &&
+       r4300.pc <  r4300.tlb_e[idx].end_even && r4300.tlb_e[idx].v_even)
+     {
+	r4300.pc+=4;
+	return;
+     }
+   if (r4300.pc >= r4300.tlb_e[idx].start_odd &&
+       r4300.pc <  r4300.tlb_e[idx].end_odd && r4300.tlb_e[idx].v_odd)
+     {
+	r4300.pc+=4;
+	return;
+     }
+
    if (r4300.tlb_e[idx].v_even)
      {
 	for (i=r4300.tlb_e[idx].start_even; i<r4300.tlb_e[idx].end_even; i+=0x1000) {
@@ -966,6 +979,19 @@ static void TLBWR()
 		Random = (Count / count_per_op) % 32;
 	else
 		Random = (Count / count_per_op % (32 - Wired)) + Wired;
+
+	if (r4300.pc >= r4300.tlb_e[Random].start_even &&
+	    r4300.pc <  r4300.tlb_e[Random].end_even && r4300.tlb_e[Random].v_even)
+	{
+		r4300.pc+=4;
+		return;
+	}
+	if (r4300.pc >= r4300.tlb_e[Random].start_odd &&
+	    r4300.pc <  r4300.tlb_e[Random].end_odd && r4300.tlb_e[Random].v_odd)
+	{
+		r4300.pc+=4;
+		return;
+	}
 
 	if (r4300.tlb_e[Random].v_even){
 	for (i=r4300.tlb_e[Random].start_even; i<r4300.tlb_e[Random].end_even; i+=0x1000) {
