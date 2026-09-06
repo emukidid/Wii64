@@ -1166,7 +1166,7 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 		}
 
 		const BOOL useCombW =
-			(onNear == 3 || (behind == 0 && tooNear != 0)) ? FALSE : TRUE;
+			(onNear == 3 || (behind == 0 && tooNear == 3)) ? FALSE : TRUE;
 		if (useCombW != OGL.GXuseCombW)
 		{
 			if (OGL.numTriangles)
