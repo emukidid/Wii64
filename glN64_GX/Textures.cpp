@@ -591,6 +591,11 @@ static void TextureCache_ForgetBackground( const CachedTexture *tex )
 			bgKeep[i] = NULL;
 }
 
+static bool TextureCache_IsInUse( const CachedTexture *tex )
+{
+	return (tex == cache.current[0]) || (tex == cache.current[1]);
+}
+
 static void TextureCache_ForgetAllBackgrounds()
 {
 	for (u32 i = 0; i < BG_KEEP; i++)
@@ -625,9 +630,11 @@ BOOL TextureCache_FreeOneTexture()
 			return TRUE;
 	}
 
-	if (cache.bottom != NULL && cache.bottom != cache.dummy)
+	if (cache.bottom != NULL && cache.bottom != cache.dummy &&
+	    !TextureCache_IsInUse( cache.bottom ))
 		TextureCache_RemoveBottom();
-	else if (cache.dummy != NULL && cache.dummy->higher != NULL)
+	else if (cache.dummy != NULL && cache.dummy->higher != NULL &&
+	         !TextureCache_IsInUse( cache.dummy->higher ))
 		TextureCache_Remove( cache.dummy->higher );
 
 	return (cache.numCached < numBefore) ? TRUE : FALSE;
@@ -1931,6 +1938,138 @@ void TextureCache_UpdateBackground()
 	cache.cachedBytes += cache.current[0]->textureBytes;
 }
 
+static u32 _TextureCache_MipLevelCap( const CachedTexture *texInfo, u32 GXsize )
+{
+	const u32 blockWidth  = (GXsize == 1) ? 8 : 4;
+	const u32 blockHeight = 4;
+
+	u32 level = 0;
+	u32 w = texInfo->realWidth;
+	u32 h = texInfo->realHeight;
+
+	while ((w >> 1) >= blockWidth && (h >> 1) >= blockHeight)
+	{
+		w >>= 1;
+		h >>= 1;
+		level++;
+	}
+
+	return level;
+}
+
+static void _TextureCache_DescribeMipLevel( CachedTexture *dst, const CachedTexture *base, u32 tileIdx )
+{
+	const gDPTile *tile = &gDP.tiles[tileIdx & 7];
+
+	*dst = *base;
+
+	dst->tMem    = tile->tmem;
+	dst->palette = tile->palette;
+	dst->maskS   = tile->masks;
+	dst->maskT   = tile->maskt;
+	dst->format  = tile->format;
+	dst->size    = tile->size;
+	dst->line    = tile->line;
+	dst->clampS  = tile->clamps;
+	dst->clampT  = tile->clampt;
+	dst->mirrorS = tile->mirrors;
+	dst->mirrorT = tile->mirrort;
+
+	dst->max_level  = 0;
+	dst->GXtexture  = NULL;
+	dst->textureBytes = 0;
+}
+
+static void TextureCache_LoadMipChain( CachedTexture *texInfo, u32 baseTile )
+{
+	const u32 GXsize = imageFormat[gDP.otherMode.textureLUT][texInfo->size][texInfo->format].GXsize;
+	const u32 cap = _TextureCache_MipLevelCap( texInfo, GXsize );
+
+	if (texInfo->max_level > cap)
+		texInfo->max_level = (u8)cap;
+
+	if (texInfo->max_level == 0)
+	{
+		TextureCache_Load( texInfo );
+		return;
+	}
+
+	const u32 levels = texInfo->max_level + 1;
+
+	CachedTexture level[8];
+	u32 levelBytes[8];
+	u32 totalBytes = 0;
+	u32 i;
+
+	for (i = 0; i < levels; i++)
+	{
+		if (i == 0)
+		{
+			level[0] = *texInfo;
+			level[0].max_level = 0;
+			level[0].GXtexture = NULL;
+		}
+		else
+		{
+			_TextureCache_DescribeMipLevel( &level[i], &level[0], baseTile + i );
+
+			level[i].width  = (level[i - 1].width  > 1) ? (level[i - 1].width  >> 1) : 1;
+			level[i].height = (level[i - 1].height > 1) ? (level[i - 1].height >> 1) : 1;
+			level[i].realWidth  = level[i - 1].realWidth  >> 1;
+			level[i].realHeight = level[i - 1].realHeight >> 1;
+			level[i].clampWidth  = level[i].width;
+			level[i].clampHeight = level[i].height;
+		}
+
+		TextureCache_Load( &level[i] );
+
+		if (level[i].GXtexture == NULL)
+		{
+			for (u32 j = 0; j < i; j++)
+				if (level[j].GXtexture != NULL)
+					__lwp_heap_free( GXtexCache, level[j].GXtexture );
+
+			texInfo->max_level = 0;
+			TextureCache_Load( texInfo );
+			return;
+		}
+
+		levelBytes[i] = level[i].textureBytes;
+		totalBytes += levelBytes[i];
+	}
+
+	u8 *chain = (u8*)__lwp_heap_allocate( GXtexCache, totalBytes );
+	while (!chain && TextureCache_FreeOneTexture())
+		chain = (u8*)__lwp_heap_allocate( GXtexCache, totalBytes );
+
+	if (chain == NULL)
+	{
+		for (i = 0; i < levels; i++)
+			if (level[i].GXtexture != NULL)
+				__lwp_heap_free( GXtexCache, level[i].GXtexture );
+
+		texInfo->max_level = 0;
+		TextureCache_Load( texInfo );
+		return;
+	}
+
+	u32 offset = 0;
+	for (i = 0; i < levels; i++)
+	{
+		memcpy( chain + offset, level[i].GXtexture, levelBytes[i] );
+		offset += levelBytes[i];
+		__lwp_heap_free( GXtexCache, level[i].GXtexture );
+	}
+
+	DCFlushRange( chain, totalBytes );
+
+	texInfo->GXtexture    = (u16*)chain;
+	texInfo->GXtexfmt     = level[0].GXtexfmt;
+	texInfo->GXrealWidth  = level[0].GXrealWidth;
+	texInfo->GXrealHeight = level[0].GXrealHeight;
+	texInfo->textureBytes = totalBytes;
+}
+
 void TextureCache_Update( u32 t )
 {
 	CachedTexture *current;
@@ -2067,7 +2206,12 @@ void TextureCache_Update( u32 t )
 	}
 	else
 	{
-		if (gSP.textureTile[t]->masks && ((maskWidth * maskHeight) <= maxTexels))
+		const u32 clampMaskWidth  = (gSP.textureTile[t]->masks == 0) ? tileWidth  : maskWidth;
+		const u32 clampMaskHeight = (gSP.textureTile[t]->maskt == 0) ? tileHeight : maskHeight;
+
+		if (gSP.textureTile[t]->clamps)
+			width = min( clampMaskWidth, tileWidth );
+		else if (gSP.textureTile[t]->masks && ((maskWidth * maskHeight) <= maxTexels))
 			width = maskWidth; // Use mask width if set and valid
 		else if ((tileWidth * tileHeight) <= maxTexels)
 			width = tileWidth; // else use tile width if valid
@@ -2076,7 +2220,9 @@ void TextureCache_Update( u32 t )
 		else
 			width = lineWidth; // else use line-based width
 
-		if (gSP.textureTile[t]->maskt && ((maskWidth * maskHeight) <= maxTexels))
+		if (gSP.textureTile[t]->clampt)
+			height = min( clampMaskHeight, tileHeight );
+		else if (gSP.textureTile[t]->maskt && ((maskWidth * maskHeight) <= maxTexels))
 			height = maskHeight;
 		else if ((tileWidth * tileHeight) <= maxTexels)
 			height = tileHeight;
@@ -2252,7 +2398,22 @@ void TextureCache_Update( u32 t )
 	else if (gSP.textureTile[t]->shiftt > 0)
 		cache.current[t]->shiftScaleT /= (f32)(1 << gSP.textureTile[t]->shiftt);
 
-	TextureCache_Load( cache.current[t] );
+	cache.current[t]->max_level = 0;
+
+	if ((gDP.otherMode.textureLOD == G_TL_LOD) &&
+	    (gDP.otherMode.textureDetail == G_TD_DETAIL) &&
+	    (gSP.texture.level > 1))
+	{
+		u32 levels = gSP.texture.level - 1;
+		if (levels > 7)
+			levels = 7;
+
+		cache.current[t]->max_level = (u8)levels;
+		TextureCache_LoadMipChain( cache.current[t], gSP.texture.tile + 1 );
+	}
+	else
+		TextureCache_Load( cache.current[t] );
+
 	TextureCache_ActivateTexture( t, cache.current[t] );
 //	TextureCache_ActivateDummy( t );
 
@@ -2281,6 +2442,7 @@ void TextureCache_FreeNextTexture()
 	while (current)
 	{
 		if (current == cache.dummy ||
+		    TextureCache_IsInUse( current ) ||
 		    TextureCache_IsKeptBackground( current ) ||
 		    (OGL.frameBufferTextures && current->frameBufferTexture && current->VIcount < 2))
 		{

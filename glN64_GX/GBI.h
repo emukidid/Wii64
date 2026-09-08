@@ -199,6 +199,7 @@ static inline u16 GXcastf32u16( f32 val )
 #define G_MW_CLIP			0x04
 #define G_MW_SEGMENT		0x06
 #define G_MW_FOG			0x08
+#define G_MW_GENSTAT		0x08	// S2DEX reuses this index
 #define G_MW_LIGHTCOL		0x0A
 #define G_MW_FORCEMTX		0x0C
 #define G_MW_POINTS			0x0C
@@ -295,6 +296,10 @@ extern u32 G_MWO_aLIGHT_7, G_MWO_bLIGHT_7;
 extern u32 G_MWO_aLIGHT_8, G_MWO_bLIGHT_8;
 
 // Image formats
+#define G_TX_LOADTILE	7
+#define G_TX_NOMIRROR	0
+#define G_TX_WRAP		0
+
 #define G_IM_FMT_RGBA	0
 #define G_IM_FMT_YUV	1
 #define G_IM_FMT_CI		2

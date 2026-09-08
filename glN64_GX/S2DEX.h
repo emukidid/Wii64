@@ -341,6 +341,20 @@ struct uObjTxSprite
 	uObjSprite    sprite;
 };
 
+// Sub-matrix: the translation and base scale only, without A/B/C/D.
+struct uObjSubMtx
+{
+#ifndef _BIG_ENDIAN
+  s16 Y, X;         /* s10.2 */
+  u16 BaseScaleY;   /* u5.10 */
+  u16 BaseScaleX;   /* u5.10 */
+#else // !_BIG_ENDIAN
+  s16 X, Y;         /* s10.2 */
+  u16 BaseScaleX;   /* u5.10 */
+  u16 BaseScaleY;   /* u5.10 */
+#endif // _BIG_ENDIAN
+};
+
 struct uObjMtx
 {
 #ifndef _BIG_ENDIAN
@@ -361,6 +375,8 @@ void S2DEX_BG_Copy( u32 w0, u32 w1 );
 void S2DEX_Obj_Rectangle( u32 w0, u32 w1 );
 void S2DEX_Obj_Sprite( u32 w0, u32 w1 );
 void S2DEX_Obj_MoveMem( u32 w0, u32 w1 );
+void S2DEX_RDPHalf_0( u32 w0, u32 w1 );
+void S2DEX_MoveWord( u32 w0, u32 w1 );
 void S2DEX_Select_DL( u32 w0, u32 w1 );
 void S2DEX_Obj_RenderMode( u32 w0, u32 w1 );
 void S2DEX_Obj_Rectangle_R( u32 w0, u32 w1 );
@@ -368,6 +384,15 @@ void S2DEX_Obj_LoadTxtr( u32 w0, u32 w1 );
 void S2DEX_Obj_LdTx_Sprite( u32 w0, u32 w1 );
 void S2DEX_Obj_LdTx_Rect( u32 w0, u32 w1 );
 void S2DEX_Obj_LdTx_Rect_R( u32 w0, u32 w1 );
+
+#define S2DEX_VER_1_3	0
+#define S2DEX_VER_1_5	1
+#define S2DEX_VER_1_7	2
+
+void S2DEX_SetVersion( u32 version );
+u32  S2DEX_GetVersion();
+void S2DEX_ResetObjMtx();
+
 void S2DEX_Init();
 
 #define	S2DEX_BG_1CYC			0x01

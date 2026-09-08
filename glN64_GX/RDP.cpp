@@ -231,9 +231,29 @@ void RDP_LoadSync( u32 w0, u32 w1 )
 	gDPLoadSync();
 }
 
+// The stripped S2DEX background code puts together texture rectangles rather than
+// reading them out of the DL, so it hands the parameters over directly.
+// GLideN64 does the same through RDP.w2/w3 under RSP.LLE
+static BOOL RDP_texRectParamsArmed = FALSE;
+static u32  RDP_texRectW2 = 0;
+static u32  RDP_texRectW3 = 0;
+
+void RDP_SetTexRectParams( u32 w2, u32 w3 )
+{
+	RDP_texRectParamsArmed = TRUE;
+	RDP_texRectW2 = w2;
+	RDP_texRectW3 = w3;
+}
 // Mirrors _getTexRectParams() in GLideN64's RDP.cpp
 static void _getTexRectParams( u32 &w2, u32 &w3 )
 {
+	if (RDP_texRectParamsArmed)
+	{
+		w2 = RDP_texRectW2;
+		w3 = RDP_texRectW3;
+		RDP_texRectParamsArmed = FALSE;
+		return;
+	}
 	if (GBI.current != NULL &&
 		(GBI.current->type == F5Rogue || GBI.current->type == F5Indi_Naboo))
 	{

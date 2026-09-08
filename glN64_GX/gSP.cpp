@@ -30,6 +30,11 @@
 #include "S2DEX.h"
 #include "VI.h"
 #include "DepthBuffer.h"
+#include "RDP.h"
+#include "FrameBuffer.h"
+extern "C" {
+#include "../main/gamehacks.h"
+}
 #ifndef __LINUX__
 # include "Resource.h"
 #else
@@ -73,6 +78,7 @@ void gSPLoadUcodeEx( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 	gSP.matrix.modelViewi = 0;
 	gSP.changed |= CHANGED_MATRIX;
 	gSP.status[0] = gSP.status[1] = gSP.status[2] = gSP.status[3] = 0;
+	gSP.objRendermode = 0;
 
 	if ((((uc_start & 0x1FFFFFFF) + 4096) > RDRAMSize) || (((uc_dstart & 0x1FFFFFFF) + uc_dsize) > RDRAMSize))
 	{
@@ -1637,10 +1643,31 @@ void gSPPerspNormalize( u16 scale )
 #endif
 }
 
+
+static u32 _gSPDetailBaseTile( u32 tile )
+{
+	if ((gDP.otherMode.textureLOD == G_TL_LOD) &&
+	    (gDP.otherMode.textureDetail == G_TD_DETAIL))
+		return (tile + 1) & 7;
+
+	return tile;
+}
+
+void gSPUpdateTextureTiles()
+{
+	const u32 base = _gSPDetailBaseTile( gSP.texture.tile );
+
+	gSP.textureTile[0] = &gDP.tiles[base];
+	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[base]
+	                                             : &gDP.tiles[(base + 1) & 7];
+}
+
 // From GLideN64 commit c28ea61b, "Fix for texture issues in Stunt Racer"
 bool needReplaceTex1ByTex0()
 {
-	return (gDP.otherMode.textureLOD == G_TL_LOD) && (gSP.texture.level == 0);
+	return (gDP.otherMode.textureLOD == G_TL_LOD) &&
+	       (gDP.otherMode.textureDetail == G_TD_CLAMP) &&
+	       (gSP.texture.level == 0);
 }
 
 void gSPTexture( f32 sc, f32 tc, s32 level, s32 tile, s32 on )
@@ -1655,8 +1682,7 @@ void gSPTexture( f32 sc, f32 tc, s32 level, s32 tile, s32 on )
 	gSP.texture.on = on;
 
 	gSP.texture.tile = tile;
-	gSP.textureTile[0] = &gDP.tiles[tile];
-	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[(tile + 1) & 7];
+	gSPUpdateTextureTiles();
 
 	gSP.changed |= CHANGED_TEXTURE;
 
@@ -1772,9 +1798,592 @@ void gSPLineW3D( s32 v0, s32 v1, s32 wd, s32 flag )
 #endif
 }
 
+// Stripped background rendering, ported from GLideN64 (S2DEX.cpp).
+static void _s2dexRunCommand( u32 w0, u32 w1 )
+{
+	GBI.cmd[_SHIFTR( w0, 24, 8 )]( w0, w1 );
+}
+
+static void BgRect1CycStripped( u32 bgAddr )
+{
+	uObjScaleBg objBg = *(const uObjScaleBg*)&RDRAM[bgAddr];
+	const u32 imagePtr = RSP_SegmentToPhysical( objBg.imagePtr );
+
+	gDP.otherMode.cycleType = G_CYC_1CYCLE;
+	gDP.changed |= CHANGED_CYCLETYPE;
+
+	s32 E2_1;
+	u16 F1_1;
+	u16 P;
+	s16 H2;
+
+	// Part 1
+	{
+		// Step 1 & 2
+		s16 Aw = objBg.frameW - ((((objBg.imageW << 10) / objBg.scaleW) - 1) & 0xFFFC);
+		if (Aw < 0)
+			Aw = 0;
+		if ((objBg.imageFlip & G_BG_FLAG_FLIPS) != 0)
+			objBg.frameX += Aw;
+
+		s16 Bw = max( 0, gDP.scissor.xh - objBg.frameX );
+		s16 Cw = max( 0, objBg.frameX + objBg.frameW - gDP.scissor.xl - Aw );
+		if ((s16)objBg.frameW - Aw - Bw - Cw <= 0)
+			return;
+
+		s16 Dw = objBg.frameX + Bw;
+		s16 Ew = objBg.frameX + objBg.frameW - Aw - Cw;
+
+		s16 Ah = objBg.frameH - ((((objBg.imageH << 10) / objBg.scaleH) - 1) & 0xFFFC);
+		if (Ah < 0)
+			Ah = 0;
+
+		s16 Bh = max( 0, gDP.scissor.yh - objBg.frameY );
+		s16 Ch = max( 0, objBg.frameY + objBg.frameH - gDP.scissor.yl - Ah );
+		if ((s16)objBg.frameH - Ah - Bh - Ch <= 0)
+			return;
+
+		s16 Dh = ((objBg.frameY + Bh) * 0x4000) >> 16;
+		s16 Eh = ((objBg.frameH - Ah - Bh - Ch) * 0x4000) >> 16;
+
+		*(u32*)(DMEM + 0x548) = (Dw << 16) | Ew;
+		*(u32*)(DMEM + 0x54C) = (Dh << 16) | Eh;
+
+		// Step 3
+		u16 Fw = objBg.imageW << 3;
+		if ((objBg.imageFlip & G_BG_FLAG_FLIPS) != 0)
+			Bw = Cw;
+
+		s16 Gw = ((objBg.scaleW * Bw * 0x0200) >> 16) + objBg.imageX;
+		s32 Hw = Gw - Fw;
+		u16 Fh = objBg.imageH << 3;
+		s16 Gh = ((objBg.scaleH * Bh * 0x0200) >> 16) + objBg.imageY;
+
+		while (Hw >= 0)
+		{
+			Gw -= Fw;
+			Gh += 0x20;
+			objBg.imageYorig += 0x20;
+			Hw = Gw - Fw;
+		}
+
+		s32 Hh = Gh - Fh;
+		while (Hh >= 0)
+		{
+			Gh -= Fh;
+			objBg.imageYorig -= Fh;
+			Hh = Gh - Fh;
+		}
+
+		s32 I = ((s32)Gh - objBg.imageYorig) << 5;
+		s16 J = (objBg.scaleW * (objBg.frameW - Aw - Bw - Cw)) >> 7;
+		u8 J_2 = 1;
+		if (J + Gw + 0x0B < Fw)
+			J_2 = 0;
+		u8 K = (gSP.objRendermode & 0x08) >> 3;
+
+		// Step 4
+		static const u32 aSize[] = {
+			0x01FF0080, 0x00FF0100, 0x007F0200, 0x003F0400
+		};
+		static const u32 aFormat[] = {
+			0x04000400, 0x02000400, 0x04000000
+		};
+		const u16 *aFormat16 = (const u16*)aFormat;
+
+		u16 L = aFormat16[objBg.imageFmt];
+		u32 M = aSize[objBg.imageSiz];
+		u16 N = ((objBg.frameW * objBg.scaleW) >> 7) + (K << 5);
+		u16 O = N;
+		if (N >= Fw)
+			O = Fw;
+		P = (((O + (M >> 16)) * (M & 0xFFFF)) >> 16) + 1;
+
+		*(u32*)(DMEM + 0x550) = (K << 24) | (J_2 << 16) | P;
+		*(s32*)(DMEM + 0x554) = I;
+
+		// Step 5
+		u16 Q = L / (P * 2) + K * 0xFFFF;
+		s32 R = (0x100000 * Q) / objBg.scaleH;
+
+		*(u32*)(DMEM + 0x558) = R;
+
+		// Step 6
+		s32 S = (((s64)I * 0x4000000 / objBg.scaleH) >> 16) & 0xFFFFFC00;
+		s16 T = (s16)(((0xFFFFFFFF / R) * (s64)S) >> 0x20);
+		s32 U = R * (T + 1);
+		s16 V = T;
+		if (U <= S)
+			V += 1;
+		s32 W = R * V;
+		s32 Z = R - S + W;
+
+		*(u32*)(DMEM + 0x55C) = Z;
+		*(s32*)(DMEM + 0x560) = objBg.imageYorig;
+
+		// Step 7
+		u32 A1 = S - (W & 0xFFFFFC00);
+		u32 B1 = (A1 * 0x0040) >> 16;
+		u32 C1 = B1 * objBg.scaleH;
+		u16 D1 = (u16)(((C1 * 0x0040) >> 16) & 0x0000FFFF);
+		u16 E1 = Q - D1;
+		u16 F1 = C1 & 0xFFFF;
+		F1_1 = ((F1 << 11) >> 16) & 0x001F;
+
+		// Step 8
+		s16 A2 = (s16)(((u32)Q * (u32)V + (u32)D1 + ((objBg.imageYorig << 11) >> 16)) & 0xFFFF);
+		u16 B2 = (objBg.imageH << 14) >> 16;
+		s16 A2_1 = (A2 >= 0) ? A2 : A2 + B2;
+		if (A2 - B2 >= 0)
+			A2_1 -= B2;
+
+		s16 C2 = (s16)((((s32)Gw * (M & 0xFFFF)) >> 16) << 3);
+		s16 D2 = (s16)((((s32)Fw * (M & 0xFFFF)) >> 16) << 3);
+		s32 E2 = A2_1 * D2 + C2;
+		E2_1 = E2 + imagePtr;
+		s32 F2 = E1 * D2;
+		s32 G2 = Q * D2;
+
+		H2 = Gw & (M >> 16);
+		if ((objBg.imageFlip & G_BG_FLAG_FLIPS) != 0)
+			H2 = (H2 + J) * 0xFFFF;
+
+		u32 I2 = 0xFD100000 | ((D2 >> 1) - 1);
+		u32 J2 = 0xF5100000 | (P << 9);
+		u32 J2_1 = (J2 & 0xFF00FFFF) | (((objBg.imageFmt << 5) | (objBg.imageSiz << 3)) << 16);
+		u32 K2 = (objBg.imagePal << 20) | 0x0007C1F0;
+		u16 L2 = objBg.imageH >> 2;
+
+		*(u32*)(DMEM + 0x564) = (C2 << 16) | D2;
+		*(u32*)(DMEM + 0x568) = I2;
+		*(u32*)(DMEM + 0x56C) = J2;
+		*(u32*)(DMEM + 0x570) = (E1 << 16) | Q;
+		*(u32*)(DMEM + 0x574) = F2;
+		*(u32*)(DMEM + 0x578) = G2;
+		*(u32*)(DMEM + 0x57C) = (L2 << 16) | A2_1;
+
+		_s2dexRunCommand( J2, 0x27000000 );
+		_s2dexRunCommand( J2_1, K2 );
+		_s2dexRunCommand( (G_SETTILESIZE << 24), 0 );
+	}
+
+	// Part 2
+	{
+		u32 VV = *(u32*)(DMEM + 0x57C);
+		s16 AA = _SHIFTR( VV, 16, 16 ) - _SHIFTR( VV, 0, 16 );
+		VV = *(u32*)(DMEM + 0x570);
+		s32 CC = VV >> 16;
+		u32 DD = *(u32*)(DMEM + 0x55C);
+		u32 EE = *(u32*)(DMEM + 0x558);
+		VV = *(u32*)(DMEM + 0x54C);
+		s32 FF = _SHIFTR( VV, 0, 16 );
+		u16 JJ = _SHIFTR( VV, 16, 16 );
+		u32 GG = *(u32*)(DMEM + 0x574);
+		VV = *(u32*)(DMEM + 0x548);
+		u32 HH = _SHIFTR( VV, 16, 16 ) << 0x0C;
+		u32 II = _SHIFTR( VV, 0, 16 ) << 0x0C;
+
+		u32 step = 2;
+		s32 KK = 0;
+		s16 LL = 0, MM = 0, NN = 0, RR = 0, AAA = 0;
+		u32 SS = 0;
+		BOOL stop = FALSE;
+
+		while (!stop)
+		{
+			switch (step)
+			{
+			case 2:
+				KK = DD >> 10;
+				step = (KK > 0) ? 5 : 3;
+				break;
+
+			case 3:
+				AA -= CC;
+				if (AA > 0)
+					E2_1 += GG;
+				else
+				{
+					VV = *(u32*)(DMEM + 0x564);
+					E2_1 = imagePtr + _SHIFTR( VV, 16, 16 ) + _SHIFTR( VV, 0, 16 ) * (-AA);
+					VV = *(u32*)(DMEM + 0x57C);
+					AA += _SHIFTR( VV, 16, 16 );
+				}
+				step = 4;
+				break;
+
+			case 4:
+				DD += EE;
+				VV = *(u32*)(DMEM + 0x570);
+				CC = (s32)_SHIFTR( VV, 0, 16 );
+				GG = *(u32*)(DMEM + 0x578);
+				F1_1 = 0;
+				step = 2;
+				break;
+
+			case 5:
+				FF -= KK;
+				DD &= 0x03FF;
+				if (FF < 0)
+				{
+					CC += ((objBg.scaleH * FF) >> 10) + 1;
+					KK += FF;
+					VV = *(u32*)(DMEM + 0x570);
+					if (CC - (s32)_SHIFTR( VV, 0, 16 ) > 0)
+						CC = (s32)_SHIFTR( VV, 0, 16 );
+				}
+				step = 6;
+				break;
+
+			case 6:
+				LL = JJ + KK;
+				VV = *(u32*)(DMEM + 0x550);
+				P = _SHIFTR( VV, 0, 16 );
+				MM = CC + _SHIFTR( VV, 24, 8 );
+				NN = AA - _SHIFTR( VV, 16, 8 );
+				step = (NN - MM < 0) ? 7 : 77;
+				break;
+
+			case 7:
+				RR = MM - AA;
+				AAA = AA;
+				if (RR > 0)
+				{
+					VV = *(u32*)(DMEM + 0x564);
+					SS = imagePtr + _SHIFTR( VV, 16, 16 );
+					if ((AAA & 1) != 0)
+					{
+						AAA--;
+						RR++;
+						SS -= _SHIFTR( VV, 0, 16 );
+					}
+					AAA *= P;
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x56C) | AAA), 0x27000000 );
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x568)), SS );
+					_s2dexRunCommand( 0xF4000000, (((P + 0x6FF) << 16) | ((RR << 2) - 1)) );
+				}
+				step = 8;
+				break;
+
+			case 77:
+				RR = MM;
+				SS = E2_1;
+				_s2dexRunCommand( *(u32*)(DMEM + 0x568), SS );
+				_s2dexRunCommand( 0xF4000000, (((P + 0x6FF) << 16) | ((RR << 2) - 1)) );
+				AA -= CC;
+				E2_1 += GG;
+				step = 11;
+				break;
+
+			case 8:
+				VV = *(u32*)(DMEM + 0x550);
+				if (_SHIFTR( VV, 16, 8 ) != 0)
+				{
+					SS = imagePtr;
+					s16 BBB = NN;
+					RR = NN & 1;
+					VV = *(u32*)(DMEM + 0x564);
+					if (RR != 0)
+					{
+						BBB--;
+						SS -= _SHIFTR( VV, 0, 16 );
+					}
+					u32 CCC = E2_1 + BBB * _SHIFTR( VV, 0, 16 );
+					RR++;
+					u16 DDD = ((_SHIFTR( VV, 0, 16 ) - _SHIFTR( VV, 16, 16 )) * 0x2000) >> 16;
+					u32 ZZZ = BBB * P;
+					P -= DDD;
+					AAA = ZZZ + DDD;
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x56C) | AAA), 0x27000000 );
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x568)), SS );
+					_s2dexRunCommand( 0xF4000000, (((P + 0x6FF) << 16) | ((RR << 2) - 1)) );
+
+					SS = CCC;
+					AAA = ZZZ;
+					P = DDD;
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x56C) | AAA), 0x27000000 );
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x568)), SS );
+					_s2dexRunCommand( 0xF4000000, (((P + 0x6FF) << 16) | ((RR << 2) - 1)) );
+				}
+				step = 9;
+				break;
+
+			case 9:
+				AA -= CC;
+				if (NN <= 0)
+					_s2dexRunCommand( *(u32*)(DMEM + 0x56C), 0x27000000 );
+				else
+				{
+					VV = *(u32*)(DMEM + 0x550);
+					P = _SHIFTR( VV, 0, 16 );
+					SS = E2_1;
+					RR = NN;
+					AAA = 0;
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x56C) | AAA), 0x27000000 );
+					_s2dexRunCommand( (*(u32*)(DMEM + 0x568)), SS );
+					_s2dexRunCommand( 0xF4000000, (((P + 0x6FF) << 16) | ((RR << 2) - 1)) );
+				}
+				step = 10;
+				break;
+
+			case 10:
+				if (AA > 0)
+					E2_1 += GG;
+				else
+				{
+					VV = *(u32*)(DMEM + 0x564);
+					E2_1 = imagePtr + _SHIFTR( VV, 16, 16 ) + _SHIFTR( VV, 0, 16 ) * (-AA);
+					VV = *(u32*)(DMEM + 0x57C);
+					AA += _SHIFTR( VV, 16, 16 );
+				}
+				step = 11;
+				break;
+
+			case 11:
+				{
+					const u32 w0 = (G_TEXRECT << 24) | (LL << 2) | II;
+					const u32 w1 = (JJ << 2) | HH;
+
+					RDP_SetTexRectParams( (H2 << 16) | F1_1,
+					                      (objBg.scaleW << 16) | objBg.scaleH );
+					RDP_TexRect( w0, w1 );
+				}
+
+				if (FF <= 0)
+					stop = TRUE;
+				else
+				{
+					JJ = LL;
+					DD = DD + EE;
+					VV = *(u32*)(DMEM + 0x570);
+					CC = _SHIFTR( VV, 0, 16 );
+					GG = *(u32*)(DMEM + 0x578);
+					F1_1 = 0;
+					step = 2;
+				}
+				break;
+			}
+		}
+	}
+}
+
+static void BgRectCopyStripped( u32 bgAddr )
+{
+	// Step 1
+	uObjBg objBg = *(const uObjBg*)&RDRAM[bgAddr];
+	const u32 imagePtr = RSP_SegmentToPhysical( objBg.imagePtr );
+
+	gDP.otherMode.cycleType = G_CYC_COPY;
+	gDP.changed |= CHANGED_CYCLETYPE;
+
+	// Step 2
+	s16 Aw = max( 0, objBg.frameX + objBg.frameW - gDP.scissor.xl );
+	s16 Bw = min( 0, objBg.frameX - gDP.scissor.xh );
+	s16 Cw = objBg.frameW + Bw - Aw;
+	if (Cw <= 0)
+		return;
+
+	s16 Dw = (((objBg.imageX * 0x2000) >> 16) & 0xFFFC) - Bw;
+	s16 Ew = objBg.frameX - Bw;
+
+	s16 Ah = max( 0, objBg.frameY + objBg.frameH - gDP.scissor.yl );
+	s16 Bh = min( 0, objBg.frameY - gDP.scissor.yh );
+	s16 Ch = objBg.frameH + Bh - Ah;
+	if (Ch <= 0)
+		return;
+
+	s16 Dh = (((objBg.imageY * 0x2000) >> 16) & 0xFFFC) - Bh;
+	s16 Eh = objBg.frameY - Bh;
+
+	s16 F = Dh - objBg.imageH;
+	s16 G = (F >= 0) ? F : Dh;
+	s16 H = (objBg.imageFlip != 0) ? Dw + Aw : Dw;
+
+	// Step 3
+	u32 I = (objBg.imageLoad == G_BGLT_LOADTILE) ? 0xFFFFFFFF : 0U;
+	u32 J = objBg.tmemW << 9;
+	u32 K = (G_SETTILE << 24) | 0x100000 | (J & I);
+	u32 L = (objBg.imageFmt << 2) | objBg.imageSiz;
+	L = (L << 0x13) | J;
+	u32 M = (objBg.imagePal << 0x14) | 0x0007C1F0;
+
+	_s2dexRunCommand( K, 0x27000000 );
+	_s2dexRunCommand( (G_SETTILESIZE << 24), 0 );
+	_s2dexRunCommand( ((G_SETTILE << 24) | L), M );
+
+	// Step 4
+	static const u32 aSize[] = {
+		0x003F0800, 0x10000080, 0x001F1000, 0x20000100,
+		0x000F2000, 0x40000200, 0x00074000, 0x80000400
+	};
+	const u16 *aSize16 = (const u16*)aSize;
+	const u16 imageSzIdx = objBg.imageSiz << 2;
+
+	u16 N0 = aSize16[0 + imageSzIdx];
+	u16 N1 = aSize16[1 + imageSzIdx];
+	u16 N2 = aSize16[2 + imageSzIdx];
+
+	G = (G * 0x4000) >> 16;
+
+	u16 O = (N0 & H) + Cw;
+	u32 P = ((N1 * H) >> 16) + objBg.tmemSizeW * G;
+	u16 Q = (N2 * O) >> 16;
+	u32 R = (objBg.imageFlip != 0) ? (((1 - O) * 8) << 16) : (((N0 & H) * 8) << 16);
+	u32 S = ((P >> 1) << 3) + imagePtr;
+	u16 T = Ew + Cw - 1;
+
+	u16 A1 = objBg.imageH & 0xFFFC;
+	u16 A2 = G << 2;
+	u16 A3 = (N1 * H) >> 16;
+	u32 T0 = Ew << 0x0C;
+	u16 T1 = Eh;
+	u32 T2 = T << 0x0C;
+	s16 AT = Ch;
+	s16 U = A1 - A2;
+
+	u32 V = 0, X = 0, Y = 0, Z = 0, AA = 0, w0 = 0, w1 = 0;
+	u16 S5 = 0, BB = 0;
+	u32 step = 4;
+	BOOL stop = FALSE;
+
+	while (!stop)
+	{
+		switch (step)
+		{
+		case 4:
+			if (U <= 0)
+				stop = TRUE;
+			step = 5;
+			break;
+
+		case 5:
+			if (A3 > 0)
+				U -= 4;
+			if (U > AT)
+				U = AT;
+
+			V = 0xE4000000 | T2;
+			if (S2DEX_GetVersion() == S2DEX_VER_1_7)
+				X = (objBg.imageLoad == G_BGLT_LOADTILE) ? (Q << 2) - 1 : objBg.tmemLoadSH;
+			else
+				X = (objBg.imageLoad == G_BGLT_LOADTILE) ? (Q << 2) : objBg.tmemLoadSH;
+			X = (X | 0x7000) << 0x0C;
+			Y = 0xFD100000 | ((objBg.tmemSizeW << 1) - 1);
+			AT -= U;
+			step = (U <= 0) ? 8 : 55;
+			break;
+
+		case 55:
+			if (S2DEX_GetVersion() == S2DEX_VER_1_7)
+				Z = (objBg.imageLoad == G_BGLT_LOADTILE) ? (objBg.tmemSize << 0x10) | objBg.tmemLoadSH : objBg.tmemSize;
+			else
+				Z = objBg.tmemSize;
+			S5 = objBg.tmemH;
+			AA = X | objBg.tmemLoadTH;
+			step = 6;
+			break;
+
+		case 6:
+			U -= S5;
+			if (U < 0)
+			{
+				Z += objBg.tmemSizeW * U;
+				S5 += U;
+				AA = (objBg.imageLoad == G_BGLT_LOADTILE)
+				   ? X | (S5 - 1)
+				   : (((Z - 2) | 0xE000) << 0x0B) | objBg.tmemLoadTH;
+			}
+			step = 7;
+			break;
+
+		case 7:
+			BB = T1 + S5 - 1;
+			_s2dexRunCommand( Y, S );
+			if (objBg.imageLoad == G_BGLT_LOADTILE)
+				_s2dexRunCommand( (G_LOADTILE << 24), AA );
+			else
+				_s2dexRunCommand( (G_LOADBLOCK << 24), AA );
+
+			w0 = V | BB;
+			w1 = T0 | T1;
+			RDP_SetTexRectParams( R, 0x10000400 );
+			RDP_TexRect( w0, w1 );
+
+			T1 = BB + 1;
+			S += Z;
+			if (U > 0)
+				step = 6;
+			else
+			{
+				if (AT <= 0)
+					stop = TRUE;
+				step = 8;
+			}
+			break;
+
+		case 8:
+			if (A3 > 0)
+			{
+				A3 >>= 1;
+				_s2dexRunCommand( Y, S );
+				_s2dexRunCommand( ((G_SETTILE << 24) | 0x35100000), 0x06000000 );
+				_s2dexRunCommand( (G_LOADBLOCK << 24), (0x06000000 | (((((objBg.tmemSizeW >> 1) - A3) << 2) - 1) << 12)) );
+				_s2dexRunCommand( Y, imagePtr );
+				_s2dexRunCommand( ((G_SETTILE << 24) | 0x35100000 | ((objBg.tmemSizeW >> 1) - A3)), 0x06000000 );
+				_s2dexRunCommand( (G_LOADBLOCK << 24), (0x06000000 | (((A3 << 2) - 1) << 12)) );
+
+				w0 = V | T1;
+				w1 = T0 | T1;
+				RDP_SetTexRectParams( R, 0x10000400 );
+				RDP_TexRect( w0, w1 );
+
+				T1 += 4;
+				AT -= 4;
+				if (AT <= 0)
+					stop = TRUE;
+			}
+			step = 9;
+			break;
+
+		case 9:
+			S = imagePtr + (A3 << 3);
+			U = AT;
+			AT = 0;
+			step = 55;
+			break;
+		}
+	}
+}
+
+// Upstream's equivalent is config.graphics2D.bgMode == bgOnePiece for this:
+//#define S2DEX_FORCE_ONE_PIECE_BG 1
+
+// GLideN64 _useOnePieceBgCode()
+static BOOL _useOnePieceBgCode( u32 address )
+{
+#ifdef S2DEX_FORCE_ONE_PIECE_BG
+	return TRUE;
+#else
+	if (!OGL.frameBufferTextures)
+		return FALSE;
+
+	const uObjScaleBg *objBg = (const uObjScaleBg*)&RDRAM[address];
+	const FrameBuffer *buffer = FrameBuffer_FindBuffer( RSP_SegmentToPhysical( objBg->imagePtr ) );
+
+	return (buffer != NULL && buffer->size == objBg->imageSiz) ? TRUE : FALSE;
+#endif
+}
+
 void gSPBgRect1Cyc( u32 bg )
 {
 	u32 address = RSP_SegmentToPhysical( bg );
+
+	if (!_useOnePieceBgCode( address ))
+	{
+		BgRect1CycStripped( address );
+		return;
+	}
+
 	uObjScaleBg *objScaleBg = (uObjScaleBg*)&RDRAM[address];
 
 	gSP.bgImage.address = RSP_SegmentToPhysical( objScaleBg->imagePtr );
@@ -1869,6 +2478,13 @@ void gSPBgRect1Cyc( u32 bg )
 void gSPBgRectCopy( u32 bg )
 {
 	u32 address = RSP_SegmentToPhysical( bg );
+
+	if (!_useOnePieceBgCode( address ))
+	{
+		BgRectCopyStripped( address );
+		return;
+	}
+
 	uObjBg *objBg = (uObjBg*)&RDRAM[address];
 
 	gSP.bgImage.address = RSP_SegmentToPhysical( objBg->imagePtr );
@@ -1892,21 +2508,311 @@ void gSPBgRectCopy( u32 bg )
 	gDPTextureRectangle( frameX, frameY, frameX + frameW - 1, frameY + frameH - 1, 0, imageX, imageY, 4, 1 );
 }
 
+// S2DEX G_MW_GENSTAT.  The status words gate G_SELECT_DL and the OBJ_LOADTXTR
+// block/tile/TLUT skip test, so a game that sets them by MoveWord rather than
+// through a texture load needs this to land somewhere.
+void gSPSetStatus( u32 sid, u32 value )
+{
+	if (sid >= 4)
+		return;
+
+	gSP.status[sid] = value;
+}
+
+// Raw fixed-point copy of the object matrix.  gSP.objMatrix holds the same values
+// as floats for gSPObjSprite(); the OBJ_RECTANGLE coordinate math below is done in
+// integers exactly as the microcode does it, so it needs the originals.
+static uObjMtx objMtx;
+
+void S2DEX_ResetObjMtx()
+{
+	objMtx.A = 1 << 16;
+	objMtx.B = 0;
+	objMtx.C = 0;
+	objMtx.D = 1 << 16;
+	objMtx.X = 0;
+	objMtx.Y = 0;
+	objMtx.BaseScaleX = 1 << 10;
+	objMtx.BaseScaleY = 1 << 10;
+}
+
+// Coordinate correctors, from GLideN64 (big endian adapted)
+struct S2DEXCoordCorrector
+{
+	s16 A0, A1, A2, A3, B0, B2, B3, B5, B7;
+
+	S2DEXCoordCorrector()
+	{
+		static const u32 CorrectorsA01[] = {
+			0x00000000, 0x00100020, 0x00200040, 0x00300060,
+			0x0000FFF4, 0x00100014, 0x00200034, 0x00300054
+		};
+		static const u32 CorrectorsA23[] = {
+			0x0001FFFE, 0xFFFEFFFE, 0x00010000, 0x00000000
+		};
+
+		const s16 *A01 = (const s16*)CorrectorsA01;
+		const s16 *A23 = (const s16*)CorrectorsA23;
+
+		const u32 O1 = (gSP.objRendermode & (G_OBJRM_SHRINKSIZE_1 | G_OBJRM_SHRINKSIZE_2 | G_OBJRM_WIDEN)) >> 3;
+		A0 = A01[0 + O1];
+		A1 = A01[1 + O1];
+
+		const u32 O2 = (gSP.objRendermode & (G_OBJRM_SHRINKSIZE_1 | G_OBJRM_BILERP)) >> 2;
+		A2 = A23[0 + O2];
+		A3 = A23[1 + O2];
+
+		if (S2DEX_GetVersion() == S2DEX_VER_1_3)
+		{
+			static const u32 CorrectorsB03_v1_3[] = {
+				0xFFFC0000, 0x00000000, 0x00000001, 0x00000000,
+				0xFFFC0000, 0x00000000, 0x00000001, 0xFFFF0001,
+				0xFFFC0000, 0x00030000, 0x00000001, 0x00000000,
+				0xFFFC0000, 0x00030000, 0x00000001, 0xFFFF0000,
+				0xFFFF0003, 0x0000FFF0, 0x00000001, 0x0000FFFF,
+				0xFFFF0003, 0x0000FFF0, 0x00000001, 0xFFFFFFFF,
+				0xFFFF0003, 0x0000FFF0, 0x00000000, 0x00000000,
+				0xFFFF0003, 0x0000FFF0, 0x00000000, 0xFFFF0000
+			};
+			const s16 *B = (const s16*)CorrectorsB03_v1_3;
+			const u32 O3 = (_SHIFTL( gSP.objRendermode, 3, 16 ) & (G_OBJRM_SHRINKSIZE_1 | G_OBJRM_SHRINKSIZE_2 | G_OBJRM_WIDEN)) >> 1;
+			B0 = B[0 + O3];
+			B2 = B[2 + O3];
+			B3 = B[3 + O3];
+			B5 = B[5 + O3];
+			B7 = B[7 + O3];
+		}
+		else
+		{
+			static const u32 CorrectorsB03[] = {
+				0xFFFC0000, 0x00000001, 0xFFFF0003, 0xFFF00000
+			};
+			const s16 *B = (const s16*)CorrectorsB03;
+			const u32 O3 = (gSP.objRendermode & G_OBJRM_BILERP) >> 1;
+			B0 = B[0 + O3];
+			B2 = B[2 + O3];
+			B3 = B[3 + O3];
+			B5 = 0;
+			B7 = 0;
+		}
+	}
+};
+
+static void _gSPObjRectCoords( const uObjSprite *objSprite, BOOL useMatrix,
+                               f32 &ulx, f32 &uly, f32 &lrx, f32 &lry,
+                               f32 &uls, f32 &ult, f32 &lrs, f32 &lrt )
+{
+	S2DEXCoordCorrector CC;
+	s16 xh, xl, yh, yl;
+	s16 sh, sl, th, tl;
+	s16 stBase;
+
+	const u16 spriteScaleW = MAX( objSprite->scaleW, (u16)1 );
+	const u16 spriteScaleH = MAX( objSprite->scaleH, (u16)1 );
+	u32 stScaleH = spriteScaleH;
+
+	if (useMatrix)
+	{
+		const u32 baseScaleX = MAX( (u32)objMtx.BaseScaleX, (u32)1 );
+		const u32 baseScaleY = MAX( (u32)objMtx.BaseScaleY, (u32)1 );
+		const u32 scaleW = MAX( (baseScaleX * 0x40 * spriteScaleW) >> 16, (u32)1 );
+		const u32 scaleH = MAX( (baseScaleY * 0x40 * spriteScaleH) >> 16, (u32)1 );
+
+		if (S2DEX_GetVersion() == S2DEX_VER_1_3)
+		{
+			xh = (s16)(((((s64)objSprite->objX << 27) * (0x80007FFFU / baseScaleX)) >> 0x30) + objMtx.X + CC.A2) & CC.B0;
+			xl = (s16)((s16)(((((s64)objSprite->imageW - CC.A1) << 8) * (0x80007FFFU / scaleW)) >> 0x20) & CC.B0) + xh;
+			yh = (s16)(((((s64)objSprite->objY << 27) * (0x80007FFFU / baseScaleY)) >> 0x30) + objMtx.Y + CC.A2) & CC.B0;
+			yl = (s16)((s16)(((((s64)objSprite->imageH - CC.A1) << 8) * (0x80007FFFU / scaleH)) >> 0x20) & CC.B0) + yh;
+			stBase = CC.B3;
+		}
+		else
+		{
+			const s32 xhp = (s32)(((((s64)objSprite->objX << 16) * 0x0800) * (0x80007FFFU / baseScaleX)) >> 32) + (((objMtx.X + CC.A2) & CC.B0) << 16);
+			xh = (s16)(xhp >> 16);
+			const s32 xlp = xhp + (s32)(((((u64)objSprite->imageW - CC.A1) << 24) * (0x80007FFFU / scaleW)) >> 32);
+			xl = (s16)(xlp >> 16);
+			const s32 yhp = (s32)(((((s64)objSprite->objY << 16) * 0x0800) * (0x80007FFFU / baseScaleY)) >> 32) + (((objMtx.Y + CC.A2) & CC.B0) << 16);
+			yh = (s16)(yhp >> 16);
+			const s32 ylp = yhp + (s32)(((((u64)objSprite->imageH - CC.A1) << 24) * (0x80007FFFU / scaleH)) >> 32);
+			yl = (s16)(ylp >> 16);
+			stBase = CC.B2;
+		}
+
+		stScaleH = scaleH;
+	}
+	else
+	{
+		xh = (s16)((objSprite->objX + CC.A2) & CC.B0);
+		xl = (s16)(((((u64)objSprite->imageW - CC.A1) << 24) * (0x80007FFFU / (u32)spriteScaleW)) >> 48) + xh;
+		yh = (s16)((objSprite->objY + CC.A2) & CC.B0);
+		yl = (s16)(((((u64)objSprite->imageH - CC.A1) << 24) * (0x80007FFFU / (u32)spriteScaleH)) >> 48) + yh;
+		stBase = CC.B2;
+	}
+
+	sh = (s16)(CC.A0 + stBase);
+	sl = (s16)(sh + objSprite->imageW + CC.A0 - CC.A1 - 1);
+	th = (s16)(sh - (((yh & 3) * 0x0200 * stScaleH) >> 16));
+	tl = (s16)(th + objSprite->imageH + CC.A0 - CC.A1 - 1);
+
+	ulx = _FIXED2FLOAT( xh, 2 );
+	lrx = _FIXED2FLOAT( xl, 2 );
+	uly = _FIXED2FLOAT( yh, 2 );
+	lry = _FIXED2FLOAT( yl, 2 );
+
+	uls = _FIXED2FLOAT( sh, 5 );
+	lrs = _FIXED2FLOAT( sl, 5 );
+	ult = _FIXED2FLOAT( th, 5 );
+	lrt = _FIXED2FLOAT( tl, 5 );
+
+	if ((objSprite->imageFlags & G_BG_FLAG_FLIPS) != 0)
+	{
+		const f32 tmp = uls; uls = lrs; lrs = tmp;
+	}
+	if ((objSprite->imageFlags & G_BG_FLAG_FLIPT) != 0)
+	{
+		const f32 tmp = ult; ult = lrt; lrt = tmp;
+	}
+}
+
+// YUV macro block support, from GLideN64, for Ogre Battle 64 (some backgrounds only).
+static u16 _YUVtoRGBA( u8 y, u8 u, u8 v )
+{
+	f32 r = y + (1.370705f * (v - 128));
+	f32 g = y - (0.698001f * (v - 128)) - (0.337633f * (u - 128));
+	f32 b = y + (1.732446f * (u - 128));
+
+	r *= 0.125f;
+	g *= 0.125f;
+	b *= 0.125f;
+
+	if (r > 31.0f) r = 31.0f;
+	if (g > 31.0f) g = 31.0f;
+	if (b > 31.0f) b = 31.0f;
+	if (r < 0.0f)  r = 0.0f;
+	if (g < 0.0f)  g = 0.0f;
+	if (b < 0.0f)  b = 0.0f;
+
+	return (u16)((((u16)r) << 11) | (((u16)g) << 6) | (((u16)b) << 1) | 1);
+}
+
+static void _drawYUVImageToFrameBuffer( f32 fUlx, f32 fUly, f32 fLrx, f32 fLry )
+{
+	const u32 ulx = (u32)fUlx;
+	const u32 uly = (u32)fUly;
+	const u32 lrx = (u32)fLrx;
+	const u32 lry = (u32)fLry;
+
+	const u32 ciWidth  = gDP.colorImage.width;
+	const u32 ciHeight = (u32)gDP.scissor.lry;
+
+	if (ciWidth == 0 || ulx >= ciWidth || uly >= ciHeight)
+		return;
+
+	// A macro block is always 16x16; it may hang off the right or bottom edge.
+	u32 width  = 16;
+	u32 height = 16;
+	if (lrx > ciWidth)
+		width = ciWidth - ulx;
+	if (lry > ciHeight)
+		height = ciHeight - uly;
+
+	const u32 srcBase = gDP.textureImage.address;
+	const u32 dstBase = gDP.colorImage.address;
+
+	if ((srcBase + 16 * 16 * 2) > RDRAMSize)
+		return;
+
+	for (u32 h = 0; h < 16; h++)
+	{
+		const u32 rowDst = dstBase + ((uly + h) * ciWidth + ulx) * 2;
+		const u32 *src = (const u32*)&RDRAM[srcBase + h * 16 * 2];
+
+		if (h >= height)
+			break;
+		if ((rowDst + width * 2) > RDRAMSize)
+			break;
+
+		u16 *dst = (u16*)&RDRAM[rowDst];
+
+		for (u32 w = 0; w < 16; w += 2)
+		{
+			const u32 t = *(src++);	// two pixels per word
+
+			if (w >= width)
+				continue;
+
+			const u8 y0 = (u8)(t & 0xFF);
+			const u8 v  = (u8)((t >> 8) & 0xFF);
+			const u8 y1 = (u8)((t >> 16) & 0xFF);
+			const u8 u  = (u8)((t >> 24) & 0xFF);
+
+			dst[w] = _YUVtoRGBA( y0, u, v );
+			if ((w + 1) < width)
+				dst[w + 1] = _YUVtoRGBA( y1, u, v );
+		}
+	}
+}
+
+// Tile setup shared by both OBJ_RECTANGLE forms (upstream gSPSetSpriteTile).
+static void _gSPSetSpriteTile( const uObjSprite *objSprite )
+{
+	const u32 imageW = MAX( objSprite->imageW >> 5, (u32)1 );
+	const u32 imageH = MAX( objSprite->imageH >> 5, (u32)1 );
+
+	// A preceding BG command leaves gDP.textureMode at TEXTUREMODE_BGIMAGE, which
+	// would route this sprite to TextureCache_UpdateBackground().  Upstream guards
+	// the same way in gSPSetSpriteTile().
+	gDP.textureMode = TEXTUREMODE_NORMAL;
+
+	gDPSetTile( objSprite->imageFmt, objSprite->imageSiz, objSprite->imageStride,
+	            objSprite->imageAdrs, 0, objSprite->imagePal,
+	            G_TX_CLAMP, G_TX_CLAMP, 0, 0, 0, 0 );
+	gDPSetTileSize( 0, 0, 0, (imageW - 1) << 2, (imageH - 1) << 2 );
+	gSPTexture( 1.0f, 1.0f, 0, 0, TRUE );
+}
+
 void gSPObjRectangle( u32 sp )
 {
-	u32 address = RSP_SegmentToPhysical( sp );
-	uObjSprite *objSprite = (uObjSprite*)&RDRAM[address];
+	const u32 address = RSP_SegmentToPhysical( sp );
+	const uObjSprite *objSprite = (const uObjSprite*)&RDRAM[address];
 
-	// Clamp against a zero scale from a malformed display list
-	// (GLideN64's 9eddde6e/af637370 division-by-zero fixes).
-	f32 scaleW = _FIXED2FLOAT( max( objSprite->scaleW, (u16)1 ), 10 );
-	f32 scaleH = _FIXED2FLOAT( max( objSprite->scaleH, (u16)1 ), 10 );
-	f32 objX = _FIXED2FLOAT( objSprite->objX, 2 );
-	f32 objY = _FIXED2FLOAT( objSprite->objY, 2 );
-	u32 imageW = objSprite->imageW >> 2;
-	u32 imageH = objSprite->imageH >> 2;
+	f32 ulx, uly, lrx, lry, uls, ult, lrs, lrt;
+	_gSPObjRectCoords( objSprite, FALSE, ulx, uly, lrx, lry, uls, ult, lrs, lrt );
 
-	gDPTextureRectangle( objX, objY, objX + imageW / scaleW - 1, objY + imageH / scaleH - 1, 0, 0.0f, 0.0f, scaleW * (gDP.otherMode.cycleType == G_CYC_COPY ? 4.0f : 1.0f), scaleH );
+	_gSPSetSpriteTile( objSprite );
+
+	const f32 spanX = lrx - ulx;
+	const f32 spanY = lry - uly;
+	const f32 dsdx = (spanX != 0.0f) ? (lrs - uls) / spanX : 1.0f;
+	const f32 dtdy = (spanY != 0.0f) ? (lrt - ult) / spanY : 1.0f;
+
+	gDPTextureRectangle( ulx, uly, lrx, lry, 0, uls, ult, dsdx, dtdy );
+}
+
+// OBJ_RECTANGLE_R: the same sprite rect, positioned and scaled through the object
+// matrix set by gSPObjMatrix()/gSPObjSubMatrix().
+void gSPObjRectangleR( u32 sp )
+{
+	const u32 address = RSP_SegmentToPhysical( sp );
+	const uObjSprite *objSprite = (const uObjSprite*)&RDRAM[address];
+
+	f32 ulx, uly, lrx, lry, uls, ult, lrs, lrt;
+	_gSPObjRectCoords( objSprite, TRUE, ulx, uly, lrx, lry, uls, ult, lrs, lrt );
+
+	// Ogre Battle 64 needs its YUV backgrounds decoded into the colour image.
+	if (objSprite->imageFmt == G_IM_FMT_YUV &&
+	    GetGameSpecificHack() == &hack_ogrebattle)
+		_drawYUVImageToFrameBuffer( ulx, uly, lrx, lry );
+
+	_gSPSetSpriteTile( objSprite );
+
+	const f32 spanX = lrx - ulx;
+	const f32 spanY = lry - uly;
+	const f32 dsdx = (spanX != 0.0f) ? (lrs - uls) / spanX : 1.0f;
+	const f32 dtdy = (spanY != 0.0f) ? (lrt - ult) / spanY : 1.0f;
+
+	gDPTextureRectangle( ulx, uly, lrx, lry, 0, uls, ult, dsdx, dtdy );
 }
 
 void gSPObjLoadTxtr( u32 tx )
@@ -1914,24 +2820,41 @@ void gSPObjLoadTxtr( u32 tx )
 	u32 address = RSP_SegmentToPhysical( tx );
 	uObjTxtr *objTxtr = (uObjTxtr*)&RDRAM[address];
 
+	if (objTxtr->block.sid > 12)
+		return;
+
 	if ((gSP.status[objTxtr->block.sid >> 2] & objTxtr->block.mask) != objTxtr->block.flag)
 	{
 		switch (objTxtr->block.type)
 		{
 			case G_OBJLT_TXTRBLOCK:
-				gDPSetTextureImage( 0, 1, 0, objTxtr->block.image );
-				gDPSetTile( 0, 1, 0, objTxtr->block.tmem, 7, 0, 0, 0, 0, 0, 0, 0 );
-				gDPLoadBlock( 7, 0, 0, ((objTxtr->block.tsize + 1) << 3) - 1, objTxtr->block.tline );
+				gDPSetTextureImage( G_IM_FMT_RGBA, G_IM_SIZ_16b,
+				                    objTxtr->block.tsize + 1, objTxtr->block.image );
+				gDPSetTile( G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, objTxtr->block.tmem,
+				            G_TX_LOADTILE, 0,
+				            G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_WRAP,
+				            0, 0, 0, 0 );
+				gDPLoadBlock( G_TX_LOADTILE, 0, 0,
+				              objTxtr->block.tsize << 2, objTxtr->block.tline );
 				break;
 			case G_OBJLT_TXTRTILE:
-				gDPSetTextureImage( 0, 1, (objTxtr->tile.twidth + 1) << 1, objTxtr->tile.image );
-				gDPSetTile( 0, 1, (objTxtr->tile.twidth + 1) >> 2, objTxtr->tile.tmem, 7, 0, 0, 0, 0, 0, 0, 0 );
-				gDPLoadTile( 7, 0, 0, (((objTxtr->tile.twidth + 1) << 1) - 1) << 2, (((objTxtr->tile.theight + 1) >> 2) - 1) << 2 );
+				gDPSetTextureImage( G_IM_FMT_RGBA, G_IM_SIZ_16b,
+				                    objTxtr->tile.twidth + 1, objTxtr->tile.image );
+				gDPSetTile( G_IM_FMT_RGBA, G_IM_SIZ_16b,
+				            (objTxtr->tile.twidth + 1) >> 2, objTxtr->tile.tmem,
+				            G_TX_LOADTILE, 0,
+				            G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_WRAP,
+				            0, 0, 0, 0 );
+				gDPLoadTile( G_TX_LOADTILE, 0, 0,
+				             objTxtr->tile.twidth << 2, objTxtr->tile.theight );
 				break;
 			case G_OBJLT_TLUT:
-				gDPSetTextureImage( 0, 2, 1, objTxtr->tlut.image );
-				gDPSetTile( 0, 2, 0, objTxtr->tlut.phead, 7, 0, 0, 0, 0, 0, 0, 0 );
-				gDPLoadTLUT( 7, 0, 0, objTxtr->tlut.pnum << 2, 0 );
+				gDPSetTextureImage( G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, objTxtr->tlut.image );
+				gDPSetTile( G_IM_FMT_RGBA, G_IM_SIZ_4b, 0, objTxtr->tlut.phead,
+				            G_TX_LOADTILE, 0,
+				            G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_WRAP,
+				            0, 0, 0, 0 );
+				gDPLoadTLUT( G_TX_LOADTILE, 0, 0, objTxtr->tlut.pnum << 2, 0 );
 				break;
 		}
 		gSP.status[objTxtr->block.sid >> 2] = (gSP.status[objTxtr->block.sid >> 2] & ~objTxtr->block.mask) | (objTxtr->block.flag & objTxtr->block.mask);
@@ -2042,7 +2965,7 @@ void gSPObjLoadTxSprite( u32 txsp )
 void gSPObjLoadTxRectR( u32 txsp )
 {
 	gSPObjLoadTxtr( txsp );
-//	gSPObjRectangleR( txsp + sizeof( uObjTxtr ) );
+	gSPObjRectangleR( txsp + sizeof( uObjTxtr ) );
 }
 
 void gSPObjMatrix( u32 mtx )
@@ -2058,8 +2981,22 @@ void gSPObjMatrix( u32 mtx )
 	gSP.objMatrix.Y = _FIXED2FLOAT( objMtx->Y, 2 );
 	gSP.objMatrix.baseScaleX = _FIXED2FLOAT( objMtx->BaseScaleX, 10 );
 	gSP.objMatrix.baseScaleY = _FIXED2FLOAT( objMtx->BaseScaleY, 10 );
+
+	::objMtx = *objMtx;
 }
 
 void gSPObjSubMatrix( u32 mtx )
 {
+	const u32 address = RSP_SegmentToPhysical( mtx );
+	const uObjSubMtx *subMtx = (const uObjSubMtx*)&RDRAM[address];
+
+	::objMtx.X = subMtx->X;
+	::objMtx.Y = subMtx->Y;
+	::objMtx.BaseScaleX = subMtx->BaseScaleX;
+	::objMtx.BaseScaleY = subMtx->BaseScaleY;
+
+	gSP.objMatrix.X = _FIXED2FLOAT( subMtx->X, 2 );
+	gSP.objMatrix.Y = _FIXED2FLOAT( subMtx->Y, 2 );
+	gSP.objMatrix.baseScaleX = _FIXED2FLOAT( subMtx->BaseScaleX, 10 );
+	gSP.objMatrix.baseScaleY = _FIXED2FLOAT( subMtx->BaseScaleY, 10 );
 }

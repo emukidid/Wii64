@@ -49,6 +49,9 @@ void gDPSetOtherMode( u32 mode0, u32 mode1 )
 {
 	gDP.otherMode.h = mode0;
 	gDP.otherMode.l = mode1;
+	gSPUpdateTextureTiles();
+	gSP.changed |= CHANGED_TEXTURE;
+
 
 	gDP.changed |= CHANGED_RENDERMODE | CHANGED_CYCLETYPE | CHANGED_ALPHACOMPARE;
 
@@ -135,6 +138,8 @@ void gDPSetTexturePersp( u32 enable )
 void gDPSetTextureDetail( u32 type )
 {
 	gDP.otherMode.textureDetail = type;
+	gSPUpdateTextureTiles();
+	gSP.changed |= CHANGED_TEXTURE;
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED | DEBUG_TEXTURE, "gDPSetTextureDetail( %s );\n",
@@ -145,6 +150,8 @@ void gDPSetTextureDetail( u32 type )
 void gDPSetTextureLOD( u32 mode )
 {
 	gDP.otherMode.textureLOD = mode;
+	gSPUpdateTextureTiles();
+	gSP.changed |= CHANGED_TEXTURE;
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED | DEBUG_TEXTURE, "gDPSetTextureLOD( %s );\n",
@@ -926,6 +933,12 @@ void gDPSetScissor( u32 mode, f32 ulx, f32 uly, f32 lrx, f32 lry )
 	gDP.scissor.uly = uly;
 	gDP.scissor.lrx = lrx;
 	gDP.scissor.lry = lry;
+
+	// Recover the raw s10.2 values
+	gDP.scissor.xh = (s16)(ulx * 4.0f);
+	gDP.scissor.yh = (s16)(uly * 4.0f);
+	gDP.scissor.xl = (s16)(lrx * 4.0f);
+	gDP.scissor.yl = (s16)(lry * 4.0f);
 
 	gDP.changed |= CHANGED_SCISSOR;
 

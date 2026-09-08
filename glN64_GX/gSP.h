@@ -115,6 +115,17 @@ struct gSPInfo
 
 	u32 status[4];
 
+	// S2DEX G_OBJ_RENDERMODE
+	u32 objRendermode;
+
+	// S2DEX G_SELECT_DL, assembled across G_RDPHALF_0 and G_SELECT_DL
+	struct
+	{
+		u32 addr;
+		u32 flag;
+		u8  sid;
+	} selectDL;
+
 	struct
 	{
 		u32 vtx, mtx;
@@ -129,6 +140,7 @@ void gSPMatrix( u32 matrix, u8 param );
 void gSPCombineMatrices( u32 mode );
 void gSPDMAMatrix( u32 matrix, u8 index, u8 multiply );
 void gSPViewport( u32 v );
+void gSPSetStatus( u32 sid, u32 value );
 void gSPForceMatrix( u32 mptr );
 void gSPLight( u32 l, s32 n );
 void gSPLightAcclaim( u32 l, s32 n );
@@ -168,6 +180,7 @@ void gSPFogFactor( s16 fm, s16 fo );
 void gSPPerspNormalize( u16 scale );
 void gSPTexture( f32 sc, f32 tc, s32 level, s32 tile, s32 on );
 bool needReplaceTex1ByTex0();
+void gSPUpdateTextureTiles();
 void gSPEndDisplayList();
 void gSPGeometryMode( u32 clear, u32 set );
 void gSPSetGeometryMode( u32 mode );
@@ -175,6 +188,7 @@ void gSPClearGeometryMode( u32 mode );
 void gSPLine3D( s32 v0, s32 v1, s32 flag );
 void gSPLineW3D( s32 v0, s32 v1, s32 wd, s32 flag );
 void gSPObjRectangle( u32 sp );
+void gSPObjRectangleR( u32 sp );
 void gSPObjSprite( u32 sp );
 void gSPObjLoadTxtr( u32 tx );
 void gSPObjLoadTxSprite( u32 txsp );

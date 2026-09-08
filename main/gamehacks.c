@@ -101,31 +101,31 @@ void hack_pkm_snap_j() {
 	compare_hword_write_hword(0x801E1EC6, 0x801E1EC6, 0x0098, 0x0001);
 }
 
-// Top Gear Hyper-Bike (E) 
+// Top Gear Hyper-Bike (E)
 void hack_topgear_hb_e() {
 	//Game Playable Fix (Gent)
 	compare_hword_write_byte(0x800021EE, 0x800021EE, 0x0001, 0);
 }
 
-// Top Gear Hyper-Bike (J) 
+// Top Gear Hyper-Bike (J)
 void hack_topgear_hb_j() {
 	//Game Playable Fix (Gent)
 	compare_hword_write_byte(0x8000225A, 0x8000225A, 0x0001, 0);
 }
 
-// Top Gear Hyper-Bike (U) 
+// Top Gear Hyper-Bike (U)
 void hack_topgear_hb_u() {
 	//Game Playable Fix (Gent)
 	compare_hword_write_hword(0x800021EA, 0x800021EA, 0x0001, 0);
 }
 
-// Top Gear Overdrive (E) 
+// Top Gear Overdrive (E)
 void hack_topgear_od_e() {
 	//Game Playable Fix (Gent)
 	compare_hword_write_hword(0x80001AB2, 0x80001AB2, 0x0001, 0);
 }
 
-// Top Gear Overdrive (J) 
+// Top Gear Overdrive (J)
 void hack_topgear_od_j() {
 	//Game Playable Fix (Gent)
 	hword = 0;
@@ -137,7 +137,7 @@ void hack_topgear_od_j() {
 	write_hword_in_memory();
 }
 
-// Top Gear Overdrive (U) 
+// Top Gear Overdrive (U)
 void hack_topgear_od_u() {
 	//Game Playable Fix (Gent)
 	compare_hword_write_hword(0x80001B4E, 0x80001B4E, 0x0001, 0);
@@ -157,6 +157,10 @@ void hack_dukenukem() {
 }
 
 void hack_scars() {
+	// NOP
+}
+
+void hack_ogrebattle() {
 	// NOP
 }
 
@@ -286,7 +290,7 @@ static int old_count_per_op = -1;
 void restore_count_per_op() {
 	if(old_count_per_op != -1) {
 		count_per_op = old_count_per_op;
-	}	
+	}
 }
 
 // Game specific hack detection via CRC
@@ -353,7 +357,7 @@ void GameSpecificHackSetup() {
 			(curCRC[0] == 0xD4C45A1A && curCRC[1] == 0xF425B25E)  // WCW Nitro (U)
 			(curCRC[0] == 0xCEA8B54F && curCRC[1] == 0x7F21D503) || // Wetrix (E) (M6)
 			(curCRC[0] == 0xDCB6EAFA && curCRC[1] == 0xC6BBCFA3) || // Wetrix (J)
-			*/) 
+			*/)
 	{ // Wetrix (U) (M6)
 				old_count_per_op = count_per_op;
 				count_per_op = COUNT_PER_OP_3;
@@ -368,6 +372,12 @@ void GameSpecificHackSetup() {
 	else if((curCRC[0] == 0x57BFF74D && curCRC[1] == 0xDE747743) ||
 			(curCRC[0] == 0xA273AB56 && curCRC[1] == 0xDA33DB9A)) {
 		game_specific_hack = &hack_dukenukem;
+		restore_count_per_op();
+	}
+	else if((curCRC[0] == 0xE6419BC5 && curCRC[1] == 0x69011DE3) ||	// Ogre Battle 64 (U)
+			(curCRC[0] == 0x0375CF67 && curCRC[1] == 0x56A93FAA) || // Ogre Battle 64 (J) v1.1
+			(curCRC[0] == 0x0ADAECA7 && curCRC[1] == 0xB17F9795)) {	// Ogre Battle 64 (U) v1.1
+		game_specific_hack = &hack_ogrebattle;
 		restore_count_per_op();
 	}
 	else if((curCRC[0] == 0x2337D8E8 && curCRC[1] == 0x6B8E7CEC) ||	// Yoshi's Story (U)
@@ -419,16 +429,16 @@ void GameSpecificHackSetup() {
             // Legend of Zelda, The - Ocarina of Time (E) (GC Version)
             zelda_subscreen_address = 0x1D8F8B;
         } else if (curCRC[0] == 0xF3DD35BA && curCRC[1] == 0x4152E075) {
-            // Legend of Zelda, The - Ocarina of Time (U) (GC Version) 
+            // Legend of Zelda, The - Ocarina of Time (U) (GC Version)
             zelda_subscreen_address = 0x1DB78B;
         } else if (curCRC[0] == 0xF034001A && curCRC[1] == 0xAE47ED06) {
             // Legend of Zelda, The - Ocarina of Time - Master Quest (U) (GC Version)
             zelda_subscreen_address = 0x1DB74B;
         } else if (curCRC[0] == 0xF7F52DB8 && curCRC[1] == 0x2195E636) {
-            // Zelda no Densetsu - Toki no Ocarina - Zelda Collection Version (J) (GC Version) 
+            // Zelda no Densetsu - Toki no Ocarina - Zelda Collection Version (J) (GC Version)
             zelda_subscreen_address = 0x1DB78B;
         } else if (curCRC[0] == 0xF611F4BA && curCRC[1] == 0xC584135C) {
-            // Zelda no Densetsu - Toki no Ocarina GC (J) (GC Version) 
+            // Zelda no Densetsu - Toki no Ocarina GC (J) (GC Version)
             zelda_subscreen_address = 0x1DB78B;
         } else if (curCRC[0] == 0xF43B45BA && curCRC[1] == 0x2F0E9B6F) {
             // Zelda no Densetsu - Toki no Ocarina GC Ura (J) (GC Version)
@@ -441,6 +451,6 @@ void GameSpecificHackSetup() {
 	else {
 		game_specific_hack = 0;
 	}
-	
+
 	//print_gecko("Applied a hack? %s\r\n", game_specific_hack ? "yes" : "no");
 }

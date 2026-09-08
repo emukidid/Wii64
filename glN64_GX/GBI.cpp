@@ -522,7 +522,18 @@ MicrocodeInfo *GBI_DetectMicrocode( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 				else if (strncmp( &uc_str[14], "S2D", 3 ) == 0)
 				{
 					if (uc_str[21] == '1')
+					{
 						type = S2DEX;
+
+						// 1.03 and 1.05 use a different coordinate corrector table from
+						// 1.07, which everything else is treated as.
+						if (strncmp( &uc_str[21], "1.03", 4 ) == 0)
+							S2DEX_SetVersion( S2DEX_VER_1_3 );
+						else if (strncmp( &uc_str[21], "1.05", 4 ) == 0)
+							S2DEX_SetVersion( S2DEX_VER_1_5 );
+						else
+							S2DEX_SetVersion( S2DEX_VER_1_7 );
+					}
 					else if (uc_str[31] == '2')
 						type = S2DEX2;
 					current->texturePersp = FALSE;

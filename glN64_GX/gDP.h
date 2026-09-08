@@ -323,6 +323,8 @@ struct gDPInfo
 	{
 		u32 mode;
 		f32 ulx, uly, lrx, lry;
+		// The same bounds in raw s10.2, as the command delivered them.
+		s16 xh, yh, xl, yl;
 	} scissor;
 
 	struct

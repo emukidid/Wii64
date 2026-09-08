@@ -23,8 +23,20 @@
 #include "RSP.h"
 #include "Types.h"
 
+// S2DEX2 packs the MoveWord index in bits 16-23, unlike S2DEX which uses 0-7.
+void S2DEX2_MoveWord( u32 w0, u32 w1 )
+{
+	if (_SHIFTR( w0, 16, 8 ) == G_MW_GENSTAT)
+		gSPSetStatus( _SHIFTR( w0, 0, 16 ), w1 );
+	else
+		F3DEX2_MoveWord( w0, w1 );
+}
+
 void S2DEX2_Init()
 {
+	S2DEX_SetVersion( S2DEX_VER_1_7 );
+	S2DEX_ResetObjMtx();
+
 	// Set GeometryMode flags
 	GBI_InitFlags( F3DEX2 );
 
@@ -47,10 +59,11 @@ void S2DEX2_Init()
 	GBI_SetGBI( G_OBJ_LDTX_SPRITE,		S2DEX2_OBJ_LDTX_SPRITE,	S2DEX_Obj_LdTx_Sprite );
 	GBI_SetGBI( G_OBJ_LDTX_RECT,		S2DEX2_OBJ_LDTX_RECT,	S2DEX_Obj_LdTx_Rect );
 	GBI_SetGBI( G_OBJ_LDTX_RECT_R,		S2DEX2_OBJ_LDTX_RECT_R,	S2DEX_Obj_LdTx_Rect_R );
-	GBI_SetGBI( G_MOVEWORD,				F3DEX2_MOVEWORD,		F3DEX2_MoveWord );
+	GBI_SetGBI( G_MOVEWORD,				F3DEX2_MOVEWORD,		S2DEX2_MoveWord );
 	GBI_SetGBI( G_SETOTHERMODE_H,		F3DEX2_SETOTHERMODE_H,	F3DEX2_SetOtherMode_H );
 	GBI_SetGBI( G_SETOTHERMODE_L,		F3DEX2_SETOTHERMODE_L,	F3DEX2_SetOtherMode_L );
 	GBI_SetGBI( G_ENDDL,				F3DEX2_ENDDL,			F3D_EndDL );
+	GBI_SetGBI( G_RDPHALF_0,			S2DEX2_RDPHALF_0,		S2DEX_RDPHalf_0 );
 	GBI_SetGBI( G_RDPHALF_1,			F3DEX2_RDPHALF_1,		F3D_RDPHalf_1 );
 	GBI_SetGBI( G_RDPHALF_2,			F3DEX2_RDPHALF_2,		F3D_RDPHalf_2 );
 	GBI_SetGBI(	G_LOAD_UCODE,			F3DEX2_LOAD_UCODE,		F3DEX_Load_uCode );

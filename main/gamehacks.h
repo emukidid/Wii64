@@ -33,5 +33,6 @@ void hack_winback();
 void hack_paperboy();
 void hack_dukenukem();
 void hack_scars();
+void hack_ogrebattle();
 void hack_yoshistory();
 #endif

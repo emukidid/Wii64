@@ -10,6 +10,8 @@
 #ifndef RDP_H
 #define RDP_H
 
+void RDP_TexRect( u32 w0, u32 w1 );
+void RDP_SetTexRectParams( u32 w2, u32 w3 );
 void RDP_Init();
 
 #endif

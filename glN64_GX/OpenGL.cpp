@@ -1804,9 +1804,14 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 			GX_InitTexObj(&cache.current[0]->GXtex, cache.current[0]->GXtexture, (u16) cache.current[0]->realWidth, 
 				(u16) cache.current[0]->realHeight, cache.current[0]->GXtexfmt, 
 				(cache.current[0]->clampS || OGL.GXforceClampS0) ? GX_CLAMP : GX_REPEAT, 
-				(cache.current[0]->clampT || OGL.GXforceClampT0) ? GX_CLAMP : GX_REPEAT, GX_FALSE); 
+				(cache.current[0]->clampT || OGL.GXforceClampT0) ? GX_CLAMP : GX_REPEAT, 
+				(cache.current[0]->max_level > 0) ? GX_TRUE : GX_FALSE); 
 		if (cache.current[0]->frameBufferTexture || OGL.GXuseMinMagNearest)
 			GX_InitTexObjLOD(&cache.current[0]->GXtex, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+		else if (cache.current[0]->max_level > 0)
+			GX_InitTexObjLOD(&cache.current[0]->GXtex, GX_LIN_MIP_LIN, GX_LINEAR,
+			                 0.0f, (f32)cache.current[0]->max_level, 0.0f,
+			                 GX_TRUE, GX_TRUE, GX_ANISO_4);
 		else
 			GX_InitTexObjLOD(&cache.current[0]->GXtex, GX_LINEAR, GX_LINEAR, 0.0f, 0.0f, 0.0f, GX_TRUE, GX_TRUE, GX_ANISO_4);
 		GX_LoadTexObj(&cache.current[0]->GXtex, GX_TEXMAP0); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1
@@ -1823,9 +1828,14 @@ void OGL_DrawTexturedRect( float ulx, float uly, float lrx, float lry, float uls
 			GX_InitTexObj(&cache.current[1]->GXtex, cache.current[1]->GXtexture, (u16) cache.current[1]->realWidth, 
 				(u16) cache.current[1]->realHeight, cache.current[1]->GXtexfmt, 
 				(cache.current[1]->clampS || OGL.GXforceClampS1) ? GX_CLAMP : GX_REPEAT, 
-				(cache.current[1]->clampT || OGL.GXforceClampT1) ? GX_CLAMP : GX_REPEAT, GX_FALSE); 
+				(cache.current[1]->clampT || OGL.GXforceClampT1) ? GX_CLAMP : GX_REPEAT, 
+				(cache.current[1]->max_level > 0) ? GX_TRUE : GX_FALSE); 
 		if (cache.current[1]->frameBufferTexture || OGL.GXuseMinMagNearest)
 			GX_InitTexObjLOD(&cache.current[1]->GXtex, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+		else if (cache.current[1]->max_level > 0)
+			GX_InitTexObjLOD(&cache.current[1]->GXtex, GX_LIN_MIP_LIN, GX_LINEAR,
+			                 0.0f, (f32)cache.current[1]->max_level, 0.0f,
+			                 GX_TRUE, GX_TRUE, GX_ANISO_4);
 		else
 			GX_InitTexObjLOD(&cache.current[1]->GXtex, GX_LINEAR, GX_LINEAR, 0.0f, 0.0f, 0.0f, GX_TRUE, GX_TRUE, GX_ANISO_4);
 		GX_LoadTexObj(&cache.current[1]->GXtex, GX_TEXMAP1); // t = 0 is GX_TEXMAP0 and t = 1 is GX_TEXMAP1

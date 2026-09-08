@@ -32,6 +32,7 @@ struct CachedTexture
 	u16			*GXtexture;
 	u8			GXtexfmt;
 	u32			GXrealWidth, GXrealHeight;	// Actual dimensions of GX texture
+	u8			max_level;					// Highest mip level held, 0 for a single-level texture
 	u32			VIcount;
 #endif // __GX__
 
