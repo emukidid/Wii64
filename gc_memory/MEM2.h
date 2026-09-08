@@ -49,14 +49,18 @@
 #define TLBLUT_LO   (ROMCACHE_HI)
 #define TLBLUT_HI   (TLBLUT_LO + TLBLUT_SIZE)
 
-// We want 12MB for a Texture Cache
+// We want 15MB for a Texture Cache
 #define TEXCACHE_SIZE (15*MB)
 #define TEXCACHE_LO   (TLBLUT_HI)
 #define TEXCACHE_HI   (TEXCACHE_LO + TEXCACHE_SIZE)
 
+#define TEX_THUMB_SIZE (320*240*2)
+#define TEX_THUMB_LO   (TEXCACHE_HI)
+#define TEX_THUMB_HI   (TEX_THUMB_LO + TEX_THUMB_SIZE)
+
 // We want 1MB for invalid_code
 #define INVCODE_SIZE (1*MB)
-#define INVCODE_LO   (TEXCACHE_HI)
+#define INVCODE_LO   (TEX_THUMB_HI)
 #define INVCODE_HI   (INVCODE_LO + INVCODE_SIZE)
 
 // We want 256KB for fontFont
@@ -111,7 +115,7 @@
 #define UNCLAIMED_HI   (MEM2_HI)
 
 #define MEM2_USED_SIZE (ROMCACHE_SIZE + TLBLUT_SIZE \
-                        + TEXCACHE_SIZE + INVCODE_SIZE \
+                        + TEXCACHE_SIZE + TEX_THUMB_SIZE + INVCODE_SIZE \
                         + FONT_SIZE + FLASHRAM_SIZE \
                         + SRAM_SIZE + MEMPACK_SIZE \
                         + BLOCKS_SIZE + RECOMPMETA_SIZE\

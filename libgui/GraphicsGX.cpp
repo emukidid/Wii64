@@ -229,7 +229,11 @@ void Graphics::copyFBTex(u8* dest, int width, int height, u8 fmt, int bpp)
 {
 	//First copy full FB
 	u8* tempFB=NULL;
+#ifdef HW_RVL
+	tempFB = (u8*) TEX_THUMB_LO;
+#else
 	tempFB = (u8*) memalign(32, 320*240*bpp);
+#endif
 	if (tempFB)
 	{
 		GX_SetTexCopySrc(0, 0, 640, 480);
@@ -283,7 +287,9 @@ void Graphics::copyFBTex(u8* dest, int width, int height, u8 fmt, int bpp)
 			GX_CopyTex(dest, GX_FALSE);
 		GX_DrawDone();
 		DCFlushRange(dest, width*height*bpp);
+#ifndef HW_RVL
 		free(tempFB);
+#endif
 	}
 	else if (dest)
 	{
