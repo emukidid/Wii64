@@ -1191,6 +1191,14 @@ bool CalculateTileSizes_method_1(int tileno, TMEMLoadMapInfo *info, TxtrInfo &gt
     return true;
 }
 
+static inline uint32 RDP_GetDetailBaseTile()
+{
+	if( gRDP.otherMode.text_lod && gRDP.otherMode.text_detail && gRSP.curTile < 7 )
+		return gRSP.curTile + 1;
+
+	return gRSP.curTile;
+}
+
 TxtrCacheEntry* LoadTexture(uint32 tileno)
 {
     //TxtrCacheEntry *pEntry = NULL;
@@ -1256,7 +1264,7 @@ TxtrCacheEntry* LoadTexture(uint32 tileno)
         //&& ((gti.Pitch<<1)>>gti.Size) > 128 && status.primitiveType == PRIM_TEXTRECT
         )
     {
-        uint32 idx = tileno-gRSP.curTile;
+        uint32 idx = tileno-RDP_GetDetailBaseTile();
         status.LargerTileRealLeft[idx] = gti.LeftToLoad;
         gti.LeftToLoad=0;
         gti.WidthToLoad = gti.WidthToCreate = ((gti.Pitch<<1)>>gti.Size);
@@ -1277,6 +1285,9 @@ void PrepareTextures()
         status.UseLargerTile[1]=false;
 
         int tilenos[2];
+        int loadtiles[2];
+        const int detailShift = (int)RDP_GetDetailBaseTile() - (int)gRSP.curTile;
+
         if( CRender::g_pRender->IsTexel0Enable() || gRDP.otherMode.cycle_type  == CYCLE_TYPE_COPY )
             tilenos[0] = gRSP.curTile;
         else
@@ -1286,6 +1297,10 @@ void PrepareTextures()
             tilenos[1] = gRSP.curTile+1;
         else
             tilenos[1] = -1;
+
+        for( int i=0; i<2; i++ )
+            loadtiles[i] = (tilenos[i] < 0 || tilenos[i] + detailShift > 7)
+                         ? tilenos[i] : tilenos[i] + detailShift;
 
 
         for( int i=0; i<2; i++ )
@@ -1299,7 +1314,7 @@ void PrepareTextures()
             }
             else
             {
-                TxtrCacheEntry *pEntry = LoadTexture(tilenos[i]);
+                TxtrCacheEntry *pEntry = LoadTexture(loadtiles[i]);
                 if (pEntry && pEntry->pTexture )
                 {
                     if( pEntry->txtrBufIdx <= 0 )
