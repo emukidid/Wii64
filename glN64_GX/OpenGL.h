@@ -34,8 +34,12 @@
 #include "glATI.h"
 #include "gSP.h"
 
-#define GXprojZScale		 0.5  //0.25 //0.5
-#define GXprojZOffset		-0.5 //-0.5
+// Depth guard band
+#define GXprojZGuard		 4.0
+#define GXprojZScale		( 0.5 / GXprojZGuard)  //0.25 //0.5
+#define GXprojZOffset		(-0.5 / GXprojZGuard) //-0.5
+
+#define GXviewportNearZ(_n,_f)	((_f) - GXprojZGuard * ((_f) - (_n)))
 #define GXpolyOffsetFactor	 5.0e-4 //Tweaked for co-planar polygons. Interestingly, Z resolution should be 5.96e-8.
 
 struct GLVertex

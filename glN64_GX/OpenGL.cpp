@@ -611,12 +611,10 @@ void OGL_UpdateViewport()
 	            (int)(gSP.viewport.width * OGL.scaleX), (int)(gSP.viewport.height * OGL.scaleY) );
 	glDepthRange( 0.0f, 1.0f );//gSP.viewport.nearz, gSP.viewport.farz );
 #else // !__GX__
-	if (OGL.GXpolyOffset)
-		GX_SetViewport((f32) (OGL.GXorigX + gSP.viewport.x * OGL.GXscaleX),(f32) (OGL.GXorigY + gSP.viewport.y * OGL.GXscaleY),
-			(f32) (gSP.viewport.width * OGL.GXscaleX),(f32) (gSP.viewport.height * OGL.GXscaleY), gSP.viewport.nearz, gSP.viewport.farz - GXpolyOffsetFactor);
-	else
-		GX_SetViewport((f32) (OGL.GXorigX + gSP.viewport.x * OGL.GXscaleX),(f32) (OGL.GXorigY + gSP.viewport.y * OGL.GXscaleY),
-			(f32) (gSP.viewport.width * OGL.GXscaleX),(f32) (gSP.viewport.height * OGL.GXscaleY), gSP.viewport.nearz, gSP.viewport.farz);
+	const f32 GXfarZ = OGL.GXpolyOffset ? (gSP.viewport.farz - GXpolyOffsetFactor) : gSP.viewport.farz;
+	const f32 GXnearZ = GXviewportNearZ(gSP.viewport.nearz, GXfarZ);
+	GX_SetViewport((f32) (OGL.GXorigX + gSP.viewport.x * OGL.GXscaleX),(f32) (OGL.GXorigY + gSP.viewport.y * OGL.GXscaleY),
+		(f32) (gSP.viewport.width * OGL.GXscaleX),(f32) (gSP.viewport.height * OGL.GXscaleY), GXnearZ, GXfarZ);
 #endif // __GX__
 }
 
@@ -1152,11 +1150,14 @@ void OGL_AddTriangle( SPVertex *vertices, int v0, int v1, int v2 )
 
 	if (OGL.GXcombWok && GBI_IsNoN())
 	{
+		// Without this, every non-Z-buffered draw in a NoN game loses
+		// perspective-correct texturing (OoT market area).
+		const BOOL zSupplied = (gSP.geometryMode & G_ZBUFFER) ? TRUE : FALSE;
 		u32 onNear = 0, tooNear = 0, behind = 0;
 		for (int c = 0; c < 3; c++)
 		{
 			const SPVertex &pv = vertices[v[c]];
-			if (pv.w > 0.0f && (pv.z + pv.w) == 0.0f)
+			if (zSupplied && pv.w > 0.0f && (pv.z + pv.w) == 0.0f)
 				onNear++;
 
 			if (pv.w <= 0.0f)
