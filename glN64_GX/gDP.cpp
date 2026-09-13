@@ -1098,6 +1098,12 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 		lry = ceilf( lry );
 	}
 
+	// Save and restore the pointers rather than recomputing them: gSPUpdateTextureTiles()
+	// can shift the base tile (G_TL_LOD + G_TD_DETAIL), and a texrect must not be the
+	// thing that decides where they point once it is done.
+	gDPTile *textureTileOrg[2];
+	textureTileOrg[0] = gSP.textureTile[0];
+	textureTileOrg[1] = gSP.textureTile[1];
 	gSP.textureTile[0] = &gDP.tiles[tile];
 	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[tile] : &gDP.tiles[(tile + 1) & 7];
 
@@ -1138,8 +1144,8 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 			OGL_DrawTexturedRect( lrx, lry, ulx, uly, lrs, lrt, s, t, (RSP.cmd == G_TEXRECTFLIP), colorOverride );
 	}
 
-	gSP.textureTile[0] = &gDP.tiles[gSP.texture.tile];
-	gSP.textureTile[1] = needReplaceTex1ByTex0() ? &gDP.tiles[gSP.texture.tile] : &gDP.tiles[(gSP.texture.tile + 1) & 7];
+	gSP.textureTile[0] = textureTileOrg[0];
+	gSP.textureTile[1] = textureTileOrg[1];
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
 	gDP.colorImage.changed = TRUE;
