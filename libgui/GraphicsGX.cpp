@@ -54,7 +54,7 @@ Graphics::Graphics(GXRModeObj *rmode)
 		memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
 		break;
 	case VIDEOMODE_240P:
-		vmode = &TVEurgb60Hz240DsAa;
+		vmode = &TVEurgb60Hz240DsVf;
 		memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
 		break;
 	case VIDEOMODE_480P:
@@ -65,10 +65,10 @@ Graphics::Graphics(GXRModeObj *rmode)
 		vmode = &TVPal576IntDfScale;
 		memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
 		break;
-	//case VIDEOMODE_288P:
-	//	vmode = &TVPal288DsAaScale;
-	//	memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
-	//	break;
+	case VIDEOMODE_288P:
+		vmode = &TVPal288DsVfScale;
+		memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
+		break;
 	case VIDEOMODE_576P:
 		vmode = &TVPal576ProgScale;
 		memcpy( &vmode_phys, vmode, sizeof(GXRModeObj));
@@ -96,7 +96,7 @@ Graphics::Graphics(GXRModeObj *rmode)
 
 	VIDEO_SetNextFramebuffer(xfb[which_fb]);
 	VIDEO_Flush();
-	VIDEO_WaitVSync();
+	VIDEO_WaitForFlush();
 	which_fb ^= 1;
 
 	//Pass vmode, xfb[0] and xfb[1] back to main program
@@ -113,34 +113,39 @@ Graphics::~Graphics()
 
 void Graphics::init()
 {
-	f32 yscale;
 	void *gpfifo = NULL;
 
 	gpfifo = memalign(32,GX_FIFO_MINSIZE);
 	GX_Init(gpfifo,GX_FIFO_MINSIZE);
 
-	yscale = GX_GetYScaleFactor(vmode->efbHeight,vmode->xfbHeight);
-	GX_SetDispCopyYScale(yscale);
+	GX_SetDispCopyFrame2Field(vmode->copy_interlaced);
 	GX_SetDispCopySrc(0,0,vmode->fbWidth,vmode->efbHeight);
+	GX_SetDispCopyYScale(GX_GetYScaleFactor(vmode->efbHeight,vmode->xfbHeight));
 	GX_SetDispCopyDst(vmode->fbWidth,vmode->xfbHeight);
 	GX_SetCopyFilter(vmode->aa,vmode->sample_pattern,GX_TRUE,vmode->vfilter);
-	GX_SetFieldMode(GX_DISABLE,((vmode->viHeight==2*vmode->xfbHeight)?GX_ENABLE:GX_DISABLE));
- 
+	GX_SetFieldMode(vmode->field_rendering,((vmode->viHeight/vmode->efbHeight==2)?GX_ENABLE:GX_DISABLE));
+
 	if (vmode->aa)
 		GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_MID);
+	else
+		GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 }
 
-void Graphics::resetCopyParamsForMenu(bool applyDeflicker)
+void Graphics::resetCopyParamsForMenu()
 {
-    f32 yscale = GX_GetYScaleFactor(vmode->efbHeight, vmode->xfbHeight);
-    u32 xfbHeight = GX_SetDispCopyYScale(yscale);
-    u32 xfbWidth  = VIDEO_PadFramebufferWidth(vmode->fbWidth);
-
-    GX_SetViewport(0, 0, vmode->fbWidth, vmode->efbHeight, 0.0f, 1.0f);
+    GX_SetViewport(0.0f, 0.0f, vmode->fbWidth, vmode->efbHeight, 0.0f, 1.0f);
     GX_SetScissor(0, 0, vmode->fbWidth, vmode->efbHeight);
+    GX_SetDispCopyFrame2Field(vmode->copy_interlaced);
     GX_SetDispCopySrc(0, 0, vmode->fbWidth, vmode->efbHeight);
-    GX_SetDispCopyDst(xfbWidth, xfbHeight);
-	//GX_SetCopyFilter(vmode->aa,vmode->sample_pattern, applyDeflicker && deflicker ? GX_TRUE : GX_FALSE,vmode->vfilter);
+    GX_SetDispCopyYScale(GX_GetYScaleFactor(vmode->efbHeight, vmode->xfbHeight));
+    GX_SetDispCopyDst(vmode->fbWidth, vmode->xfbHeight);
+    GX_SetCopyFilter(vmode->aa, vmode->sample_pattern, GX_TRUE, vmode->vfilter);
+    GX_SetFieldMode(vmode->field_rendering, ((vmode->viHeight / vmode->efbHeight == 2) ? GX_ENABLE : GX_DISABLE));
+
+    if (vmode->aa)
+        GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_MID);
+    else
+        GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 }
 
 void Graphics::drawInit()
@@ -191,7 +196,7 @@ void Graphics::drawInit()
 	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
 	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
 
-	resetCopyParamsForMenu(false);
+	resetCopyParamsForMenu();
 
 	setTEV(GX_PASSCLR);
 	newModelView();
@@ -203,7 +208,7 @@ void Graphics::swapBuffers()
 {
 	GX_SetCopyClear((GXColor){0, 0, 0, 0xFF}, GX_MAX_Z24);
 	GX_CopyDisp(xfb[which_fb],GX_TRUE);
-	GX_Flush();
+	GX_DrawDone();
 
 	VIDEO_SetNextFramebuffer(xfb[which_fb]);
 	if(first_frame) {
@@ -211,7 +216,7 @@ void Graphics::swapBuffers()
 		VIDEO_SetBlack(false);
 	}
 	VIDEO_Flush();
- 	VIDEO_WaitVSync();
+	VIDEO_WaitForFlush();
 	which_fb ^= 1;
 }
 
@@ -237,7 +242,7 @@ void Graphics::copyFBTex(u8* dest, int width, int height, u8 fmt, int bpp)
 	if (tempFB)
 	{
 		GX_SetTexCopySrc(0, 0, 640, 480);
-		GX_SetTexCopyDst(320, 240, fmt, GX_TRUE);
+		GX_SetTexCopyDst(320, 240, fmt, GX_COPY_MIPMAP);
 		GX_CopyTex(tempFB, GX_FALSE);
 		GX_DrawDone();
 	//Next draw FB to thumbnail sized region of EFB
@@ -282,7 +287,7 @@ void Graphics::copyFBTex(u8* dest, int width, int height, u8 fmt, int bpp)
 		GX_End();
 	//Next copy FB thumbnail
 		GX_SetTexCopySrc(0, 0, width, height);
-		GX_SetTexCopyDst(width, height, fmt, GX_FALSE);
+		GX_SetTexCopyDst(width, height, fmt, GX_COPY_PROGRESSIVE);
 		if (dest)
 			GX_CopyTex(dest, GX_FALSE);
 		GX_DrawDone();
@@ -597,12 +602,11 @@ void Graphics::setInGameVMode() {
 			IplFont::getInstance().drawString(80,280,buf, 0.5, false);
 			sprintf(buf, "Region: [%s] CRC [%08X:%08X]", countryString, ROM_HEADER.CRC1, ROM_HEADER.CRC2 );
 			IplFont::getInstance().drawString(80,310,buf, 0.5, false);
-			GX_DrawDone();
 			GX_CopyDisp(xfb[which_fb], GX_TRUE);
-			GX_Flush();
+			GX_DrawDone();
 			VIDEO_SetNextFramebuffer(xfb[which_fb]);
 			VIDEO_Flush();
-			VIDEO_WaitVSync();
+			VIDEO_WaitForFlush();
 			which_fb ^= 1;
 		}
 	}
@@ -613,30 +617,30 @@ GXRModeObj* Graphics::getVmode() {
 }
 
 void Graphics::setNativeOut(bool is_pal) {
-	GXRModeObj* m = &TVNtsc240Ds;
+	GXRModeObj* m = &TVNtsc240DsAa;
 	if(is_pal) {
-		m = &TVPal264Ds;
+		m = &TVPal288DsAaScale;
 	}
-	GX_SetCopyFilter(m->aa,m->sample_pattern, GX_FALSE,m->vfilter);
     VIDEO_Configure(m);
 	curVmode = m;
     VIDEO_Flush();
-    VIDEO_WaitVSync();
-    VIDEO_WaitVSync();
+    VIDEO_WaitForFlush();
 
-    GX_SetCopyClear((GXColor){0,0,0,255}, 0xFFFFFF);
-    GX_SetViewport(0, 0, m->fbWidth, m->efbHeight, 0.0f, 1.0f);
-
-    f32 yscale = GX_GetYScaleFactor(m->efbHeight, m->xfbHeight);
-    u32 xfbHeight = GX_SetDispCopyYScale(yscale);
-    u32 xfbWidth  = VIDEO_PadFramebufferWidth(m->fbWidth);
-
-    GX_SetDispCopySrc(0, 0, m->fbWidth, m->efbHeight);
-    GX_SetDispCopyDst(xfbWidth, xfbHeight);
-
+    GX_SetCopyClear((GXColor){0, 0, 0, 0xFF}, GX_MAX_Z24);
+    GX_SetViewport(0.0f, 0.0f, m->fbWidth, m->efbHeight, 0.0f, 1.0f);
     GX_SetScissor(0, 0, m->fbWidth, m->efbHeight);
-    GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
-	GX_SetFieldMode(m->field_rendering,((m->viHeight==2*m->xfbHeight)?GX_ENABLE:GX_DISABLE));
+
+    GX_SetDispCopyFrame2Field(m->copy_interlaced);
+    GX_SetDispCopySrc(0, 0, m->fbWidth, m->efbHeight);
+    GX_SetDispCopyYScale(GX_GetYScaleFactor(m->efbHeight, m->xfbHeight));
+    GX_SetDispCopyDst(m->fbWidth, m->xfbHeight);
+
+    GX_SetCopyFilter(m->aa, m->sample_pattern, GX_TRUE, m->vfilter);
+    GX_SetFieldMode(m->field_rendering, ((m->viHeight / m->efbHeight == 2) ? GX_ENABLE : GX_DISABLE));
+    if (m->aa)
+        GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_MID);
+    else
+        GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
 
     Mtx44 proj;
     guOrtho(proj, 0, m->efbHeight, 0, m->fbWidth, 0, 300);
@@ -646,7 +650,7 @@ void Graphics::setNativeOut(bool is_pal) {
 extern "C" void switchToNormalVideo()
 {
     Gui::getInstance().gfx->setInGameVMode();
-	Gui::getInstance().gfx->resetCopyParamsForMenu(true);
+	Gui::getInstance().gfx->resetCopyParamsForMenu();
 }
 
 extern "C" void switchTo240p(bool is_pal)
@@ -654,9 +658,9 @@ extern "C" void switchTo240p(bool is_pal)
     Gui::getInstance().gfx->setNativeOut(is_pal);
 }
 
-extern "C" int getXfbHeight() {
+extern "C" int getEfbHeight() {
 	GXRModeObj* vmode = Gui::getInstance().gfx->getVmode();
-	return vmode->xfbHeight;
+	return vmode->efbHeight;
 }
 
 } //namespace menu 

@@ -67,14 +67,10 @@ extern "C" {
 #include "../vm/vm.h"
 #include "../gc_memory/ARAM.h"
 #endif
-
-#ifdef HW_RVL
-extern f32 SYS_GetCoreMultiplier();
-#endif
 }
 
 #ifdef WII
-unsigned int MALLOC_MEM2 = 0;
+u32 MALLOC_MEM2 = 0;
 #include <ogc/conf.h>
 #include <wiiuse/wpad.h>
 #include "../gc_memory/MEM2.h"
@@ -619,10 +615,6 @@ static void Initialise (void){
 	control_info_init();
 
 	// Init PS GQRs so I can load signed/unsigned chars/shorts as PS values
-	__asm__ volatile(
-		"li		3, 0     \n"
-		"mtspr	912, 3   \n" // GQR0 = F32
-		:: : "r3");
 	CAST_SetGQR2(GQR_TYPE_U8, 8);
 	CAST_SetGQR3(GQR_TYPE_U16, 16);
 	CAST_SetGQR4(GQR_TYPE_U8, 0);

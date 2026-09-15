@@ -135,7 +135,7 @@ void Gui::draw()
 		{
 			VIDEO_SetBlack(true);
 			VIDEO_Flush();
-		 	VIDEO_WaitVSync();
+		 	VIDEO_WaitForFlush();
 #ifdef WII
 			// If this is a Wii U, restore the original aspect ratio
 			if(isWiiU) {
@@ -146,9 +146,7 @@ void Gui::draw()
 			if(shutdown==1)	//Power off System
 				SYS_ResetSystem(SYS_POWEROFF, 0, FALSE);
 			else			//Return to Loader
-			{
 				exit(0);
-			}
 		}
 
 		char increment = 3;

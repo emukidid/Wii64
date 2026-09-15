@@ -252,7 +252,7 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 #else // !__GX__
 			//Note: texture realWidth and realHeight should be multiple of 2!
 			GX_SetTexCopySrc(OGL.GXorigX, OGL.GXorigY,(u16) current->texture->realWidth,(u16) current->texture->realHeight);
-			GX_SetTexCopyDst((u16) current->texture->realWidth,(u16) current->texture->realHeight, current->texture->GXtexfmt, GX_FALSE);
+			GX_SetTexCopyDst((u16) current->texture->realWidth,(u16) current->texture->realHeight, current->texture->GXtexfmt, GX_COPY_PROGRESSIVE);
 			GX_SetCopyFilter(GX_FALSE, NULL, GX_FALSE, NULL);
 			if (current->texture->GXtexture)
 			{
@@ -392,7 +392,7 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 #else // !__GX__
 	//Note: texture realWidth and realHeight should be multiple of 2!
 	GX_SetTexCopySrc((u16) OGL.GXorigX, (u16) OGL.GXorigY,(u16) current->texture->realWidth,(u16) current->texture->realHeight);
-	GX_SetTexCopyDst((u16) current->texture->realWidth,(u16) current->texture->realHeight, current->texture->GXtexfmt, GX_FALSE);
+	GX_SetTexCopyDst((u16) current->texture->realWidth,(u16) current->texture->realHeight, current->texture->GXtexfmt, GX_COPY_PROGRESSIVE);
 	GX_SetCopyFilter(GX_FALSE, NULL, GX_FALSE, NULL);
 	if (current->texture->GXtexture)
 	{
