@@ -410,23 +410,23 @@ void VM_InvalidateAll(void)
 	LWP_MutexUnlock(vm_mutex);
 }
 
-int vm_dsi_handler(u32 DSISR, u32 DAR)
+int vm_dsi_handler(u32 dsisr, u32 dar)
 {
 	u16 virt_index;
 	u16 phys_index;
 	u16 flush_v_index;
 
-	if (DAR<(u32)VM_Base || DAR>=0x80000000)
+	if (dar<(u32)VM_Base || dar>=0x80000000)
 		return 0;
-	if ((DSISR&~0x02000000)!=0x40000000)
+	if ((dsisr&~0x02000000)!=0x40000000)
 		return 0;
 	if (!vm_initialized)
 		return 0;
 
 	LWP_MutexLock(vm_mutex);
 
-	DAR &= ~0xFFF;
-	virt_index = (vm_page*)DAR - VM_Base;
+	dar &= ~0xFFF;
+	virt_index = (vm_page*)dar - VM_Base;
 
 	phys_index = locate_oldest();
 
@@ -488,7 +488,7 @@ int vm_dsi_handler(u32 DSISR, u32 DAR)
 	else
 		DCZeroRange(MEM_Base+phys_index, PAGE_SIZE);
 
-//	printf("VM page %u (0x%08x) replaced page %u (%p) @ %p\n", virt_index, DAR, phys_map[phys_index].page_index, VM_Base+phys_map[phys_index].page_index, MEM_Base+phys_index);
+//	printf("VM page %u (0x%08x) replaced page %u (%p) @ %p\n", virt_index, dar, phys_map[phys_index].page_index, VM_Base+phys_map[phys_index].page_index, MEM_Base+phys_index);
 
 	virt_map[virt_index].p_map_index = phys_index;
 	phys_map[phys_index].page_index = virt_index;

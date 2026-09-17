@@ -81,7 +81,7 @@ u32 gc_connected;
 
 static unsigned int getButtons(int Control)
 {
-	unsigned int b = PAD_ButtonsHeld(Control);
+	unsigned int b = PAD_ButtonsHeld(Control) & PAD_BUTTON_ALL;
 	s8 stickX      = PAD_StickX(Control);
 	s8 stickY      = PAD_StickY(Control);
 	s8 substickX   = PAD_SubStickX(Control);

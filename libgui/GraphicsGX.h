@@ -35,7 +35,7 @@ public:
 	void drawInit();
 	void swapBuffers();
 	void clearEFB(GXColor color, u32 zvalue);
-	void resetCopyParamsForMenu(bool applyDeflicker);
+	void resetCopyParamsForMenu();
 	GXRModeObj* getVmode();
 	void setNativeOut(bool is_pal);
 	void copyFBTex(u8* dest, int width, int height, u8 fmt, int bpp);

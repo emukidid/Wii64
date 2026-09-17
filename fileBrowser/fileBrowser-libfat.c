@@ -41,15 +41,11 @@ extern int stop;
 #ifdef HW_RVL
 #include <sdcard/wiisd_io.h>
 #include <ogc/usbstorage.h>
-DISC_INTERFACE* frontsd = &__io_wiisd;
-DISC_INTERFACE* usb = &__io_usbstorage;
-DISC_INTERFACE* carda = &__io_gcsda;
-DISC_INTERFACE* cardb = &__io_gcsdb;
-
+static DISC_INTERFACE* frontsd = &__io_wiisd;
+static DISC_INTERFACE* usb = &__io_usbstorage;
 #else
-DISC_INTERFACE* carda = &__io_gcsda;
-DISC_INTERFACE* cardb = &__io_gcsdb;
-DISC_INTERFACE* sd2sp2 = &__io_gcsd2;
+#include <ogc/dvd.h>
+static DISC_INTERFACE* gcloader = &__io_gcode;
 #endif
 
 #define FRONTSD 1
@@ -210,18 +206,23 @@ int fileBrowser_libfat_init(fileBrowser_file* f){
 #else
 	// GC has only SD
 	if(mounted[2]) return 1;
-	res = fatMountSimple ("sd", sd2sp2);
+	res = fatMountSimple ("sd", gcloader);
+	if(res) {
+		mounted[2] = 1;
+		return res;
+	}
+	res = fatMountSimple ("sd", get_io_gcsd2());
+	if(res) {
+		mounted[2] = 1;
+		return res;
+	}
 #endif
+	res = fatMountSimple ("sd", get_io_gcsda());
 	if(res) {
 		mounted[2] = 1;
 		return res;
 	}
-	res = fatMountSimple ("sd", carda);
-	if(res) {
-		mounted[2] = 1;
-		return res;
-	}
-	res = fatMountSimple ("sd", cardb);
+	res = fatMountSimple ("sd", get_io_gcsdb());
 	if(res) {
 		mounted[2] = 1;
 		return res;

@@ -464,26 +464,26 @@ static char using_240p = 0;
 static char oldNativeOutputSetting = NATIVEOUT_DISABLE;
 extern "C" void switchTo240p(bool is_pal);
 extern "C" void switchToNormalVideo();
-extern "C" int getXfbHeight();
+extern "C" int getEfbHeight();
 extern void gfx_set_window(int x, int y, int width, int height);
 
 void GX_CheckResChange() {
 	// Detect resolution change (if we'd gone back to the menu)
-	int xfbHeight = getXfbHeight(), dims_changed = 0;
-	if((using_240p && xfbHeight > 264) || (!using_240p && xfbHeight <= 264)) {
-		using_240p = xfbHeight <= 264;
+	int efbHeight = getEfbHeight(), dims_changed = 0;
+	if((using_240p && efbHeight > 264) || (!using_240p && efbHeight <= 264)) {
+		using_240p = efbHeight <= 264;
 		dims_changed = 1;
 	}
 	// 
 	// Detect internal res change or setting change.
-	if ((dims_changed || (oldNativeOutputSetting != nativeOutput)) && windowSetting.fViHeight > 0) {
-		int new_h = windowSetting.fViHeight;
+	if (dims_changed || (oldNativeOutputSetting != nativeOutput)) {
+		int new_h = *g_GraphicsInfo.VI_V_SYNC_REG & 0xFFFF;
 
 		// Decide if we should be in 240p
-		bool want_240p = (nativeOutput == NATIVEOUT_ENABLE) && (new_h <= 288);
+		bool want_240p = (nativeOutput == NATIVEOUT_ENABLE) && (new_h % 2);
 
 		if (want_240p && !using_240p) {
-			switchTo240p(new_h > 240);
+			switchTo240p(new_h > 525);
 			using_240p = true;
 			gfx_set_window(0, 0, 640, 240);
 		}
