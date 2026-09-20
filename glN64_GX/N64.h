@@ -49,6 +49,7 @@ extern N64Regs REG;
 extern u8 *DMEM;
 extern u8 *IMEM;
 extern u8 *RDRAM;
+extern u8 *HEADER;
 extern u64 TMEM[512];
 extern u32 RDRAMSize;
 

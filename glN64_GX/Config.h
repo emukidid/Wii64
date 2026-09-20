@@ -9,7 +9,23 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
+
+#include "Types.h"
+
+struct Config
+{
+	struct
+	{
+		u32 hacks;
+	} generalEmulation;
+};
+
+extern Config config;
+
+#define hack_subscreen				(1<<6)  //Fix subscreen delay in Zelda OOT and Doubutsu no Mori
+#define hack_clearAloneDepthBuffer	(1<<3)  //Force clear depth buffer if there is no frame buffer for it. Multiplayer in GE and PD.
+#define hack_rectDepthBufferCopyPD	(1<<8)  //Perfect Dark's depth buffer reads, which drive its light coronas
+
 void Config_LoadConfig();
 void Config_DoConfig();
 #endif
-

@@ -404,8 +404,10 @@ void GameSpecificHackSetup() {
 		game_specific_hack = &hack_scars;
 		restore_count_per_op();
 	}
+#ifdef RICE_GFX
 	else if(strncmp((char *)ROM_HEADER.Name, "THE LEGEND OF ZELDA", 19) == 0) {
 		zelda_subscreen_address = 0;
+		game_specific_hack = 0;
         if (curCRC[0] == 0xEC7011B7 && curCRC[1] == 0x7616D72B) {
             // Legend of Zelda, The - Ocarina of Time (U) + (J) (V1.0)
             zelda_subscreen_address = 0x1DA5CB;
@@ -448,6 +450,7 @@ void GameSpecificHackSetup() {
 			game_specific_hack = &hack_zelda_oot;
 		}
 	}
+#endif
 	else {
 		game_specific_hack = 0;
 	}

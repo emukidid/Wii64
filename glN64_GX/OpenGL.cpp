@@ -682,7 +682,7 @@ void OGL_UpdateStates()
 #else // !__GX__
 	//Zbuffer settings
 	static u8 GXenableZmode, GXZfunc = GX_ALWAYS, GXZupdate = GX_FALSE;
-	if (gSP.geometryMode & G_ZBUFFER)
+	if ((gSP.geometryMode & G_ZBUFFER) && gDP.otherMode.cycleType <= G_CYC_2CYCLE)
 //		glEnable( GL_DEPTH_TEST );
 		GXenableZmode = GX_ENABLE;
 	else
@@ -2161,6 +2161,9 @@ void OGL_GXinitDlist()
 	OGL.enable2xSaI = glN64_use2xSaiTextures;
 	OGL.forceBilinear = glN64_use2xSaiTextures;
 
+	// for _gDPPeekDepth()
+	GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+
 	// init Ztexture, AlphaCompare, and Texture Clamping
 	GX_SetZTexture(GX_ZT_DISABLE,GX_TF_Z8,0);
 	OGL.GXuseAlphaCompare = false;
@@ -2223,13 +2226,20 @@ void OGL_GXinitDlist()
 	OGL.GXclearColor = (GXColor){0,0,0,255};
 }
 
+void OGL_ApplyPendingClears()
+{
+	if (OGL.GXclearColorBuffer || OGL.GXclearDepthBuffer)
+		OGL_GXclearEFB();
+}
+
 void OGL_GXclearEFB()
 {
 	//Note: EFB is RGB8, so no need to clear alpha
 	if(OGL.GXclearColorBuffer)	GX_SetColorUpdate(GX_ENABLE);
 	else						GX_SetColorUpdate(GX_DISABLE);
-	if(OGL.GXclearDepthBuffer)	GX_SetZMode(GX_ENABLE,GX_GEQUAL,GX_TRUE);
-	else						GX_SetZMode(GX_ENABLE,GX_GEQUAL,GX_FALSE);
+
+	if(OGL.GXclearDepthBuffer)	GX_SetZMode(GX_ENABLE,GX_ALWAYS,GX_TRUE);
+	else						GX_SetZMode(GX_ENABLE,GX_ALWAYS,GX_FALSE);
 
 	GX_SetNumChans(1);
 	GX_SetNumTexGens(0);

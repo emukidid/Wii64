@@ -134,7 +134,7 @@ struct gDPTile
 		};
 	};
 
-	FrameBuffer *frameBuffer;
+	u32 frameBufferAddress;	// resolved through FrameBuffer_GetBuffer()
 	u32 maskt, masks;
 	u32 originalMaskS, originalMaskT;
 	u32 shiftt, shifts;
@@ -291,6 +291,7 @@ struct gDPInfo
 	{
 		f32 r, g, b, a;
 		f32 z, dz;
+		u32 color;
 	} fillColor;
 
 	struct
@@ -350,9 +351,14 @@ struct gDPInfo
 	u32 half_1, half_2;
 	u32 textureMode;
 	u32 loadType;
+
+	bool m_subscreen;	// for GLideN64 hack_subscreen
 };
 
 extern gDPInfo gDP;
+
+extern u32 DepthClearColor;
+void gDPSetDepthClearColor();
 
 void gDPSetOtherMode( u32 mode0, u32 mode1 );
 void gDPSetPrimDepth( u16 z, u16 dz );

@@ -577,7 +577,11 @@ float Graphics::getCurrentTransparency(int index)
 }
 
 void Graphics::setInGameVMode() {
+#ifdef RVL_LIBWIIDRC
+	vmode->viWidth = 680;
+#else
 	vmode->viWidth = 640;
+#endif
 	vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
 	VIDEO_Init ();
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);

@@ -11,6 +11,8 @@
 
 #ifdef __GX__
 #include <gccore.h>
+#include <stdio.h>
+#include "../gui/DEBUG.h"
 #endif // __GX__
 
 #ifndef __LINUX__
@@ -20,6 +22,8 @@
 #endif
 
 #include <math.h>
+#include <string.h>
+#include <ctype.h>
 #include "glN64.h"
 #include "OpenGL.h"
 #include "Debug.h"
@@ -32,7 +36,7 @@
 #include "../main/timers.h"
 #include "Combiner.h"
 //#include "textures.h"
-//#include "Config.h"
+#include "Config.h"
 #include "FrameBuffer.h"
 #include "DepthBuffer.h"
 #include "GBI.h"
@@ -442,6 +446,40 @@ void RSP_ProcessDList()
 	gSP.changed |= CHANGED_COLORBUFFER;
 }
 
+static void _RSP_SetGameHacks()
+{
+	RSP.romname[0] = 0;
+
+	if (HEADER != NULL)
+	{
+		for (int i = 0; i < 20; i++)
+			RSP.romname[i] = (char)HEADER[32 + i];
+		RSP.romname[20] = 0;
+
+		// Remove all trailing spaces.
+		size_t len = strlen( RSP.romname );
+		while (len > 0 && RSP.romname[len - 1] == ' ')
+			RSP.romname[--len] = 0;
+	}
+
+	gDPSetDepthClearColor();
+	config.generalEmulation.hacks = 0;
+
+	if (strstr( RSP.romname, "THE LEGEND OF ZELDA" ) != NULL ||
+	    strstr( RSP.romname, "ZELDA MASTER QUEST" ) != NULL)
+		config.generalEmulation.hacks |= hack_subscreen;
+	else if (strstr( RSP.romname, "DOUBUTSUNOMORI" ) != NULL ||
+	         strstr( RSP.romname, "ANIMAL FOREST" ) != NULL)
+		config.generalEmulation.hacks |= hack_subscreen;
+	else if (strstr( RSP.romname, "Perfect Dark" ) != NULL ||
+	         strstr( RSP.romname, "PERFECT DARK" ) != NULL)
+		config.generalEmulation.hacks |= hack_rectDepthBufferCopyPD | hack_clearAloneDepthBuffer;
+	else if (strstr( RSP.romname, "TUROK_DINOSAUR_HUNTE" ) != NULL)
+		config.generalEmulation.hacks |= hack_rectDepthBufferCopyPD; // TODO check if this works here
+	else if (strstr( RSP.romname, "GOLDENEYE" ) != NULL)
+		config.generalEmulation.hacks |= hack_clearAloneDepthBuffer;
+}
+
 void RSP_Init()
 {
         //u8 test;
@@ -481,6 +519,9 @@ void RSP_Init()
 	
 	memset( &gSP, 0, sizeof( gSPInfo ) );
 	gDP.otherMode._u64 = 0;
+	gDP.m_subscreen = false;
+
+	_RSP_SetGameHacks();
 
 	gDP.loadTile = &gDP.tiles[7];
 	gSP.textureTile[0] = &gDP.tiles[0];

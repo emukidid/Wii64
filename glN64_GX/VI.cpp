@@ -54,6 +54,8 @@ unsigned int* xfb[2];
 int which_fb;*/
 #endif // __GX__
 
+static u32 widthPrev = 0;
+
 void VI_UpdateSize()
 {
 	f32 xScale = _FIXED2FLOAT( _SHIFTR( *REG.VI_X_SCALE, 0, 12 ), 10 );
@@ -81,6 +83,17 @@ void VI_UpdateSize()
 
 	if (VI.width == 0) VI.width = 320;
 	if (VI.height == 0) VI.height = 240;
+
+	if (VI.width != widthPrev)
+	{
+		if (widthPrev != 0)
+		{
+			FrameBuffer_RemoveBuffersOfWidth( widthPrev );
+			FrameBuffer_RemoveBuffersOfWidth( VI.width );
+		}
+
+		widthPrev = VI.width;
+	}
 }
 
 

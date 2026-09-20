@@ -268,6 +268,7 @@ EXPORT BOOL CALL InitiateGFX (GFX_INFO Gfx_Info)
 	DMEM = Gfx_Info.DMEM;
 	IMEM = Gfx_Info.IMEM;
 	RDRAM = Gfx_Info.RDRAM;
+	HEADER = Gfx_Info.HEADER;
 
 	REG.MI_INTR = Gfx_Info.MI_INTR_REG;
 	REG.DPC_START = Gfx_Info.DPC_START_REG;

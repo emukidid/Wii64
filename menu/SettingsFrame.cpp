@@ -763,7 +763,7 @@ void Func_ScreenForce16_9()
 		FRAME_BUTTONS[i].button->setSelected(false);
 	FRAME_BUTTONS[20].button->setSelected(true);
 	screenMode = SCREENMODE_16x9_PILLARBOX;
-	gfx_set_window( 78, 0, 483, 480);
+	gfx_set_window( 80, 0, 480, 480);
 }
 
 void Func_CpuFramebufferOn()

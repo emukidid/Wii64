@@ -30,6 +30,8 @@
 #include "Textures.h"
 #include "OpenGL.h"
 
+Config config;
+
 #ifdef __GX__
 char glN64_useFrameBufferTextures = 0;
 char glN64_use2xSaiTextures = 0;

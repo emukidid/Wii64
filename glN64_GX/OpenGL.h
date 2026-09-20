@@ -228,6 +228,7 @@ void OGL_ReadScreen( void **dest, long *width, long *height );
 #ifdef __GX__
 void OGL_GXinitDlist();
 void OGL_GXclearEFB();
+void OGL_ApplyPendingClears();
 #endif // __GX__
 
 #endif

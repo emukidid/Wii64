@@ -24,6 +24,7 @@ extern "C" {
 #include "GBI.h"
 #include "RSP.h"
 #include "gDP.h"
+#include "Config.h"
 #include "gSP.h"
 #include "Types.h"
 #include "Debug.h"
@@ -486,6 +487,10 @@ void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 			gDP.colorImage.height = 1;
 	}
 
+	if ((config.generalEmulation.hacks & hack_subscreen) != 0 &&
+	    format == G_IM_FMT_I && size == G_IM_SIZ_8b)
+		gDP.m_subscreen = (gDP.otherMode._u64 == 0x00000cf00f0a0004ULL);
+
 	gDP.colorImage.format = format;
 	gDP.colorImage.size = size;
 	gDP.colorImage.width = width;
@@ -522,12 +527,19 @@ void gDPSetDepthImage( u32 address )
 	//if (address != gDP.depthImageAddress)
 	//	OGL_ClearDepthBuffer();
 
-	DepthBuffer_SetBuffer( RSP_SegmentToPhysical( address ) );
+	const u32 depthAddress = RSP_SegmentToPhysical( address );
+
+	DepthBuffer_SetBuffer( depthAddress );
 
 	if (depthBuffer.current->cleared)
 		OGL_ClearDepthBuffer();
+	else if ((config.generalEmulation.hacks & hack_clearAloneDepthBuffer) != 0 &&
+	         FrameBuffer_FindBuffer( depthAddress ) == NULL)
+	{
+		OGL_ClearDepthBuffer();
+	}
 
-	gDP.depthImageAddress = RSP_SegmentToPhysical( address );
+	gDP.depthImageAddress = depthAddress;
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPSetDepthImage( 0x%08X );\n", gDP.depthImageAddress );
@@ -586,6 +598,8 @@ void gDPSetFillColor( u32 c )
 
 	gDP.fillColor.z = (u16)_SHIFTR( c, 2, 14 );
 	gDP.fillColor.dz = (u8)_SHIFTR( c, 0, 2 );
+
+	gDP.fillColor.color = c;
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPSetFillColor( 0x%08X );\n", c );
@@ -673,6 +687,59 @@ void gDPSetTileSize( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 #endif
 }
 
+// GLideN64's CheckForFrameBufferTexture()
+static BOOL _gDPCheckForFrameBufferTexture( u32 address, u32 width, u32 bytes, u32 loadType )
+{
+	gDP.loadTile->frameBufferAddress = 0;
+	gDP.textureMode = TEXTUREMODE_NORMAL;
+	gDP.changed |= CHANGED_TMEM;
+
+	if (!OGL.frameBufferTextures)
+		return FALSE;
+
+	FrameBuffer *buffer = FrameBuffer_FindBuffer( address );
+	if (buffer == NULL)
+	{
+		return FALSE;
+	}
+
+	const u32 texEndAddress = address + bytes - 1;
+	if (address > buffer->startAddress &&
+	    (u32)abs( (s32)buffer->width - (s32)width ) > 1 &&
+	    texEndAddress > (buffer->endAddress + (buffer->width << buffer->size >> 1)))
+	{
+		return FALSE;
+	}
+
+	if (loadType == LOADTYPE_TILE &&
+	    gDP.textureImage.width != buffer->width &&
+	    gDP.textureImage.size != buffer->size)
+	{
+		return FALSE;
+	}
+
+	if (!FrameBuffer_IsValid( buffer ))
+	{
+		if (buffer->startAddress != gDP.colorImage.address)
+			FrameBuffer_Remove( buffer );
+
+		return FALSE;
+	}
+
+	FrameBuffer_RefreshCurrent( buffer );
+
+	gDP.loadTile->frameBufferAddress = buffer->startAddress;
+	FrameBuffer_MoveToTop( buffer );
+	gDP.textureMode = TEXTUREMODE_FRAMEBUFFER;
+	gDP.loadType = loadType;
+
+	for (u32 i = 0; i < 8; i++)
+		if (&gDP.tiles[i] != gDP.loadTile && gDP.tiles[i].tmem == gDP.loadTile->tmem)
+			gDP.tiles[i].frameBufferAddress = buffer->startAddress;
+
+	return TRUE;
+}
+
 void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 {
 	u32 address, height, bpl, line, y;
@@ -743,22 +810,9 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 		return;
 	}
 
-	if (OGL.frameBufferTextures)
-	{
-		FrameBuffer *buffer;
-		if (((buffer = FrameBuffer_FindBuffer( address )) != NULL) &&
-			((*(u32*)&RDRAM[buffer->startAddress] & 0xFFFEFFFE) == (buffer->startAddress & 0xFFFEFFFE)))
-		{
-			gDP.loadTile->frameBuffer = buffer;
-#ifdef __GX__
-			FrameBuffer_MoveToTop(gDP.loadTile->frameBuffer);
-#endif //__GX__
-			gDP.textureMode = TEXTUREMODE_FRAMEBUFFER;
-			gDP.loadType = LOADTYPE_TILE;
-			gDP.changed |= CHANGED_TMEM;
-			return;
-		}
-	}
+	if (_gDPCheckForFrameBufferTexture( address,
+	        gDP.loadInfo[gDP.loadTile->tmem & 0x1FF].width, bpl * height, LOADTYPE_TILE ))
+		return;
 
 	for (y = 0; y < height; y++)
 	{
@@ -808,22 +862,9 @@ void gDPLoadBlock( u32 tile, u32 uls, u32 ult, u32 lrs, u32 dxt )
 		return;
 	}
 
-	if (OGL.frameBufferTextures)
-	{
-		FrameBuffer *buffer;
-		if (((buffer = FrameBuffer_FindBuffer( address )) != NULL) &&
-			((*(u32*)&RDRAM[buffer->startAddress] & 0xFFFEFFFE) == (buffer->startAddress & 0xFFFEFFFE)))
-		{
-			gDP.loadTile->frameBuffer = buffer;
-#ifdef __GX__
-			FrameBuffer_MoveToTop(gDP.loadTile->frameBuffer);
-#endif //__GX__
-			gDP.textureMode = TEXTUREMODE_FRAMEBUFFER;
-			gDP.loadType = LOADTYPE_BLOCK;
-			gDP.changed |= CHANGED_TMEM;
-			return;
-		}
-	}
+	if (_gDPCheckForFrameBufferTexture( address, (lrs - uls + 1) & 0x0FFF, bytes,
+	                                    LOADTYPE_BLOCK ))
+		return;
 
 	gDP.loadInfo[gDP.loadTile->tmem & 0x1FF].texAddress = address;
 
@@ -952,6 +993,23 @@ void gDPSetScissor( u32 mode, f32 ulx, f32 uly, f32 lrx, f32 lry )
 #endif
 }
 
+// GLideN64's DepthClearColor
+u32 DepthClearColor = 0xFFFCFFFC;
+
+void gDPSetDepthClearColor()
+{
+	if (strstr( RSP.romname, "Elmo's" ) != NULL)
+		DepthClearColor = 0xFFFFFFFF;
+	else if (strstr( RSP.romname, "Taz Express" ) != NULL)
+		DepthClearColor = 0xFFBCFFBC;
+	else if (strstr( RSP.romname, "NFL QBC 2000" ) != NULL ||
+	         strstr( RSP.romname, "NFL Quarterback Club" ) != NULL ||
+	         strstr( RSP.romname, "Jeremy McGrath Super" ) != NULL)
+		DepthClearColor = 0xFFFDFFFC;
+	else
+		DepthClearColor = 0xFFFCFFFC;
+}
+
 void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 {
 	DepthBuffer *buffer = DepthBuffer_FindBuffer( gDP.colorImage.address );
@@ -959,7 +1017,8 @@ void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 	if (buffer)
 		buffer->cleared = TRUE;
 
-	if (gDP.depthImageAddress == gDP.colorImage.address)
+	if (gDP.depthImageAddress == gDP.colorImage.address ||
+	    (gDP.fillColor.color == DepthClearColor && gDP.otherMode.cycleType == G_CYC_FILL))
 	{
 		OGL_ClearDepthBuffer();
 		return;
@@ -970,11 +1029,13 @@ void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 		//if (gDP.fillColor.a == 0.0f)
 		//	return;
 
-		if ((ulx == 0) && (uly == 0) && ((unsigned int)lrx == VI.width) && ((unsigned int)lry == VI.height))
+		if ((ulx == 0) && (uly == 0) &&
+		    ((unsigned int)lrx >= VI.width) && ((unsigned int)lry >= VI.height))
 		{
 			OGL_ClearColorBuffer( &gDP.fillColor.r );
 			return;
 		}
+
 	}
 
 	OGL_DrawRect( ulx, uly, lrx, lry, (gDP.otherMode.cycleType == G_CYC_FILL) ? &gDP.fillColor.r : &gDP.blendColor.r );
@@ -1022,10 +1083,9 @@ void gDPSetKeyGB(u32 cG, u32 sG, u32 wG, u32 cB, u32 sB, u32 wB )
 	gDP.key.width.b = GXcastu8f32( wB );
 }
 
-// Yoshi's Story draws some backgrounds as a texrect into an 8-bit colour image and
-// then reads that image back as a texture. Copy the
-// source texels straight into the colour image in RDRAM instead and skip the draw.
-// (from GLideN64's texturedRectBGCopy())
+// GLideN64's texturedRectBGCopy(). Yoshi's Story draws some backgrounds as a texrect
+// into an 8-bit colour image and then reads that image back as a texture, so copy the
+// source texels straight into the colour image in RDRAM and skip the draw.
 static BOOL _gDPTextureRectangleBGCopy( f32 ulx, f32 uly, f32 lrx, f32 lry, f32 s, f32 t,
                                         f32 dsdx, f32 dtdy )
 {
@@ -1085,8 +1145,153 @@ static BOOL _gDPTextureRectangleBGCopy( f32 ulx, f32 uly, f32 lrx, f32 lry, f32 
 	return TRUE;
 }
 
+#ifdef __GX__
+// GLideN64 does hack_rectDepthBufferCopyPD with texturedRectDepthBufferCopy(),
+// which copies the whole depth buffer back to RDRAM.
+//
+// We can do similar via GX_PeekZ.
+#define GDP_MAX_ARTIFACT_SAMPLES 128
+
+static struct
+{
+	u32 rowAddress;	// the z buffer row the game read - write back relative to this
+	u16 x, y;		// screen pixel it sampled
+} gDPArtifactSamples[GDP_MAX_ARTIFACT_SAMPLES];
+
+static u32 gDPArtifactSampleCount = 0;
+static BOOL gDPArtifactSynced = FALSE;
+
+// The N64's depth word: 3 bit exponent, 11 bit mantissa, 2 dz bits, we need to encode to it.
+// I think this covers it enough for PD.
+static u16 _gDPEncodeN64Depth( f32 ndc01 )
+{
+	if (ndc01 < 0.0f) ndc01 = 0.0f;
+	if (ndc01 > 1.0f) ndc01 = 1.0f;
+
+	const u32 value = (u32)(ndc01 * 261632.0f);
+	u32 exponent, mantissa;
+
+	if      (value > 0x3F800) { exponent = 7; mantissa = value;      }
+	else if (value > 0x3F000) { exponent = 6; mantissa = value;      }
+	else if (value > 0x3E000) { exponent = 5; mantissa = value >> 1; }
+	else if (value > 0x3C000) { exponent = 4; mantissa = value >> 2; }
+	else if (value > 0x38000) { exponent = 3; mantissa = value >> 3; }
+	else if (value > 0x30000) { exponent = 2; mantissa = value >> 4; }
+	else if (value > 0x20000) { exponent = 1; mantissa = value >> 5; }
+	else                      { exponent = 0; mantissa = value >> 6; }
+
+	return (u16)((exponent << 13) | ((mantissa & 0x7FF) << 2));
+}
+
+static u16 _gDPPeekDepth( u16 x, u16 y )
+{
+	const u16 efbX = (u16)(OGL.GXorigX + (f32)x * OGL.GXscaleX);
+	const u16 efbY = (u16)(OGL.GXorigY + (f32)y * OGL.GXscaleY);
+	u32 z = 0;
+
+	GX_PeekZ( efbX, efbY, &z );
+
+	// Undo the viewport depth range the scene was drawn with
+	f32 ndc01 = (f32)z / 16777215.0f;
+	const f32 nearz = gSP.viewport.nearz;
+	const f32 farz  = gSP.viewport.farz;
+
+	if (farz != nearz)
+		ndc01 = (ndc01 - nearz) / (farz - nearz);
+
+	const u16 encoded = _gDPEncodeN64Depth( ndc01 );
+
+	return encoded;
+}
+
+// TRUE means it was handled and nothing should be drawn
+static BOOL _gDPArtifactDepthCopy( f32 ulx, f32 uly, f32 lry, f32 s )
+{
+	if ((config.generalEmulation.hacks & hack_rectDepthBufferCopyPD) == 0)
+		return FALSE;
+
+	if (gDP.otherMode.cycleType != G_CYC_COPY || uly != 0.0f || (lry - uly) > 1.0f)
+		return FALSE;
+
+	if (gDP.textureImage.size != G_IM_SIZ_16b)
+		return FALSE;
+
+	if (gDP.loadInfo[gSP.textureTile[0]->tmem & 0x1FF].loadType != LOADTYPE_BLOCK)
+		return FALSE;
+
+	// What is being read has to be a whole row of the current depth image.
+	const u32 stride = (u32)VI.width << 1;
+
+	if (stride == 0 || gDP.depthImageAddress == 0 ||
+	    gDP.textureImage.address < gDP.depthImageAddress)
+		return FALSE;
+
+	const u32 rowOffset = gDP.textureImage.address - gDP.depthImageAddress;
+
+	if (rowOffset >= stride * (u32)VI.height || (rowOffset % stride) != 0)
+		return FALSE;
+
+	const u32 x = (u32)s;
+	const u32 y = rowOffset / stride;
+	const u32 dstIndex = (u32)ulx;
+
+	if (x >= (u32)VI.width || dstIndex > 0x0FFF)
+		return FALSE;
+
+	if (!gDPArtifactSynced)
+	{
+		GX_DrawDone();
+		gDPArtifactSynced = TRUE;
+
+	}
+
+	const u16 depth = _gDPPeekDepth( (u16)x, (u16)y );
+
+	// One texel is enough
+	const u32 dstAddress = gDP.colorImage.address + (dstIndex << 1);
+
+	if ((dstAddress + 1) < RDRAMSize)
+		*(u16*)&RDRAM[dstAddress] = depth;
+
+	// Remembered so _gDPResolveArtifactDepths() can answer the second read.
+	if (gDPArtifactSampleCount < GDP_MAX_ARTIFACT_SAMPLES)
+	{
+		gDPArtifactSamples[gDPArtifactSampleCount].rowAddress = gDP.textureImage.address;
+		gDPArtifactSamples[gDPArtifactSampleCount].x = (u16)x;
+		gDPArtifactSamples[gDPArtifactSampleCount].y = (u16)y;
+		++gDPArtifactSampleCount;
+	}
+
+	return TRUE;
+}
+
+// The second of the two reads
+static void _gDPResolveArtifactDepths()
+{
+	if (gDPArtifactSampleCount == 0)
+		return;
+
+	GX_DrawDone();
+
+	for (u32 i = 0; i < gDPArtifactSampleCount; i++)
+	{
+		// rowAddress is the row the game itself read, so this lands on its
+		// artifact->zbufptr whether or not the depth image and g_ZbufPtr1 agree.
+		const u32 address = gDPArtifactSamples[i].rowAddress + ((u32)gDPArtifactSamples[i].x << 1);
+
+		if ((address + 1) < RDRAMSize)
+			*(u16*)&RDRAM[address] = _gDPPeekDepth( gDPArtifactSamples[i].x, gDPArtifactSamples[i].y );
+	}
+
+	gDPArtifactSampleCount = 0;
+}
+#endif // __GX__
+
 void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f32 t, f32 dsdx, f32 dtdy, const f32 *colorOverride )
 {
+	if (_gDPArtifactDepthCopy( ulx, uly, lry, s ))
+		return;
+
  	if (gDP.otherMode.cycleType == G_CYC_COPY)
 	{
 		dsdx = 1.0f;
@@ -1127,7 +1332,7 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 
 	if (blitted)
 	{
-		// nothing to do, the rect went straight into RDRAM above
+		// The rect went straight into RDRAM above.
 	}
 	else if (lrs > s)
 	{
@@ -1167,8 +1372,37 @@ void gDPTextureRectangleFlip( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 
 #endif
 }
 
+// GLideN64's copyWhiteToRDRAM(). Zelda OoT reads the frame buffer back out of RDRAM
+// and checks it before opening the subscreen; a real copy does not satisfy it, but a
+// buffer full of white does, and without it the menu takes 7-10 seconds to appear
+// (GLideN64 issue #327).
+static void _gDPCopyWhiteToRDRAM()
+{
+	const u32 numBytes = (VI.width * VI.height) << 1;
+
+	if (numBytes == 0 || (gDP.colorImage.address + numBytes) > RDRAMSize)
+		return;
+
+	memset( &RDRAM[gDP.colorImage.address], 0xFF, numBytes );
+
+	FrameBuffer_RestampMarkers( gDP.colorImage.address, gDP.colorImage.address + numBytes - 1 );
+}
+
 void gDPFullSync()
 {
+	FB_frame++;
+
+	if (gDP.m_subscreen &&
+	    gDP.colorImage.size == G_IM_SIZ_16b &&
+	    gDP.colorImage.width == VI.width)
+	{
+		_gDPCopyWhiteToRDRAM();
+		gDP.m_subscreen = false;
+	}
+
+	_gDPResolveArtifactDepths();
+	gDPArtifactSynced = FALSE;
+
 	*REG.MI_INTR |= MI_INTR_DP;
 
 	CheckInterrupts();

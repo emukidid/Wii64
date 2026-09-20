@@ -50,6 +50,7 @@ typedef struct
 
 	u32 PC[18], PCi, busy, halt, infloop, close, DList, uc_start, uc_dstart, cmd, nextCmd, count;
 	u32 F5DL[18];
+	char romname[21];
 } RSPInfo;
 
 extern RSPInfo RSP;

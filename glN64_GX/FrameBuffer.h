@@ -24,6 +24,9 @@ struct FrameBuffer
 	u32 startAddress, endAddress;
 	u32 size, width, height, changed;
 	float scaleX, scaleY;
+	BOOL fingerprint;	// FrameBuffer_CopyRdram() stamped this buffer
+	u32 validityChecked;	// the frame its validity was last established at
+	u32 refreshedFrame;	// the frame its texture was last re-captured from the EFB
 };
 
 struct FrameBufferInfo
@@ -36,14 +39,35 @@ extern FrameBufferInfo frameBuffer;
 
 void FrameBuffer_Init();
 void FrameBuffer_Destroy();
+void FrameBuffer_RemoveBuffersOfWidth( u32 width );
 void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height );
 void FrameBuffer_RenderBuffer( u32 address );
 void FrameBuffer_RestoreBuffer( u32 address, u16 size, u16 width );
-void FrameBuffer_RemoveBuffer( u32 address );
+void FrameBuffer_Remove( FrameBuffer *buffer );
+void FrameBuffer_RemoveIntersections( FrameBuffer *current );
+void FrameBuffer_RemoveBufferForTexture( CachedTexture *texture );
 void FrameBuffer_InvalidateBuffer( u32 address );
 FrameBuffer *FrameBuffer_FindBuffer( u32 address );
+FrameBuffer *FrameBuffer_GetBuffer( u32 startAddress );
 void FrameBuffer_ActivateBufferTexture( s16 t, FrameBuffer *buffer );
 #ifdef __GX__
+// GLideN64's FrameBuffer::copyRdram()/isValid(). Rather than snapshot the games
+// pixels, an auxiliary buffer gets four words of our own stamped over its start and
+// is later asked only whether they survived. Which is what makes it immune to the
+// game rewriting its own frame buffer, as OoT's pause filter seems to.
+void FrameBuffer_CopyRdram( FrameBuffer *buffer );
+BOOL FrameBuffer_IsValid( FrameBuffer *buffer );
+// Display list counter, bumped in gDPFullSync(). Upstream has dwnd().getBuffersSwapCount()
+extern u32 FB_frame;
+// Restamp any buffer starting in [start,end] after deliberately rewriting RDRAM
+// underneath it (upstream does the same after copyWhiteToRDRAM()).
+void FrameBuffer_RestampMarkers( u32 start, u32 end );
+// TRUE while this texture's buffer is being scanned out or rendered into. The
+// texture cache asks before its eviction of last resort takes a frame buffer.
+BOOL FrameBuffer_IsTextureLive( const CachedTexture *texture );
+// Re-capture the EFB into this buffer's texture, at most once a frame and only
+// while it is the buffer being rendered into.
+void FrameBuffer_RefreshCurrent( FrameBuffer *buffer );
 void FrameBuffer_RemoveBottom();
 void FrameBuffer_MoveToTop( FrameBuffer *newtop );
 void FrameBuffer_IncrementVIcount();
