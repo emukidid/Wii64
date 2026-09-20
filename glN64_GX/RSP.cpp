@@ -478,6 +478,12 @@ static void _RSP_SetGameHacks()
 		config.generalEmulation.hacks |= hack_rectDepthBufferCopyPD; // TODO check if this works here
 	else if (strstr( RSP.romname, "GOLDENEYE" ) != NULL)
 		config.generalEmulation.hacks |= hack_clearAloneDepthBuffer;
+	else if (strstr( RSP.romname, "F1 POLE POSITION 64" ) != NULL ||
+	         strstr( RSP.romname, "ROADSTERS TROPHY" ) != NULL ||
+	         strstr( RSP.romname, "VIGILANTE 8" ) != NULL ||
+	         strstr( RSP.romname, "Extreme G 2" ) != NULL ||
+	         strstr( RSP.romname, "\xb4\xb8\xbd\xc4\xd8\xb0\xd1\x47\x32" ) != NULL)
+		config.generalEmulation.hacks |= hack_noDepthFrameBuffers;
 }
 
 void RSP_Init()

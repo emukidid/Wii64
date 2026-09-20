@@ -667,4 +667,9 @@ extern "C" int getEfbHeight() {
 	return vmode->efbHeight;
 }
 
-} //namespace menu 
+extern "C" int getVmodeAA() {
+	GXRModeObj* vmode = Gui::getInstance().gfx->getVmode();
+	return vmode->aa;
+}
+
+} //namespace menu

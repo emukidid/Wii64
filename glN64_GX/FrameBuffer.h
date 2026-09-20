@@ -25,6 +25,7 @@ struct FrameBuffer
 	u32 size, width, height, changed;
 	float scaleX, scaleY;
 	BOOL fingerprint;	// FrameBuffer_CopyRdram() stamped this buffer
+	BOOL isDepthBuffer;	// GLideN64's m_isDepthBuffer: saved at the depth image address
 	u32 validityChecked;	// the frame its validity was last established at
 	u32 refreshedFrame;	// the frame its texture was last re-captured from the EFB
 };

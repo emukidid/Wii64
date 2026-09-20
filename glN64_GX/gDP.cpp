@@ -531,6 +531,15 @@ void gDPSetDepthImage( u32 address )
 
 	DepthBuffer_SetBuffer( depthAddress );
 
+	// GLideN64's DepthBufferList::saveBuffer(): whichever colour buffer's range holds the
+	// depth image is a depth buffer too, not just one saved exactly at its address.
+	if (OGL.frameBufferTextures)
+	{
+		FrameBuffer *holder = FrameBuffer_FindBuffer( depthAddress );
+		if (holder != NULL)
+			holder->isDepthBuffer = TRUE;
+	}
+
 	if (depthBuffer.current->cleared)
 		OGL_ClearDepthBuffer();
 	else if ((config.generalEmulation.hacks & hack_clearAloneDepthBuffer) != 0 &&
@@ -700,6 +709,14 @@ static BOOL _gDPCheckForFrameBufferTexture( u32 address, u32 width, u32 bytes, u
 	FrameBuffer *buffer = FrameBuffer_FindBuffer( address );
 	if (buffer == NULL)
 	{
+		return FALSE;
+	}
+
+	if ((config.generalEmulation.hacks & hack_noDepthFrameBuffers) != 0 && buffer->isDepthBuffer)
+	{
+		if (buffer->startAddress != gDP.colorImage.address)
+			FrameBuffer_Remove( buffer );
+
 		return FALSE;
 	}
 
@@ -1083,6 +1100,55 @@ void gDPSetKeyGB(u32 cG, u32 sG, u32 wG, u32 cB, u32 sB, u32 wB )
 	gDP.key.width.b = GXcastu8f32( wB );
 }
 
+
+static void _gDPWriteRDRAM( u32 dst, const u8 *src, u8 fill, u32 numBytes )
+{
+	const u32 end     = dst + numBytes;
+	const u32 wgStart = (dst + 31) & ~31;
+	const u32 wgEnd   = end & ~31;
+
+	if (wgEnd > wgStart)
+	{
+		const u32 head = wgStart - dst;
+		const u32 span = wgEnd - wgStart;
+
+		DCFlushRange( &RDRAM[wgStart], span );
+
+		GX_RedirectWriteGatherPipe( &RDRAM[wgStart] );
+		if (src)
+		{
+			const u8 *s = src + head;
+			for (u32 n = span >> 3; n; --n, s += 8)
+			{
+				f64 quad;
+				memcpy( &quad, s, 8 );
+				wgPipe->F64 = quad;
+			}
+		}
+		else
+		{
+			const u32 word = fill * 0x01010101u;
+			for (u32 n = span >> 2; n; --n)
+				wgPipe->U32 = word;
+		}
+		GX_RestoreWriteGatherPipe();
+
+		DCInvalidateRange( &RDRAM[wgStart], span );
+
+		if (src)
+		{
+			memcpy( &RDRAM[dst], src, head );
+			memcpy( &RDRAM[wgEnd], src + head + span, end - wgEnd );
+		}
+		else
+		{
+			memset( &RDRAM[dst], fill, head );
+			memset( &RDRAM[wgEnd], fill, end - wgEnd );
+		}
+		return;
+	}
+}
+
 // GLideN64's texturedRectBGCopy(). Yoshi's Story draws some backgrounds as a texrect
 // into an 8-bit colour image and then reads that image back as a texture, so copy the
 // source texels straight into the colour image in RDRAM and skip the draw.
@@ -1135,11 +1201,13 @@ static BOOL _gDPTextureRectangleBGCopy( f32 ulx, f32 uly, f32 lrx, f32 lry, f32 
 		return FALSE;
 	}
 
-	for (s32 y = 0; y < rows; y++)
-		memcpy( &RDRAM[dstBase + (dstY0 + y) * ciWidth],
-		        &RDRAM[srcBase + y * texWidth], (size_t)width );
-
-
+	if (width == ciWidth && texWidth == ciWidth)
+		_gDPWriteRDRAM( (u32)(dstBase + dstY0 * ciWidth), &RDRAM[srcBase], 0,
+		                (u32)(rows * ciWidth) );
+	else
+		for (s32 y = 0; y < rows; y++)
+			memcpy( &RDRAM[dstBase + (dstY0 + y) * ciWidth],
+			        &RDRAM[srcBase + y * texWidth], (size_t)width );
 
 	FrameBuffer_InvalidateBuffer( gDP.colorImage.address );
 	return TRUE;
@@ -1150,6 +1218,18 @@ static BOOL _gDPTextureRectangleBGCopy( f32 ulx, f32 uly, f32 lrx, f32 lry, f32 
 // which copies the whole depth buffer back to RDRAM.
 //
 // We can do similar via GX_PeekZ.
+extern "C" int getVmodeAA();
+
+static u32 _gDPDecodeZ16Mid( u16 z16 )
+{
+	const u32 e     = z16 >> 13;
+	const u32 m     = z16 & 0x1FFF;
+	const u32 shift = (e < 7) ? 10 - e : 4;
+	const u32 base  = 0x1000000 - (0x1000000 >> e);
+
+	return base + (m << shift) + ((1u << shift) >> 1);
+}
+
 #define GDP_MAX_ARTIFACT_SAMPLES 128
 
 static struct
@@ -1190,6 +1270,9 @@ static u16 _gDPPeekDepth( u16 x, u16 y )
 	u32 z = 0;
 
 	GX_PeekZ( efbX, efbY, &z );
+
+	if (getVmodeAA())
+		z = _gDPDecodeZ16Mid( (u16)(z & 0xFFFF) );
 
 	// Undo the viewport depth range the scene was drawn with
 	f32 ndc01 = (f32)z / 16777215.0f;
@@ -1383,7 +1466,7 @@ static void _gDPCopyWhiteToRDRAM()
 	if (numBytes == 0 || (gDP.colorImage.address + numBytes) > RDRAMSize)
 		return;
 
-	memset( &RDRAM[gDP.colorImage.address], 0xFF, numBytes );
+	_gDPWriteRDRAM( gDP.colorImage.address, NULL, 0xFF, numBytes );
 
 	FrameBuffer_RestampMarkers( gDP.colorImage.address, gDP.colorImage.address + numBytes - 1 );
 }

@@ -22,6 +22,7 @@ struct Config
 
 extern Config config;
 
+#define hack_noDepthFrameBuffers	(1<<1)  //Do not use depth buffers as texture
 #define hack_subscreen				(1<<6)  //Fix subscreen delay in Zelda OOT and Doubutsu no Mori
 #define hack_clearAloneDepthBuffer	(1<<3)  //Force clear depth buffer if there is no frame buffer for it. Multiplayer in GE and PD.
 #define hack_rectDepthBufferCopyPD	(1<<8)  //Perfect Dark's depth buffer reads, which drive its light coronas

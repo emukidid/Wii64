@@ -102,8 +102,7 @@ void FrameBuffer_CopyRdram( FrameBuffer *buffer )
 	if (height <= 1)
 		return;
 
-	// equiv to !m_isDepthBuffer
-	if (buffer->startAddress == gDP.depthImageAddress)
+	if (buffer->isDepthBuffer)
 		return;
 
 	if (!_fbIsAuxiliary( buffer ))
@@ -148,30 +147,19 @@ void FrameBuffer_Init()
 	fbUnderConstruction = NULL;
 }
 
+static BOOL _fbIsLive( const FrameBuffer *buffer );
+
+// Eviction for the texture cache: the least recently used buffer that is neither being
+// built, scanned out nor rendered into.
 void FrameBuffer_RemoveBottom()
 {
-	if (frameBuffer.bottom == NULL || frameBuffer.bottom == fbUnderConstruction)
-		return;
+	FrameBuffer *victim = frameBuffer.bottom;
 
-	FrameBuffer *newBottom = frameBuffer.bottom->higher;
+	while (victim != NULL && (victim == fbUnderConstruction || _fbIsLive( victim )))
+		victim = victim->higher;
 
-#ifdef __GX__
-	frameBuffer.bottom->texture->frameBufferTexture = false;
-#endif //__GX__
-	TextureCache_Remove( frameBuffer.bottom->texture );
-
-	if (frameBuffer.bottom == frameBuffer.top)
-		frameBuffer.top = NULL;
-
-
-	free( frameBuffer.bottom );
-
-    frameBuffer.bottom = newBottom;
-	
-	if (frameBuffer.bottom != NULL)
-		frameBuffer.bottom->lower = NULL;
-
-	frameBuffer.numBuffers--;
+	if (victim != NULL)
+		FrameBuffer_Remove( victim );
 }
 
 void FrameBuffer_Remove( FrameBuffer *buffer )
@@ -475,7 +463,7 @@ void FrameBuffer_Destroy()
 {
 	fbUnderConstruction = NULL;
 	while (frameBuffer.bottom)
-		FrameBuffer_RemoveBottom();
+		FrameBuffer_Remove( frameBuffer.bottom );
 }
 
 void FrameBuffer_RefreshCurrent( FrameBuffer *buffer )
@@ -493,7 +481,7 @@ void FrameBuffer_RefreshCurrent( FrameBuffer *buffer )
 	GX_SetTexCopySrc(OGL.GXorigX, OGL.GXorigY,
 	                 (u16) buffer->texture->realWidth, (u16) buffer->texture->realHeight);
 	GX_SetTexCopyDst((u16) buffer->texture->realWidth, (u16) buffer->texture->realHeight,
-	                 buffer->texture->GXtexfmt, GX_FALSE);
+	                 buffer->texture->GXtexfmt, GX_COPY_PROGRESSIVE);
 	GX_SetCopyFilter(GX_FALSE, NULL, GX_FALSE, NULL);
 	DCInvalidateRange(buffer->texture->GXtexture, buffer->texture->textureBytes);
 	GX_CopyTex(buffer->texture->GXtexture, GX_FALSE);
@@ -552,6 +540,7 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 			GX_SetCopyFilter(rmode->aa, rmode->sample_pattern, GX_TRUE, rmode->vfilter);
 #endif // __GX__
 
+			current->isDepthBuffer = (address == gDP.depthImageAddress) ? TRUE : FALSE;
 			_fbUpdateEndAddress( current );
 			FrameBuffer_RemoveIntersections( current );
 			FrameBuffer_CopyRdram( current );
@@ -596,6 +585,7 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 	current->width = width;
 	current->height = height;
 	current->size = size;
+	current->isDepthBuffer = (address == gDP.depthImageAddress) ? TRUE : FALSE;
 	_fbUpdateEndAddress( current );
 
 	// Before allocating, so an overlapping stale buffer gives its texture back first.
