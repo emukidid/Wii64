@@ -2161,9 +2161,6 @@ void OGL_GXinitDlist()
 	OGL.enable2xSaI = glN64_use2xSaiTextures;
 	OGL.forceBilinear = glN64_use2xSaiTextures;
 
-	// for _gDPPeekDepth()
-	GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
-
 	// init Ztexture, AlphaCompare, and Texture Clamping
 	GX_SetZTexture(GX_ZT_DISABLE,GX_TF_Z8,0);
 	OGL.GXuseAlphaCompare = false;
