@@ -51,12 +51,14 @@ void FrameBuffer_InvalidateBuffer( u32 address );
 FrameBuffer *FrameBuffer_FindBuffer( u32 address );
 FrameBuffer *FrameBuffer_GetBuffer( u32 startAddress );
 void FrameBuffer_ActivateBufferTexture( s16 t, FrameBuffer *buffer );
+void FrameBuffer_ActivateBufferTextureBG( s16 t, FrameBuffer *buffer );
 #ifdef __GX__
 // GLideN64's FrameBuffer::copyRdram()/isValid(). Rather than snapshot the games
 // pixels, an auxiliary buffer gets four words of our own stamped over its start and
 // is later asked only whether they survived. Which is what makes it immune to the
 // game rewriting its own frame buffer, as OoT's pause filter seems to.
 void FrameBuffer_CopyRdram( FrameBuffer *buffer );
+void FrameBuffer_CopyToRDRAM( u32 sourceAddress, u32 address, u32 width, u32 height );
 BOOL FrameBuffer_IsValid( FrameBuffer *buffer );
 // Display list counter, bumped in gDPFullSync(). Upstream has dwnd().getBuffersSwapCount()
 extern u32 FB_frame;

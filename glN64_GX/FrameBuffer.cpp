@@ -30,6 +30,8 @@
 #include "Combiner.h"
 #include "gDP.h"
 #include "Types.h"
+#include "../gui/DEBUG.h"
+#include "Config.h"
 
 FrameBufferInfo frameBuffer;
 
@@ -46,7 +48,6 @@ void glN64_FBRead( unsigned long addr )
 #ifdef __GX__
 extern heap_cntrl* GXtexCache;
 #endif //__GX__
-
 
 // Re-stamp the fingerprint of every buffer starting in [start,end].
 // GLideN64 does this after copyWhiteToRDRAM().
@@ -195,10 +196,16 @@ void FrameBuffer_Remove( FrameBuffer *buffer )
 
 	if (buffer->texture)
 	{
-		buffer->texture->frameBufferTexture = false;
-		TextureCache_Remove( buffer->texture );
-	}
+		CachedTexture *texture = buffer->texture;
 
+		// Clearing buffer->texture, rather than the frameBufferTexture flag, is what
+		// stops TextureCache_Remove() coming back around through
+		// FrameBuffer_RemoveBufferForTexture(). It looks this buffer up by texture and
+		// no longer finds it. The flag has to stay around, because it is what tells
+		// _texHeapFree() the GP may still be writing to the block. (Vigilante 8 menu crash)
+		buffer->texture = NULL;
+		TextureCache_Remove( texture );
+	}
 
 	free( buffer );
 
@@ -339,7 +346,6 @@ void FrameBuffer_RemoveIntersections( FrameBuffer *current )
 {
 	if (current == NULL)
 		return;
-
 
 	FrameBuffer *iter = frameBuffer.bottom;
 	while (iter != NULL)
@@ -553,7 +559,6 @@ void FrameBuffer_SaveBuffer( u32 address, u16 size, u16 width, u16 height )
 			return;
 		}
 	}
-
 
 	FrameBuffer *stale = frameBuffer.bottom;
 
@@ -1007,6 +1012,27 @@ FrameBuffer *FrameBuffer_FindBuffer( u32 address )
 	return best;
 }
 
+// GLideN64's FrameBuffer::getTextureBG(). A BG rect covers the buffer as a whole and
+// takes its origin from gSP.bgImage, so none of the load tile shift and offset work
+// that FrameBuffer_ActivateBufferTexture() does applies here.
+void FrameBuffer_ActivateBufferTextureBG( s16 t, FrameBuffer *buffer )
+{
+	if (buffer == NULL || buffer->texture == NULL)
+		return;
+
+	buffer->texture->scaleS = OGL.GXscaleX / (float)buffer->texture->realWidth;
+	buffer->texture->scaleT = OGL.GXscaleY / (float)buffer->texture->realHeight;
+
+	buffer->texture->shiftScaleS = 1.0f;
+	buffer->texture->shiftScaleT = 1.0f;
+
+	buffer->texture->offsetS = gSP.bgImage.imageX;
+	buffer->texture->offsetT = gSP.bgImage.imageY;
+
+	FrameBuffer_MoveToTop( buffer );
+	TextureCache_ActivateTexture( t, buffer->texture );
+}
+
 void FrameBuffer_ActivateBufferTexture( s16 t, FrameBuffer *buffer )
 {
 #ifndef __GX__
@@ -1050,11 +1076,82 @@ void FrameBuffer_ActivateBufferTexture( s16 t, FrameBuffer *buffer )
 #endif //__GX__
 	}
 
+	// GLideN64 hack_fbTextureOffset (their #519 and #2112)
+	if ((config.generalEmulation.hacks & hack_fbTextureOffset) != 0 &&
+	    gDP.otherMode.textureFilter != G_TF_POINT)
+	{
+		buffer->texture->offsetS -= 1.0f;
+		buffer->texture->offsetT -= 1.0f;
+	}
+
 	FrameBuffer_MoveToTop( buffer );
 	TextureCache_ActivateTexture( t, buffer->texture );
 }
 
 #ifdef __GX__
+
+void FrameBuffer_CopyToRDRAM( u32 sourceAddress, u32 address, u32 width, u32 height )
+{
+	if (width == 0 || height == 0)
+		return;
+
+	if (address >= RDRAMSize || (address + width * height * 2) > RDRAMSize)
+		return;
+
+	FrameBuffer *source = FrameBuffer_GetBuffer( sourceAddress );
+
+	if (source == NULL || source->texture == NULL ||
+	    source->texture->GXtexture == NULL ||
+	    source->texture->GXtexfmt != GX_TF_RGBA8)
+		return;
+
+	const u32 texW = source->texture->width;
+	const u32 texH = source->texture->height;
+	const u32 pitch = source->texture->realWidth;
+
+	if (texW == 0 || texH == 0 || pitch < 4)
+		return;
+
+	const u8 *tex = (const u8*)source->texture->GXtexture;
+	DCInvalidateRange( source->texture->GXtexture, source->texture->textureBytes );
+
+	for (u32 oy = 0; oy < height; oy++)
+	{
+		u32 sy = (oy * texH) / height;
+		if (sy >= texH)
+			sy = texH - 1;
+
+		const u8 *tileRow = tex + (sy >> 2) * (pitch >> 2) * 64;
+		const u32 i = ((sy & 3) << 2) << 1;
+
+		u16 *dst = (u16*)&RDRAM[address + oy * width * 2];
+
+		for (u32 ox = 0; ox < width; ox++)
+		{
+			u32 sx = (ox * texW) / width;
+			if (sx >= texW)
+				sx = texW - 1;
+
+			const u8 *tile = tileRow + (sx >> 2) * 64;
+			const u32 t = i + ((sx & 3) << 1);
+
+			const u8 r = tile[t + 1];
+			const u8 g = tile[32 + t];
+			const u8 b = tile[32 + t + 1];
+
+			dst[ox] = (u16)(((r >> 3) << 11) | ((g >> 3) << 6) | ((b >> 3) << 1) | 1);
+		}
+	}
+
+	DCFlushRange( &RDRAM[address], width * height * 2 );
+
+	FrameBuffer_RestampMarkers( address, address + width * height * 2 - 1 );
+
+	FrameBuffer *written = FrameBuffer_GetBuffer( address );
+	if (written != NULL && written->isDepthBuffer)
+		written->changed = FALSE;
+}
+
 void FrameBuffer_IncrementVIcount()
 {
 	FrameBuffer *buffer = frameBuffer.top;

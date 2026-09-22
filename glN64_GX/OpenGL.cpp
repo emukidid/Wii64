@@ -682,11 +682,10 @@ void OGL_UpdateStates()
 #else // !__GX__
 	//Zbuffer settings
 	static u8 GXenableZmode, GXZfunc = GX_ALWAYS, GXZupdate = GX_FALSE;
-	if ((gSP.geometryMode & G_ZBUFFER) && gDP.otherMode.cycleType <= G_CYC_2CYCLE)
-//		glEnable( GL_DEPTH_TEST );
+	if (((gSP.geometryMode & G_ZBUFFER) || (gDP.otherMode.depthSource == G_ZS_PRIM)) &&
+	    gDP.otherMode.cycleType <= G_CYC_2CYCLE)
 		GXenableZmode = GX_ENABLE;
 	else
-//		glDisable( GL_DEPTH_TEST );
 		GXenableZmode = GX_DISABLE;
 
 	if (gDP.changed & CHANGED_RENDERMODE)

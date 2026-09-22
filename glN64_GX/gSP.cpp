@@ -32,6 +32,7 @@
 #include "DepthBuffer.h"
 #include "RDP.h"
 #include "FrameBuffer.h"
+#include "Config.h"
 extern "C" {
 #include "../main/gamehacks.h"
 }
@@ -74,7 +75,6 @@ f32 identityMatrix[4][4] =
 
 void gSPLoadUcodeEx( u32 uc_start, u32 uc_dstart, u16 uc_dsize )
 {
-	RSP.PCi = 0;
 	gSP.matrix.modelViewi = 0;
 	gSP.changed |= CHANGED_MATRIX;
 	gSP.status[0] = gSP.status[1] = gSP.status[2] = gSP.status[3] = 0;
@@ -1301,8 +1301,8 @@ void gSPTriangle( s32 v0, s32 v1, s32 v2 )
 #endif
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
-	gDP.colorImage.changed = TRUE;
-	gDP.colorImage.height = (unsigned long)(max( gDP.colorImage.height, gDP.scissor.lry ));
+
+	gDPBufferChanged( gDP.scissor.lry );
 }
 
 void gSP1Triangle( s32 v0, s32 v1, s32 v2 )
@@ -2359,6 +2359,35 @@ static void BgRectCopyStripped( u32 bgAddr )
 //#define S2DEX_FORCE_ONE_PIECE_BG 1
 
 // GLideN64 _useOnePieceBgCode()
+static BOOL _bgSourceIsFrameBuffer( u32 address, FrameBuffer **found )
+{
+	if (found != NULL)
+		*found = NULL;
+
+	if (!OGL.frameBufferTextures)
+		return FALSE;
+
+	const uObjScaleBg *objBg = (const uObjScaleBg*)&RDRAM[address];
+	FrameBuffer *buffer = FrameBuffer_FindBuffer( RSP_SegmentToPhysical( objBg->imagePtr ) );
+
+	if (buffer == NULL || buffer->size != objBg->imageSiz)
+		return FALSE;
+
+	if (buffer->isDepthBuffer && !buffer->changed)
+		return FALSE;
+
+	if (objBg->imageFmt == G_IM_FMT_CI && objBg->imageSiz == G_IM_SIZ_8b)
+		return FALSE;
+
+	if (!FrameBuffer_IsValid( buffer ))
+		return FALSE;
+
+	if (found != NULL)
+		*found = buffer;
+
+	return TRUE;
+}
+
 static BOOL _useOnePieceBgCode( u32 address )
 {
 #ifdef S2DEX_FORCE_ONE_PIECE_BG
@@ -2392,11 +2421,30 @@ void gSPBgRect1Cyc( u32 bg )
 	gSP.bgImage.format = objScaleBg->imageFmt;
 	gSP.bgImage.size = objScaleBg->imageSiz;
 	gSP.bgImage.palette = objScaleBg->imagePal;
-	gDP.textureMode = TEXTUREMODE_BGIMAGE;
+	FrameBuffer *bgBuffer = NULL;
+
+	if (_bgSourceIsFrameBuffer( address, &bgBuffer ) && bgBuffer != NULL)
+	{
+		gSP.textureTile[0]->frameBufferAddress = bgBuffer->startAddress;
+		gDP.textureMode = TEXTUREMODE_FRAMEBUFFER_BG;
+
+		if ((config.generalEmulation.hacks & hack_fbCopyToRDRAM) != 0 &&
+		    gDP.colorImage.address == gDP.depthImageAddress &&
+		    bgBuffer->startAddress != gDP.colorImage.address)
+		{
+			gDP.m_fbCopyPending = gDP.colorImage.address;
+			gDP.m_fbCopySource = bgBuffer->startAddress;
+		}
+	}
+	else
+		gDP.textureMode = TEXTUREMODE_BGIMAGE;
 
 
 	f32 imageX = _FIXED2FLOAT( objScaleBg->imageX, 5 );
 	f32 imageY = _FIXED2FLOAT( objScaleBg->imageY, 5 );
+
+	gSP.bgImage.imageX = imageX;
+	gSP.bgImage.imageY = imageY;
 	f32 imageW = objScaleBg->imageW >> 2;
 	f32 imageH = objScaleBg->imageH >> 2;
 
@@ -2473,11 +2521,17 @@ void gSPBgRect1Cyc( u32 bg )
 		gDPTextureRectangle( frameX0, frameY0 + loadHeight * i, 
 			frameX1, frameY0 + loadHeight * (i + 1) - 1, 0, 0, 0, 4, 1 );
 	}*/
+	if (gDP.textureMode == TEXTUREMODE_FRAMEBUFFER_BG)
+	{
+		gDP.textureMode = TEXTUREMODE_NORMAL;
+		gDP.changed |= CHANGED_TILE;
+	}
 }
 
 void gSPBgRectCopy( u32 bg )
 {
 	u32 address = RSP_SegmentToPhysical( bg );
+
 
 	if (!_useOnePieceBgCode( address ))
 	{
@@ -2493,10 +2547,29 @@ void gSPBgRectCopy( u32 bg )
 	gSP.bgImage.format = objBg->imageFmt;
 	gSP.bgImage.size = objBg->imageSiz;
 	gSP.bgImage.palette = objBg->imagePal;
-	gDP.textureMode = TEXTUREMODE_BGIMAGE;
+	FrameBuffer *bgBuffer = NULL;
+
+	if (_bgSourceIsFrameBuffer( address, &bgBuffer ) && bgBuffer != NULL)
+	{
+		gSP.textureTile[0]->frameBufferAddress = bgBuffer->startAddress;
+		gDP.textureMode = TEXTUREMODE_FRAMEBUFFER_BG;
+
+		if ((config.generalEmulation.hacks & hack_fbCopyToRDRAM) != 0 &&
+		    gDP.colorImage.address == gDP.depthImageAddress &&
+		    bgBuffer->startAddress != gDP.colorImage.address)
+		{
+			gDP.m_fbCopyPending = gDP.colorImage.address;
+			gDP.m_fbCopySource = bgBuffer->startAddress;
+		}
+	}
+	else
+		gDP.textureMode = TEXTUREMODE_BGIMAGE;
 
 	u16 imageX = objBg->imageX >> 5;
 	u16 imageY = objBg->imageY >> 5;
+
+	gSP.bgImage.imageX = (f32)imageX;
+	gSP.bgImage.imageY = (f32)imageY;
 
 	s16 frameX = objBg->frameX / 4;
 	s16 frameY = objBg->frameY / 4;
@@ -2506,6 +2579,12 @@ void gSPBgRectCopy( u32 bg )
 	gSPTexture( 1.0f, 1.0f, 0, 0, TRUE );
 
 	gDPTextureRectangle( frameX, frameY, frameX + frameW - 1, frameY + frameH - 1, 0, imageX, imageY, 4, 1 );
+	
+	if (gDP.textureMode == TEXTUREMODE_FRAMEBUFFER_BG)
+	{
+		gDP.textureMode = TEXTUREMODE_NORMAL;
+		gDP.changed |= CHANGED_TILE;
+	}
 }
 
 // S2DEX G_MW_GENSTAT.  The status words gate G_SELECT_DL and the OBJ_LOADTXTR
@@ -2952,8 +3031,8 @@ void gSPObjSprite( u32 sp )
 #endif // __GX__
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
-	gDP.colorImage.changed = TRUE;
-	gDP.colorImage.height = (unsigned long)(max( gDP.colorImage.height, gDP.scissor.lry ));
+
+	gDPBufferChanged( gDP.scissor.lry );
 }
 
 void gSPObjLoadTxSprite( u32 txsp )

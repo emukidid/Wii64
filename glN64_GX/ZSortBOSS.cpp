@@ -572,8 +572,8 @@ static void ZSortBOSS_DrawScreenSpaceTriangle( u8 *_addr, u32 _vnum, u32 _textur
 	OGL_UpdateViewport();
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
-	gDP.colorImage.changed = TRUE;
-	gDP.colorImage.height = (unsigned long)MAX( gDP.colorImage.height, gDP.scissor.lry );
+
+	gDPBufferChanged( gDP.scissor.lry );
 }
 
 static void ZSortBOSS_DrawObject( u8 *_addr, u32 _type )

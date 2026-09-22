@@ -29,6 +29,7 @@
 #define TEXTUREMODE_TEXRECT		1
 #define TEXTUREMODE_BGIMAGE		2
 #define TEXTUREMODE_FRAMEBUFFER	3
+#define TEXTUREMODE_FRAMEBUFFER_BG	4
 
 #define LOADTYPE_BLOCK			0
 #define LOADTYPE_TILE			1
@@ -353,6 +354,8 @@ struct gDPInfo
 	u32 loadType;
 
 	bool m_subscreen;	// for GLideN64 hack_subscreen
+	u32 m_fbCopyPending;
+	u32 m_fbCopySource;
 };
 
 extern gDPInfo gDP;
@@ -391,6 +394,7 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt );
 void gDPLoadBlock( u32 tile, u32 uls, u32 ult, u32 lrs, u32 dxt );
 void gDPLoadTLUT( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt );
 void gDPSetScissor( u32 mode, f32 ulx, f32 uly, f32 lrx, f32 lry );
+void gDPBufferChanged( f32 maxY );
 void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry );
 void gDPSetConvert( s32 k0, s32 k1, s32 k2, s32 k3, s32 k4, s32 k5 );
 void gDPSetKeyR( u32 cR, u32 sR, u32 wR );

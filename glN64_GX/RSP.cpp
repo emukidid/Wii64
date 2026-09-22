@@ -323,20 +323,27 @@ void RSP_ProcessDList()
 		if ((uc_start != RSP.uc_start) || (uc_dstart != RSP.uc_dstart))
 			gSPLoadUcodeEx( uc_start, uc_dstart, uc_dsize );
 
-		gDPSetAlphaCompare( G_AC_NONE );
-		gDPSetDepthSource( G_ZS_PIXEL );
-		gDPSetRenderMode( 0, 0 );
-		gDPSetAlphaDither( G_AD_DISABLE );
-		gDPSetColorDither( G_CD_DISABLE );
-		gDPSetCombineKey( G_CK_NONE );
-		gDPSetTextureConvert( G_TC_FILT );
-		gDPSetTextureFilter( G_TF_POINT );
-		gDPSetTextureLUT( G_TT_NONE );
-		gDPSetTextureLOD( G_TL_TILE );
-		gDPSetTextureDetail( G_TD_CLAMP );
-		gDPSetTexturePersp( G_TP_PERSP );
-		gDPSetCycleType( G_CYC_1CYCLE );
-		gDPPipelineMode( G_PM_NPRIMITIVE );
+		if ((config.generalEmulation.hacks & hack_doNotResetOtherModeL) == 0)
+		{
+			gDPSetAlphaCompare( G_AC_NONE );
+			gDPSetDepthSource( G_ZS_PIXEL );
+			gDPSetRenderMode( 0, 0 );
+		}
+
+		if ((config.generalEmulation.hacks & hack_doNotResetOtherModeH) == 0)
+		{
+			gDPSetAlphaDither( G_AD_DISABLE );
+			gDPSetColorDither( G_CD_DISABLE );
+			gDPSetCombineKey( G_CK_NONE );
+			gDPSetTextureConvert( G_TC_FILT );
+			gDPSetTextureFilter( G_TF_POINT );
+			gDPSetTextureLUT( G_TT_NONE );
+			gDPSetTextureLOD( G_TL_TILE );
+			gDPSetTextureDetail( G_TD_CLAMP );
+			gDPSetTexturePersp( G_TP_PERSP );
+			gDPSetCycleType( G_CYC_1CYCLE );
+			gDPPipelineMode( G_PM_NPRIMITIVE );
+		}
 
 #ifdef __GX__
 		OGL_GXinitDlist();
@@ -478,12 +485,16 @@ static void _RSP_SetGameHacks()
 		config.generalEmulation.hacks |= hack_rectDepthBufferCopyPD; // TODO check if this works here
 	else if (strstr( RSP.romname, "GOLDENEYE" ) != NULL)
 		config.generalEmulation.hacks |= hack_clearAloneDepthBuffer;
-	else if (strstr( RSP.romname, "F1 POLE POSITION 64" ) != NULL ||
-	         strstr( RSP.romname, "ROADSTERS TROPHY" ) != NULL ||
-	         strstr( RSP.romname, "VIGILANTE 8" ) != NULL ||
-	         strstr( RSP.romname, "Extreme G 2" ) != NULL ||
-	         strstr( RSP.romname, "\xb4\xb8\xbd\xc4\xd8\xb0\xd1\x47\x32" ) != NULL)
-		config.generalEmulation.hacks |= hack_noDepthFrameBuffers;
+	else if (strstr( RSP.romname, "CONKER BFD" ) != NULL ||
+	         strstr( RSP.romname, "MarioTennis" ) != NULL)
+		config.generalEmulation.hacks |= hack_fbTextureOffset;
+	else if (strstr( RSP.romname, "MASK" ) != NULL) // ZELDA MAJORA'S MASK
+		config.generalEmulation.hacks |= hack_fbCopyToRDRAM;
+	else if (strstr( RSP.romname, "Quake" ) != NULL)
+		config.generalEmulation.hacks |= hack_doNotResetOtherModeH | hack_doNotResetOtherModeL;
+	else if (strstr( RSP.romname, "QUAKE II" ) != NULL ||
+	         strstr( RSP.romname, "GAUNTLET LEGENDS" ) != NULL)
+		config.generalEmulation.hacks |= hack_doNotResetOtherModeH;
 }
 
 void RSP_Init()
@@ -526,6 +537,8 @@ void RSP_Init()
 	memset( &gSP, 0, sizeof( gSPInfo ) );
 	gDP.otherMode._u64 = 0;
 	gDP.m_subscreen = false;
+	gDP.m_fbCopyPending = 0;
+	gDP.m_fbCopySource = 0;
 
 	_RSP_SetGameHacks();
 

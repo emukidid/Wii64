@@ -614,6 +614,8 @@ void VI_GX_PreRetraceCallback(u32 retraceCnt)
 
 void VI_GX_DrawSyncCallback(u16 token)
 {
+	TextureCache_ReleaseRetired();
+
 	VIDEO_SetNextFramebuffer(VI.xfb[token & 1]);
 	VIDEO_Flush();
 	VIDEO_SetPreRetraceCallback(VI_GX_PreRetraceCallback);

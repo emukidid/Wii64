@@ -441,6 +441,8 @@ void gDPUpdateColorImage()
 }
 #endif
 
+static void _gDPWriteRDRAM( u32 dst, const u8 *src, u8 fill, u32 numBytes );
+
 void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 {
 	if (enablegDPUpdateColorImage &&
@@ -468,6 +470,16 @@ void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 
 	if (gDP.colorImage.address != address)
 	{
+		if (gDP.m_fbCopyPending != 0 && gDP.m_fbCopyPending == gDP.colorImage.address)
+		{
+			if (gDP.colorImage.size == G_IM_SIZ_16b && gDP.colorImage.width == VI.width)
+				FrameBuffer_CopyToRDRAM( gDP.m_fbCopySource, gDP.colorImage.address,
+				                         gDP.colorImage.width, VI.height );
+
+			gDP.m_fbCopyPending = 0;
+			gDP.m_fbCopySource = 0;
+		}
+
 		if (OGL.frameBufferTextures)
 		{
 			if (gDP.colorImage.changed)
@@ -485,6 +497,19 @@ void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 			gDP.colorImage.height = VI.height;
  		else
 			gDP.colorImage.height = 1;
+	}
+
+	if ((config.generalEmulation.hacks & hack_fbCopyToRDRAM) != 0 &&
+	    format == G_IM_FMT_I && size == G_IM_SIZ_8b && width == VI.width)
+	{
+		const u32 address32 = RSP_SegmentToPhysical( address );
+		const u32 numBytes = width * VI.height;
+
+		if (numBytes != 0 && (address32 + numBytes) <= RDRAMSize)
+		{
+			_gDPWriteRDRAM( address32, NULL, 0xFF, numBytes );
+			FrameBuffer_RestampMarkers( address32, address32 + numBytes - 1 );
+		}
 	}
 
 	if ((config.generalEmulation.hacks & hack_subscreen) != 0 &&
@@ -530,15 +555,6 @@ void gDPSetDepthImage( u32 address )
 	const u32 depthAddress = RSP_SegmentToPhysical( address );
 
 	DepthBuffer_SetBuffer( depthAddress );
-
-	// GLideN64's DepthBufferList::saveBuffer(): whichever colour buffer's range holds the
-	// depth image is a depth buffer too, not just one saved exactly at its address.
-	if (OGL.frameBufferTextures)
-	{
-		FrameBuffer *holder = FrameBuffer_FindBuffer( depthAddress );
-		if (holder != NULL)
-			holder->isDepthBuffer = TRUE;
-	}
 
 	if (depthBuffer.current->cleared)
 		OGL_ClearDepthBuffer();
@@ -712,18 +728,19 @@ static BOOL _gDPCheckForFrameBufferTexture( u32 address, u32 width, u32 bytes, u
 		return FALSE;
 	}
 
-	if ((config.generalEmulation.hacks & hack_noDepthFrameBuffers) != 0 && buffer->isDepthBuffer)
-	{
-		if (buffer->startAddress != gDP.colorImage.address)
-			FrameBuffer_Remove( buffer );
-
-		return FALSE;
-	}
-
 	const u32 texEndAddress = address + bytes - 1;
 	if (address > buffer->startAddress &&
 	    (u32)abs( (s32)buffer->width - (s32)width ) > 1 &&
 	    texEndAddress > (buffer->endAddress + (buffer->width << buffer->size >> 1)))
+	{
+		return FALSE;
+	}
+
+	const u32 bufferStride = buffer->width << buffer->size >> 1;
+
+	if (address > buffer->startAddress && bufferStride != 0 &&
+	    (u32)abs( (s32)buffer->width - (s32)width ) > 1 &&
+	    ((address - buffer->startAddress) % bufferStride) != 0)
 	{
 		return FALSE;
 	}
@@ -787,8 +804,6 @@ void gDPLoadTile( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 	bpl = line << 3;
 	height = gDP.loadTile->lrt - gDP.loadTile->ult + 1;
 	src = &RDRAM[address];
-
-
 
 	// Record what this load actually put at this TMEM address
 	{
@@ -984,6 +999,12 @@ void gDPLoadTLUT( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 #endif
 }
 
+void gDPBufferChanged( f32 maxY )
+{
+	gDP.colorImage.changed = TRUE;
+	gDP.colorImage.height = MAX( gDP.colorImage.height, (u32)maxY );
+}
+
 void gDPSetScissor( u32 mode, f32 ulx, f32 uly, f32 lrx, f32 lry )
 {
 	gDP.scissor.mode = mode;
@@ -1058,14 +1079,10 @@ void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 	OGL_DrawRect( ulx, uly, lrx, lry, (gDP.otherMode.cycleType == G_CYC_FILL) ? &gDP.fillColor.r : &gDP.blendColor.r );
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
-	gDP.colorImage.changed = TRUE;
-	if (gDP.otherMode.cycleType == G_CYC_FILL) {
-		if (lry > (s32)VI.height)
-			gDP.colorImage.height = (u32)MAX((s32)gDP.colorImage.height, lry - 1);
-		else
-			gDP.colorImage.height = (u32)MAX((s32)gDP.colorImage.height, lry);
-	} else
-		gDP.colorImage.height = MAX( gDP.colorImage.height, (u32)gDP.scissor.lry );
+	if (gDP.otherMode.cycleType == G_CYC_FILL)
+		gDPBufferChanged( (f32)((lry > (s32)VI.height) ? lry - 1 : lry) );
+	else
+		gDPBufferChanged( gDP.scissor.lry );
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPFillRectangle( %i, %i, %i, %i );\n",
@@ -1436,8 +1453,7 @@ void gDPTextureRectangle( f32 ulx, f32 uly, f32 lrx, f32 lry, s32 tile, f32 s, f
 	gSP.textureTile[1] = textureTileOrg[1];
 
 	if (depthBuffer.current) depthBuffer.current->cleared = FALSE;
-	gDP.colorImage.changed = TRUE;
-	gDP.colorImage.height = (unsigned long)(MAX( gDP.colorImage.height, gDP.scissor.lry ));
+	gDPBufferChanged( gDP.scissor.lry );
 
 #ifdef DEBUG
 	DebugMsg( DEBUG_HIGH | DEBUG_HANDLED, "gDPTextureRectangle( %f, %f, %f, %f, %i, %i, %f, %f, %f, %f );\n",

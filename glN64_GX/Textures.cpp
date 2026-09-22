@@ -663,6 +663,8 @@ BOOL TextureCache_FreeOneTexture()
 }
 #endif // __GX__
 
+static void _texHeapDropRetired();
+
 void TextureCache_Init()
 {
 	TextureCache_InitSlots();
@@ -693,6 +695,7 @@ void TextureCache_Init()
 	}
 	else if (GXtexCacheBase != NULL)
 	{
+		_texHeapDropRetired();
 		__lwp_heap_init(GXtexCache, GXtexCacheBase, GX_TEXTURE_CACHE_SIZE, 32);
 	}
 #endif //__GX__
@@ -807,6 +810,35 @@ static BOOL _texHeapOwns(const void *ptr)
 	        (const char*)ptr < (const char*)GXtexCache->final) ? TRUE : FALSE;
 }
 
+// GX_CopyTex() only queues the copy, and we run into timing issues in some games
+// like Vigilante 8 where it'll write into a FB tex after we've replaced it.
+#define TEX_RETIRE_MAX 64
+
+static void *texRetire[TEX_RETIRE_MAX];
+static u32 texRetireCount = 0;
+
+static void _texHeapDropRetired()
+{
+	texRetireCount = 0;
+}
+
+void TextureCache_ReleaseRetired()
+{
+	while (texRetireCount > 0)
+		__lwp_heap_free( GXtexCache, texRetire[--texRetireCount] );
+}
+
+static void _texHeapRetire( void *ptr )
+{
+	if (texRetireCount >= TEX_RETIRE_MAX)
+	{
+		GX_DrawDone();
+		TextureCache_ReleaseRetired();
+	}
+
+	texRetire[texRetireCount++] = ptr;
+}
+
 static void _texHeapFree(CachedTexture *texture)
 {
 	if (texture->GXtexture == NULL)
@@ -818,7 +850,11 @@ static void _texHeapFree(CachedTexture *texture)
 		return;
 	}
 
-	__lwp_heap_free(GXtexCache, texture->GXtexture);
+	if (texture->frameBufferTexture)
+		_texHeapRetire( texture->GXtexture );
+	else
+		__lwp_heap_free(GXtexCache, texture->GXtexture);
+
 	texture->GXtexture = NULL;
 }
 
@@ -2173,6 +2209,13 @@ void TextureCache_Update( u32 t )
 		FrameBuffer *buffer = FrameBuffer_GetBuffer( gSP.textureTile[t]->frameBufferAddress );
 		if (buffer != NULL)
 			FrameBuffer_ActivateBufferTexture( t, buffer );
+		return;
+	}
+	else if (gDP.textureMode == TEXTUREMODE_FRAMEBUFFER_BG)
+	{
+		FrameBuffer *buffer = FrameBuffer_GetBuffer( gSP.textureTile[t]->frameBufferAddress );
+		if (buffer != NULL)
+			FrameBuffer_ActivateBufferTextureBG( t, buffer );
 		return;
 	}
 
