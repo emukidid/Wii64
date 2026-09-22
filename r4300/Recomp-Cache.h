@@ -25,7 +25,7 @@
 
 #ifdef HW_RVL
 #ifdef GLN64_GX
-#define RECOMP_CACHE_SIZE (10*1024*1024)	// glN64 Wii
+#define RECOMP_CACHE_SIZE ((9*1024*1024) + (512*1024))	// glN64 Wii
 #else
 #define RECOMP_CACHE_SIZE (9*1024*1024)		// Rice Wii
 #endif
