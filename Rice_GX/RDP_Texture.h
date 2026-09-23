@@ -2032,6 +2032,18 @@ void DLParser_TexRect(Gfx *gfx)
 
     uint32 cycletype = gRDP.otherMode.cycle_type;
 
+#ifdef __GX__
+    // Perfect Dark reads its depth buffer through a texrect, provide it via the EFB
+    // before the copy mode adjustments below move the coordinates (Rice stuff).
+    if (_pdDepthBufferCopy( dwXL, dwYL, dwYH, fS0, tileno ))
+    {
+        // ForceMainTextureIndex(tileno) ran above and
+        // the normal exit undoes it so we need to here as well otherwise we'll draw with the wrong tile
+        ForceMainTextureIndex(curTile);
+        return;
+    }
+#endif // __GX__
+
     if (cycletype == CYCLE_TYPE_COPY)
     {
         fDSDX /= 4.0f;  // In copy mode 4 pixels are copied at once.

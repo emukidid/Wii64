@@ -793,6 +793,10 @@ void GenerateCurrentRomOptions()
     {
         options.enableHackForGames = HACK_FOR_BANJO_TOOIE;
     }
+    else if ((strncasecmp((char*)g_curRomInfo.szGameName, "Perfect Dark", 12) == 0))
+    {
+        options.enableHackForGames = HACK_FOR_PD;
+    }
     else if ((strncmp((char*)g_curRomInfo.szGameName, "DR.MARIO", 8) == 0))
     {
         options.enableHackForGames = HACK_FOR_DR_MARIO;

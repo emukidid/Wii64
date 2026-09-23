@@ -258,6 +258,145 @@ const char *textluttype[4] = {"RGB16", "I16?", "RGBA16", "IA16"};
 uint16  g_wRDPTlut[0x200];
 uint32  g_dwRDPPalCrc[16];
 
+#ifdef __GX__
+// Perfect Dark's light coronas, ported from glN64_GX's hack_rectDepthBufferCopyPD.
+extern "C" int getVmodeAA();
+
+static uint32 _pdDecodeZ16Mid( uint16 z16 )
+{
+    const uint32 e     = z16 >> 13;
+    const uint32 m     = z16 & 0x1FFF;
+    const uint32 shift = (e < 7) ? 10 - e : 4;
+    const uint32 base  = 0x1000000 - (0x1000000 >> e);
+
+    return base + (m << shift) + ((1u << shift) >> 1);
+}
+
+// The N64 depth word: 3 bit exponent, 11 bit mantissa, 2 dz bits.
+static uint16 _pdEncodeN64Depth( float ndc01 )
+{
+    if (ndc01 < 0.0f) ndc01 = 0.0f;
+    if (ndc01 > 1.0f) ndc01 = 1.0f;
+
+    const uint32 value = (uint32)(ndc01 * 261632.0f);
+    uint32 exponent, mantissa;
+
+    if      (value > 0x3F800) { exponent = 7; mantissa = value;      }
+    else if (value > 0x3F000) { exponent = 6; mantissa = value;      }
+    else if (value > 0x3E000) { exponent = 5; mantissa = value >> 1; }
+    else if (value > 0x3C000) { exponent = 4; mantissa = value >> 2; }
+    else if (value > 0x38000) { exponent = 3; mantissa = value >> 3; }
+    else if (value > 0x30000) { exponent = 2; mantissa = value >> 4; }
+    else if (value > 0x20000) { exponent = 1; mantissa = value >> 5; }
+    else                      { exponent = 0; mantissa = value >> 6; }
+
+    return (uint16)((exponent << 13) | ((mantissa & 0x7FF) << 2));
+}
+
+static uint16 _pdPeekDepth( uint16 x, uint16 y )
+{
+    // Rice maps an N64 pixels differently to glN64
+    const uint16 efbX = (uint16)(gGX.GXorigX + (float)x * windowSetting.fMultX * gGX.GXscaleX);
+    const uint16 efbY = (uint16)(gGX.GXorigY + (float)y * windowSetting.fMultY * gGX.GXscaleY);
+    uint32 z = 0;
+
+    GX_PeekZ( efbX, efbY, &z );
+
+    if (getVmodeAA())
+        z = _pdDecodeZ16Mid( (uint16)(z & 0xFFFF) );
+
+    return _pdEncodeN64Depth( (float)z / 16777215.0f );
+}
+
+#define PD_MAX_DEPTH_SAMPLES 128
+
+static struct
+{
+    uint32 rowAddress;
+    uint16 x, y;
+} g_pdDepthSamples[PD_MAX_DEPTH_SAMPLES];
+
+static uint32 g_pdDepthSampleCount = 0;
+static bool   g_pdDepthSynced = false;
+
+// true means the rect was answered here and nothing should be drawn.
+static bool _pdDepthBufferCopy( uint32 ulx, uint32 uly, uint32 lry, float s, uint32 tileno )
+{
+    if (options.enableHackForGames != HACK_FOR_PD)
+        return false;
+
+    if (gRDP.otherMode.cycle_type != CYCLE_TYPE_COPY || uly != 0 || (lry - uly) > 1)
+        return false;
+
+    if (g_TI.dwSize != TXT_SIZE_16b)
+        return false;
+
+    uint32 zWidth = (uint32)(*g_GraphicsInfo.VI_WIDTH_REG & 0xFFF);
+    if (zWidth == 0)
+        zWidth = (uint32)g_CI.dwWidth;
+
+    const uint32 stride = zWidth << 1;
+
+    if (zWidth == 0 || g_ZI.dwAddr == 0 || g_TI.dwAddr < g_ZI.dwAddr)
+        return false;
+
+    const uint32 rowOffset = g_TI.dwAddr - g_ZI.dwAddr;
+
+    if ((rowOffset % stride) != 0)
+        return false;
+
+    const uint32 x = (uint32)s;
+    const uint32 y = rowOffset / stride;
+
+    if (x >= zWidth || y >= 1024 || ulx > 0x0FFF)
+        return false;
+
+    if (!g_pdDepthSynced)
+    {
+        GX_DrawDone();
+        g_pdDepthSynced = true;
+    }
+
+    const uint16 depth = _pdPeekDepth( (uint16)x, (uint16)y );
+
+    // One texel is enough
+    const uint32 dstAddress = g_CI.dwAddr + (ulx << 1);
+
+    if ((dstAddress + 1) < g_dwRamSize)
+        RDRAM_UHALF(dstAddress) = depth;
+
+    // Remembered so the full sync below can answer the second read.
+    if (g_pdDepthSampleCount < PD_MAX_DEPTH_SAMPLES)
+    {
+        g_pdDepthSamples[g_pdDepthSampleCount].rowAddress = g_TI.dwAddr;
+        g_pdDepthSamples[g_pdDepthSampleCount].x = (uint16)x;
+        g_pdDepthSamples[g_pdDepthSampleCount].y = (uint16)y;
+        ++g_pdDepthSampleCount;
+    }
+
+    return true;
+}
+
+// The second of the two reads
+static void _pdResolveDepthSamples()
+{
+    if (g_pdDepthSampleCount == 0)
+        return;
+
+    GX_DrawDone();
+
+    for (uint32 i = 0; i < g_pdDepthSampleCount; i++)
+    {
+        const uint32 address = g_pdDepthSamples[i].rowAddress + ((uint32)g_pdDepthSamples[i].x << 1);
+
+        if ((address + 1) < g_dwRamSize)
+            RDRAM_UHALF(address) = _pdPeekDepth( g_pdDepthSamples[i].x, g_pdDepthSamples[i].y );
+    }
+
+    g_pdDepthSampleCount = 0;
+}
+#endif // __GX__
+
 #include "FrameBuffer.h"
 #include "RSP_GBI0.h"
 #include "RSP_GBI1.h"
@@ -1171,6 +1310,10 @@ void DLParser_RDPTileSync(Gfx *gfx)
 void DLParser_RDPFullSync(Gfx *gfx)
 { 
     DP_Timing(DLParser_RDPFullSync);
+#ifdef __GX__
+    _pdResolveDepthSamples();
+    g_pdDepthSynced = false;
+#endif // __GX__
     TriggerDPInterrupt();
 }
 
