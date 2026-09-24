@@ -353,7 +353,7 @@ public class RiverLayout extends FlowLayout implements LayoutManager,
 				// if (m.isVisible()) {
 				if (hasConstraint(m, TAB_STOP))
 					x = getInsets(target).left + ruler.getTab(tabIndex++);
-				int dy = (valign == VTOP) ? 0 : (height - m.getHeight()) / 2;
+				int dy = (valign.equals(VTOP)) ? 0 : (height - m.getHeight()) / 2;
 				if (ltr) {
 					m.setLocation(x, y + dy);
 				} else {
