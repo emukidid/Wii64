@@ -603,6 +603,8 @@ void GBI_MakeCurrent( MicrocodeInfo *current )
 
 		RDP_Init();
 
+		G_TRI1 = G_TRI2 = G_TRI4 = G_QUAD = G_DMA_TRI = (u32)-1;
+
 		switch (current->type)
 		{
 			case F3D:		F3D_Init();		break;
