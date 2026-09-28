@@ -32,6 +32,7 @@ extern "C" {
 #include "CRC.h"
 #include "FrameBuffer.h"
 #include "DepthBuffer.h"
+#include "DepthCopy.h"
 #include "VI.h"
 #ifdef __GX__
 #include "Textures.h"
@@ -441,7 +442,7 @@ void gDPUpdateColorImage()
 }
 #endif
 
-static void _gDPWriteRDRAM( u32 dst, const u8 *src, u8 fill, u32 numBytes );
+static void _gDPWriteRDRAM( u32 dst, const u8 *src, u32 fill, u32 numBytes );
 
 void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 {
@@ -507,7 +508,7 @@ void gDPSetColorImage( u32 format, u32 size, u32 width, u32 address )
 
 		if (numBytes != 0 && (address32 + numBytes) <= RDRAMSize)
 		{
-			_gDPWriteRDRAM( address32, NULL, 0xFF, numBytes );
+			_gDPWriteRDRAM( address32, NULL, 0xFFFFFFFF, numBytes );
 			FrameBuffer_RestampMarkers( address32, address32 + numBytes - 1 );
 		}
 	}
@@ -1001,6 +1002,9 @@ void gDPLoadTLUT( u32 tile, u32 uls, u32 ult, u32 lrs, u32 lrt )
 
 void gDPBufferChanged( f32 maxY )
 {
+	if (gDP.colorImage.address == gDP.depthImageAddress)
+		DepthCopy_NoteDepthImageWritten();
+
 	gDP.colorImage.changed = TRUE;
 	gDP.colorImage.height = MAX( gDP.colorImage.height, (u32)maxY );
 }
@@ -1048,6 +1052,47 @@ void gDPSetDepthClearColor()
 		DepthClearColor = 0xFFFCFFFC;
 }
 
+// GLideN64's FrameBufferList::fillRDRAM()
+static void _gDPFillRDRAM( s32 ulx, s32 uly, s32 lrx, s32 lry )
+{
+	if (gDP.otherMode.cycleType != G_CYC_FILL || gDP.colorImage.size != G_IM_SIZ_16b)
+		return;
+
+	const s32 width = (s32)gDP.colorImage.width;
+
+	if (ulx < (s32)gDP.scissor.ulx) ulx = (s32)gDP.scissor.ulx;
+	if (uly < (s32)gDP.scissor.uly) uly = (s32)gDP.scissor.uly;
+	if (lrx > (s32)gDP.scissor.lrx) lrx = (s32)gDP.scissor.lrx;
+	if (lry > (s32)gDP.scissor.lry) lry = (s32)gDP.scissor.lry;
+	if (ulx < 0) ulx = 0;
+	if (uly < 0) uly = 0;
+	if (lrx > width) lrx = width;
+
+	if (width == 0 || lrx <= ulx || lry <= uly)
+		return;
+
+	const u32 stride = (u32)width << 1;
+	const u32 rowBytes = (u32)(lrx - ulx) << 1;
+	const u32 start = gDP.colorImage.address + (u32)uly * stride + ((u32)ulx << 1);
+
+	if (start >= RDRAMSize)
+		return;
+
+	if ((u32)lry > (RDRAMSize - gDP.colorImage.address) / stride)
+		lry = (s32)((RDRAMSize - gDP.colorImage.address) / stride);
+
+	if (lry <= uly)
+		return;
+
+	if (rowBytes == stride)
+		_gDPWriteRDRAM( start, NULL, gDP.fillColor.color, (u32)(lry - uly) * stride );
+	else
+		for (s32 y = uly; y < lry; y++)
+			_gDPWriteRDRAM( start + (u32)(y - uly) * stride, NULL, gDP.fillColor.color, rowBytes );
+
+	FrameBuffer_RestampMarkers( start, start + (u32)(lry - uly - 1) * stride + rowBytes - 1 );
+}
+
 void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 {
 	DepthBuffer *buffer = DepthBuffer_FindBuffer( gDP.colorImage.address );
@@ -1059,6 +1104,14 @@ void gDPFillRectangle( s32 ulx, s32 uly, s32 lrx, s32 lry )
 	    (gDP.fillColor.color == DepthClearColor && gDP.otherMode.cycleType == G_CYC_FILL))
 	{
 		OGL_ClearDepthBuffer();
+		const BOOL depthImage = (gDP.depthImageAddress == gDP.colorImage.address);
+		if (depthImage)
+			DepthCopy_NoteDepthClear();
+
+		// With the depth copy running, the depth image holds the previous frame's depth
+		// for the game to read after this list, so its clear must not land there.
+		if (!depthImage || !DepthCopy_Active())
+			_gDPFillRDRAM( ulx, uly, lrx, lry );
 		return;
 	}
 
@@ -1117,52 +1170,63 @@ void gDPSetKeyGB(u32 cG, u32 sG, u32 wG, u32 cB, u32 sB, u32 wB )
 	gDP.key.width.b = GXcastu8f32( wB );
 }
 
+static inline u8 _gDPFillByte( u32 fill, u32 address )
+{
+	return (u8)(fill >> ((3 - (address & 3)) << 3));
+}
 
-static void _gDPWriteRDRAM( u32 dst, const u8 *src, u8 fill, u32 numBytes )
+static void _gDPWriteRDRAM( u32 dst, const u8 *src, u32 fill, u32 numBytes )
 {
 	const u32 end     = dst + numBytes;
 	const u32 wgStart = (dst + 31) & ~31;
 	const u32 wgEnd   = end & ~31;
 
-	if (wgEnd > wgStart)
+	if (wgEnd <= wgStart)
 	{
-		const u32 head = wgStart - dst;
-		const u32 span = wgEnd - wgStart;
-
-		DCFlushRange( &RDRAM[wgStart], span );
-
-		GX_RedirectWriteGatherPipe( &RDRAM[wgStart] );
 		if (src)
-		{
-			const u8 *s = src + head;
-			for (u32 n = span >> 3; n; --n, s += 8)
-			{
-				f64 quad;
-				memcpy( &quad, s, 8 );
-				wgPipe->F64 = quad;
-			}
-		}
+			memcpy( &RDRAM[dst], src, numBytes );
 		else
-		{
-			const u32 word = fill * 0x01010101u;
-			for (u32 n = span >> 2; n; --n)
-				wgPipe->U32 = word;
-		}
-		GX_RestoreWriteGatherPipe();
-
-		DCInvalidateRange( &RDRAM[wgStart], span );
-
-		if (src)
-		{
-			memcpy( &RDRAM[dst], src, head );
-			memcpy( &RDRAM[wgEnd], src + head + span, end - wgEnd );
-		}
-		else
-		{
-			memset( &RDRAM[dst], fill, head );
-			memset( &RDRAM[wgEnd], fill, end - wgEnd );
-		}
+			for (u32 a = dst; a < end; a++)
+				RDRAM[a] = _gDPFillByte( fill, a );
 		return;
+	}
+
+	const u32 head = wgStart - dst;
+	const u32 span = wgEnd - wgStart;
+
+	DCFlushRange( &RDRAM[wgStart], span );
+
+	GX_RedirectWriteGatherPipe( &RDRAM[wgStart] );
+	if (src)
+	{
+		const u8 *s = src + head;
+		for (u32 n = span >> 3; n; --n, s += 8)
+		{
+			f64 quad;
+			memcpy( &quad, s, 8 );
+			wgPipe->F64 = quad;
+		}
+	}
+	else
+	{
+		for (u32 n = span >> 2; n; --n)
+			wgPipe->U32 = fill;
+	}
+	GX_RestoreWriteGatherPipe();
+
+	DCInvalidateRange( &RDRAM[wgStart], span );
+
+	if (src)
+	{
+		memcpy( &RDRAM[dst], src, head );
+		memcpy( &RDRAM[wgEnd], src + head + span, end - wgEnd );
+	}
+	else
+	{
+		for (u32 a = dst; a < wgStart; a++)
+			RDRAM[a] = _gDPFillByte( fill, a );
+		for (u32 a = wgEnd; a < end; a++)
+			RDRAM[a] = _gDPFillByte( fill, a );
 	}
 }
 
@@ -1482,7 +1546,9 @@ static void _gDPCopyWhiteToRDRAM()
 	if (numBytes == 0 || (gDP.colorImage.address + numBytes) > RDRAMSize)
 		return;
 
-	_gDPWriteRDRAM( gDP.colorImage.address, NULL, 0xFF, numBytes );
+	_gDPWriteRDRAM( gDP.colorImage.address, NULL, 0xFFFFFFFF, numBytes );
+	if (gDP.colorImage.address == gDP.depthImageAddress)
+		DepthCopy_NoteDepthImageWritten();
 
 	FrameBuffer_RestampMarkers( gDP.colorImage.address, gDP.colorImage.address + numBytes - 1 );
 }

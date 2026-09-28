@@ -39,6 +39,7 @@
 #include "Config.h"
 #include "FrameBuffer.h"
 #include "DepthBuffer.h"
+#include "DepthCopy.h"
 #include "GBI.h"
 #include "Turbo3D.h"
 
@@ -347,6 +348,7 @@ void RSP_ProcessDList()
 
 #ifdef __GX__
 		OGL_GXinitDlist();
+		DepthCopy_BeginDList();
 #endif //__GX__
 		if (GBI.current && (GBI.current->type == ZSortBOSS) && REG.SP_STATUS)
 		{
@@ -448,6 +450,8 @@ void RSP_ProcessDList()
 		return;
 	}
 
+	DepthCopy_EndDList();
+
 	RSP.busy = FALSE;
 	RSP.DList++;
 	gSP.changed |= CHANGED_COLORBUFFER;
@@ -474,7 +478,7 @@ static void _RSP_SetGameHacks()
 
 	if (strstr( RSP.romname, "THE LEGEND OF ZELDA" ) != NULL ||
 	    strstr( RSP.romname, "ZELDA MASTER QUEST" ) != NULL)
-		config.generalEmulation.hacks |= hack_subscreen;
+		config.generalEmulation.hacks |= hack_subscreen | hack_copyDepthToRDRAM;
 	else if (strstr( RSP.romname, "DOUBUTSUNOMORI" ) != NULL ||
 	         strstr( RSP.romname, "ANIMAL FOREST" ) != NULL)
 		config.generalEmulation.hacks |= hack_subscreen;
@@ -489,7 +493,10 @@ static void _RSP_SetGameHacks()
 	         strstr( RSP.romname, "MarioTennis" ) != NULL)
 		config.generalEmulation.hacks |= hack_fbTextureOffset;
 	else if (strstr( RSP.romname, "MASK" ) != NULL) // ZELDA MAJORA'S MASK
-		config.generalEmulation.hacks |= hack_fbCopyToRDRAM;
+		config.generalEmulation.hacks |= hack_fbCopyToRDRAM | hack_copyDepthToRDRAM;
+	else if (strstr( RSP.romname, "DONKEY KONG 64" ) != NULL ||
+	         strstr( RSP.romname, "D K DISPLAY" ) != NULL)
+		config.generalEmulation.hacks |= hack_copyDepthToRDRAM;
 	else if (strstr( RSP.romname, "Quake" ) != NULL)
 		config.generalEmulation.hacks |= hack_doNotResetOtherModeH | hack_doNotResetOtherModeL;
 	else if (strstr( RSP.romname, "QUAKE II" ) != NULL ||
@@ -541,6 +548,7 @@ void RSP_Init()
 	gDP.m_fbCopySource = 0;
 
 	_RSP_SetGameHacks();
+	DepthCopy_Reset();
 
 	gDP.loadTile = &gDP.tiles[7];
 	gSP.textureTile[0] = &gDP.tiles[0];

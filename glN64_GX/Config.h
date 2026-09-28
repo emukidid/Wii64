@@ -27,6 +27,7 @@ extern Config config;
 #define hack_rectDepthBufferCopyPD	(1<<8)  //Perfect Dark's depth buffer reads, which drive its light coronas
 #define hack_fbTextureOffset		(1<<23) //Offset Conker's shadow in CBFD and the Bob-ombs in Mario Tennis
 #define hack_fbCopyToRDRAM			(1<<24) //Write the EFB back to RDRAM for real. Majora's Mask pictograph
+#define hack_copyDepthToRDRAM		(1<<25) //Copy the EFB's depth into the N64 depth image a frame late. OoT/MM glows/sun, DK64 camera/sun
 #define hack_doNotResetOtherModeH	(1<<14) //Don't reset othermode.h at dlist start. Quake and Quake 2
 #define hack_doNotResetOtherModeL	(1<<15) //Don't reset othermode.l at dlist start. Quake
 

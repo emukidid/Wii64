@@ -15,6 +15,7 @@ OBJ_GLN64_GX	=glN64_GX/glN64.o \
 		glN64_GX/gSP.o \
 		glN64_GX/GBI.o \
 		glN64_GX/DepthBuffer.o \
+		glN64_GX/DepthCopy.o \
 		glN64_GX/CRC.o \
 		glN64_GX/2xSAI.o \
 		glN64_GX/TEV_combiner.o \
