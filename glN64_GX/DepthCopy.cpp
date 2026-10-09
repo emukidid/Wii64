@@ -38,6 +38,7 @@ static struct
 	BOOL cleared;			// the current display list cleared the depth buffer
 	BOOL depthWritten;		// and wrote to the depth image as a colour image
 	u32  clearedAddress;	// the depth image that clear was made to
+	BOOL clearWritten;		// that clear has been put in RDRAM already
 	BOOL pending;			// a copy is queued for the next display list to convert
 	u32  address;			// the N64 depth image it is for
 	u32  width, height;		// in N64 pixels, which is also the copy's size in texels
@@ -214,9 +215,11 @@ void DepthCopy_EndDList()
 {
 	const BOOL cleared = dc.cleared;
 	const BOOL depthWritten = dc.depthWritten;
+	const BOOL clearWritten = dc.clearWritten;
 
 	dc.cleared = FALSE;
 	dc.depthWritten = FALSE;
+	dc.clearWritten = FALSE;
 
 	const BOOL active = DepthCopy_Active();
 	BOOL skip = !active;
@@ -237,7 +240,9 @@ void DepthCopy_EndDList()
 	{
 		// The clear this list made was kept out of RDRAM while the copy was running, and
 		// there is no copy to put there instead so fall back to what it would have written.
-		if (active && cleared)
+		// Not if it's there already... anything drawn into the depth image after it (MM's
+		// pictograph) would be lost.
+		if (active && cleared && !clearWritten)
 			_dcFillClear( dc.clearedAddress, VI.width, VI.height, (u16)(DepthClearColor >> 16) );
 		return;
 	}
@@ -270,11 +275,18 @@ void DepthCopy_NoteDepthClear()
 {
 	dc.cleared = TRUE;
 	dc.clearedAddress = gDP.depthImageAddress;
+	dc.clearWritten = FALSE;
 }
 
 void DepthCopy_NoteDepthImageWritten()
 {
 	dc.depthWritten = TRUE;
+
+	if (dc.cleared && !dc.clearWritten && DepthCopy_Active())
+	{
+		_dcFillClear( dc.clearedAddress, VI.width, VI.height, (u16)(DepthClearColor >> 16) );
+		dc.clearWritten = TRUE;
+	}
 }
 
 #else // HW_RVL

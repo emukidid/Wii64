@@ -737,10 +737,12 @@ static BOOL _gDPCheckForFrameBufferTexture( u32 address, u32 width, u32 bytes, u
 		return FALSE;
 	}
 
+	// Banjo Kazooie pause screen needs gDP.textureImage.width
 	const u32 bufferStride = buffer->width << buffer->size >> 1;
+	const u32 rowWidth = (loadType == LOADTYPE_TILE) ? gDP.textureImage.width : width;
 
 	if (address > buffer->startAddress && bufferStride != 0 &&
-	    (u32)abs( (s32)buffer->width - (s32)width ) > 1 &&
+	    (u32)abs( (s32)buffer->width - (s32)rowWidth ) > 1 &&
 	    ((address - buffer->startAddress) % bufferStride) != 0)
 	{
 		return FALSE;
@@ -1546,9 +1548,10 @@ static void _gDPCopyWhiteToRDRAM()
 	if (numBytes == 0 || (gDP.colorImage.address + numBytes) > RDRAMSize)
 		return;
 
-	_gDPWriteRDRAM( gDP.colorImage.address, NULL, 0xFFFFFFFF, numBytes );
 	if (gDP.colorImage.address == gDP.depthImageAddress)
 		DepthCopy_NoteDepthImageWritten();
+	// Do this after to not break pictograph in ZeldaMM
+	_gDPWriteRDRAM( gDP.colorImage.address, NULL, 0xFFFFFFFF, numBytes );
 
 	FrameBuffer_RestampMarkers( gDP.colorImage.address, gDP.colorImage.address + numBytes - 1 );
 }
