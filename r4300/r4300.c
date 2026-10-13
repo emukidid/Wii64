@@ -59,6 +59,7 @@ precomp_instr PC;
 
 #ifdef PPC_DYNAREC
 #include "ppc/Recompile.h"
+#include "ppc/Register-Cache.h"
 #ifdef HW_RVL
 #include "../gc_memory/MEM2.h"
 PowerPC_block **const blocks = (PowerPC_block**)(BLOCKS_LO);
@@ -102,6 +103,10 @@ inline unsigned long update_invalid_addr(unsigned long addr)
 }
 
 
+#ifdef PPC_DYNAREC
+unsigned int fpr_odd_base;
+#endif
+
 void set_fpr_pointers(int newStatus)
 {
     int i;
@@ -109,6 +114,12 @@ void set_fpr_pointers(int newStatus)
     const int isBigEndian = 1;
 #else
     const int isBigEndian = 0;
+#endif
+
+#ifdef PPC_DYNAREC
+    // Recompiled code addresses odd single FPRs off this (see fprOffset), it's loaded into
+    // DYNAREG_FPRODD on every entry from the trampoline and after anything that can MTC0
+    fpr_odd_base = (unsigned int)&r4300.fpr_data[0] - ((newStatus & 0x04000000) ? 0 : 12);
 #endif
 
     // update the FPR register pointers

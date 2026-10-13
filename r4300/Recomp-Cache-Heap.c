@@ -172,6 +172,10 @@ static void unlink_func(PowerPC_func* func){
 }
 
 static void free_func(PowerPC_func* func, unsigned int addr){
+	// The trampoline must not link a branch in this func's code from here on
+	note_freed_func(func);
+	// Remove func links first, a link from the func to itself is patched in its own code
+	unlink_func(func);
 	// Free the code associated with the func
 	__lwp_heap_free(cache, func->code);
 	MetaCache_Free(func->code_addr);
@@ -186,8 +190,6 @@ static void free_func(PowerPC_func* func, unsigned int addr){
 	// Remove the func from the block.
 	if (blocks[addr>>12])
 		remove_func(&blocks[addr>>12]->funcs, func);
-	// Remove func links
-	unlink_func(func);
 
 	free(func);
 }
@@ -273,6 +275,8 @@ void RecompCache_Alloc(unsigned int size, unsigned int address, PowerPC_func* fu
 }
 
 void RecompCache_Realloc(PowerPC_func* func, unsigned int new_size){
+	// The code moves, so a branch in the old code must not be linked
+	note_freed_func(func);
 	// There should be no need for the code to be preserved
 	__lwp_heap_free(cache, func->code);
 	func->code = __lwp_heap_allocate(cache, new_size);

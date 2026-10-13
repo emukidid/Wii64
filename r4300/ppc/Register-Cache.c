@@ -85,10 +85,8 @@ static RegMapping flushLRURegister(void){
 	RegMapping map = regMap[lru_i].map;
 	// Flush the register if its dirty
 	if(regMap[lru_i].dirty) _flushRegister(lru_i);
-	// Mark unmapped
+	// Mark unmapped. A constant stays known, r4300.gpr now holds it.
 	regMap[lru_i].map.hi = regMap[lru_i].map.lo = -1;
-	// Clear constant bit
-	regMap[lru_i].constant = 0;
 	return map;
 }
 
@@ -182,7 +180,7 @@ int mapRegister(int reg){
 		return regMap[reg].map.lo;
 	}
 	regMap[reg].dirty = 0; // If it hasn't previously been mapped, its clean
-	regMap[reg].constant = 0; // It also can't be a constant
+	// A constant that was flushed stays known, the load below reads that value
 	// Iterate over the HW registers and find one that's available
 	int available = getAvailableHWReg();
 	if(available >= 0){
@@ -225,7 +223,7 @@ RegMapping mapRegister64(int reg){
 		return regMap[reg].map;
 	}
 	regMap[reg].dirty = 0; // If it hasn't previously been mapped, its clean
-	regMap[reg].constant = 0; // It also can't be a constant
+	// A constant that was flushed stays known, the loads below read that value
 
 	// Try to find any already available registers
 	regMap[reg].map.hi = getAvailableHWReg();
@@ -267,7 +265,15 @@ void flushRegister(int reg){
 		availableRegs[ regMap[reg].map.lo ] = 1;
 	}
 	regMap[reg].map.hi = regMap[reg].map.lo = -1;
-	regMap[reg].constant = 0;
+	// A constant stays known: if it was dirty it was just written back, so r4300.gpr holds it.
+	// clearRegisterConstants drops them where code can be entered from the trampoline.
+}
+
+// Forget every known constant. Called wherever code can be entered from the trampoline
+// (see reset_code_addr), where nothing about the registers can be assumed.
+void clearRegisterConstants(void){
+	int i;
+	for(i=0; i<34; ++i) regMap[i].constant = 0;
 }
 
 RegMappingType getRegisterMapping(int reg){
@@ -327,15 +333,61 @@ static char availableFPRsDefault[32] = {
 static char availableFPRs[32];
 
 // Actually perform the store for a dirty register mapping
-static void _flushFPR(int reg){
-	// Store the register to memory (indirectly)
-	if(fprMap[reg].dbl){
-		GEN_LWZ(R0, (reg*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
-		GEN_STFDX(fprMap[reg].map, 0, R0);
-	} else {
-		GEN_LWZ(R0, (reg*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
-		GEN_STFSX(fprMap[reg].map, 0, R0);
+// Where an FPR is, in code that works in either Status FR mode. The FPR data never moves (as in
+// set_fpr_pointers), only which half of it a register name means:
+//   even single i: fpr_data + 8i + 4 in both modes      even double i: fpr_data + 8i in both
+//   odd single i:  fpr_data + 8i + 4, or 8i - 8 with FR clear (12 less)
+// So even registers are a fixed offset from DYNAREG_R4300, and odd singles a fixed offset from
+// DYNAREG_FPRODD, which holds &fpr_data or 12 less (fpr_odd_base).
+int fprOffset(int fpr, int dbl, int* base){
+	if(!(fpr & 1)){
+		*base = DYNAREG_R4300;
+		return offsetof(R4300, fpr_data) + fpr*8 + (dbl ? 0 : 4);
 	}
+	if(!dbl){
+		*base = DYNAREG_FPRODD;
+		return fpr*8 + 4;
+	}
+	return -1;
+}
+
+// reg = the address of an FPR
+void genFprAddress(int reg, int fpr, int dbl){
+	int base, offset = fprOffset(fpr, dbl, &base);
+	if(offset >= 0){
+		GEN_ADDI(reg, base, offset);
+	} else {
+		GEN_LWZ(reg, (fpr*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	}
+}
+
+static void genFprLoad(int hwfpr, int fpr, int dbl){
+	int base, offset = fprOffset(fpr, dbl, &base);
+	if(offset < 0){
+		GEN_LWZ(R0, (fpr*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+		GEN_LFDX(hwfpr, 0, R0);
+	} else if(dbl){
+		GEN_LFD(hwfpr, offset, base);
+	} else {
+		GEN_LFS(hwfpr, offset, base);
+	}
+}
+
+static void genFprStore(int hwfpr, int fpr, int dbl){
+	int base, offset = fprOffset(fpr, dbl, &base);
+	if(offset < 0){
+		GEN_LWZ(R0, (fpr*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+		GEN_STFDX(hwfpr, 0, R0);
+	} else if(dbl){
+		GEN_STFD(hwfpr, offset, base);
+	} else {
+		GEN_STFS(hwfpr, offset, base);
+	}
+}
+
+static void _flushFPR(int reg){
+	// Store the register to memory
+	genFprStore(fprMap[reg].map, reg, fprMap[reg].dbl);
 }
 // Find an available HW reg or -1 for none
 static int getAvailableFPR(void){
@@ -402,14 +454,8 @@ int mapFPR(int fpr, int dbl){
 	// If didn't find an available register, flush one
 	if(fprMap[fpr].map < 0) fprMap[fpr].map = flushLRUFPR();
 	
-	// Load the register from memory (indirectly)
-	if(dbl){
-		GEN_LWZ(R0, (fpr*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
-		GEN_LFDX(fprMap[fpr].map, 0, R0);
-	} else {
-		GEN_LWZ(R0, (fpr*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
-		GEN_LFSX(fprMap[fpr].map, 0, R0);
-	}
+	// Load the register from memory
+	genFprLoad(fprMap[fpr].map, fpr, dbl);
 	
 	return fprMap[fpr].map;
 }
@@ -528,13 +574,7 @@ void emitFlushOf(const RegCacheState* s){
 	for(i=0; i<32; ++i){
 		const FPRState* f = &s->fprMap[i];
 		if(f->map < 0 || !f->dirty) continue;
-		if(f->dbl){
-			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
-			GEN_STFDX(f->map, 0, R0);
-		} else {
-			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
-			GEN_STFSX(f->map, 0, R0);
-		}
+		genFprStore(f->map, i, f->dbl);
 	}
 }
 
@@ -556,13 +596,7 @@ void emitReloadOf(const RegCacheState* s){
 	for(i=0; i<32; ++i){
 		const FPRState* f = &s->fprMap[i];
 		if(f->map < 0) continue;
-		if(f->dbl){
-			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
-			GEN_LFDX(f->map, 0, R0);
-		} else {
-			GEN_LWZ(R0, (i*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
-			GEN_LFSX(f->map, 0, R0);
-		}
+		genFprLoad(f->map, i, f->dbl);
 	}
 }
 

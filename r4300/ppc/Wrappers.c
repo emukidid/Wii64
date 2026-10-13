@@ -31,6 +31,7 @@
 #include "../Recomp-Cache.h"
 #include "Recompile.h"
 #include "Wrappers.h"
+#include "Register-Cache.h"
 
 extern unsigned long instructionCount;
 extern void (*interp_ops[64])(void);
@@ -57,11 +58,12 @@ inline u32 dyna_run(PowerPC_func* func, PowerPC_instr *code){
 	register void* r29 __asm__("r29") = rdram;
 	register void* r30 __asm__("r30") = func;
 	register void* r31 __asm__("r31") = NULL;
+	register unsigned int r27 __asm__("r27") = fpr_odd_base;
 
 	end_section(TRAMP_SECTION);
 
 	__asm__ volatile(
-        "mtctr  %4        \n"
+        "mtctr  %5        \n"
         "bl     1f        \n"
         "mflr   %3        \n"
         "lwz    %2, 12(1) \n"
@@ -73,7 +75,7 @@ inline u32 dyna_run(PowerPC_func* func, PowerPC_instr *code){
         "stw    0, 12(1)  \n"
 		"bctr             \n"
         "2:               \n"
-        : "=r" (r3), "=r" (r30), "=r" (return_addr), "=r" (link_branch)
+        : "=r" (r3), "=r" (r30), "=r" (return_addr), "=r" (link_branch), "+r" (r27)
 		: "r" (code), "r" (r28), "r" (r29), "r" (r30), "r" (r31)
         : "r0", "r2", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12",
 		  "fr0", "fr1", "fr2", "fr3", "fr4", "fr5", "fr6", "fr7", "fr8", "fr9", "fr10", "fr11", "fr12", "fr13",

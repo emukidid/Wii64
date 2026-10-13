@@ -21,6 +21,7 @@
 **/
 
 #include <stdio.h>
+#include <string.h>
 #include "winlnxdefs.h"
 #include "rom.h"
 #include "../gc_memory/memory.h"
@@ -293,10 +294,17 @@ void restore_count_per_op() {
 	}
 }
 
+int dynarec_tlb_tier = 0;
+
 // Game specific hack detection via CRC
 void GameSpecificHackSetup() {
 	unsigned int curCRC[2];
 	ROMCache_read((u8*)&curCRC[0], 0x10, sizeof(unsigned int)*2);
+
+	// TLB heavy games dynarec inline TLB lookups on loads
+	dynarec_tlb_tier = strncmp((char *)ROM_HEADER.Name, "GOLDENEYE", 9) == 0 ||
+	                   strncmp((char *)ROM_HEADER.Name, "Perfect Dark", 12) == 0 ||
+	                   	strncmp((char *)ROM_HEADER.Name, "CONKER BFD", 10) == 0) == 0;
 	//print_gecko("CRC values %08X %08X\r\n", curCRC[0], curCRC[1]);
 	if(curCRC[0] == 0xCA12B547 && curCRC[1] == 0x71FA4EE4) {
 		game_specific_hack = &hack_pkm_snap_u;

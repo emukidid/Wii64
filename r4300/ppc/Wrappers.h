@@ -30,6 +30,10 @@
 #define DYNAREG_RDRAM   29
 #define DYNAREG_FUNC    30
 #define DYNAREG_ZERO    31
+// Base for odd single FPRs, so they work in either Status FR mode (see fprOffset)
+#define DYNAREG_FPRODD  27
+// What DYNAREG_FPRODD holds: &r4300.fpr_data, or 12 less with FR clear. Kept by set_fpr_pointers.
+extern unsigned int fpr_odd_base;
 
 #define DYNAOFF_LR     12
 

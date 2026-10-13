@@ -58,10 +58,12 @@ static PowerPC_instr code_buffer[1024*32];
 static PowerPC_instr* code_addr_buffer[1024];
 
 PowerPC_func* current_func;
-static struct func_list {
-	PowerPC_func*     func;
-	struct func_list* next;
-} *freed_funcs = NULL;
+// Funcs whose code was freed or moved since the trampoline last called clear_freed_funcs.
+// The trampoline must not link a branch that sits in one of these: it would patch freed
+// memory and leave a link record that unlink_func later writes nop/blrl through.
+#define FREED_FUNCS_MAX 64
+static PowerPC_func* freed_funcs[FREED_FUNCS_MAX];
+static int freed_count;	// more than FREED_FUNCS_MAX means some weren't recorded
 
 static int pass0(PowerPC_block* ppc_block);
 static void pass2(PowerPC_block* ppc_block);
@@ -80,16 +82,17 @@ int has_next_src(void){ return (src_last-src) > 0; }
  // Makes sure a branch to a NOP in the delay slot won't crash
  // This should be called ONLY after get_next_src returns a
  //   NOP in a delay slot
- void nop_ignored(void){ if(src<src_last) code_addr[src-1-src_first] = ppc_dst; }
+ void nop_ignored(void){ if(src<src_last){ code_addr[src-1-src_first] = ppc_dst; clearRegisterConstants(); } }
  // Returns whether the current src instruction is branched to
  int is_j_dst(int i){ return isJmpDst[i + ((get_src_pc()&0xfff)>>2)]; }
 // Returns the MIPS PC
 unsigned int get_src_pc(void){ return addr_first + ((src-1-src_first)<<2); }
 void set_next_dst(PowerPC_instr i){ *(ppc_dst++) = i; ++code_length; }
-// Adjusts the code_addr for the current instruction to account for flushes
-void reset_code_addr(void){ if(src<=src_last) code_addr[src-1-src_first] = ppc_dst; }
+// Adjusts the code_addr for the current instruction to account for flushes.
+// The trampoline can enter here, so no constants known at compile time can be assumed.
+void reset_code_addr(void){ if(src<=src_last) code_addr[src-1-src_first] = ppc_dst; clearRegisterConstants(); }
 // Same, but for multiple swallowed source instructions.
-void reset_code_addr_burst(int count){ if(src<=src_last) code_addr[src-count-src_first] = ppc_dst; }
+void reset_code_addr_burst(int count){ if(src<=src_last) code_addr[src-count-src_first] = ppc_dst; clearRegisterConstants(); }
 
 static inline unsigned short extractUpper16(void* address){
 	unsigned int addr = (unsigned int)address;
@@ -178,10 +181,7 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 			fhn->next = (*node)->function->holes;
 			// Make sure those holes aren't freed
 			(*node)->function->holes = NULL;
-			// Add it to the freed_funcs list
-			struct func_list* freed = malloc(sizeof(struct func_list));
-			freed->func = (*node)->function, freed->next = freed_funcs;
-			freed_funcs = freed;
+			// free_func records it in freed_funcs
 			// Free the hole
 			RecompCache_Free((*node)->function->start_addr);
 
@@ -212,10 +212,7 @@ PowerPC_func* recompile_block(PowerPC_block* ppc_block, unsigned int addr){
 
 		} else if(func->start_addr < (*node)->function->end_addr &&
 				  func->end_addr   > (*node)->function->start_addr){
-			// Add it to the freed_funcs list
-			struct func_list* freed = malloc(sizeof(struct func_list));
-			freed->func = (*node)->function, freed->next = freed_funcs;
-			freed_funcs = freed;
+			// free_func records it in freed_funcs
 			// We have some other non-containment overlap
 			RecompCache_Free((*node)->function->start_addr);
 		}
@@ -552,18 +549,20 @@ void invalidate_block(PowerPC_block* ppc_block, int is_deinit){
 	}
 }
 
+void note_freed_func(PowerPC_func* func){
+	if(freed_count < FREED_FUNCS_MAX)
+		freed_funcs[freed_count] = func;
+	freed_count++;
+}
 int func_was_freed(PowerPC_func* func){
-	struct func_list* node;
-	for(node = freed_funcs; node != NULL; node = node->next)
-		if(node->func == func) return 1;
+	int i;
+	// Lost track, so treat everything as freed, that only costs a missed link
+	if(freed_count > FREED_FUNCS_MAX) return 1;
+	for(i = 0; i < freed_count; i++)
+		if(freed_funcs[i] == func) return 1;
 	return 0;
 }
 
 void clear_freed_funcs(void){
-	struct func_list* node, * next;
-	for(node = freed_funcs; node != NULL; node = next){
-		next = node->next;
-		free(node);
-	}
-	freed_funcs = NULL;
+	freed_count = 0;
 }

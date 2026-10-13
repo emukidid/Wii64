@@ -118,6 +118,14 @@ void flushFPR(int fpr);
 void flushRegisters(void);
 // Unmap all registers without storing any
 void invalidateRegisters(void);
+// Forgets every known constant, for points code can be entered at from the trampoline
+void clearRegisterConstants(void);
+
+// Where an FPR is in either Status FR mode: offset from *base, or -1 to go through
+// r4300.fpr_double (see Register-Cache.c)
+int fprOffset(int fpr, int dbl, int* base);
+// Emits reg = the address of an FPR
+void genFprAddress(int reg, int fpr, int dbl);
 // Reserve a HW register to be used but not associated with any registers
 // When the register is no longer needed, be sure to call unmapRegisterTemp
 int mapRegisterTemp(void);

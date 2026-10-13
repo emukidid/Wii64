@@ -29,6 +29,9 @@ void *GetGameSpecificHack();
 // Game specific hack detection via CRC
 void GameSpecificHackSetup();
 
+// Emit the dynarec's inline TLB lookup for loads (TLB heavy games, Wii only)
+extern int dynarec_tlb_tier;
+
 void hack_winback();
 void hack_paperboy();
 void hack_dukenukem();

@@ -36,6 +36,13 @@
 
 #include <assert.h>
 
+// Inline TLB lookup for loads that miss the rdram fast path. Needs the flat tlb_LUT_r in MEM2.
+#if defined(HW_RVL) && defined(FASTMEM) && !defined(USE_TLB_CACHE)
+#define FASTMEM_TLB_TIER
+#include "../../gc_memory/tlb.h"
+#include "../../main/gamehacks.h"
+#endif
+
 #ifdef USE_EXPANSION
 #define RAM_TOP 0x80800000
 #else
@@ -404,6 +411,7 @@ static int branch(short offset, condition cond, int link, int likely){
 			bo = 0x14; nbo = 0x4; bi = 19;
 			break;
 	}
+	(void)bo;
 
 	flushRegisters();
 
@@ -427,6 +435,8 @@ static int branch(short offset, condition cond, int link, int likely){
 	PowerPC_instr* preDelay = get_curr_dst();
 	check_delaySlot();
 	int delaySlot = get_curr_dst() - preDelay;
+	// A likely branch skips the delay slot when not taken, so constants it set aren't known
+	if(likely) clearRegisterConstants();
 
 #ifdef COMPARE_CORE
 	GEN_LI(R4, 1);
@@ -440,7 +450,12 @@ static int branch(short offset, condition cond, int link, int likely){
 	if(likely) set_jump_special(likely_id, delaySlot+1);
 #endif
 
+	// An in-block conditional branch stores last_pc on both paths below
+#ifndef INTERPRET_BRANCH
+	genUpdateCount((cond != NONE && !is_j_out(offset, 0)) ? 2 : 1); // Sets cr3 to (cycle_count ? 0)
+#else
 	genUpdateCount(1); // Sets cr3 to (cycle_count ? 0)
+#endif
 
 #ifndef INTERPRET_BRANCH
 	// If we're jumping out, we need to trampoline using genJumpTo
@@ -462,28 +477,41 @@ static int branch(short offset, condition cond, int link, int likely){
 
 #ifndef INTERPRET_BRANCH
 	} else {
-		// r4300.last_pc = naddr
 		if(cond != NONE){
-			GEN_BC(4, 0, 0, bo, bi);
+			// Each path stores its own r4300.last_pc and checks for an interrupt, rather
+			// than picking the address with one branch and testing the condition again like we did before
+			GEN_BC(6, 0, 0, nbo, bi);
+			// Taken: r4300.last_pc = target
+			GEN_LIS(R3, extractUpper16(get_src_pc() + (offset<<2)));
+			GEN_ADDI(R3, R3, extractLower16(get_src_pc() + (offset<<2)));
+			GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
+			// If taking the interrupt, return to the trampoline
+			GEN_BGELR(CR3, 0);
+			GEN_B(add_jump(offset, 0, 0), 0, 0);
+			// Not taken: r4300.last_pc = the next instruction
 			GEN_LIS(R3, extractUpper16(get_src_pc()+4));
 			GEN_ADDI(R3, R3, extractLower16(get_src_pc()+4));
-			GEN_B(3, 0, 0);
-		}
-		GEN_LIS(R3, extractUpper16(get_src_pc() + (offset<<2)));
-		GEN_ADDI(R3, R3, extractLower16(get_src_pc() + (offset<<2)));
-		GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
+			GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
+			// If taking the interrupt, return to the trampoline
+			GEN_BGELR(CR3, 0);
+		} else {
+			// r4300.last_pc = naddr
+			GEN_LIS(R3, extractUpper16(get_src_pc() + (offset<<2)));
+			GEN_ADDI(R3, R3, extractLower16(get_src_pc() + (offset<<2)));
+			GEN_STW(R3, offsetof(R4300,last_pc), DYNAREG_R4300);
 
-		// If taking the interrupt, return to the trampoline
-		GEN_BGELR(CR3, 0);
-		// The actual branch
+			// If taking the interrupt, return to the trampoline
+			GEN_BGELR(CR3, 0);
+			// The actual branch
 #if 0
-		// FIXME: Reenable this when blocks are small enough to BC within
-		//          Make sure that pass2 uses BD/LI as appropriate
-		GEN_BC(add_jump(offset, 0, 0), 0, 0, bo, bi);
+			// FIXME: Reenable this when blocks are small enough to BC within
+			//          Make sure that pass2 uses BD/LI as appropriate
+			GEN_BC(add_jump(offset, 0, 0), 0, 0, bo, bi);
 #else
-		GEN_BC(2, 0, 0, nbo, bi);
-		GEN_B(add_jump(offset, 0, 0), 0, 0);
+			GEN_BC(2, 0, 0, nbo, bi);
+			GEN_B(add_jump(offset, 0, 0), 0, 0);
 #endif
+		}
 
 	}
 #endif // INTERPRET_BRANCH
@@ -508,13 +536,32 @@ static int branch(short offset, condition cond, int link, int likely){
 #endif
 }
 
+// After a store to rdram (address in r3): invalidate any compiled code it wrote over.
+// we can be cheap(er) here instructions executed wise because most don't actually need to invalidate funcs
+// The register cache was flushed before the store and nothing is dirty so we can use all regs.
+static void genCheckMemoryRange(int nbytes){
+	GEN_RLWINM(R5, R3, 0, 20, 31);						// 0  addr & 0xFFF
+	GEN_CMPLI(CR6, R5, 0x1000 - nbytes);				// 1
+	GEN_BGT(CR6, 10, 0, 0);								// 2  into the next page: to 12
+	GEN_RLWINM(R5, R3, 22, 10, 29);						// 3  page * 4
+	GEN_LIS(R6, extractUpper16((unsigned int)blocks));	// 4
+	GEN_ADDI(R6, R6, extractLower16((unsigned int)blocks));	// 5
+	GEN_LWZX(R5, R6, R5);								// 6  blocks[page]
+	GEN_CMPI(CR6, R5, 0);								// 7
+	GEN_BEQ(CR6, 8, 0, 0);								// 8  no block: to 16
+	GEN_LWZ(R5, offsetof(PowerPC_block, funcs), R5);	// 9
+	GEN_CMPI(CR6, R5, 0);								// 10
+	GEN_BEQ(CR6, 5, 0, 0);								// 11 no functions: to 16
+	GEN_LI(R4, nbytes);									// 12
+	GEN_B(add_jump((unsigned long)&invalidate_func_range, 1, 1), 0, 1);	// 13
+	GEN_LWZ(R0, DYNAOFF_LR, R1);						// 14
+	GEN_MTLR(R0);										// 15
+}														// 16
+
 #define check_memory_range(nbytes) \
 { \
 invalidateRegisters(); \
-GEN_LI(R4, (nbytes)); \
-GEN_B(add_jump((unsigned long)&invalidate_func_range, 1, 1), 0, 1); \
-GEN_LWZ(R0, DYNAOFF_LR, R1); \
-GEN_MTLR(R0); \
+genCheckMemoryRange(nbytes); \
 }
 
 static int (*gen_ops[64])(MIPS_instr);
@@ -3142,6 +3189,10 @@ static int MTC0(MIPS_instr mips){
 		// there's no need to reload the register cache first.
 		GEN_BNELR(CR5, 0);
 
+		// An MTC0 to Status may have changed FR, so pick up DYNAREG_FPRODD again
+		GEN_LIS(DYNAREG_FPRODD, extractUpper16((unsigned int)&fpr_odd_base));
+		GEN_LWZ(DYNAREG_FPRODD, extractLower16((unsigned int)&fpr_odd_base), DYNAREG_FPRODD);
+
 		// No interrupt, the call clobbered the volatiles.
 		emitReloadOf(&preCall);
 
@@ -3199,8 +3250,8 @@ static int MFC1(MIPS_instr mips){
 	int rt = mapRegisterNew( MIPS_GET_RT(mips) );
 	flushFPR(fs);
 
-	// rt = r4300.fpr_single[fs]
-	GEN_LWZ(rt, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// rt = &FPR fs (see fprOffset)
+	genFprAddress(rt, fs, 0);
 	// rt = *rt
 	GEN_LWZ(rt, 0, rt);
 
@@ -3221,8 +3272,8 @@ static int DMFC1(MIPS_instr mips){
 	int addr = mapRegisterTemp();
 	flushFPR(fs);
 
-	// addr = r4300.fpr_double[fs]
-	GEN_LWZ(addr, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	// addr = &FPR fs (see fprOffset)
+	genFprAddress(addr, fs, 1);
 	// rt[r4300.hi] = *addr
 	GEN_LWZ(rt.hi, 0, addr);
 	// rt[r4300.lo] = *(addr+4)
@@ -3269,8 +3320,8 @@ static int MTC1(MIPS_instr mips){
 	int addr = mapRegisterTemp();
 	invalidateFPR(fs);
 
-	// addr = r4300.fpr_single[fs]
-	GEN_LWZ(addr, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// addr = &FPR fs (see fprOffset)
+	genFprAddress(addr, fs, 0);
 	// *addr = rt
 	GEN_STW(rt, 0, addr);
 
@@ -3293,7 +3344,7 @@ static int DMTC1(MIPS_instr mips){
 	int addr = mapRegisterTemp();
 	invalidateFPR(fs);
 
-	GEN_LWZ(addr, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	genFprAddress(addr, fs, 1);
 	GEN_STW(rt.hi, 0, addr);
 	GEN_STW(rt.lo, 4, addr);
 
@@ -3517,8 +3568,8 @@ static int ROUND_L_FP(MIPS_instr mips, int dbl){
 	GEN_B(add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	//TODO Tehpola check if we should use tmp register?
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
-	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	// addr = &FPR fd (see fprOffset)
+	genFprAddress(addr, fd, 1);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3548,8 +3599,8 @@ static int TRUNC_L_FP(MIPS_instr mips, int dbl){
 	GEN_B(add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	// TODO Tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
-	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	// addr = &FPR fd (see fprOffset)
+	genFprAddress(addr, fd, 1);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3581,8 +3632,8 @@ static int CEIL_L_FP(MIPS_instr mips, int dbl){
 	GEN_B(add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	//TODO tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
-	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	// addr = &FPR fd (see fprOffset)
+	genFprAddress(addr, fd, 1);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3614,8 +3665,8 @@ static int FLOOR_L_FP(MIPS_instr mips, int dbl){
 	GEN_B(add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	//TODO tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
-	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	// addr = &FPR fd (see fprOffset)
+	genFprAddress(addr, fd, 1);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -3642,8 +3693,8 @@ static int ROUND_W_FP(MIPS_instr mips, int dbl){
 
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
-	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// r0 = &FPR fd (see fprOffset)
+	genFprAddress(R0, fd, 0);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 
@@ -3665,8 +3716,8 @@ static int TRUNC_W_FP(MIPS_instr mips, int dbl){
 
 	// fctiwz f0, fs
 	GEN_FCTIWZ(F0, fs);
-	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// r0 = &FPR fd (see fprOffset)
+	genFprAddress(R0, fd, 0);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 	
@@ -3690,8 +3741,8 @@ static int CEIL_W_FP(MIPS_instr mips, int dbl){
 
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
-	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// r0 = &FPR fd (see fprOffset)
+	genFprAddress(R0, fd, 0);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 
@@ -3716,8 +3767,8 @@ static int FLOOR_W_FP(MIPS_instr mips, int dbl){
 
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
-	// r0 = r4300.fpr_single[fd]
-	GEN_LWZ(R0, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// r0 = &FPR fd (see fprOffset)
+	genFprAddress(R0, fd, 0);
 	// stfiwx f0, 0, r0
 	GEN_STFIWX(F0, 0, R0);
 	
@@ -3780,8 +3831,8 @@ static int CVT_W_FP(MIPS_instr mips, int dbl){
 
 	// fctiw f0, fs
 	GEN_FCTIW(F0, fs);
-	// addr = r4300.fpr_single[fd]
-	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// addr = &FPR fd (see fprOffset)
+	genFprAddress(addr, fd, 0);
 	// stfiwx f0, 0, addr
 	GEN_STFIWX(F0, 0, addr);
 
@@ -3810,8 +3861,8 @@ static int CVT_L_FP(MIPS_instr mips, int dbl){
 	GEN_B(add_jump(dbl ? (unsigned long)(&__fixdfdi) : (unsigned long)(&__fixsfdi), 1, 1), 0, 1);
 	// TODO Tehpola again
 	int addr = 5; // Use r5 for the addr (to not clobber r3/r4)
-	// addr = r4300.fpr_double[fd]
-	GEN_LWZ(addr, (fd*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	// addr = &FPR fd (see fprOffset)
+	genFprAddress(addr, fd, 1);
 	// Load old LR
 	GEN_LWZ(R0, DYNAOFF_LR, R1);
 	// stw r3, 0(addr)
@@ -4221,8 +4272,8 @@ static int CVT_FP_W(MIPS_instr mips, int dbl){
 	int tmp = mapFPRTemp();
 
 	// Get the integer value into a GPR
-	// r2 = r4300.fpr_single[fs]
-	GEN_LWZ(r2, (fs*4)+offsetof(R4300,fpr_single), DYNAREG_R4300);
+	// r2 = &FPR fs (see fprOffset)
+	genFprAddress(r2, fs, 0);
 	GEN_LFS(F0, offsetof(R4300,two16), DYNAREG_R4300);
 
 	GEN_PSQ_L(fd, 0, r2, QR7);
@@ -4260,8 +4311,8 @@ static int CVT_FP_L(MIPS_instr mips, int dbl){
 	int tmp = mapFPRTemp();
 
 	// Get the long value into GPRs
-	// r2 = r4300.fpr_double[fs]
-	GEN_LWZ(r2, (fs*4)+offsetof(R4300,fpr_double), DYNAREG_R4300);
+	// r2 = &FPR fs (see fprOffset)
+	genFprAddress(r2, fs, 1);
 	GEN_LFS(F0, offsetof(R4300,two16), DYNAREG_R4300);
 	GEN_PSQ_L(fd, 0, r2, QR7);
 	GEN_PSQ_L(tmp, 2, r2, QR5);
@@ -4340,6 +4391,11 @@ static void genCallInterp(MIPS_instr mips){
 	// if decodeNInterpret returned an address
 	//   jumpTo it
 	GEN_BNELR(CR5, 0);
+	// An interpreted MTC0 to Status may have changed FR, so pick up DYNAREG_FPRODD again
+	if(MIPS_GET_OPCODE(mips) == MIPS_OPCODE_COP0 && MIPS_GET_RS(mips) == 4 && MIPS_GET_RD(mips) == 12){
+		GEN_LIS(DYNAREG_FPRODD, extractUpper16((unsigned int)&fpr_odd_base));
+		GEN_LWZ(DYNAREG_FPRODD, extractLower16((unsigned int)&fpr_odd_base), DYNAREG_FPRODD);
+	}
 
 	if(mips_is_jump(mips)) delaySlotNext = 2;
 }
@@ -4430,7 +4486,9 @@ static void emit_genCheckFp_lazy(void)
 }
 #endif
 
-// Updates Count, and sets cr3 to (cycle_count ? 0)
+// Updates Count, and sets cr3 to (cycle_count ? 0) if checkCount.
+// checkCount 2 is the same as 1, except r4300.last_pc isn't stored: the caller stores it
+// on every path, so the store here would only be overwritten.
 static void genUpdateCount(int checkCount){
 #ifdef LAZY_GEN_CALLS
 	emit_update_count_lazy(checkCount);
@@ -4445,7 +4503,8 @@ static void genUpdateCount(int checkCount){
 	// addi    tmp, tmp, pc & 0xffff  // tmp = pc
 	GEN_ADDI(tmp, tmp, extractLower16(get_src_pc()+4));
 	// stw    tmp, 0(&r4300.last_pc)     // r4300.last_pc = pc
-	GEN_STW(tmp, offsetof(R4300,last_pc), DYNAREG_R4300);
+	if(checkCount != 2)
+		GEN_STW(tmp, offsetof(R4300,last_pc), DYNAREG_R4300);
 	// subf   r0,  r0, tmp           // r0 = pc - r4300.last_pc
 	GEN_SUBF(R0, R0, tmp);
 	// lwz    tmp, 9*4(r4300.reg_cop0)     // tmp = Count
@@ -4568,6 +4627,22 @@ static void genCallDynaMem(memType type, int count, int reverse, int _rs, int _r
 		if (type >= MEM_SW && phys >= 0x03F00000 && phys <= 0x04900000) {
 			isUnsafe = 0;
 		}
+	}
+	// A guessed base (isConstant == 2) is only what the register held at recompile time, so a
+	// guess outside rdram doesn't mean the access will be. Keep the checked fast path for those.
+	if(isConstant == 2 && !isPhysical)
+		isPhysical = 1;
+#endif
+
+#ifdef FASTMEM_TLB_TIER
+	int tlbTier = dynarec_tlb_tier &&
+	              (type == MEM_LW || type == MEM_LHU || type == MEM_LBU || type == MEM_LWC1);
+	// A constant TLB mapped address has no fast path at all, so give it the checked one. The
+	// range check always misses and the tier serves it. isConstant is dropped so the fast path
+	// loads through rd, which the tier rewrites, rather than straight from the constant.
+	if(tlbTier && isConstant == 1 && !isPhysical && (constant & 0xC0000000) != 0x80000000){
+		isPhysical = 1;
+		isConstant = 0;
 	}
 #endif
 	
@@ -5053,6 +5128,36 @@ static void genCallDynaMem(memType type, int count, int reverse, int _rs, int _r
 
 		int ts_callSize = get_curr_dst() - ts_preCall;
 		set_jump_special(to_slow_id, ts_callSize+1);
+
+#ifdef FASTMEM_TLB_TIER
+		if(tlbTier){
+			// Look the page up in tlb_LUT_r. If it maps into rdram, rebuild rd as a KSEG0 address
+			// and branch back into the fast path load above, which then joins as normal.
+			// Otherwise fall through to dyna_mem. Only tmp, R0 and CR0 are clobbered, and rd only
+			// on a hit, so the slow path still gets the original address.
+			const int size = (type == MEM_LHU) ? 2 : (type == MEM_LBU) ? 1 : 4;
+			const unsigned int lut = (unsigned int)tlb_LUT_r;
+			if(count > 1){
+				// The whole burst has to stay inside the page
+				GEN_RLWINM(R0, rd, 0, 20, 31);
+				GEN_CMPLI(CR0, R0, 0x1000 - count*size);
+				GEN_BGT(CR0, 9, 0, 0);
+			}
+			GEN_RLWINM(tmp, rd, 22, 10, 29);			// (vaddr >> 12) << 2
+			GEN_ADDIS(tmp, tmp, (lut + 0x8000) >> 16);
+			GEN_LWZ(tmp, (short)(lut & 0xFFFF), tmp);
+			// 0x80000000 | paddr when mapped, 0 when not, so one check covers both
+			GEN_XORIS(R0, tmp, 0x8000);
+		#ifdef USE_EXPANSION
+			GEN_ANDIS(R0, R0, 0xFF80);
+		#else
+			GEN_ANDIS(R0, R0, 0xFFC0);
+		#endif
+			GEN_BNE(CR0, 3, 0, 0);
+			GEN_RLWIMI(rd, tmp, 0, 0, 19);			// physical page, keep the page offset
+			GEN_B(ts_preCall - get_curr_dst(), 0, 0);
+		}
+#endif
 	}
 #endif // FASTMEM
 
